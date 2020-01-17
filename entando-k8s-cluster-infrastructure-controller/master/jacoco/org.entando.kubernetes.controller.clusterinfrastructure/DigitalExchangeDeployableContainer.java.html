@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DigitalExchangeDeployableContainer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando K8S Controller for Entando Cluster Infrastructure Deployments</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.controller.clusterinfrastructure</a> &gt; <span class="el_source">DigitalExchangeDeployableContainer.java</span></div><h1>DigitalExchangeDeployableContainer.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.controller.clusterinfrastructure;
+
+import java.util.Optional;
+import org.entando.kubernetes.controller.KeycloakClientConfig;
+import org.entando.kubernetes.controller.KeycloakConnectionConfig;
+import org.entando.kubernetes.controller.KubeUtils;
+import org.entando.kubernetes.controller.common.EntandoDatabaseConsumingContainer;
+import org.entando.kubernetes.controller.spi.DatabasePopulator;
+import org.entando.kubernetes.controller.spi.IngressingContainer;
+import org.entando.kubernetes.controller.spi.KeycloakAware;
+import org.entando.kubernetes.controller.spi.PersistentVolumeAware;
+import org.entando.kubernetes.controller.spi.TlsAware;
+import org.entando.kubernetes.model.infrastructure.EntandoClusterInfrastructure;
+
+public class DigitalExchangeDeployableContainer extends EntandoDatabaseConsumingContainer implements IngressingContainer,
+        PersistentVolumeAware, KeycloakAware, TlsAware {
+
+    public static final String INGRESS_WEB_CONTEXT = &quot;/digital-exchange&quot;;
+    public static final int PORT = 8080;
+    public static final String DIGITAL_EXCHANGE_QUALIFIER = &quot;dig-ex&quot;;
+    private final EntandoClusterInfrastructure entandoClusterInfrastructure;
+    private final KeycloakConnectionConfig keycloakConnectionConfig;
+
+    public DigitalExchangeDeployableContainer(EntandoClusterInfrastructure entandoClusterInfrastructure,
+<span class="fc" id="L25">            KeycloakConnectionConfig keycloakConnectionConfig) {</span>
+<span class="fc" id="L26">        this.entandoClusterInfrastructure = entandoClusterInfrastructure;</span>
+<span class="fc" id="L27">        this.keycloakConnectionConfig = keycloakConnectionConfig;</span>
+<span class="fc" id="L28">    }</span>
+
+    public static String clientIdOf(EntandoClusterInfrastructure entandoClusterInfrastructure) {
+        //TOOD may have to prefix namespace
+<span class="fc" id="L32">        return entandoClusterInfrastructure.getMetadata().getName() + &quot;-&quot; + DIGITAL_EXCHANGE_QUALIFIER;</span>
+    }
+
+    @Override
+    public int getCpuLimitMillicores() {
+<span class="fc" id="L37">        return 1000;</span>
+    }
+
+    @Override
+    public int getMemoryLimitMebibytes() {
+<span class="fc" id="L42">        return 1024 + 768;</span>
+    }
+
+    @Override
+    public String determineImageToUse() {
+<span class="fc" id="L47">        return &quot;entando/digital-exchange&quot;;</span>
+    }
+
+    @Override
+    public String getNameQualifier() {
+<span class="fc" id="L52">        return DIGITAL_EXCHANGE_QUALIFIER;</span>
+    }
+
+    @Override
+    public int getPort() {
+<span class="fc" id="L57">        return PORT;</span>
+    }
+
+    public KeycloakConnectionConfig getKeycloakConnectionConfig() {
+<span class="fc" id="L61">        return keycloakConnectionConfig;</span>
+    }
+
+    @Override
+    public KeycloakClientConfig getKeycloakClientConfig() {
+<span class="fc" id="L66">        String clientId = clientIdOf(this.entandoClusterInfrastructure);</span>
+<span class="fc" id="L67">        return new KeycloakClientConfig(KubeUtils.ENTANDO_KEYCLOAK_REALM,</span>
+                clientId,
+<span class="fc" id="L69">                clientId).withRole(&quot;superuser&quot;).withPermission(&quot;realm-management&quot;, &quot;realm-admin&quot;);</span>
+    }
+
+    @Override
+    public String getWebContextPath() {
+<span class="fc" id="L74">        return INGRESS_WEB_CONTEXT;</span>
+    }
+
+    @Override
+    public Optional&lt;String&gt; getHealthCheckPath() {
+<span class="fc" id="L79">        return Optional.of(getWebContextPath());</span>
+    }
+
+    @Override
+    public String getVolumeMountPath() {
+<span class="fc" id="L84">        return &quot;/entando-data&quot;;</span>
+    }
+
+    @Override
+    protected DatabasePopulator buildDatabasePopulator() {
+<span class="fc" id="L89">        return new DigitalExchangeDatabasePopulator(this);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
