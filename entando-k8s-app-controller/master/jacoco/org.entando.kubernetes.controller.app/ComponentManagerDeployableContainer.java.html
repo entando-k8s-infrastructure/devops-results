@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ComponentManagerDeployableContainer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando K8S Controller for Entando App Deployments</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.controller.app</a> &gt; <span class="el_source">ComponentManagerDeployableContainer.java</span></div><h1>ComponentManagerDeployableContainer.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.controller.app;
+
+import static java.lang.String.format;
+
+import io.fabric8.kubernetes.api.model.EnvVar;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import org.entando.kubernetes.controller.KeycloakClientConfig;
+import org.entando.kubernetes.controller.KeycloakConnectionConfig;
+import org.entando.kubernetes.controller.KubeUtils;
+import org.entando.kubernetes.controller.common.InfrastructureConfig;
+import org.entando.kubernetes.controller.database.DatabaseSchemaCreationResult;
+import org.entando.kubernetes.controller.spi.DatabasePopulator;
+import org.entando.kubernetes.controller.spi.DbAware;
+import org.entando.kubernetes.controller.spi.IngressingContainer;
+import org.entando.kubernetes.controller.spi.KeycloakAware;
+import org.entando.kubernetes.controller.spi.TlsAware;
+import org.entando.kubernetes.model.app.EntandoApp;
+import org.entando.kubernetes.model.plugin.Permission;
+
+public class ComponentManagerDeployableContainer implements KeycloakAware, IngressingContainer, DbAware, TlsAware {
+
+    public static final String COMPONENT_MANAGER_QUALIFIER = &quot;de&quot;;
+    public static final String COMPONENT_MANAGER_IMAGE_NAME = &quot;entando/entando-component-manager&quot;;
+
+    private static final String DEDB = &quot;dedb&quot;;
+    private final EntandoApp entandoApp;
+    private final KeycloakConnectionConfig keycloakConnectionConfig;
+    private final Optional&lt;InfrastructureConfig&gt; infrastructureConfig;
+    private Map&lt;String, DatabaseSchemaCreationResult&gt; dbSchemas;
+
+    public ComponentManagerDeployableContainer(EntandoApp entandoApp, KeycloakConnectionConfig keycloakConnectionConfig,
+<span class="fc" id="L37">            InfrastructureConfig infrastructureConfig) {</span>
+<span class="fc" id="L38">        this.entandoApp = entandoApp;</span>
+<span class="fc" id="L39">        this.keycloakConnectionConfig = keycloakConnectionConfig;</span>
+<span class="fc" id="L40">        this.infrastructureConfig = Optional.ofNullable(infrastructureConfig);</span>
+<span class="fc" id="L41">    }</span>
+
+    @Override
+    public String determineImageToUse() {
+<span class="fc" id="L45">        return COMPONENT_MANAGER_IMAGE_NAME;</span>
+    }
+
+    @Override
+    public String getNameQualifier() {
+<span class="fc" id="L50">        return COMPONENT_MANAGER_QUALIFIER;</span>
+    }
+
+    @Override
+    public int getPort() {
+<span class="fc" id="L55">        return 8083;</span>
+    }
+
+    @Override
+    public void addEnvironmentVariables(List&lt;EnvVar&gt; vars) {
+<span class="fc" id="L60">        String entandoUrl = format(&quot;http://localhost:%s%s&quot;, EntandoAppDeployableContainer.PORT,</span>
+                EntandoAppDeployableContainer.INGRESS_WEB_CONTEXT);
+<span class="fc" id="L62">        vars.add(new EnvVar(&quot;ENTANDO_APP_NAME&quot;, entandoApp.getMetadata().getName(), null));</span>
+<span class="fc" id="L63">        vars.add(new EnvVar(&quot;ENTANDO_URL&quot;, entandoUrl, null));</span>
+<span class="fc" id="L64">        vars.add(new EnvVar(&quot;SERVER_PORT&quot;, String.valueOf(getPort()), null));</span>
+<span class="fc" id="L65">        infrastructureConfig.ifPresent((c) -&gt; vars.add(new EnvVar(&quot;ENTANDO_K8S_SERVICE_URL&quot;, c.getK8SExternalServiceUrl(), null)));</span>
+<span class="fc" id="L66">        DatabaseSchemaCreationResult databaseSchemaCreationResult = dbSchemas.get(DEDB);</span>
+<span class="fc" id="L67">        vars.add(new EnvVar(&quot;DB_VENDOR&quot;, databaseSchemaCreationResult.getVendor().getName(),</span>
+                null));
+<span class="fc" id="L69">        vars.add(new EnvVar(&quot;SPRING_DATASOURCE_URL&quot;, databaseSchemaCreationResult.getJdbcUrl(),</span>
+                null));
+<span class="fc" id="L71">        vars.add(new EnvVar(&quot;SPRING_DATASOURCE_USERNAME&quot;, null,</span>
+<span class="fc" id="L72">                KubeUtils.secretKeyRef(databaseSchemaCreationResult.getSchemaSecretName(), KubeUtils.USERNAME_KEY)));</span>
+<span class="fc" id="L73">        vars.add(new EnvVar(&quot;SPRING_DATASOURCE_PASSWORD&quot;, null,</span>
+<span class="fc" id="L74">                KubeUtils.secretKeyRef(databaseSchemaCreationResult.getSchemaSecretName(), KubeUtils.PASSSWORD_KEY)));</span>
+<span class="fc" id="L75">        databaseSchemaCreationResult.addAdditionalConfigFromDatabaseSecret(vars);</span>
+<span class="fc" id="L76">    }</span>
+
+    @Override
+    public int getMemoryLimitMebibytes() {
+<span class="fc" id="L80">        return 768;</span>
+    }
+
+    @Override
+    public int getCpuLimitMillicores() {
+<span class="fc" id="L85">        return 750;</span>
+    }
+
+    public KeycloakConnectionConfig getKeycloakConnectionConfig() {
+<span class="fc" id="L89">        return keycloakConnectionConfig;</span>
+    }
+
+    @Override
+    public KeycloakClientConfig getKeycloakClientConfig() {
+<span class="fc" id="L94">        String entandoAppClientId = EntandoAppDeployableContainer.clientIdOf(entandoApp);</span>
+<span class="fc" id="L95">        String clientId = entandoApp.getMetadata().getName() + &quot;-&quot; + getNameQualifier();</span>
+<span class="fc" id="L96">        List&lt;Permission&gt; permissions = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L97">        permissions.add(new Permission(entandoAppClientId, &quot;superuser&quot;));</span>
+<span class="fc" id="L98">        this.infrastructureConfig.ifPresent(c -&gt; permissions.add(new Permission(c.getK8sServiceClientId(), KubeUtils.ENTANDO_APP_ROLE)));</span>
+<span class="fc" id="L99">        return new KeycloakClientConfig(KubeUtils.ENTANDO_KEYCLOAK_REALM, clientId, clientId,</span>
+<span class="fc" id="L100">                Collections.emptyList(),</span>
+                permissions);
+    }
+
+    @Override
+    public String getWebContextPath() {
+<span class="fc" id="L106">        return &quot;/digital-exchange&quot;;</span>
+    }
+
+    @Override
+    public Optional&lt;String&gt; getHealthCheckPath() {
+<span class="fc" id="L111">        return Optional.of(getWebContextPath() + &quot;/actuator/health&quot;);</span>
+    }
+
+    @Override
+    public List&lt;String&gt; getDbSchemaQualifiers() {
+<span class="fc" id="L116">        return Arrays.asList(DEDB);</span>
+    }
+
+    @Override
+    public Optional&lt;DatabasePopulator&gt; useDatabaseSchemas(Map&lt;String, DatabaseSchemaCreationResult&gt; dbSchemas) {
+<span class="fc" id="L121">        this.dbSchemas = dbSchemas;</span>
+<span class="fc" id="L122">        return Optional.empty();</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
