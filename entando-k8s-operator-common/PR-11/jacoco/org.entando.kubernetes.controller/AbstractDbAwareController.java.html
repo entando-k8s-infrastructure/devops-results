@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractDbAwareController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando K8S Operator Common Library</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.controller</a> &gt; <span class="el_source">AbstractDbAwareController.java</span></div><h1>AbstractDbAwareController.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.controller;
+
+import static java.lang.String.format;
+import static java.util.Optional.empty;
+
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.Watcher.Action;
+import java.lang.reflect.ParameterizedType;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.entando.kubernetes.client.DefaultKeycloakClient;
+import org.entando.kubernetes.client.DefaultSimpleK8SClient;
+import org.entando.kubernetes.controller.common.TlsHelper;
+import org.entando.kubernetes.controller.database.DatabaseDeployable;
+import org.entando.kubernetes.controller.database.DatabaseServiceResult;
+import org.entando.kubernetes.controller.database.ExternalDatabaseDeployment;
+import org.entando.kubernetes.controller.k8sclient.SimpleK8SClient;
+import org.entando.kubernetes.model.DbmsImageVendor;
+import org.entando.kubernetes.model.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.EntandoCustomResource;
+import org.entando.kubernetes.model.EntandoDeploymentPhase;
+import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseServiceSpec;
+
+public abstract class AbstractDbAwareController&lt;T extends EntandoBaseCustomResource&gt; {
+
+    protected final SimpleK8SClient&lt;?&gt; k8sClient;
+    protected final SimpleKeycloakClient keycloakClient;
+    protected final AutoExit autoExit;
+    protected final EntandoImageResolver entandoImageResolver;
+    protected Class&lt;T&gt; resourceType;
+    protected Logger logger;
+
+    /**
+     * Constructor for runtime environments where the KubernetesClient is injected, and the controller is assumed to exit automatically to
+     * emulate the behavior of a normal CLI.
+     */
+
+    protected AbstractDbAwareController(KubernetesClient kubernetesClient) {
+<span class="nc" id="L42">        this(new DefaultSimpleK8SClient(kubernetesClient), new DefaultKeycloakClient(), new AutoExit(true));</span>
+<span class="nc" id="L43">    }</span>
+
+    /**
+     * Constructor for in process tests where we may want to mock the clients out and would not want to exit.
+     */
+
+    protected AbstractDbAwareController(SimpleK8SClient&lt;?&gt; k8sClient, SimpleKeycloakClient keycloakClient) {
+<span class="fc" id="L50">        this(k8sClient, keycloakClient, new AutoExit(false));</span>
+<span class="fc" id="L51">    }</span>
+
+    /**
+     * Constructor for integration tests where we would need to override the auto exit behaviour.
+     */
+    public AbstractDbAwareController(KubernetesClient kubernetesClient, boolean exitAutomatically) {
+<span class="fc" id="L57">        this(new DefaultSimpleK8SClient(kubernetesClient), new DefaultKeycloakClient(), new AutoExit(exitAutomatically));</span>
+
+<span class="fc" id="L59">    }</span>
+
+<span class="fc" id="L61">    private AbstractDbAwareController(SimpleK8SClient&lt;?&gt; k8sClient, SimpleKeycloakClient keycloakClient, AutoExit autoExit) {</span>
+<span class="fc" id="L62">        this.k8sClient = k8sClient;</span>
+<span class="fc" id="L63">        this.keycloakClient = keycloakClient;</span>
+<span class="fc" id="L64">        this.autoExit = autoExit;</span>
+<span class="fc" id="L65">        this.entandoImageResolver = new EntandoImageResolver(</span>
+<span class="fc" id="L66">                k8sClient.secrets().loadControllerConfigMap(EntandoOperatorConfig.getEntandoDockerImageVersionsConfigMap()));</span>
+<span class="fc" id="L67">        Class&lt;?&gt; cls = getClass();</span>
+<span class="fc" id="L68">        List&lt;Class&lt;T&gt;&gt; types = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L69" title="All 2 branches covered.">        while (cls != AbstractDbAwareController.class) {</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">            if (isImplementedCorrectly(cls)) {</span>
+<span class="fc" id="L71">                types.add(getFirstTypeArgument(cls));</span>
+            }
+<span class="fc" id="L73">            cls = cls.getSuperclass();</span>
+        }
+<span class="pc bpc" id="L75" title="1 of 2 branches missed.">        if (types.isEmpty()) {</span>
+<span class="nc" id="L76">            throw new IllegalStateException(</span>
+<span class="nc" id="L77">                    &quot;Please implement &quot; + AbstractDbAwareController.class.getSimpleName() + &quot; directly with the required type argument.&quot;);</span>
+        }
+<span class="fc" id="L79">        this.resourceType = types.get(types.size() - 1);</span>
+<span class="fc" id="L80">        this.logger = Logger.getLogger(resourceType.getName() + &quot;Controller&quot;);</span>
+<span class="fc" id="L81">    }</span>
+
+    @SuppressWarnings(&quot;unchecked&quot;)
+    private Class&lt;T&gt; getFirstTypeArgument(Class&lt;?&gt; cls) {
+<span class="fc" id="L85">        ParameterizedType genericSuperclass = (ParameterizedType) cls.getGenericSuperclass();</span>
+<span class="fc" id="L86">        return (Class&lt;T&gt;) genericSuperclass.getActualTypeArguments()[0];</span>
+    }
+
+    private boolean isImplementedCorrectly(Class&lt;?&gt; cls) {
+<span class="pc bpc" id="L90" title="1 of 2 branches missed.">        if (cls.getGenericSuperclass() instanceof ParameterizedType) {</span>
+<span class="fc" id="L91">            ParameterizedType genericSuperclass = (ParameterizedType) cls.getGenericSuperclass();</span>
+<span class="pc bpc" id="L92" title="1 of 4 branches missed.">            if (genericSuperclass.getActualTypeArguments().length == 1 &amp;&amp; genericSuperclass.getActualTypeArguments()[0] instanceof Class) {</span>
+<span class="fc" id="L93">                Class argument = (Class) genericSuperclass.getActualTypeArguments()[0];</span>
+<span class="pc bpc" id="L94" title="1 of 2 branches missed.">                if (EntandoBaseCustomResource.class.isAssignableFrom(argument)) {</span>
+<span class="fc" id="L95">                    return true;</span>
+                }
+            }
+        }
+<span class="fc" id="L99">        return false;</span>
+    }
+
+    protected abstract void processAddition(T newResource);
+
+    protected void processCommand() {
+        try {
+<span class="fc" id="L106">            Action action = Action.valueOf(</span>
+<span class="fc" id="L107">                    EntandoOperatorConfigBase.lookupProperty(KubeUtils.ENTANDO_RESOURCE_ACTION).orElseThrow(IllegalArgumentException::new));</span>
+<span class="fc" id="L108">            TlsHelper.getInstance().init();</span>
+<span class="pc bpc" id="L109" title="1 of 2 branches missed.">            if (resourceExists(action)) {</span>
+<span class="fc" id="L110">                String resourceName = EntandoOperatorConfigBase.lookupProperty(KubeUtils.ENTANDO_RESOURCE_NAME)</span>
+<span class="fc" id="L111">                        .orElseThrow(IllegalArgumentException::new);</span>
+<span class="fc" id="L112">                String resourceNamespace = EntandoOperatorConfigBase.lookupProperty(KubeUtils.ENTANDO_RESOURCE_NAMESPACE)</span>
+<span class="fc" id="L113">                        .orElseThrow(IllegalArgumentException::new);</span>
+<span class="fc" id="L114">                T newResource = k8sClient.entandoResources().load(resourceType, resourceNamespace, resourceName);</span>
+<span class="fc" id="L115">                processAction(action, newResource);</span>
+            }
+        } finally {
+<span class="fc" id="L118">            new Thread(autoExit).start();</span>
+        }
+
+<span class="fc" id="L121">    }</span>
+
+    private boolean resourceExists(Action action) {
+<span class="pc bpc" id="L124" title="3 of 4 branches missed.">        return action == Action.ADDED || action == Action.MODIFIED;</span>
+    }
+
+    protected void processAction(Action action, T newResource) {
+        try {
+<span class="fc" id="L129">            k8sClient.entandoResources().updatePhase(newResource, EntandoDeploymentPhase.STARTED);</span>
+<span class="pc bpc" id="L130" title="1 of 2 branches missed.">            if (action == Action.ADDED) {</span>
+<span class="fc" id="L131">                processAddition(newResource);</span>
+            }
+<span class="fc" id="L133">            k8sClient.entandoResources().updatePhase(newResource, EntandoDeploymentPhase.SUCCESSFUL);</span>
+<span class="fc" id="L134">        } catch (Exception e) {</span>
+<span class="fc" id="L135">            autoExit.withCode(-1);</span>
+<span class="fc" id="L136">            logger.log(Level.SEVERE, e, () -&gt; format(&quot;Unexpected exception occurred while adding %s %s/%s&quot;,</span>
+<span class="fc" id="L137">                    newResource.getKind(),</span>
+<span class="fc" id="L138">                    newResource.getMetadata().getNamespace(),</span>
+<span class="fc" id="L139">                    newResource.getMetadata().getName()));</span>
+<span class="fc" id="L140">            k8sClient.entandoResources().deploymentFailed(newResource, e);</span>
+<span class="fc" id="L141">        }</span>
+<span class="fc" id="L142">    }</span>
+
+    protected DatabaseServiceResult prepareDatabaseService(EntandoCustomResource entandoCustomResource,
+            Optional&lt;DbmsImageVendor&gt; dbmsImageVendor, String nameQualifier) {
+<span class="fc" id="L146">        ExternalDatabaseDeployment externalDatabase = k8sClient.entandoResources().findExternalDatabase(entandoCustomResource);</span>
+        DatabaseServiceResult result;
+<span class="fc bfc" id="L148" title="All 2 branches covered.">        if (externalDatabase == null) {</span>
+<span class="fc" id="L149">            DbmsImageVendor dbmsVendor = dbmsImageVendor.orElse(DbmsImageVendor.POSTGRESQL);</span>
+<span class="fc" id="L150">            final DatabaseDeployable databaseDeployable = new DatabaseDeployable(dbmsVendor, entandoCustomResource, nameQualifier);</span>
+<span class="fc" id="L151">            final DeployCommand&lt;DatabaseServiceResult&gt; dbCommand = new DeployCommand&lt;&gt;(databaseDeployable);</span>
+<span class="fc" id="L152">            result = dbCommand.execute(k8sClient, empty());</span>
+<span class="fc bfc" id="L153" title="All 2 branches covered.">            if (result.hasFailed()) {</span>
+<span class="fc" id="L154">                throw new EntandoControllerException(&quot;Database deployment failed&quot;);</span>
+            }
+<span class="fc" id="L156">        } else {</span>
+<span class="fc" id="L157">            EntandoDatabaseServiceSpec spec = externalDatabase.getEntandoDatabaseService().getSpec();</span>
+<span class="fc" id="L158">            result = new DatabaseServiceResult(externalDatabase.getService(), spec.getDbms(), spec.getDatabaseName(),</span>
+<span class="fc" id="L159">                    spec.getSecretName(), empty());</span>
+        }
+<span class="fc" id="L161">        return result;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
