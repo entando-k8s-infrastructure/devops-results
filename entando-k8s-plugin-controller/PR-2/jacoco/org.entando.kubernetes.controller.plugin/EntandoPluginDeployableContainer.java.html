@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EntandoPluginDeployableContainer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando K8S Controller for Entando Plugin Deployments</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.controller.plugin</a> &gt; <span class="el_source">EntandoPluginDeployableContainer.java</span></div><h1>EntandoPluginDeployableContainer.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.controller.plugin;
+
+import io.fabric8.kubernetes.api.model.EnvVar;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import org.entando.kubernetes.controller.KeycloakClientConfig;
+import org.entando.kubernetes.controller.KeycloakConnectionConfig;
+import org.entando.kubernetes.controller.KubeUtils;
+import org.entando.kubernetes.controller.creators.DeploymentCreator;
+import org.entando.kubernetes.controller.database.DatabaseSchemaCreationResult;
+import org.entando.kubernetes.controller.spi.DatabasePopulator;
+import org.entando.kubernetes.controller.spi.DbAware;
+import org.entando.kubernetes.controller.spi.IngressingContainer;
+import org.entando.kubernetes.controller.spi.KeycloakAware;
+import org.entando.kubernetes.controller.spi.PersistentVolumeAware;
+import org.entando.kubernetes.controller.spi.TlsAware;
+import org.entando.kubernetes.model.DbmsImageVendor;
+import org.entando.kubernetes.model.plugin.EntandoPlugin;
+import org.entando.kubernetes.model.plugin.PluginSecurityLevel;
+
+public class EntandoPluginDeployableContainer implements IngressingContainer, KeycloakAware, PersistentVolumeAware, DbAware, TlsAware {
+
+    private final EntandoPlugin entandoPlugin;
+    private final KeycloakConnectionConfig keycloakConnectionConfig;
+    private Map&lt;String, DatabaseSchemaCreationResult&gt; dbSchemas;
+
+<span class="fc" id="L30">    public EntandoPluginDeployableContainer(EntandoPlugin entandoPlugin, KeycloakConnectionConfig keycloakConnectionConfig) {</span>
+<span class="fc" id="L31">        this.entandoPlugin = entandoPlugin;</span>
+<span class="fc" id="L32">        this.keycloakConnectionConfig = keycloakConnectionConfig;</span>
+<span class="fc" id="L33">    }</span>
+
+    @Override
+    public int getCpuLimitMillicores() {
+<span class="fc" id="L37">        return 1000;</span>
+    }
+
+    @Override
+    public int getMemoryLimitMebibytes() {
+<span class="fc" id="L42">        return 1024;</span>
+    }
+
+    @Override
+    public List&lt;String&gt; getNamesOfSecretsToMount() {
+<span class="fc" id="L47">        return entandoPlugin.getSpec().getConnectionConfigNames();</span>
+    }
+
+    @Override
+    public String determineImageToUse() {
+<span class="fc" id="L52">        return entandoPlugin.getSpec().getImage();</span>
+    }
+
+    @Override
+    public String getNameQualifier() {
+<span class="fc" id="L57">        return KubeUtils.DEFAULT_SERVER_QUALIFIER;</span>
+    }
+
+    @Override
+    public int getPort() {
+<span class="fc" id="L62">        return 8081;</span>
+    }
+
+    @Override
+    public String getVolumeMountPath() {
+<span class="fc" id="L67">        return &quot;/entando-data&quot;;</span>
+    }
+
+    @Override
+    public void addEnvironmentVariables(List&lt;EnvVar&gt; vars) {
+<span class="fc" id="L72">        vars.add(new EnvVar(&quot;PORT&quot;, &quot;8081&quot;, null));</span>
+<span class="fc" id="L73">        DatabaseSchemaCreationResult databaseSchemaCreationResult = dbSchemas.get(&quot;plugindb&quot;);</span>
+<span class="pc bpc" id="L74" title="1 of 2 branches missed.">        if (databaseSchemaCreationResult != null) {</span>
+<span class="fc" id="L75">            vars.add(new EnvVar(&quot;DB_VENDOR&quot;, databaseSchemaCreationResult.getVendor().getName(),</span>
+                    null));
+<span class="fc" id="L77">            vars.add(new EnvVar(&quot;SPRING_DATASOURCE_USERNAME&quot;, null,</span>
+<span class="fc" id="L78">                    databaseSchemaCreationResult.getUsernameRef()));</span>
+<span class="fc" id="L79">            vars.add(new EnvVar(&quot;SPRING_DATASOURCE_PASSWORD&quot;, null,</span>
+<span class="fc" id="L80">                    databaseSchemaCreationResult.getPasswordRef()));</span>
+<span class="fc" id="L81">            vars.add(new EnvVar(&quot;SPRING_DATASOURCE_URL&quot;, databaseSchemaCreationResult.getJdbcUrl(),</span>
+                    null));
+<span class="fc" id="L83">            vars.add(new EnvVar(&quot;SPRING_JPA_DATABASE_PLATFORM&quot;,</span>
+<span class="fc" id="L84">                    databaseSchemaCreationResult.getVendor().getHibernateDialect(), null));</span>
+            /*
+            Set SPRING_JPA_PROPERTIES_HIBERNATE_ID_NEW_GENERATOR_MAPPINGS to 'false' if we ever run into issues with ID Generation
+            */
+<span class="fc" id="L88">            databaseSchemaCreationResult.addAdditionalConfigFromDatabaseSecret(vars);</span>
+        }
+
+<span class="fc" id="L91">        EnvVar keycloakClientSecret = vars.stream().filter(</span>
+<span class="fc" id="L92">                var -&gt; var.getName().equals(&quot;KEYCLOAK_CLIENT_SECRET&quot;)).findAny().orElseThrow(IllegalStateException::new);</span>
+<span class="fc" id="L93">        EnvVar keycloakClientId = vars.stream().filter(</span>
+<span class="fc" id="L94">                var -&gt; var.getName().equals(&quot;KEYCLOAK_CLIENT_ID&quot;)).findAny().orElseThrow(IllegalStateException::new);</span>
+<span class="fc" id="L95">        EnvVar keycloakAuthUrl = vars.stream().filter(</span>
+<span class="fc" id="L96">                var -&gt; var.getName().equals(&quot;KEYCLOAK_AUTH_URL&quot;)).findAny().orElseThrow(IllegalStateException::new);</span>
+<span class="fc" id="L97">        EnvVar keycloakRealm = vars.stream().filter(</span>
+<span class="fc" id="L98">                var -&gt; var.getName().equals(&quot;KEYCLOAK_REALM&quot;)).findAny().orElseThrow(IllegalStateException::new);</span>
+
+<span class="fc" id="L100">        String keycloakIssuerUri = keycloakAuthUrl.getValue() + &quot;/realms/&quot; + keycloakRealm.getValue();</span>
+
+<span class="fc" id="L102">        vars.add(new EnvVar(&quot;SPRING_PROFILES_ACTIVE&quot;, &quot;default,prod&quot;, null));</span>
+<span class="fc" id="L103">        vars.add(new EnvVar(&quot;SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_CLIENT_ID&quot;, null,</span>
+<span class="fc" id="L104">                keycloakClientId.getValueFrom()));</span>
+<span class="fc" id="L105">        vars.add(new EnvVar(&quot;SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_CLIENT_SECRET&quot;, null,</span>
+<span class="fc" id="L106">                keycloakClientSecret.getValueFrom()));</span>
+<span class="fc" id="L107">        vars.add(new EnvVar(&quot;SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI&quot;, keycloakIssuerUri, null));</span>
+<span class="fc" id="L108">        vars.add(new EnvVar(&quot;ENTANDO_CONFIG_SERVICE_URI&quot;, &quot;http://localhost:8083/config-service&quot;, null));</span>
+<span class="fc" id="L109">        vars.add(new EnvVar(&quot;ENTANDO_AUTH_SERVICE_URI&quot;, &quot;todo&quot;, null));</span>
+<span class="fc" id="L110">        vars.add(new EnvVar(&quot;ENTANDO_WIDGETS_FOLDER&quot;, &quot;/app/resources/widgets&quot;, null));</span>
+<span class="fc" id="L111">        vars.add(new EnvVar(&quot;ENTANDO_CONNECTIONS_ROOT&quot;, DeploymentCreator.ENTANDO_SECRET_MOUNTS_ROOT, null));</span>
+<span class="fc" id="L112">        vars.add(new EnvVar(&quot;ENTANDO_PLUGIN_SECURITY_LEVEL&quot;,</span>
+<span class="fc" id="L113">                entandoPlugin.getSpec().getSecurityLevel().orElse(PluginSecurityLevel.STRICT).name(), null));</span>
+<span class="fc" id="L114">        vars.add(new EnvVar(&quot;PLUGIN_SIDECAR_PORT&quot;, &quot;8084&quot;, null));</span>
+<span class="fc" id="L115">    }</span>
+
+    public KeycloakConnectionConfig getKeycloakConnectionConfig() {
+<span class="fc" id="L118">        return keycloakConnectionConfig;</span>
+    }
+
+    @Override
+    public KeycloakClientConfig getKeycloakClientConfig() {
+<span class="fc" id="L123">        return new KeycloakClientConfig(KubeUtils.ENTANDO_KEYCLOAK_REALM,</span>
+<span class="fc" id="L124">                entandoPlugin.getMetadata().getName() + &quot;-&quot; + getNameQualifier(),</span>
+<span class="fc" id="L125">                entandoPlugin.getMetadata().getName(), entandoPlugin.getSpec().getRoles(),</span>
+<span class="fc" id="L126">                entandoPlugin.getSpec().getPermissions())</span>
+<span class="fc" id="L127">                .withRole(KubeUtils.ENTANDO_APP_ROLE)</span>
+<span class="fc" id="L128">                .withPermission(EntandoPluginSidecarDeployableContainer.keycloakClientIdOf(entandoPlugin),</span>
+                        EntandoPluginSidecarDeployableContainer.REQUIRED_ROLE);
+    }
+
+    @Override
+    public Optional&lt;String&gt; getHealthCheckPath() {
+<span class="fc" id="L134">        return Optional.of(getWebContextPath() + entandoPlugin.getSpec().getHealthCheckPath());</span>
+    }
+
+    @Override
+    public String getWebContextPath() {
+<span class="fc" id="L139">        return entandoPlugin.getSpec().getIngressPath();</span>
+    }
+
+    @Override
+    public List&lt;String&gt; getDbSchemaQualifiers() {
+<span class="pc bpc" id="L144" title="1 of 2 branches missed.">        if (entandoPlugin.getSpec().getDbms().orElse(DbmsImageVendor.NONE) == DbmsImageVendor.NONE) {</span>
+<span class="nc" id="L145">            return Collections.emptyList();</span>
+        } else {
+<span class="fc" id="L147">            return Arrays.asList(&quot;plugindb&quot;);</span>
+        }
+    }
+
+    @Override
+    public Optional&lt;DatabasePopulator&gt; useDatabaseSchemas(Map&lt;String, DatabaseSchemaCreationResult&gt; dbSchemas) {
+<span class="fc" id="L153">        this.dbSchemas = dbSchemas;</span>
+<span class="fc" id="L154">        return Optional.empty();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
