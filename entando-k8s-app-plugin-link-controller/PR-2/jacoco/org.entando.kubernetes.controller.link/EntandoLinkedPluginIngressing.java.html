@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EntandoLinkedPluginIngressing.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando K8S Controller for Entando App Plugin Links</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.controller.link</a> &gt; <span class="el_source">EntandoLinkedPluginIngressing.java</span></div><h1>EntandoLinkedPluginIngressing.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.controller.link;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import org.entando.kubernetes.controller.KubeUtils;
+import org.entando.kubernetes.controller.ServiceDeploymentResult;
+import org.entando.kubernetes.controller.spi.Ingressing;
+import org.entando.kubernetes.controller.spi.IngressingPathOnPort;
+import org.entando.kubernetes.model.app.EntandoApp;
+import org.entando.kubernetes.model.plugin.EntandoPlugin;
+
+public class EntandoLinkedPluginIngressing implements Ingressing&lt;IngressingPathOnPort&gt; {
+
+    private final EntandoApp entandoApp;
+    private final List&lt;IngressingPathOnPort&gt; ingressingPaths;
+    private final ServiceDeploymentResult entandoAppDeploymentResult;
+    private final ServiceDeploymentResult entandoPluginDeploymentResult;
+
+    public EntandoLinkedPluginIngressing(EntandoApp entandoApp, EntandoPlugin entandoPlugin,
+            ServiceDeploymentResult entandoAppDeploymentResult,
+<span class="fc" id="L22">            ServiceDeploymentResult entandoPluginDeploymentResult) {</span>
+<span class="fc" id="L23">        this.entandoApp = entandoApp;</span>
+<span class="fc" id="L24">        this.ingressingPaths = Arrays.asList(new IngressingPathOnPort() {</span>
+            @Override
+            public int getPort() {
+<span class="fc" id="L27">                return 8081;</span>
+            }
+
+            @Override
+            public String getWebContextPath() {
+<span class="fc" id="L32">                return entandoPlugin.getSpec().getIngressPath();</span>
+            }
+
+            @Override
+            public Optional&lt;String&gt; getHealthCheckPath() {
+<span class="fc" id="L37">                return Optional.of(getWebContextPath() + entandoPlugin.getSpec().getHealthCheckPath());</span>
+            }
+        });
+<span class="fc" id="L40">        this.entandoAppDeploymentResult = entandoAppDeploymentResult;</span>
+<span class="fc" id="L41">        this.entandoPluginDeploymentResult = entandoPluginDeploymentResult;</span>
+<span class="fc" id="L42">    }</span>
+
+    @Override
+    public List&lt;IngressingPathOnPort&gt; getIngressingContainers() {
+<span class="fc" id="L46">        return ingressingPaths;</span>
+    }
+
+    @Override
+    public String getIngressName() {
+<span class="fc" id="L51">        return entandoApp.getMetadata().getName() + &quot;-&quot; + KubeUtils.DEFAULT_INGRESS_SUFFIX;</span>
+    }
+
+    @Override
+    public String getIngressNamespace() {
+<span class="fc" id="L56">        return entandoApp.getMetadata().getNamespace();</span>
+    }
+
+    @Override
+    public String getNameQualifier() {
+<span class="fc" id="L61">        return KubeUtils.DEFAULT_SERVER_QUALIFIER; //Same as EntandoApp 'server'</span>
+    }
+
+    public EntandoApp getEntandoApp() {
+<span class="fc" id="L65">        return entandoApp;</span>
+    }
+
+    public ServiceDeploymentResult getEntandoAppDeploymentResult() {
+<span class="fc" id="L69">        return entandoAppDeploymentResult;</span>
+    }
+
+    public ServiceDeploymentResult getEntandoPluginDeploymentResult() {
+<span class="fc" id="L73">        return entandoPluginDeploymentResult;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
