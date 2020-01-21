@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EntandoKeycloakServerController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando K8S Controller for Keycloak</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.controller.keycloakserver</a> &gt; <span class="el_source">EntandoKeycloakServerController.java</span></div><h1>EntandoKeycloakServerController.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.controller.keycloakserver;
+
+import io.fabric8.kubernetes.api.model.SecretBuilder;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.quarkus.runtime.StartupEvent;
+import java.util.Optional;
+import javax.enterprise.event.Observes;
+import javax.inject.Inject;
+import org.entando.kubernetes.controller.AbstractDbAwareController;
+import org.entando.kubernetes.controller.DeployCommand;
+import org.entando.kubernetes.controller.EntandoOperatorConfig;
+import org.entando.kubernetes.controller.KubeUtils;
+import org.entando.kubernetes.controller.SimpleKeycloakClient;
+import org.entando.kubernetes.controller.database.DatabaseServiceResult;
+import org.entando.kubernetes.controller.k8sclient.SimpleK8SClient;
+import org.entando.kubernetes.model.DbmsImageVendor;
+import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
+
+public class EntandoKeycloakServerController extends AbstractDbAwareController&lt;EntandoKeycloakServer&gt; {
+
+    @Inject
+    public EntandoKeycloakServerController(KubernetesClient kubernetesClient) {
+<span class="nc" id="L23">        super(kubernetesClient);</span>
+<span class="nc" id="L24">    }</span>
+
+    public EntandoKeycloakServerController(KubernetesClient kubernetesClient, boolean exitAutomatically) {
+<span class="nc" id="L27">        super(kubernetesClient, exitAutomatically);</span>
+<span class="nc" id="L28">    }</span>
+
+    public EntandoKeycloakServerController(SimpleK8SClient&lt;?&gt; k8sClient, SimpleKeycloakClient keycloakClient) {
+<span class="fc" id="L31">        super(k8sClient, keycloakClient);</span>
+<span class="fc" id="L32">    }</span>
+
+    public void onStartup(@Observes StartupEvent event) {
+<span class="fc" id="L35">        processCommand();</span>
+<span class="fc" id="L36">    }</span>
+
+    protected void processAddition(EntandoKeycloakServer newEntandoKeycloakServer) {
+        // Create database for Keycloak
+<span class="fc" id="L40">        DatabaseServiceResult databaseServiceResult = null;</span>
+<span class="fc bfc" id="L41" title="All 2 branches covered.">        if (newEntandoKeycloakServer.getSpec().getDbms().orElse(DbmsImageVendor.NONE) != DbmsImageVendor.NONE) {</span>
+<span class="fc" id="L42">            databaseServiceResult = prepareDatabaseService(newEntandoKeycloakServer, newEntandoKeycloakServer.getSpec().getDbms(), &quot;db&quot;);</span>
+        }
+        // Create the Keycloak service using the provided database
+<span class="fc" id="L45">        KeycloakDeployable keycloakDeployable = new KeycloakDeployable(newEntandoKeycloakServer, databaseServiceResult);</span>
+<span class="fc" id="L46">        DeployCommand&lt;KeycloakDeploymentResult&gt; keycloakCommand = new DeployCommand&lt;&gt;(keycloakDeployable);</span>
+<span class="fc" id="L47">        KeycloakDeploymentResult keycloakDeploymentResult = keycloakCommand.execute(k8sClient, Optional.of(keycloakClient));</span>
+<span class="pc bpc" id="L48" title="1 of 2 branches missed.">        if (keycloakCommand.getPod() != null) {</span>
+<span class="fc" id="L49">            logger.severe(&quot;Attempting to log into Keycloak at &quot; + keycloakDeploymentResult.getExternalBaseUrl());</span>
+<span class="fc" id="L50">            keycloakClient.login(keycloakDeploymentResult.getExternalBaseUrl(), keycloakDeploymentResult.getUsername(),</span>
+<span class="fc" id="L51">                    keycloakDeploymentResult.getPassword());</span>
+<span class="fc" id="L52">            keycloakClient.ensureRealm(KubeUtils.ENTANDO_KEYCLOAK_REALM);</span>
+<span class="pc bpc" id="L53" title="1 of 2 branches missed.">            if (newEntandoKeycloakServer.getSpec().isDefault()) {</span>
+<span class="fc" id="L54">                k8sClient.secrets().overwriteControllerSecret(new SecretBuilder()</span>
+<span class="fc" id="L55">                        .withNewMetadata()</span>
+<span class="fc" id="L56">                        .withName(EntandoOperatorConfig.getDefaultKeycloakSecretName())</span>
+<span class="fc" id="L57">                        .endMetadata()</span>
+<span class="fc" id="L58">                        .addToStringData(KubeUtils.USERNAME_KEY, keycloakDeploymentResult.getUsername())</span>
+<span class="fc" id="L59">                        .addToStringData(KubeUtils.PASSSWORD_KEY, keycloakDeploymentResult.getPassword())</span>
+<span class="fc" id="L60">                        .addToStringData(KubeUtils.URL_KEY, keycloakDeploymentResult.getBaseUrl())</span>
+<span class="fc" id="L61">                        .build());</span>
+            }
+        }
+<span class="fc" id="L64">        k8sClient.entandoResources().updateStatus(newEntandoKeycloakServer, keycloakCommand.getStatus());</span>
+<span class="fc" id="L65">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
