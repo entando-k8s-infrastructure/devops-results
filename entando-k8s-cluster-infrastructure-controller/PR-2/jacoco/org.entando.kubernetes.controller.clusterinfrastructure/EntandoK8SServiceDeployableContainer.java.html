@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EntandoK8SServiceDeployableContainer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando K8S Controller for Entando Cluster Infrastructure Deployments</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.controller.clusterinfrastructure</a> &gt; <span class="el_source">EntandoK8SServiceDeployableContainer.java</span></div><h1>EntandoK8SServiceDeployableContainer.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.controller.clusterinfrastructure;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import org.entando.kubernetes.controller.KeycloakClientConfig;
+import org.entando.kubernetes.controller.KeycloakConnectionConfig;
+import org.entando.kubernetes.controller.KubeUtils;
+import org.entando.kubernetes.controller.spi.IngressingContainer;
+import org.entando.kubernetes.controller.spi.KeycloakAware;
+import org.entando.kubernetes.controller.spi.TlsAware;
+import org.entando.kubernetes.model.infrastructure.EntandoClusterInfrastructure;
+import org.entando.kubernetes.model.plugin.ExpectedRole;
+
+public class EntandoK8SServiceDeployableContainer implements KeycloakAware, IngressingContainer, TlsAware {
+
+    public static final String K8S_SVC_QUALIFIER = &quot;k8s-svc&quot;;
+    private static final String ENTANDO_K8S_SERVICE_IMAGE_NAME = &quot;entando/entando-k8s-service&quot;;
+
+    private final EntandoClusterInfrastructure entandoClusterInfrastructure;
+    private final KeycloakConnectionConfig keycloakConnectionConfig;
+
+    public EntandoK8SServiceDeployableContainer(EntandoClusterInfrastructure entandoClusterInfrastructure,
+<span class="fc" id="L24">            KeycloakConnectionConfig keycloakConnectionConfig) {</span>
+<span class="fc" id="L25">        this.entandoClusterInfrastructure = entandoClusterInfrastructure;</span>
+<span class="fc" id="L26">        this.keycloakConnectionConfig = keycloakConnectionConfig;</span>
+<span class="fc" id="L27">    }</span>
+
+    public static String clientIdOf(EntandoClusterInfrastructure infrastructure) {
+<span class="fc" id="L30">        return infrastructure.getMetadata().getName() + &quot;-&quot; + K8S_SVC_QUALIFIER;</span>
+    }
+
+    @Override
+    public int getCpuLimitMillicores() {
+<span class="fc" id="L35">        return 1000;</span>
+    }
+
+    @Override
+    public int getMemoryLimitMebibytes() {
+<span class="fc" id="L40">        return 768;</span>
+    }
+
+    @Override
+    public String determineImageToUse() {
+<span class="fc" id="L45">        return ENTANDO_K8S_SERVICE_IMAGE_NAME;</span>
+    }
+
+    @Override
+    public String getNameQualifier() {
+<span class="fc" id="L50">        return K8S_SVC_QUALIFIER;</span>
+    }
+
+    @Override
+    public int getPort() {
+<span class="fc" id="L55">        return 8084;</span>
+    }
+
+    public KeycloakConnectionConfig getKeycloakConnectionConfig() {
+<span class="fc" id="L59">        return keycloakConnectionConfig;</span>
+    }
+
+    @Override
+    public KeycloakClientConfig getKeycloakClientConfig() {
+<span class="fc" id="L64">        String clientId = clientIdOf(this.entandoClusterInfrastructure);</span>
+<span class="fc" id="L65">        List&lt;ExpectedRole&gt; clientRoles = Arrays.asList(</span>
+                new ExpectedRole(KubeUtils.ENTANDO_APP_ROLE),
+                new ExpectedRole(KubeUtils.ENTANDO_PLUGIN_ROLE)
+        );
+<span class="fc" id="L69">        return new KeycloakClientConfig(KubeUtils.ENTANDO_KEYCLOAK_REALM,</span>
+                clientId, &quot;Entando K8S Service&quot;, clientRoles, null);
+    }
+
+    @Override
+    public String getWebContextPath() {
+<span class="fc" id="L75">        return &quot;/k8s&quot;;</span>
+    }
+
+    @Override
+    public Optional&lt;String&gt; getHealthCheckPath() {
+<span class="fc" id="L80">        return Optional.of(getWebContextPath() + &quot;/actuator/health&quot;);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
