@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EntandoAppDeployableContainer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando K8S Controller for Entando App Deployments</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.controller.app</a> &gt; <span class="el_source">EntandoAppDeployableContainer.java</span></div><h1>EntandoAppDeployableContainer.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.controller.app;
 
+import io.fabric8.kubernetes.api.model.EnvVar;
+import java.util.List;
 import java.util.Optional;
 import org.entando.kubernetes.controller.KeycloakClientConfig;
 import org.entando.kubernetes.controller.KeycloakConnectionConfig;
@@ -23,73 +25,77 @@ public class EntandoAppDeployableContainer extends EntandoDatabaseConsumingConta
     private final EntandoApp entandoApp;
     private final KeycloakConnectionConfig keycloakConnectionConfig;
 
-<span class="fc" id="L26">    public EntandoAppDeployableContainer(EntandoApp entandoApp, KeycloakConnectionConfig keycloakConnectionConfig) {</span>
-<span class="fc" id="L27">        this.entandoApp = entandoApp;</span>
-<span class="fc" id="L28">        this.keycloakConnectionConfig = keycloakConnectionConfig;</span>
-<span class="fc" id="L29">    }</span>
+<span class="fc" id="L28">    public EntandoAppDeployableContainer(EntandoApp entandoApp, KeycloakConnectionConfig keycloakConnectionConfig) {</span>
+<span class="fc" id="L29">        this.entandoApp = entandoApp;</span>
+<span class="fc" id="L30">        this.keycloakConnectionConfig = keycloakConnectionConfig;</span>
+<span class="fc" id="L31">    }</span>
 
     public static String clientIdOf(EntandoApp entandoApp) {
         //TOOD may have to prefix namespace
-<span class="fc" id="L33">        return entandoApp.getMetadata().getName() + &quot;-&quot; + KubeUtils.DEFAULT_SERVER_QUALIFIER;</span>
+<span class="fc" id="L35">        return entandoApp.getMetadata().getName() + &quot;-&quot; + KubeUtils.DEFAULT_SERVER_QUALIFIER;</span>
     }
 
     @Override
     public String determineImageToUse() {
-<span class="fc" id="L38">        EntandoAppSpec spec = entandoApp.getSpec();</span>
-<span class="fc" id="L39">        return spec.getCustomServerImage().orElse(spec.getStandardServerImage().orElse(JeeServer.WILDFLY).getImageName());</span>
+<span class="fc" id="L40">        EntandoAppSpec spec = entandoApp.getSpec();</span>
+<span class="fc" id="L41">        return spec.getCustomServerImage().orElse(spec.getStandardServerImage().orElse(JeeServer.WILDFLY).getImageName());</span>
     }
 
     @Override
     public int getMemoryLimitMebibytes() {
-<span class="fc" id="L44">        return 1024 + 768;</span>
+<span class="fc" id="L46">        return 1024 + 768;</span>
     }
 
     @Override
     public int getCpuLimitMillicores() {
-<span class="fc" id="L49">        return 1500;</span>
+<span class="fc" id="L51">        return 1500;</span>
     }
 
     @Override
     public String getNameQualifier() {
-<span class="fc" id="L54">        return KubeUtils.DEFAULT_SERVER_QUALIFIER;</span>
+<span class="fc" id="L56">        return KubeUtils.DEFAULT_SERVER_QUALIFIER;</span>
     }
 
     @Override
     public int getPort() {
-<span class="fc" id="L59">        return PORT;</span>
+<span class="fc" id="L61">        return PORT;</span>
     }
 
     public KeycloakConnectionConfig getKeycloakConnectionConfig() {
-<span class="fc" id="L63">        return keycloakConnectionConfig;</span>
+<span class="fc" id="L65">        return keycloakConnectionConfig;</span>
     }
 
     @Override
     public KeycloakClientConfig getKeycloakClientConfig() {
-<span class="fc" id="L68">        String clientId = clientIdOf(this.entandoApp);</span>
-<span class="fc" id="L69">        return new KeycloakClientConfig(KubeUtils.ENTANDO_KEYCLOAK_REALM,</span>
+<span class="fc" id="L70">        String clientId = clientIdOf(this.entandoApp);</span>
+<span class="fc" id="L71">        return new KeycloakClientConfig(KubeUtils.ENTANDO_KEYCLOAK_REALM,</span>
                 clientId,
-<span class="fc" id="L71">                clientId).withRole(&quot;superuser&quot;).withPermission(&quot;realm-management&quot;, &quot;realm-admin&quot;);</span>
+<span class="fc" id="L73">                clientId).withRole(&quot;superuser&quot;).withPermission(&quot;realm-management&quot;, &quot;realm-admin&quot;);</span>
     }
 
     @Override
     public String getWebContextPath() {
-<span class="fc" id="L76">        return entandoApp.getSpec().getIngressPath().orElse(INGRESS_WEB_CONTEXT);</span>
+<span class="fc" id="L78">        return entandoApp.getSpec().getIngressPath().orElse(INGRESS_WEB_CONTEXT);</span>
     }
 
     @Override
     public Optional&lt;String&gt; getHealthCheckPath() {
-<span class="fc" id="L81">        return Optional.of(getWebContextPath());</span>
+<span class="fc" id="L83">        return Optional.of(getWebContextPath());</span>
     }
 
     @Override
     public String getVolumeMountPath() {
-<span class="fc" id="L86">        return &quot;/entando-data&quot;;</span>
+<span class="fc" id="L88">        return &quot;/entando-data&quot;;</span>
     }
 
     @Override
     protected DatabasePopulator buildDatabasePopulator() {
-<span class="fc" id="L91">        return new EntandoAppDatabasePopulator(this);</span>
+<span class="fc" id="L93">        return new EntandoAppDatabasePopulator(this);</span>
     }
 
+    @Override
+    public void addDatabaseConnectionVariables(List&lt;EnvVar&gt; list) {
+        //Done in superclass. One day we will implement this method in the superclass
+<span class="fc" id="L99">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
