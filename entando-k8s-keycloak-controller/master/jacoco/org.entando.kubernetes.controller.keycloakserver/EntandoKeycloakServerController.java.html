@@ -35,33 +35,34 @@ public class EntandoKeycloakServerController extends AbstractDbAwareController&l
 <span class="fc" id="L35">        processCommand();</span>
 <span class="fc" id="L36">    }</span>
 
-    protected void processAddition(EntandoKeycloakServer newEntandoKeycloakServer) {
+    @Override
+    protected void synchronizeDeploymentState(EntandoKeycloakServer newEntandoKeycloakServer) {
         // Create database for Keycloak
-<span class="fc" id="L40">        DatabaseServiceResult databaseServiceResult = null;</span>
-<span class="fc bfc" id="L41" title="All 2 branches covered.">        if (newEntandoKeycloakServer.getSpec().getDbms().orElse(DbmsImageVendor.NONE) != DbmsImageVendor.NONE) {</span>
-<span class="fc" id="L42">            databaseServiceResult = prepareDatabaseService(newEntandoKeycloakServer, newEntandoKeycloakServer.getSpec().getDbms(), &quot;db&quot;);</span>
+<span class="fc" id="L41">        DatabaseServiceResult databaseServiceResult = null;</span>
+<span class="fc bfc" id="L42" title="All 2 branches covered.">        if (newEntandoKeycloakServer.getSpec().getDbms().orElse(DbmsImageVendor.NONE) != DbmsImageVendor.NONE) {</span>
+<span class="fc" id="L43">            databaseServiceResult = prepareDatabaseService(newEntandoKeycloakServer, newEntandoKeycloakServer.getSpec().getDbms(), &quot;db&quot;);</span>
         }
         // Create the Keycloak service using the provided database
-<span class="fc" id="L45">        KeycloakDeployable keycloakDeployable = new KeycloakDeployable(newEntandoKeycloakServer, databaseServiceResult);</span>
-<span class="fc" id="L46">        DeployCommand&lt;KeycloakDeploymentResult&gt; keycloakCommand = new DeployCommand&lt;&gt;(keycloakDeployable);</span>
-<span class="fc" id="L47">        KeycloakDeploymentResult keycloakDeploymentResult = keycloakCommand.execute(k8sClient, Optional.of(keycloakClient));</span>
-<span class="pc bpc" id="L48" title="1 of 2 branches missed.">        if (keycloakCommand.getPod() != null) {</span>
-<span class="fc" id="L49">            logger.severe(&quot;Attempting to log into Keycloak at &quot; + keycloakDeploymentResult.getExternalBaseUrl());</span>
-<span class="fc" id="L50">            keycloakClient.login(keycloakDeploymentResult.getExternalBaseUrl(), keycloakDeploymentResult.getUsername(),</span>
-<span class="fc" id="L51">                    keycloakDeploymentResult.getPassword());</span>
-<span class="fc" id="L52">            keycloakClient.ensureRealm(KubeUtils.ENTANDO_KEYCLOAK_REALM);</span>
-<span class="pc bpc" id="L53" title="1 of 2 branches missed.">            if (newEntandoKeycloakServer.getSpec().isDefault()) {</span>
-<span class="fc" id="L54">                k8sClient.secrets().overwriteControllerSecret(new SecretBuilder()</span>
-<span class="fc" id="L55">                        .withNewMetadata()</span>
-<span class="fc" id="L56">                        .withName(EntandoOperatorConfig.getDefaultKeycloakSecretName())</span>
-<span class="fc" id="L57">                        .endMetadata()</span>
-<span class="fc" id="L58">                        .addToStringData(KubeUtils.USERNAME_KEY, keycloakDeploymentResult.getUsername())</span>
-<span class="fc" id="L59">                        .addToStringData(KubeUtils.PASSSWORD_KEY, keycloakDeploymentResult.getPassword())</span>
-<span class="fc" id="L60">                        .addToStringData(KubeUtils.URL_KEY, keycloakDeploymentResult.getBaseUrl())</span>
-<span class="fc" id="L61">                        .build());</span>
+<span class="fc" id="L46">        KeycloakDeployable keycloakDeployable = new KeycloakDeployable(newEntandoKeycloakServer, databaseServiceResult);</span>
+<span class="fc" id="L47">        DeployCommand&lt;KeycloakDeploymentResult&gt; keycloakCommand = new DeployCommand&lt;&gt;(keycloakDeployable);</span>
+<span class="fc" id="L48">        KeycloakDeploymentResult keycloakDeploymentResult = keycloakCommand.execute(k8sClient, Optional.of(keycloakClient));</span>
+<span class="pc bpc" id="L49" title="1 of 2 branches missed.">        if (keycloakCommand.getPod() != null) {</span>
+<span class="fc" id="L50">            logger.severe(&quot;Attempting to log into Keycloak at &quot; + keycloakDeploymentResult.getExternalBaseUrl());</span>
+<span class="fc" id="L51">            keycloakClient.login(keycloakDeploymentResult.getExternalBaseUrl(), keycloakDeploymentResult.getUsername(),</span>
+<span class="fc" id="L52">                    keycloakDeploymentResult.getPassword());</span>
+<span class="fc" id="L53">            keycloakClient.ensureRealm(KubeUtils.ENTANDO_KEYCLOAK_REALM);</span>
+<span class="pc bpc" id="L54" title="1 of 2 branches missed.">            if (newEntandoKeycloakServer.getSpec().isDefault()) {</span>
+<span class="fc" id="L55">                k8sClient.secrets().overwriteControllerSecret(new SecretBuilder()</span>
+<span class="fc" id="L56">                        .withNewMetadata()</span>
+<span class="fc" id="L57">                        .withName(EntandoOperatorConfig.getDefaultKeycloakSecretName())</span>
+<span class="fc" id="L58">                        .endMetadata()</span>
+<span class="fc" id="L59">                        .addToStringData(KubeUtils.USERNAME_KEY, keycloakDeploymentResult.getUsername())</span>
+<span class="fc" id="L60">                        .addToStringData(KubeUtils.PASSSWORD_KEY, keycloakDeploymentResult.getPassword())</span>
+<span class="fc" id="L61">                        .addToStringData(KubeUtils.URL_KEY, keycloakDeploymentResult.getBaseUrl())</span>
+<span class="fc" id="L62">                        .build());</span>
             }
         }
-<span class="fc" id="L64">        k8sClient.entandoResources().updateStatus(newEntandoKeycloakServer, keycloakCommand.getStatus());</span>
-<span class="fc" id="L65">    }</span>
+<span class="fc" id="L65">        k8sClient.entandoResources().updateStatus(newEntandoKeycloakServer, keycloakCommand.getStatus());</span>
+<span class="fc" id="L66">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
