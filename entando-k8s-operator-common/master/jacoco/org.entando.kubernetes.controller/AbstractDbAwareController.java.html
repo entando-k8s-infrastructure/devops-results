@@ -99,7 +99,7 @@ public abstract class AbstractDbAwareController&lt;T extends EntandoBaseCustomRe
 <span class="fc" id="L99">        return false;</span>
     }
 
-    protected abstract void processAddition(T newResource);
+    protected abstract void synchronizeDeploymentState(T newResource);
 
     protected void processCommand() {
         try {
@@ -126,39 +126,40 @@ public abstract class AbstractDbAwareController&lt;T extends EntandoBaseCustomRe
 
     protected void processAction(Action action, T newResource) {
         try {
-<span class="fc" id="L129">            k8sClient.entandoResources().updatePhase(newResource, EntandoDeploymentPhase.STARTED);</span>
-<span class="pc bpc" id="L130" title="1 of 2 branches missed.">            if (action == Action.ADDED) {</span>
-<span class="fc" id="L131">                processAddition(newResource);</span>
+<span class="fc" id="L129">            EntandoDeploymentPhase initialPhase = newResource.getStatus().getEntandoDeploymentPhase();</span>
+<span class="fc" id="L130">            k8sClient.entandoResources().updatePhase(newResource, EntandoDeploymentPhase.STARTED);</span>
+<span class="pc bpc" id="L131" title="5 of 6 branches missed.">            if (action == Action.ADDED || (action == Action.MODIFIED &amp;&amp; initialPhase == EntandoDeploymentPhase.REQUESTED)) {</span>
+<span class="fc" id="L132">                synchronizeDeploymentState(newResource);</span>
             }
-<span class="fc" id="L133">            k8sClient.entandoResources().updatePhase(newResource, EntandoDeploymentPhase.SUCCESSFUL);</span>
-<span class="nc" id="L134">        } catch (Exception e) {</span>
-<span class="nc" id="L135">            autoExit.withCode(-1);</span>
-<span class="nc" id="L136">            logger.log(Level.SEVERE, e, () -&gt; format(&quot;Unexpected exception occurred while adding %s %s/%s&quot;,</span>
-<span class="nc" id="L137">                    newResource.getKind(),</span>
-<span class="nc" id="L138">                    newResource.getMetadata().getNamespace(),</span>
-<span class="nc" id="L139">                    newResource.getMetadata().getName()));</span>
-<span class="nc" id="L140">            k8sClient.entandoResources().deploymentFailed(newResource, e);</span>
-<span class="fc" id="L141">        }</span>
-<span class="fc" id="L142">    }</span>
+<span class="fc" id="L134">            k8sClient.entandoResources().updatePhase(newResource, EntandoDeploymentPhase.SUCCESSFUL);</span>
+<span class="nc" id="L135">        } catch (Exception e) {</span>
+<span class="nc" id="L136">            autoExit.withCode(-1);</span>
+<span class="nc" id="L137">            logger.log(Level.SEVERE, e, () -&gt; format(&quot;Unexpected exception occurred while adding %s %s/%s&quot;,</span>
+<span class="nc" id="L138">                    newResource.getKind(),</span>
+<span class="nc" id="L139">                    newResource.getMetadata().getNamespace(),</span>
+<span class="nc" id="L140">                    newResource.getMetadata().getName()));</span>
+<span class="nc" id="L141">            k8sClient.entandoResources().deploymentFailed(newResource, e);</span>
+<span class="fc" id="L142">        }</span>
+<span class="fc" id="L143">    }</span>
 
     protected DatabaseServiceResult prepareDatabaseService(EntandoCustomResource entandoCustomResource,
             Optional&lt;DbmsImageVendor&gt; dbmsImageVendor, String nameQualifier) {
-<span class="fc" id="L146">        ExternalDatabaseDeployment externalDatabase = k8sClient.entandoResources().findExternalDatabase(entandoCustomResource);</span>
+<span class="fc" id="L147">        ExternalDatabaseDeployment externalDatabase = k8sClient.entandoResources().findExternalDatabase(entandoCustomResource);</span>
         DatabaseServiceResult result;
-<span class="fc bfc" id="L148" title="All 2 branches covered.">        if (externalDatabase == null) {</span>
-<span class="fc" id="L149">            DbmsImageVendor dbmsVendor = dbmsImageVendor.orElse(DbmsImageVendor.POSTGRESQL);</span>
-<span class="fc" id="L150">            final DatabaseDeployable databaseDeployable = new DatabaseDeployable(dbmsVendor, entandoCustomResource, nameQualifier);</span>
-<span class="fc" id="L151">            final DeployCommand&lt;DatabaseServiceResult&gt; dbCommand = new DeployCommand&lt;&gt;(databaseDeployable);</span>
-<span class="fc" id="L152">            result = dbCommand.execute(k8sClient, empty());</span>
-<span class="pc bpc" id="L153" title="1 of 2 branches missed.">            if (result.hasFailed()) {</span>
-<span class="nc" id="L154">                throw new EntandoControllerException(&quot;Database deployment failed&quot;);</span>
+<span class="fc bfc" id="L149" title="All 2 branches covered.">        if (externalDatabase == null) {</span>
+<span class="fc" id="L150">            DbmsImageVendor dbmsVendor = dbmsImageVendor.orElse(DbmsImageVendor.POSTGRESQL);</span>
+<span class="fc" id="L151">            final DatabaseDeployable databaseDeployable = new DatabaseDeployable(dbmsVendor, entandoCustomResource, nameQualifier);</span>
+<span class="fc" id="L152">            final DeployCommand&lt;DatabaseServiceResult&gt; dbCommand = new DeployCommand&lt;&gt;(databaseDeployable);</span>
+<span class="fc" id="L153">            result = dbCommand.execute(k8sClient, empty());</span>
+<span class="pc bpc" id="L154" title="1 of 2 branches missed.">            if (result.hasFailed()) {</span>
+<span class="nc" id="L155">                throw new EntandoControllerException(&quot;Database deployment failed&quot;);</span>
             }
-<span class="fc" id="L156">        } else {</span>
-<span class="fc" id="L157">            EntandoDatabaseServiceSpec spec = externalDatabase.getEntandoDatabaseService().getSpec();</span>
-<span class="fc" id="L158">            result = new DatabaseServiceResult(externalDatabase.getService(), spec.getDbms(), spec.getDatabaseName(),</span>
-<span class="fc" id="L159">                    spec.getSecretName(), empty());</span>
+<span class="fc" id="L157">        } else {</span>
+<span class="fc" id="L158">            EntandoDatabaseServiceSpec spec = externalDatabase.getEntandoDatabaseService().getSpec();</span>
+<span class="fc" id="L159">            result = new DatabaseServiceResult(externalDatabase.getService(), spec.getDbms(), spec.getDatabaseName(),</span>
+<span class="fc" id="L160">                    spec.getSecretName(), empty());</span>
         }
-<span class="fc" id="L161">        return result;</span>
+<span class="fc" id="L162">        return result;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
