@@ -9,53 +9,57 @@ import org.entando.kubernetes.controller.database.DatabaseSchemaCreationResult;
 
 public interface SpringBootDeployableContainer extends DbAware, KeycloakAware, IngressingContainer, TlsAware {
 
-    String SPRING_SECURITY_OAUTH_2_CLIENT_PROVIDER_OIDC_ISSUER_URI = &quot;SPRING_SECURITY_OAUTH2_CLIENT_PROVIDER_OIDC_ISSUER_URI&quot;;
-    String SPRING_SECURITY_OAUTH_2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET = &quot;SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET&quot;;
-    String SPRING_SECURITY_OAUTH_2_CLIENT_REGISTRATION_OIDC_CLIENT_ID = &quot;SPRING_SECURITY_OAUTH2_CLIENT_REGISTRATION_OIDC_CLIENT_ID&quot;;
-    String SPRING_DATASOURCE_USERNAME = &quot;SPRING_DATASOURCE_USERNAME&quot;;
-    String SPRING_DATASOURCE_PASSWORD = &quot;SPRING_DATASOURCE_PASSWORD&quot;;
-    String SPRING_DATASOURCE_URL = &quot;SPRING_DATASOURCE_URL&quot;;
-    String SPRING_JPA_DATABASE_PLATFORM = &quot;SPRING_JPA_DATABASE_PLATFORM&quot;;
-
     DatabaseSchemaCreationResult getDatabaseSchema();
 
     @Override
     default int getCpuLimitMillicores() {
-<span class="fc" id="L24">        return 1000;</span>
+<span class="fc" id="L16">        return 1000;</span>
     }
 
     @Override
     default int getMemoryLimitMebibytes() {
-<span class="fc" id="L29">        return 1024;</span>
+<span class="fc" id="L21">        return 1024;</span>
     }
 
     @Override
     default void addDatabaseConnectionVariables(List&lt;EnvVar&gt; vars) {
-<span class="fc" id="L34">        DatabaseSchemaCreationResult databaseSchema = getDatabaseSchema();</span>
-<span class="pc bpc" id="L35" title="1 of 2 branches missed.">        if (databaseSchema != null) {</span>
-<span class="fc" id="L36">            vars.add(new EnvVar(&quot;DB_VENDOR&quot;, databaseSchema.getVendor().getName(), null));</span>
-<span class="fc" id="L37">            vars.add(new EnvVar(SPRING_DATASOURCE_USERNAME, null, databaseSchema.getUsernameRef()));</span>
-<span class="fc" id="L38">            vars.add(new EnvVar(SPRING_DATASOURCE_PASSWORD, null, databaseSchema.getPasswordRef()));</span>
-<span class="fc" id="L39">            vars.add(new EnvVar(SPRING_DATASOURCE_URL, databaseSchema.getJdbcUrl(), null));</span>
-<span class="fc" id="L40">            vars.add(new EnvVar(SPRING_JPA_DATABASE_PLATFORM, databaseSchema.getVendor().getHibernateDialect(), null));</span>
+<span class="fc" id="L26">        DatabaseSchemaCreationResult databaseSchema = getDatabaseSchema();</span>
+<span class="pc bpc" id="L27" title="1 of 2 branches missed.">        if (databaseSchema != null) {</span>
+<span class="fc" id="L28">            vars.add(new EnvVar(&quot;DB_VENDOR&quot;, databaseSchema.getVendor().getName(), null));</span>
+<span class="fc" id="L29">            vars.add(new EnvVar(SpringProperty.SPRING_DATASOURCE_USERNAME.name(), null, databaseSchema.getUsernameRef()));</span>
+<span class="fc" id="L30">            vars.add(new EnvVar(SpringProperty.SPRING_DATASOURCE_PASSWORD.name(), null, databaseSchema.getPasswordRef()));</span>
+<span class="fc" id="L31">            vars.add(new EnvVar(SpringProperty.SPRING_DATASOURCE_URL.name(), databaseSchema.getJdbcUrl(), null));</span>
+<span class="fc" id="L32">            vars.add(</span>
+<span class="fc" id="L33">                    new EnvVar(SpringProperty.SPRING_JPA_DATABASE_PLATFORM.name(), databaseSchema.getVendor().getHibernateDialect(), null));</span>
             /*
             TODO: Set SPRING_JPA_PROPERTIES_HIBERNATE_ID_NEW_GENERATOR_MAPPINGS to 'false' if we ever run into issues with ID Generation
             */
-<span class="fc" id="L44">            databaseSchema.addAdditionalConfigFromDatabaseSecret(vars);</span>
+<span class="fc" id="L37">            databaseSchema.addAdditionalConfigFromDatabaseSecret(vars);</span>
         }
-<span class="fc" id="L46">    }</span>
+<span class="fc" id="L39">    }</span>
 
     @Override
     default void addKeycloakVariables(List&lt;EnvVar&gt; vars) {
-<span class="fc" id="L50">        KeycloakConnectionConfig keycloakDeployment = getKeycloakConnectionConfig();</span>
-<span class="fc" id="L51">        vars.add(new EnvVar(SPRING_SECURITY_OAUTH_2_CLIENT_PROVIDER_OIDC_ISSUER_URI, keycloakDeployment.getBaseUrl() + &quot;/realms/entando&quot;,</span>
+<span class="fc" id="L43">        KeycloakConnectionConfig keycloakDeployment = getKeycloakConnectionConfig();</span>
+<span class="fc" id="L44">        vars.add(new EnvVar(SpringProperty.SPRING_SECURITY_OAUTH_2_CLIENT_PROVIDER_OIDC_ISSUER_URI.name(),</span>
+<span class="fc" id="L45">                keycloakDeployment.getBaseUrl() + &quot;/realms/entando&quot;,</span>
                 null));
-<span class="fc" id="L53">        String keycloakSecretName = KeycloakClientCreator.keycloakClientSecret(getKeycloakClientConfig());</span>
-<span class="fc" id="L54">        vars.add(new EnvVar(SPRING_SECURITY_OAUTH_2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET, null,</span>
-<span class="fc" id="L55">                KubeUtils.secretKeyRef(keycloakSecretName, KeycloakClientCreator.CLIENT_SECRET_KEY)));</span>
-<span class="fc" id="L56">        vars.add(new EnvVar(SPRING_SECURITY_OAUTH_2_CLIENT_REGISTRATION_OIDC_CLIENT_ID, null,</span>
-<span class="fc" id="L57">                KubeUtils.secretKeyRef(keycloakSecretName, KeycloakClientCreator.CLIENT_ID_KEY)));</span>
-<span class="fc" id="L58">    }</span>
+<span class="fc" id="L47">        String keycloakSecretName = KeycloakClientCreator.keycloakClientSecret(getKeycloakClientConfig());</span>
+<span class="fc" id="L48">        vars.add(new EnvVar(SpringProperty.SPRING_SECURITY_OAUTH_2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET.name(), null,</span>
+<span class="fc" id="L49">                KubeUtils.secretKeyRef(keycloakSecretName, KeycloakClientCreator.CLIENT_SECRET_KEY)));</span>
+<span class="fc" id="L50">        vars.add(new EnvVar(SpringProperty.SPRING_SECURITY_OAUTH_2_CLIENT_REGISTRATION_OIDC_CLIENT_ID.name(), null,</span>
+<span class="fc" id="L51">                KubeUtils.secretKeyRef(keycloakSecretName, KeycloakClientCreator.CLIENT_ID_KEY)));</span>
+<span class="fc" id="L52">    }</span>
+
+<span class="fc" id="L54">    enum SpringProperty {</span>
+<span class="fc" id="L55">        SPRING_SECURITY_OAUTH_2_CLIENT_PROVIDER_OIDC_ISSUER_URI,</span>
+<span class="fc" id="L56">        SPRING_SECURITY_OAUTH_2_CLIENT_REGISTRATION_OIDC_CLIENT_SECRET,</span>
+<span class="fc" id="L57">        SPRING_SECURITY_OAUTH_2_CLIENT_REGISTRATION_OIDC_CLIENT_ID,</span>
+<span class="fc" id="L58">        SPRING_DATASOURCE_USERNAME,</span>
+<span class="fc" id="L59">        SPRING_DATASOURCE_PASSWORD,</span>
+<span class="fc" id="L60">        SPRING_DATASOURCE_URL,</span>
+<span class="fc" id="L61">        SPRING_JPA_DATABASE_PLATFORM;</span>
+    }
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
