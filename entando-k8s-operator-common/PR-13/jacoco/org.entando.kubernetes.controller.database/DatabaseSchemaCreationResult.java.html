@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DatabaseSchemaCreationResult.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando K8S Operator Common Library</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.controller.database</a> &gt; <span class="el_source">DatabaseSchemaCreationResult.java</span></div><h1>DatabaseSchemaCreationResult.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.controller.database;
+
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.EnvVarSource;
+import java.util.List;
+import org.entando.kubernetes.controller.AbstractServiceResult;
+import org.entando.kubernetes.controller.KubeUtils;
+import org.entando.kubernetes.model.ConfigVariable;
+import org.entando.kubernetes.model.DbmsImageVendor;
+
+public class DatabaseSchemaCreationResult extends AbstractServiceResult {
+
+    private final DatabaseServiceResult databaseServiceResult;
+    private final String schemaSecretName;
+    private final String schemaName;
+
+    public DatabaseSchemaCreationResult(DatabaseServiceResult databaseServiceResult, String schemaName, String schemaSecretName) {
+<span class="fc" id="L18">        super(databaseServiceResult.getService());</span>
+<span class="fc" id="L19">        this.databaseServiceResult = databaseServiceResult;</span>
+<span class="fc" id="L20">        this.schemaName = schemaName;</span>
+<span class="fc" id="L21">        this.schemaSecretName = schemaSecretName;</span>
+<span class="fc" id="L22">    }</span>
+
+    public String getSchemaSecretName() {
+<span class="fc" id="L25">        return schemaSecretName;</span>
+    }
+
+    public String getJdbcUrl() {
+<span class="fc" id="L29">        return getVendor().getConnectionStringBuilder().toHost(getInternalServiceHostname()).onPort(getPort())</span>
+<span class="fc" id="L30">                .usingDatabase(</span>
+<span class="fc" id="L31">                        getDatabase()).usingSchema(schemaName)</span>
+<span class="fc" id="L32">                .buildConnectionString();</span>
+    }
+
+    public DbmsImageVendor getVendor() {
+<span class="fc" id="L36">        return this.databaseServiceResult.getVendor();</span>
+    }
+
+    public String getDatabase() {
+<span class="fc bfc" id="L40" title="All 2 branches covered.">        if (getVendor().schemaIsDatabase()) {</span>
+<span class="fc" id="L41">            return getSchemaName();</span>
+        } else {
+<span class="fc" id="L43">            return this.databaseServiceResult.getDatabaseName();</span>
+        }
+    }
+
+    public void addAdditionalConfigFromDatabaseSecret(List&lt;EnvVar&gt; vars) {
+<span class="fc" id="L48">        getVendor().getAdditionalConfig().stream().forEach(cfg -&gt; vars.add(newSecretKeyRef(cfg)));</span>
+<span class="fc" id="L49">    }</span>
+
+    protected EnvVar newSecretKeyRef(ConfigVariable cfg) {
+        //Point the EnvVar to the externalDb's secret.
+<span class="fc" id="L53">        return new EnvVar(cfg.getEnvironmentVariable(), null,</span>
+<span class="fc" id="L54">                KubeUtils.secretKeyRef(this.databaseServiceResult.getDatabaseSecretName(), cfg.getConfigKey()));</span>
+    }
+
+    public String getSchemaName() {
+<span class="fc" id="L58">        return schemaName;</span>
+    }
+
+    public EnvVarSource getPasswordRef() {
+<span class="fc" id="L62">        return KubeUtils.secretKeyRef(getSchemaSecretName(), KubeUtils.PASSSWORD_KEY);</span>
+    }
+
+    public EnvVarSource getUsernameRef() {
+<span class="fc" id="L66">        return KubeUtils.secretKeyRef(getSchemaSecretName(), KubeUtils.USERNAME_KEY);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
