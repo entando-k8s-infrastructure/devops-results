@@ -18,6 +18,7 @@ import org.entando.kubernetes.controller.common.ControllerExecutor;
 import org.entando.kubernetes.controller.database.EntandoDatabaseServiceController;
 import org.entando.kubernetes.controller.k8sclient.SimpleK8SClient;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.EntandoDeploymentPhase;
 import org.entando.kubernetes.model.WebServerStatus;
 import org.entando.kubernetes.model.compositeapp.EntandoCompositeApp;
 import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
@@ -28,54 +29,56 @@ public class EntandoCompositeAppController extends AbstractDbAwareController&lt;
 
     @Inject
     public EntandoCompositeAppController(KubernetesClient kubernetesClient) {
-<span class="nc" id="L31">        this(kubernetesClient, true);</span>
-<span class="nc" id="L32">    }</span>
+<span class="nc" id="L32">        this(kubernetesClient, true);</span>
+<span class="nc" id="L33">    }</span>
 
     /**
      * This constructor is intended for in-process tests where we do not want the controller to exit automatically.
      */
     public EntandoCompositeAppController(KubernetesClient kubernetesClient, boolean exitAutomatically) {
-<span class="fc" id="L38">        super(kubernetesClient, exitAutomatically);</span>
-<span class="fc" id="L39">        this.namespace = kubernetesClient.getNamespace();</span>
-<span class="fc" id="L40">    }</span>
+<span class="fc" id="L39">        super(kubernetesClient, exitAutomatically);</span>
+<span class="fc" id="L40">        this.namespace = kubernetesClient.getNamespace();</span>
+<span class="fc" id="L41">    }</span>
 
     public SimpleK8SClient&lt;?&gt; getClient() {
-<span class="fc" id="L43">        return super.k8sClient;</span>
+<span class="fc" id="L44">        return super.k8sClient;</span>
     }
 
     public void onStartup(@Observes StartupEvent event) {
-<span class="fc" id="L47">        processCommand();</span>
-<span class="fc" id="L48">    }</span>
+<span class="fc" id="L48">        processCommand();</span>
+<span class="fc" id="L49">    }</span>
 
-    protected void processAddition(EntandoCompositeApp newCompositeApp) {
-<span class="fc" id="L51">        ControllerExecutor executor = new ControllerExecutor(namespace, k8sClient);</span>
-<span class="fc bfc" id="L52" title="All 2 branches covered.">        for (EntandoBaseCustomResource component : newCompositeApp.getSpec().getComponents()) {</span>
-<span class="fc bfc" id="L53" title="All 2 branches covered.">            if (component.getMetadata().getNamespace() == null) {</span>
-<span class="fc" id="L54">                component.getMetadata().setNamespace(newCompositeApp.getMetadata().getNamespace());</span>
+    @Override
+    protected void synchronizeDeploymentState(EntandoCompositeApp newCompositeApp) {
+<span class="fc" id="L53">        ControllerExecutor executor = new ControllerExecutor(namespace, k8sClient);</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">        for (EntandoBaseCustomResource component : newCompositeApp.getSpec().getComponents()) {</span>
+<span class="fc bfc" id="L55" title="All 2 branches covered.">            if (component.getMetadata().getNamespace() == null) {</span>
+<span class="fc" id="L56">                component.getMetadata().setNamespace(newCompositeApp.getMetadata().getNamespace());</span>
             }
-<span class="fc" id="L56">            component.getMetadata().setOwnerReferences(Collections.singletonList(KubeUtils.buildOwnerReference(newCompositeApp)));</span>
-<span class="fc" id="L57">            EntandoBaseCustomResource storedComponent = k8sClient.entandoResources().putEntandoCustomResource(component);</span>
-<span class="fc bfc" id="L58" title="All 2 branches covered.">            if (storedComponent instanceof EntandoDatabaseService) {</span>
-<span class="fc" id="L59">                new EntandoDatabaseServiceController(k8sClient).processEvent(Action.ADDED, (EntandoDatabaseService) storedComponent);</span>
+<span class="fc" id="L58">            component.getMetadata().setOwnerReferences(Collections.singletonList(KubeUtils.buildOwnerReference(newCompositeApp)));</span>
+<span class="fc" id="L59">            component.getStatus().setEntandoDeploymentPhase(EntandoDeploymentPhase.REQUESTED);</span>
+<span class="fc" id="L60">            EntandoBaseCustomResource storedComponent = k8sClient.entandoResources().createOrPatchEntandoResource(component);</span>
+<span class="fc bfc" id="L61" title="All 2 branches covered.">            if (storedComponent instanceof EntandoDatabaseService) {</span>
+<span class="fc" id="L62">                new EntandoDatabaseServiceController(k8sClient).processEvent(Action.ADDED, (EntandoDatabaseService) storedComponent);</span>
             } else {
-<span class="fc" id="L61">                Pod pod = executor.runControllerFor(</span>
+<span class="fc" id="L64">                Pod pod = executor.runControllerFor(</span>
                         Action.ADDED,
                         storedComponent,
-<span class="fc" id="L64">                        executor.resolveLatestImageFor(storedComponent.getClass()).orElseThrow(IllegalStateException::new)</span>
+<span class="fc" id="L67">                        executor.resolveLatestImageFor(storedComponent.getClass()).orElseThrow(IllegalStateException::new)</span>
                 );
-<span class="fc" id="L66">                WebServerStatus webServerStatus = new WebServerStatus(storedComponent.getMetadata().getName());</span>
-<span class="fc" id="L67">                webServerStatus.setPodStatus(pod.getStatus());</span>
-<span class="fc" id="L68">                getClient().entandoResources().updateStatus(newCompositeApp, webServerStatus);</span>
-<span class="fc bfc" id="L69" title="All 2 branches covered.">                if (PodResult.of(pod).hasFailed()) {</span>
-<span class="fc" id="L70">                    String message = format(&quot;Unexpected exception occurred while adding %s %s/%s&quot;, storedComponent.getKind(),</span>
-<span class="fc" id="L71">                            storedComponent.getMetadata().getNamespace(),</span>
-<span class="fc" id="L72">                            storedComponent.getMetadata().getName());</span>
-<span class="fc" id="L73">                    this.logger.log(Level.SEVERE, message);</span>
-<span class="fc" id="L74">                    throw new EntandoControllerException(message);</span>
+<span class="fc" id="L69">                WebServerStatus webServerStatus = new WebServerStatus(storedComponent.getMetadata().getName());</span>
+<span class="fc" id="L70">                webServerStatus.setPodStatus(pod.getStatus());</span>
+<span class="fc" id="L71">                getClient().entandoResources().updateStatus(newCompositeApp, webServerStatus);</span>
+<span class="fc bfc" id="L72" title="All 2 branches covered.">                if (PodResult.of(pod).hasFailed()) {</span>
+<span class="fc" id="L73">                    String message = format(&quot;Unexpected exception occurred while adding %s %s/%s&quot;, storedComponent.getKind(),</span>
+<span class="fc" id="L74">                            storedComponent.getMetadata().getNamespace(),</span>
+<span class="fc" id="L75">                            storedComponent.getMetadata().getName());</span>
+<span class="fc" id="L76">                    this.logger.log(Level.SEVERE, message);</span>
+<span class="fc" id="L77">                    throw new EntandoControllerException(message);</span>
                 }
             }
-<span class="fc" id="L77">        }</span>
-<span class="fc" id="L78">    }</span>
+<span class="fc" id="L80">        }</span>
+<span class="fc" id="L81">    }</span>
 }
 
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
