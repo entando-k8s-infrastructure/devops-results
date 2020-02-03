@@ -4,6 +4,7 @@ import io.fabric8.kubernetes.api.model.apps.Deployment;
 import io.fabric8.kubernetes.api.model.apps.DoneableDeployment;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.RollableScalableResource;
+import java.util.Optional;
 import org.entando.kubernetes.controller.k8sclient.DeploymentClient;
 import org.entando.kubernetes.model.EntandoCustomResource;
 
@@ -11,27 +12,27 @@ public class DefaultDeploymentClient implements DeploymentClient {
 
     private final KubernetesClient client;
 
-<span class="fc" id="L14">    public DefaultDeploymentClient(KubernetesClient client) {</span>
-<span class="fc" id="L15">        this.client = client;</span>
-<span class="fc" id="L16">    }</span>
+<span class="fc" id="L15">    public DefaultDeploymentClient(KubernetesClient client) {</span>
+<span class="fc" id="L16">        this.client = client;</span>
+<span class="fc" id="L17">    }</span>
 
     @Override
     public Deployment createOrPatchDeployment(EntandoCustomResource peerInNamespace, Deployment deployment) {
-<span class="fc" id="L20">        RollableScalableResource&lt;Deployment, DoneableDeployment&gt; resource = client.apps()</span>
-<span class="fc" id="L21">                .deployments().inNamespace(peerInNamespace.getMetadata().getNamespace()).withName(deployment.getMetadata().getName());</span>
-<span class="pc bpc" id="L22" title="1 of 2 branches missed.">        if (resource.get() == null) {</span>
-<span class="fc" id="L23">            return client.apps().deployments().inNamespace(peerInNamespace.getMetadata().getNamespace()).create(deployment);</span>
+<span class="fc" id="L21">        RollableScalableResource&lt;Deployment, DoneableDeployment&gt; resource = client.apps()</span>
+<span class="fc" id="L22">                .deployments().inNamespace(peerInNamespace.getMetadata().getNamespace()).withName(deployment.getMetadata().getName());</span>
+<span class="pc bpc" id="L23" title="1 of 2 branches missed.">        if (resource.get() == null) {</span>
+<span class="fc" id="L24">            return client.apps().deployments().inNamespace(peerInNamespace.getMetadata().getNamespace()).create(deployment);</span>
         } else {
-<span class="nc" id="L25">            resource.scale(0, true);</span>
-<span class="nc" id="L26">            resource.patch(deployment);</span>
-<span class="nc" id="L27">            return resource.scale(deployment.getSpec().getReplicas(), true);</span>
+<span class="nc" id="L26">            resource.scale(0, true);</span>
+<span class="nc" id="L27">            resource.patch(deployment);</span>
+<span class="nc" id="L28">            return resource.scale(Optional.ofNullable(deployment.getSpec().getReplicas()).orElse(1), true);</span>
         }
     }
 
     @Override
     public Deployment loadDeployment(EntandoCustomResource peerInNamespace, String name) {
-<span class="fc" id="L33">        return client.apps().deployments().inNamespace(peerInNamespace.getMetadata().getNamespace()).withName(name)</span>
-<span class="fc" id="L34">                .get();</span>
+<span class="fc" id="L34">        return client.apps().deployments().inNamespace(peerInNamespace.getMetadata().getNamespace()).withName(name)</span>
+<span class="fc" id="L35">                .get();</span>
     }
 
 }
