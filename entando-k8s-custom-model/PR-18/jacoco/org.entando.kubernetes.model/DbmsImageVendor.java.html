@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DbmsImageVendor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Kubernetes Custom Model</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.model</a> &gt; <span class="el_source">DbmsImageVendor.java</span></div><h1>DbmsImageVendor.java</h1><pre class="source lang-java linenums">/*
+ *
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ *  This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ */
+
+package org.entando.kubernetes.model;
+
+import static java.lang.String.format;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+import io.fabric8.zjsonpatch.internal.guava.Strings;
+import io.quarkus.runtime.annotations.RegisterForReflection;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Locale;
+
+/**
+ * Metadata related to Database vendors. Some of the metadata relates to the Docker images being used. Entando creates one database for each
+ * EntandoApp deployment and one for each EntandoPlugin deployment. For each datasource requirement inside the deployment, Entando will
+ * create a different schema/username/password combination. For maximum portability, we enforce the pattern of using the schema name as the
+ * username On deployment, Entando initializes the database image just enough to be able to create schemas against MySQL considers databases
+ * to be schemas (!) so we only initialize the Root user's password Oracle's images have been troublesome, and are not supported yet. For
+ * Oracle, rather use a pre-configured external database.
+ */
+<span class="fc" id="L38">@SuppressWarnings(&quot;squid:S2068&quot;)//Because the password gets resolved from and environment variable at runtime only</span>
+@RegisterForReflection
+public enum DbmsImageVendor {
+<span class="fc" id="L41">    MYSQL(&quot;docker.io/centos/mysql-57-centos7:latest&quot;, 3306, &quot;root&quot;, &quot;/var/lib/mysql/data&quot;,</span>
+            &quot;MYSQL_PWD=${MYSQL_ROOT_PASSWORD} mysql -h 127.0.0.1 -u root -e 'SELECT 1'&quot;,
+            &quot;org.hibernate.dialect.MySQL5InnoDBDialect&quot;) {
+        @Override
+        public JdbcConnectionStringBuilder getConnectionStringBuilder() {
+<span class="fc" id="L46">            return new JdbcConnectionStringBuilder() {</span>
+                @Override
+                public String buildConnectionString() {
+<span class="fc" id="L49">                    return format(&quot;jdbc:mysql://%s:%s/%s&quot;, getHost(), getPort(), getSchema());</span>
+                }
+            };
+        }
+
+        @Override
+        public boolean schemaIsDatabase() {
+<span class="nc" id="L56">            return true;</span>
+        }
+    },
+<span class="fc" id="L59">    POSTGRESQL(&quot;docker.io/centos/postgresql-96-centos7:latest&quot;, 5432, &quot;postgres&quot;, &quot;/var/lib/pgsql/data&quot;,</span>
+            &quot;psql -h 127.0.0.1 -U ${POSTGRESQL_USER} -q -d postgres -c '\\l'|grep ${POSTGRESQL_DATABASE}&quot;,
+            &quot;org.hibernate.dialect.PostgreSQLDialect&quot;) {
+        @Override
+        public JdbcConnectionStringBuilder getConnectionStringBuilder() {
+<span class="fc" id="L64">            return new JdbcConnectionStringBuilder() {</span>
+                @Override
+                public String buildConnectionString() {
+<span class="fc" id="L67">                    return format(&quot;jdbc:postgresql://%s:%s/%s&quot;, getHost(), getPort(), getDatabase());</span>
+                }
+            };
+        }
+
+    },
+<span class="fc" id="L73">    ORACLE(&quot;docker.io/store/oracle/database-enterprise:12.2.0.1&quot;, 1521, &quot;sys&quot;, &quot;/ORCL&quot;,</span>
+            &quot;sqlplus sys/Oradoc_db1:${DB_SID}&quot;, &quot;org.hibernate.dialect.Oracle10gDialect&quot;) {
+        @Override
+        public Collection&lt;ConfigVariable&gt; getAdditionalConfig() {
+<span class="fc" id="L77">            return Arrays.asList(</span>
+                    new ConfigVariable(&quot;oracleMavenRepo&quot;, &quot;ORACLE_MAVEN_REPO&quot;),
+                    new ConfigVariable(&quot;oracleRepoUser&quot;, &quot;ORACLE_REPO_USER&quot;),
+                    new ConfigVariable(&quot;oracleRepoPassword&quot;, &quot;ORACLE_REPO_PASSWORD&quot;),
+                    new ConfigVariable(&quot;oracleTablespace&quot;, &quot;TABLESPACE&quot;)
+            );
+        }
+
+        @Override
+        public JdbcConnectionStringBuilder getConnectionStringBuilder() {
+<span class="fc" id="L87">            return new JdbcConnectionStringBuilder() {</span>
+                @Override
+                public String buildConnectionString() {
+<span class="fc" id="L90">                    return format(&quot;jdbc:oracle:thin:@//%s:%s/%s&quot;, getHost(), getPort(), getDatabase());</span>
+                }
+            };
+        }
+
+    },
+
+<span class="fc" id="L97">    NONE(&quot;&quot;, 0, &quot;&quot;, &quot;&quot;, &quot;&quot;, &quot;&quot;) {</span>
+        @Override
+        public JdbcConnectionStringBuilder getConnectionStringBuilder() {
+<span class="nc" id="L100">            return new JdbcConnectionStringBuilder() {</span>
+                @Override
+                public String buildConnectionString() {
+<span class="nc" id="L103">                    return null;</span>
+                }
+            };
+        }
+    };
+
+    private String imageName;
+    private int port;
+    private String defaultAdminUsername;
+    private String volumeMountPath;
+    private String healthCheck;
+    private String hibernateDialect;
+
+    DbmsImageVendor(String imageName, int port, String defaultAdminUsername, String volumeMountPath,
+            String healthCheck,
+<span class="fc" id="L118">            String hibernateDialect) {</span>
+<span class="fc" id="L119">        this.imageName = imageName;</span>
+<span class="fc" id="L120">        this.port = port;</span>
+<span class="fc" id="L121">        this.defaultAdminUsername = defaultAdminUsername;</span>
+<span class="fc" id="L122">        this.volumeMountPath = volumeMountPath;</span>
+<span class="fc" id="L123">        this.healthCheck = healthCheck;</span>
+<span class="fc" id="L124">        this.hibernateDialect = hibernateDialect;</span>
+<span class="fc" id="L125">    }</span>
+
+    @JsonCreator
+    public static DbmsImageVendor forValue(String value) {
+<span class="pc bpc" id="L129" title="1 of 2 branches missed.">        if (Strings.isNullOrEmpty(value)) {</span>
+<span class="nc" id="L130">            return null;</span>
+        }
+<span class="fc" id="L132">        return DbmsImageVendor.valueOf(value.toUpperCase(Locale.getDefault()));</span>
+    }
+
+    public abstract JdbcConnectionStringBuilder getConnectionStringBuilder();
+
+    public String getHealthCheck() {
+<span class="nc" id="L138">        return healthCheck;</span>
+    }
+
+    public String getImageName() {
+<span class="nc" id="L142">        return imageName;</span>
+    }
+
+    public int getPort() {
+<span class="nc" id="L146">        return port;</span>
+    }
+
+    public String getVolumeMountPath() {
+<span class="nc" id="L150">        return volumeMountPath;</span>
+    }
+
+    @JsonValue
+    public String toValue() {
+<span class="fc" id="L155">        return name().toLowerCase(Locale.getDefault());</span>
+    }
+
+    public String getName() {
+<span class="nc" id="L159">        return name().toLowerCase(Locale.getDefault());</span>
+    }
+
+    //TODO localize this elsewhere
+
+    /**
+     * Additional configuration parameters extracted from secrets provided for databases by customers.
+     */
+    public Collection&lt;ConfigVariable&gt; getAdditionalConfig() {
+<span class="nc" id="L168">        return Collections.emptyList();</span>
+    }
+
+    public boolean schemaIsDatabase() {
+<span class="nc" id="L172">        return false;</span>
+    }
+
+    public String getDefaultAdminUsername() {
+<span class="nc" id="L176">        return defaultAdminUsername;</span>
+    }
+
+    public String getHibernateDialect() {
+<span class="nc" id="L180">        return hibernateDialect;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
