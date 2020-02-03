@@ -14,6 +14,7 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.commons.io.IOUtils;
 import org.entando.kubernetes.controller.KubeUtils;
+import org.entando.kubernetes.controller.ServiceDeploymentResult;
 import org.entando.kubernetes.controller.database.DatabaseServiceResult;
 import org.entando.kubernetes.controller.spi.DbAwareDeployable;
 import org.entando.kubernetes.controller.spi.DeployableContainer;
@@ -23,7 +24,7 @@ import org.entando.kubernetes.model.DbmsImageVendor;
 import org.entando.kubernetes.model.EntandoCustomResource;
 import org.entando.kubernetes.model.keycloakserver.EntandoKeycloakServer;
 
-public class KeycloakDeployable implements IngressingDeployable&lt;KeycloakDeploymentResult&gt;, DbAwareDeployable, Secretive {
+public class KeycloakDeployable implements IngressingDeployable&lt;ServiceDeploymentResult&gt;, DbAwareDeployable, Secretive {
 
     private final EntandoKeycloakServer keycloakServer;
     private final List&lt;DeployableContainer&gt; containers;
@@ -32,74 +33,73 @@ public class KeycloakDeployable implements IngressingDeployable&lt;KeycloakDeplo
     private final Secret realmBase;
 
     public KeycloakDeployable(EntandoKeycloakServer keycloakServer,
-<span class="fc" id="L35">            DatabaseServiceResult databaseServiceResult) {</span>
-<span class="fc" id="L36">        this.keycloakServer = keycloakServer;</span>
-<span class="fc" id="L37">        this.databaseServiceResult = databaseServiceResult;</span>
-<span class="fc" id="L38">        containers = Arrays.asList(new KeycloakDeployableContainer(keycloakServer));</span>
-<span class="fc" id="L39">        keycloakAdminSecret = generateSecret(this.keycloakServer, KeycloakDeployableContainer.secretName(this.keycloakServer),</span>
+<span class="fc" id="L36">            DatabaseServiceResult databaseServiceResult) {</span>
+<span class="fc" id="L37">        this.keycloakServer = keycloakServer;</span>
+<span class="fc" id="L38">        this.databaseServiceResult = databaseServiceResult;</span>
+<span class="fc" id="L39">        containers = Arrays.asList(new KeycloakDeployableContainer(keycloakServer));</span>
+<span class="fc" id="L40">        keycloakAdminSecret = generateSecret(this.keycloakServer, KeycloakDeployableContainer.secretName(this.keycloakServer),</span>
                 &quot;entando_keycloak_admin&quot;);
-<span class="fc" id="L41">        realmBase = buildRealmJson();</span>
-<span class="fc" id="L42">    }</span>
+<span class="fc" id="L42">        realmBase = buildRealmJson();</span>
+<span class="fc" id="L43">    }</span>
 
     private Secret buildRealmJson() {
         try {
-<span class="fc" id="L46">            return new SecretBuilder().withNewMetadata().withName(this.keycloakServer.getMetadata().getName() + &quot;-realm&quot;).endMetadata()</span>
-<span class="fc" id="L47">                    .addToStringData(&quot;realm.json&quot;, IOUtils.resourceToString(&quot;/realm-base.json&quot;, StandardCharsets.UTF_8))</span>
-<span class="fc" id="L48">                    .build();</span>
-<span class="nc" id="L49">        } catch (IOException e) {</span>
-<span class="nc" id="L50">            throw new IllegalStateException(e);</span>
+<span class="fc" id="L47">            return new SecretBuilder().withNewMetadata().withName(this.keycloakServer.getMetadata().getName() + &quot;-realm&quot;).endMetadata()</span>
+<span class="fc" id="L48">                    .addToStringData(&quot;realm.json&quot;, IOUtils.resourceToString(&quot;/realm-base.json&quot;, StandardCharsets.UTF_8))</span>
+<span class="fc" id="L49">                    .build();</span>
+<span class="nc" id="L50">        } catch (IOException e) {</span>
+<span class="nc" id="L51">            throw new IllegalStateException(e);</span>
         }
     }
 
     @Override
     public boolean hasContainersExpectingSchemas() {
-<span class="fc bfc" id="L56" title="All 2 branches covered.">        return keycloakServer.getSpec().getDbms().map(v -&gt; v != DbmsImageVendor.NONE).orElse(false);</span>
+<span class="fc bfc" id="L57" title="All 2 branches covered.">        return keycloakServer.getSpec().getDbms().map(v -&gt; v != DbmsImageVendor.NONE).orElse(false);</span>
     }
 
     @Override
     public List&lt;DeployableContainer&gt; getContainers() {
-<span class="fc" id="L61">        return containers;</span>
+<span class="fc" id="L62">        return containers;</span>
     }
 
     @Override
     public DatabaseServiceResult getDatabaseServiceResult() {
-<span class="fc" id="L66">        return databaseServiceResult;</span>
+<span class="fc" id="L67">        return databaseServiceResult;</span>
     }
 
     @Override
     public String getNameQualifier() {
-<span class="fc" id="L71">        return KubeUtils.DEFAULT_SERVER_QUALIFIER;</span>
+<span class="fc" id="L72">        return KubeUtils.DEFAULT_SERVER_QUALIFIER;</span>
     }
 
     @Override
     public EntandoCustomResource getCustomResource() {
-<span class="fc" id="L76">        return keycloakServer;</span>
+<span class="fc" id="L77">        return keycloakServer;</span>
     }
 
     @Override
-    public KeycloakDeploymentResult createResult(Deployment deployment, Service service, Ingress ingress, Pod pod) {
-<span class="fc" id="L81">        return new KeycloakDeploymentResult(service, ingress, keycloakAdminSecret);</span>
+    public ServiceDeploymentResult createResult(Deployment deployment, Service service, Ingress ingress, Pod pod) {
+<span class="fc" id="L82">        return new ServiceDeploymentResult(service, ingress);</span>
     }
 
     @Override
     public int getReplicas() {
-<span class="fc" id="L86">        return keycloakServer.getSpec().getReplicas().orElse(1);</span>
+<span class="fc" id="L87">        return keycloakServer.getSpec().getReplicas().orElse(1);</span>
     }
 
     @Override
     public String getIngressName() {
-<span class="fc" id="L91">        return KubeUtils.standardIngressName(keycloakServer);</span>
+<span class="fc" id="L92">        return KubeUtils.standardIngressName(keycloakServer);</span>
     }
 
     @Override
     public String getIngressNamespace() {
-<span class="fc" id="L96">        return keycloakServer.getMetadata().getNamespace();</span>
+<span class="fc" id="L97">        return keycloakServer.getMetadata().getNamespace();</span>
     }
 
     @Override
     public List&lt;Secret&gt; buildSecrets() {
-<span class="fc" id="L101">        return Arrays.asList(keycloakAdminSecret, realmBase);</span>
+<span class="fc" id="L102">        return Arrays.asList(keycloakAdminSecret, realmBase);</span>
     }
-
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
