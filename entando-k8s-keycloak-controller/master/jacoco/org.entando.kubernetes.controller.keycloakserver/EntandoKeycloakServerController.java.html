@@ -49,10 +49,10 @@ public class EntandoKeycloakServerController extends AbstractDbAwareController&l
         // Create the Keycloak service using the provided database
 <span class="fc" id="L50">        KeycloakDeployable keycloakDeployable = new KeycloakDeployable(newEntandoKeycloakServer, databaseServiceResult);</span>
 <span class="fc" id="L51">        DeployCommand&lt;ServiceDeploymentResult&gt; keycloakCommand = new DeployCommand&lt;&gt;(keycloakDeployable);</span>
-<span class="fc" id="L52">        keycloakCommand.execute(k8sClient, Optional.of(keycloakClient));</span>
+<span class="fc" id="L52">        ServiceDeploymentResult serviceDeploymentResult = keycloakCommand.execute(k8sClient, Optional.of(keycloakClient));</span>
 <span class="pc bpc" id="L53" title="1 of 2 branches missed.">        if (keycloakCommand.getPod() != null) {</span>
 <span class="pc bpc" id="L54" title="1 of 2 branches missed.">            if (newEntandoKeycloakServer.getSpec().isDefault()) {</span>
-<span class="fc" id="L55">                copySecretToLocalNamespace(newEntandoKeycloakServer);</span>
+<span class="fc" id="L55">                copySecretToLocalNamespace(newEntandoKeycloakServer, serviceDeploymentResult);</span>
             }
 <span class="fc" id="L57">            ensureKeycloakRealm();</span>
         }
@@ -67,7 +67,7 @@ public class EntandoKeycloakServerController extends AbstractDbAwareController&l
 <span class="fc" id="L67">        keycloakClient.ensureRealm(KubeUtils.ENTANDO_KEYCLOAK_REALM);</span>
 <span class="fc" id="L68">    }</span>
 
-    private void copySecretToLocalNamespace(EntandoKeycloakServer keycloakSever) {
+    private void copySecretToLocalNamespace(EntandoKeycloakServer keycloakSever, ServiceDeploymentResult serviceDeploymentResult) {
 <span class="fc" id="L71">        Secret kcSecret = k8sClient.secrets().loadSecret(keycloakSever, KeycloakDeployableContainer.secretName(keycloakSever));</span>
 <span class="fc" id="L72">        KeycloakConnectionConfig keycloakConnectionConfig = new KeycloakConnectionSecret(kcSecret);</span>
 <span class="fc" id="L73">        k8sClient.secrets().overwriteControllerSecret(new SecretBuilder()</span>
@@ -76,7 +76,7 @@ public class EntandoKeycloakServerController extends AbstractDbAwareController&l
 <span class="fc" id="L76">                .endMetadata()</span>
 <span class="fc" id="L77">                .addToStringData(KubeUtils.USERNAME_KEY, keycloakConnectionConfig.getUsername())</span>
 <span class="fc" id="L78">                .addToStringData(KubeUtils.PASSSWORD_KEY, keycloakConnectionConfig.getPassword())</span>
-<span class="fc" id="L79">                .addToStringData(KubeUtils.URL_KEY, keycloakConnectionConfig.getBaseUrl())</span>
+<span class="fc" id="L79">                .addToStringData(KubeUtils.URL_KEY, serviceDeploymentResult.getExternalBaseUrl())</span>
 <span class="fc" id="L80">                .build());</span>
 <span class="fc" id="L81">    }</span>
 }
