@@ -118,46 +118,49 @@ public class EntandoCustomResourceResolver&lt;R extends EntandoCustomResource, L
 <span class="fc" id="L118">            return crd;</span>
 <span class="nc" id="L119">        } catch (KubernetesClientException e) {</span>
 <span class="nc bnc" id="L120" title="All 2 branches missed.">            if (e.getCode() == HttpURLConnection.HTTP_FORBIDDEN) {</span>
-<span class="nc" id="L121">                LOGGER.severe(&quot;User does not have permissions to create CRD's. Loading from memory.&quot;);</span>
+<span class="nc" id="L121">                LOGGER.warning(</span>
+<span class="nc" id="L122">                        format(&quot;User does not have permissions to create CRD's. Assuming CRD's have already been deployed. Loading %s CRD&quot;</span>
+                                        + &quot; from classpath.&quot;,
+                                crdName));
                 //The code doesn't have RBAC permission to read the CRD. Let's assume it has already been deployed
-<span class="nc" id="L123">                List&lt;HasMetadata&gt; list = client.load(loadYamlFile()).get();</span>
-<span class="nc" id="L124">                return (CustomResourceDefinition) list.get(0);</span>
+<span class="nc" id="L126">                List&lt;HasMetadata&gt; list = client.load(loadYamlFile()).get();</span>
+<span class="nc" id="L127">                return (CustomResourceDefinition) list.get(0);</span>
             } else {
-<span class="nc" id="L126">                LOGGER.log(Level.SEVERE, &quot;Error&quot;, e);</span>
-<span class="nc" id="L127">                throw e;</span>
+<span class="nc" id="L129">                LOGGER.log(Level.SEVERE, &quot;Error&quot;, e);</span>
+<span class="nc" id="L130">                throw e;</span>
             }
-<span class="nc" id="L129">        } catch (RuntimeException e) {</span>
-<span class="nc" id="L130">            throw e;</span>
+<span class="nc" id="L132">        } catch (RuntimeException e) {</span>
+<span class="nc" id="L133">            throw e;</span>
         }
     }
 
     private InputStream loadYamlFile() {
-<span class="fc" id="L135">        InputStream resourceAsStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(yamlFile);</span>
-<span class="pc bpc" id="L136" title="1 of 2 branches missed.">        if (resourceAsStream == null) {</span>
-<span class="nc" id="L137">            LOGGER.severe(() -&gt; format(&quot;Could not load yaml file: %s&quot;, yamlFile));</span>
-<span class="nc" id="L138">            throw new IllegalStateException(&quot;Could not load yaml file: &quot; + yamlFile);</span>
+<span class="fc" id="L138">        InputStream resourceAsStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(yamlFile);</span>
+<span class="pc bpc" id="L139" title="1 of 2 branches missed.">        if (resourceAsStream == null) {</span>
+<span class="nc" id="L140">            LOGGER.severe(() -&gt; format(&quot;Could not load yaml file: %s&quot;, yamlFile));</span>
+<span class="nc" id="L141">            throw new IllegalStateException(&quot;Could not load yaml file: &quot; + yamlFile);</span>
         }
-<span class="fc" id="L140">        return resourceAsStream;</span>
+<span class="fc" id="L143">        return resourceAsStream;</span>
     }
 
     private boolean notAvailable(CustomResourceOperationsImpl&lt;R, L, D&gt; oper, KubernetesClient client) {
         //Sometimes it takes a couple of seconds after registration for the resource to become available.
         try {
-<span class="fc" id="L146">            String namespaceToUse = client.getNamespace();</span>
-<span class="pc bpc" id="L147" title="1 of 4 branches missed.">            if (isBlank(namespaceToUse) || client.namespaces().withName(namespaceToUse).get() == null) {</span>
+<span class="fc" id="L149">            String namespaceToUse = client.getNamespace();</span>
+<span class="pc bpc" id="L150" title="1 of 4 branches missed.">            if (isBlank(namespaceToUse) || client.namespaces().withName(namespaceToUse).get() == null) {</span>
                 //Only needed to wait until the resource is available in tests. We can assume the test user has access to the default
                 // namespace
-<span class="fc" id="L150">                namespaceToUse = &quot;default&quot;;</span>
+<span class="fc" id="L153">                namespaceToUse = &quot;default&quot;;</span>
             }
-<span class="fc" id="L152">            oper.inNamespace(namespaceToUse).list();</span>
-<span class="fc" id="L153">            return false;</span>
-<span class="nc" id="L154">        } catch (KubernetesClientException e) {</span>
-<span class="nc bnc" id="L155" title="All 2 branches missed.">            return e.getCode() == HttpURLConnection.HTTP_NOT_FOUND;</span>
+<span class="fc" id="L155">            oper.inNamespace(namespaceToUse).list();</span>
+<span class="fc" id="L156">            return false;</span>
+<span class="nc" id="L157">        } catch (KubernetesClientException e) {</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">            return e.getCode() == HttpURLConnection.HTTP_NOT_FOUND;</span>
         }
     }
 
     private boolean isBlank(String namespaceToUse) {
-<span class="pc bpc" id="L160" title="2 of 4 branches missed.">        return namespaceToUse == null || namespaceToUse.isEmpty();</span>
+<span class="pc bpc" id="L163" title="2 of 4 branches missed.">        return namespaceToUse == null || namespaceToUse.isEmpty();</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

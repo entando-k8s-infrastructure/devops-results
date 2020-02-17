@@ -17,6 +17,7 @@
 package org.entando.kubernetes.model;
 
 import static java.util.Optional.ofNullable;
+import static org.entando.kubernetes.model.Coalescence.coalesce;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
@@ -25,7 +26,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import io.quarkus.runtime.annotations.RegisterForReflection;
 import java.io.Serializable;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 
 @JsonInclude(Include.NON_NULL)
 @JsonAutoDetect(fieldVisibility = Visibility.ANY, isGetterVisibility = Visibility.NONE, getterVisibility = Visibility.NONE,
@@ -34,37 +37,46 @@ import java.util.Optional;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public abstract class EntandoDeploymentSpec implements HasIngress, Serializable {
 
-<span class="fc" id="L37">    private Integer replicas = 1;</span>
+<span class="fc" id="L40">    private Integer replicas = 1;</span>
     private DbmsImageVendor dbms;
     private String ingressHostName;
     private String tlsSecretName;
+<span class="fc" id="L44">    private Map&lt;String, String&gt; parameters = new ConcurrentHashMap&lt;&gt;();</span>
 
-<span class="fc" id="L42">    protected EntandoDeploymentSpec() {</span>
-<span class="fc" id="L43">    }</span>
+<span class="fc" id="L46">    protected EntandoDeploymentSpec() {</span>
+<span class="fc" id="L47">    }</span>
 
-<span class="fc" id="L45">    protected EntandoDeploymentSpec(String ingressHostName, String tlsSecretName, Integer replicas, DbmsImageVendor dbms) {</span>
-<span class="fc" id="L46">        this.ingressHostName = ingressHostName;</span>
-<span class="fc" id="L47">        this.tlsSecretName = tlsSecretName;</span>
-<span class="fc" id="L48">        this.replicas = replicas;</span>
-<span class="fc" id="L49">        this.dbms = dbms;</span>
-<span class="fc" id="L50">    }</span>
+    @SuppressWarnings(&quot;unchecked&quot;)
+    protected EntandoDeploymentSpec(String ingressHostName, String tlsSecretName, Integer replicas, DbmsImageVendor dbms,
+<span class="fc" id="L51">            Map&lt;String, String&gt; parameters) {</span>
+<span class="fc" id="L52">        this.ingressHostName = ingressHostName;</span>
+<span class="fc" id="L53">        this.tlsSecretName = tlsSecretName;</span>
+<span class="fc" id="L54">        this.replicas = replicas;</span>
+<span class="fc" id="L55">        this.dbms = dbms;</span>
+<span class="fc" id="L56">        this.parameters = coalesce(parameters, this.parameters);</span>
+<span class="fc" id="L57">    }</span>
 
     @Override
     public Optional&lt;String&gt; getIngressHostName() {
-<span class="fc" id="L54">        return Optional.ofNullable(ingressHostName);</span>
+<span class="fc" id="L61">        return Optional.ofNullable(ingressHostName);</span>
     }
 
     @Override
     public Optional&lt;String&gt; getTlsSecretName() {
-<span class="fc" id="L59">        return Optional.ofNullable(tlsSecretName);</span>
+<span class="fc" id="L66">        return Optional.ofNullable(tlsSecretName);</span>
     }
 
     public Optional&lt;Integer&gt; getReplicas() {
-<span class="fc" id="L63">        return ofNullable(replicas);</span>
+<span class="fc" id="L70">        return ofNullable(replicas);</span>
     }
 
     public Optional&lt;DbmsImageVendor&gt; getDbms() {
-<span class="fc" id="L67">        return ofNullable(dbms);</span>
+<span class="fc" id="L74">        return ofNullable(dbms);</span>
     }
+
+    public Map&lt;String, String&gt; getParameters() {
+<span class="fc" id="L78">        return parameters;</span>
+    }
+
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
