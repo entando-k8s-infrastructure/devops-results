@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DbmsVendorStrategy.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando K8S Operator Common Library</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.controller.database</a> &gt; <span class="el_source">DbmsVendorStrategy.java</span></div><h1>DbmsVendorStrategy.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.controller.database;
+
+import java.util.Locale;
+import org.entando.kubernetes.model.DbmsVendor;
+
+<span class="fc" id="L6">public enum DbmsVendorStrategy {</span>
+<span class="fc" id="L7">    MYSQL(&quot;docker.io/centos/mysql-57-centos7:latest&quot;, 3306, &quot;root&quot;, &quot;/var/lib/mysql/data&quot;,</span>
+            &quot;MYSQL_PWD=${MYSQL_ROOT_PASSWORD} mysql -h 127.0.0.1 -u root -e 'SELECT 1'&quot;, &quot;org.hibernate.dialect.MySQL5InnoDBDialect&quot;) {
+        public JdbcConnectionStringBuilder getConnectionStringBuilder() {
+<span class="nc" id="L10">            return new JdbcConnectionStringBuilder() {</span>
+                public String buildConnectionString() {
+<span class="nc" id="L12">                    return String.format(&quot;jdbc:mysql://%s:%s/%s&quot;, this.getHost(), this.getPort(), this.getSchema());</span>
+                }
+            };
+        }
+
+        public boolean schemaIsDatabase() {
+<span class="fc" id="L18">            return true;</span>
+        }
+    },
+<span class="fc" id="L21">    POSTGRESQL(&quot;docker.io/centos/postgresql-96-centos7:latest&quot;, 5432, &quot;postgres&quot;, &quot;/var/lib/pgsql/data&quot;,</span>
+            &quot;psql -h 127.0.0.1 -U ${POSTGRESQL_USER} -q -d postgres -c '\\l'|grep ${POSTGRESQL_DATABASE}&quot;,
+            &quot;org.hibernate.dialect.PostgreSQLDialect&quot;) {
+        public JdbcConnectionStringBuilder getConnectionStringBuilder() {
+<span class="fc" id="L25">            return new JdbcConnectionStringBuilder() {</span>
+                public String buildConnectionString() {
+<span class="fc" id="L27">                    return String.format(&quot;jdbc:postgresql://%s:%s/%s&quot;, this.getHost(), this.getPort(), this.getDatabase());</span>
+                }
+            };
+        }
+    },
+<span class="fc" id="L32">    ORACLE(&quot;docker.io/store/oracle/database-enterprise:12.2.0.1&quot;, 1521, &quot;sys&quot;, &quot;/ORCL&quot;, &quot;sqlplus sys/Oradoc_db1:${DB_SID}&quot;,</span>
+            &quot;org.hibernate.dialect.Oracle10gDialect&quot;) {
+        public JdbcConnectionStringBuilder getConnectionStringBuilder() {
+<span class="nc" id="L35">            return new JdbcConnectionStringBuilder() {</span>
+                public String buildConnectionString() {
+<span class="nc" id="L37">                    return String.format(&quot;jdbc:oracle:thin:@//%s:%s/%s&quot;, this.getHost(), this.getPort(), this.getDatabase());</span>
+                }
+            };
+        }
+    };
+    public static final String DATABASE_IDENTIFIER_TYPE = &quot;databaseIdentifierType&quot;;
+    public static final String TABLESPACE_PARAMETER_NAME = &quot;tablespace&quot;;
+    private String imageName;
+    private int port;
+    private String defaultAdminUsername;
+    private String volumeMountPath;
+    private String healthCheck;
+    private String hibernateDialect;
+
+    private DbmsVendorStrategy(String imageName, int port, String defaultAdminUsername, String volumeMountPath, String healthCheck,
+<span class="fc" id="L52">            String hibernateDialect) {</span>
+<span class="fc" id="L53">        this.imageName = imageName;</span>
+<span class="fc" id="L54">        this.port = port;</span>
+<span class="fc" id="L55">        this.defaultAdminUsername = defaultAdminUsername;</span>
+<span class="fc" id="L56">        this.volumeMountPath = volumeMountPath;</span>
+<span class="fc" id="L57">        this.healthCheck = healthCheck;</span>
+<span class="fc" id="L58">        this.hibernateDialect = hibernateDialect;</span>
+<span class="fc" id="L59">    }</span>
+
+    public abstract JdbcConnectionStringBuilder getConnectionStringBuilder();
+
+    public String getHealthCheck() {
+<span class="fc" id="L64">        return this.healthCheck;</span>
+    }
+
+    public String getImageName() {
+<span class="fc" id="L68">        return this.imageName;</span>
+    }
+
+    public int getPort() {
+<span class="fc" id="L72">        return this.port;</span>
+    }
+
+    public String getVolumeMountPath() {
+<span class="fc" id="L76">        return this.volumeMountPath;</span>
+    }
+
+    public String toValue() {
+<span class="fc" id="L80">        return this.name().toLowerCase(Locale.getDefault());</span>
+    }
+
+    public String getName() {
+<span class="fc" id="L84">        return this.name().toLowerCase(Locale.getDefault());</span>
+    }
+
+    public boolean schemaIsDatabase() {
+<span class="fc" id="L88">        return false;</span>
+    }
+
+    public String getDefaultAdminUsername() {
+<span class="fc" id="L92">        return this.defaultAdminUsername;</span>
+    }
+
+    public String getHibernateDialect() {
+<span class="fc" id="L96">        return this.hibernateDialect;</span>
+    }
+
+    public static DbmsVendorStrategy forVendor(DbmsVendor vendor) {
+<span class="fc" id="L100">        return valueOf(vendor.name());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

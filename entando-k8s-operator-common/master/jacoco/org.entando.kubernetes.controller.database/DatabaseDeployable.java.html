@@ -19,77 +19,74 @@ import org.entando.kubernetes.controller.spi.HasHealthCommand;
 import org.entando.kubernetes.controller.spi.PersistentVolumeAware;
 import org.entando.kubernetes.controller.spi.Secretive;
 import org.entando.kubernetes.controller.spi.ServiceBackingContainer;
-import org.entando.kubernetes.model.DbmsImageVendor;
 import org.entando.kubernetes.model.EntandoCustomResource;
 
 public class DatabaseDeployable implements Deployable&lt;DatabaseServiceResult&gt;, Secretive {
 
-<span class="fc" id="L27">    private final Map&lt;DbmsImageVendor, VariableInitializer&gt; variableInitializers = new ConcurrentHashMap&lt;&gt;();</span>
-    private final DbmsImageVendor dbmsVendor;
+<span class="fc" id="L26">    private final Map&lt;DbmsVendorStrategy, VariableInitializer&gt; variableInitializers = new ConcurrentHashMap&lt;&gt;();</span>
+    private final DbmsVendorStrategy dbmsVendor;
     private final EntandoCustomResource customResource;
     private final List&lt;DeployableContainer&gt; containers;
     private final String nameQualifier;
 
-    public DatabaseDeployable(DbmsImageVendor dbmsVendor,
-<span class="fc" id="L34">            EntandoCustomResource customResource, String nameQualifier) {</span>
-<span class="fc" id="L35">        variableInitializers.put(DbmsImageVendor.MYSQL, vars -&gt;</span>
+<span class="fc" id="L32">    public DatabaseDeployable(DbmsVendorStrategy dbmsVendor, EntandoCustomResource customResource, String nameQualifier) {</span>
+<span class="fc" id="L33">        variableInitializers.put(DbmsVendorStrategy.MYSQL, vars -&gt;</span>
                 //No DB creation. Dbs are created during schema creation
-<span class="fc" id="L37">                vars.add(new EnvVar(&quot;MYSQL_ROOT_PASSWORD&quot;, null,</span>
-<span class="fc" id="L38">                        KubeUtils.secretKeyRef(getDatabaseAdminSecretName(), KubeUtils.PASSSWORD_KEY)))</span>
+<span class="fc" id="L35">                vars.add(new EnvVar(&quot;MYSQL_ROOT_PASSWORD&quot;, null,</span>
+<span class="fc" id="L36">                        KubeUtils.secretKeyRef(getDatabaseAdminSecretName(), KubeUtils.PASSSWORD_KEY)))</span>
         );
-<span class="fc" id="L40">        variableInitializers.put(DbmsImageVendor.POSTGRESQL, vars -&gt; {</span>
-<span class="fc" id="L41">            vars.add(new EnvVar(&quot;POSTGRESQL_DATABASE&quot;, getDatabaseName(), null));</span>
+<span class="fc" id="L38">        variableInitializers.put(DbmsVendorStrategy.POSTGRESQL, vars -&gt; {</span>
+<span class="fc" id="L39">            vars.add(new EnvVar(&quot;POSTGRESQL_DATABASE&quot;, getDatabaseName(), null));</span>
             // This username will not be used, as we will be creating schema/user pairs,
             // but without it the DB isn't created.
-<span class="fc" id="L44">            vars.add(new EnvVar(&quot;POSTGRESQL_USER&quot;, getDatabaseName() + &quot;_user&quot;, null));</span>
-<span class="fc" id="L45">            vars.add(new EnvVar(&quot;POSTGRESQL_PASSWORD&quot;, null,</span>
+<span class="fc" id="L42">            vars.add(new EnvVar(&quot;POSTGRESQL_USER&quot;, getDatabaseName() + &quot;_user&quot;, null));</span>
+<span class="fc" id="L43">            vars.add(new EnvVar(&quot;POSTGRESQL_PASSWORD&quot;, null,</span>
+<span class="fc" id="L44">                    KubeUtils.secretKeyRef(getDatabaseAdminSecretName(), KubeUtils.PASSSWORD_KEY)));</span>
+<span class="fc" id="L45">            vars.add(new EnvVar(&quot;POSTGRESQL_ADMIN_PASSWORD&quot;, null,</span>
 <span class="fc" id="L46">                    KubeUtils.secretKeyRef(getDatabaseAdminSecretName(), KubeUtils.PASSSWORD_KEY)));</span>
-<span class="fc" id="L47">            vars.add(new EnvVar(&quot;POSTGRESQL_ADMIN_PASSWORD&quot;, null,</span>
-<span class="fc" id="L48">                    KubeUtils.secretKeyRef(getDatabaseAdminSecretName(), KubeUtils.PASSSWORD_KEY)));</span>
 
-<span class="fc" id="L50">        });</span>
-<span class="fc" id="L51">        this.dbmsVendor = dbmsVendor;</span>
-<span class="fc" id="L52">        this.customResource = customResource;</span>
-<span class="fc" id="L53">        containers = Arrays.asList(new DatabaseContainer(this.variableInitializers, dbmsVendor, nameQualifier));</span>
-<span class="fc" id="L54">        this.nameQualifier = nameQualifier;</span>
-<span class="fc" id="L55">    }</span>
+<span class="fc" id="L48">        });</span>
+<span class="fc" id="L49">        this.dbmsVendor = dbmsVendor;</span>
+<span class="fc" id="L50">        this.customResource = customResource;</span>
+<span class="fc" id="L51">        containers = Arrays.asList(new DatabaseContainer(this.variableInitializers, dbmsVendor, nameQualifier));</span>
+<span class="fc" id="L52">        this.nameQualifier = nameQualifier;</span>
+<span class="fc" id="L53">    }</span>
 
     @Override
     public List&lt;DeployableContainer&gt; getContainers() {
-<span class="fc" id="L59">        return containers;</span>
+<span class="fc" id="L57">        return containers;</span>
     }
 
     @Override
     public String getNameQualifier() {
-<span class="fc" id="L64">        return nameQualifier;</span>
+<span class="fc" id="L62">        return nameQualifier;</span>
     }
 
     @Override
     public EntandoCustomResource getCustomResource() {
-<span class="fc" id="L69">        return customResource;</span>
+<span class="fc" id="L67">        return customResource;</span>
     }
 
     @Override
     public DatabaseServiceResult createResult(Deployment deployment, Service service, Ingress ingress, Pod pod) {
-<span class="fc" id="L74">        return new DatabaseServiceResult(service, dbmsVendor, getDatabaseName(), getDatabaseAdminSecretName(),</span>
-<span class="fc" id="L75">                ofNullable(pod));</span>
+<span class="fc" id="L72">        return new DatabaseServiceResult(service, dbmsVendor, getDatabaseName(), getDatabaseAdminSecretName(), pod);</span>
     }
 
     @Override
     public List&lt;Secret&gt; buildSecrets() {
-<span class="fc" id="L80">        Secret secret = KubeUtils.generateSecret(customResource, getDatabaseAdminSecretName(),</span>
-<span class="fc" id="L81">                dbmsVendor.getDefaultAdminUsername());</span>
-<span class="fc" id="L82">        return Arrays.asList(secret);</span>
+<span class="fc" id="L77">        Secret secret = KubeUtils.generateSecret(customResource, getDatabaseAdminSecretName(),</span>
+<span class="fc" id="L78">                dbmsVendor.getDefaultAdminUsername());</span>
+<span class="fc" id="L79">        return Arrays.asList(secret);</span>
     }
 
     private String getDatabaseAdminSecretName() {
-<span class="fc" id="L86">        return customResource.getMetadata().getName() + &quot;-&quot; + getNameQualifier()</span>
+<span class="fc" id="L83">        return customResource.getMetadata().getName() + &quot;-&quot; + getNameQualifier()</span>
                 + &quot;-admin-secret&quot;;
     }
 
     private String getDatabaseName() {
-<span class="fc" id="L91">        return KubeUtils</span>
-<span class="fc" id="L92">                .snakeCaseOf(customResource.getMetadata().getName() + &quot;_&quot; + getNameQualifier());</span>
+<span class="fc" id="L88">        return KubeUtils</span>
+<span class="fc" id="L89">                .snakeCaseOf(customResource.getMetadata().getName() + &quot;_&quot; + getNameQualifier());</span>
     }
 
     interface VariableInitializer {
@@ -99,49 +96,49 @@ public class DatabaseDeployable implements Deployable&lt;DatabaseServiceResult&g
 
     public static class DatabaseContainer implements ServiceBackingContainer, PersistentVolumeAware, HasHealthCommand {
 
-        private final Map&lt;DbmsImageVendor, VariableInitializer&gt; variableInitializers;
-        private final DbmsImageVendor dbmsVendor;
+        private final Map&lt;DbmsVendorStrategy, VariableInitializer&gt; variableInitializers;
+        private final DbmsVendorStrategy dbmsVendor;
         private final String nameQualifier;
 
-        public DatabaseContainer(Map&lt;DbmsImageVendor, VariableInitializer&gt; variableInitializers,
-                DbmsImageVendor dbmsVendor,
-<span class="fc" id="L108">                String nameQualifier) {</span>
-<span class="fc" id="L109">            this.variableInitializers = variableInitializers;</span>
-<span class="fc" id="L110">            this.dbmsVendor = dbmsVendor;</span>
-<span class="fc" id="L111">            this.nameQualifier = nameQualifier;</span>
-<span class="fc" id="L112">        }</span>
+        public DatabaseContainer(Map&lt;DbmsVendorStrategy, VariableInitializer&gt; variableInitializers,
+                DbmsVendorStrategy dbmsVendor,
+<span class="fc" id="L105">                String nameQualifier) {</span>
+<span class="fc" id="L106">            this.variableInitializers = variableInitializers;</span>
+<span class="fc" id="L107">            this.dbmsVendor = dbmsVendor;</span>
+<span class="fc" id="L108">            this.nameQualifier = nameQualifier;</span>
+<span class="fc" id="L109">        }</span>
 
         @Override
         public String determineImageToUse() {
-<span class="fc" id="L116">            return dbmsVendor.getImageName();</span>
+<span class="fc" id="L113">            return dbmsVendor.getImageName();</span>
         }
 
         @Override
         public String getNameQualifier() {
-<span class="fc" id="L121">            return nameQualifier;</span>
+<span class="fc" id="L118">            return nameQualifier;</span>
         }
 
         @Override
         public int getPort() {
-<span class="fc" id="L126">            return dbmsVendor.getPort();</span>
+<span class="fc" id="L123">            return dbmsVendor.getPort();</span>
         }
 
         @Override
         public String getVolumeMountPath() {
-<span class="fc" id="L131">            return dbmsVendor.getVolumeMountPath();</span>
+<span class="fc" id="L128">            return dbmsVendor.getVolumeMountPath();</span>
         }
 
         @Override
         public String getHealthCheckCommand() {
-<span class="fc" id="L136">            return dbmsVendor.getHealthCheck();</span>
+<span class="fc" id="L133">            return dbmsVendor.getHealthCheck();</span>
         }
 
         @Override
         public void addEnvironmentVariables(List&lt;EnvVar&gt; vars) {
-<span class="fc" id="L141">            ofNullable(variableInitializers.get(dbmsVendor))</span>
-<span class="pc" id="L142">                    .orElseThrow(() -&gt; new IllegalStateException(dbmsVendor + &quot; not supported for container creation&quot;))</span>
-<span class="fc" id="L143">                    .addEnvironmentVariables(vars);</span>
-<span class="fc" id="L144">        }</span>
+<span class="fc" id="L138">            ofNullable(variableInitializers.get(dbmsVendor))</span>
+<span class="pc" id="L139">                    .orElseThrow(() -&gt; new IllegalStateException(dbmsVendor + &quot; not supported for container creation&quot;))</span>
+<span class="fc" id="L140">                    .addEnvironmentVariables(vars);</span>
+<span class="fc" id="L141">        }</span>
 
     }
 }

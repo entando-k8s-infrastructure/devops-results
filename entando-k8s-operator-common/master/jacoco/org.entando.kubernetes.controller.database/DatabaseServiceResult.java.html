@@ -2,41 +2,66 @@
 
 import io.fabric8.kubernetes.api.model.Pod;
 import io.fabric8.kubernetes.api.model.Service;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 import org.entando.kubernetes.controller.AbstractServiceResult;
 import org.entando.kubernetes.controller.PodResult;
-import org.entando.kubernetes.model.DbmsImageVendor;
+import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
 
 public class DatabaseServiceResult extends AbstractServiceResult {
 
-    private final DbmsImageVendor vendor;
+    private final DbmsVendorStrategy vendor;
     private final String databaseName;
     private final String databaseSecretName;
-    private final Optional&lt;Pod&gt; pod;
+    private String tablespace;
+    private Pod pod;
+    private Map&lt;String, String&gt; databaseParameters;
 
-    public DatabaseServiceResult(Service service, DbmsImageVendor vendor, String databaseName,
-            String databaseSecretName, Optional&lt;Pod&gt; pod) {
-<span class="fc" id="L19">        super(service);</span>
-<span class="fc" id="L20">        this.vendor = vendor;</span>
-<span class="fc" id="L21">        this.databaseName = databaseName;</span>
-<span class="fc" id="L22">        this.databaseSecretName = databaseSecretName;</span>
+    public DatabaseServiceResult(Service service, DbmsVendorStrategy vendor, String databaseName, String databaseSecretName, Pod pod) {
+<span class="fc" id="L22">        this(service, vendor, databaseName, databaseSecretName);</span>
 <span class="fc" id="L23">        this.pod = pod;</span>
-<span class="fc" id="L24">    }</span>
+<span class="fc" id="L24">        this.databaseParameters = Collections.emptyMap();</span>
+<span class="fc" id="L25">    }</span>
+
+    private DatabaseServiceResult(Service service, DbmsVendorStrategy vendor, String databaseName, String databaseSecretName) {
+<span class="fc" id="L28">        super(service);</span>
+<span class="fc" id="L29">        this.vendor = vendor;</span>
+<span class="fc" id="L30">        this.databaseName = databaseName;</span>
+<span class="fc" id="L31">        this.databaseSecretName = databaseSecretName;</span>
+<span class="fc" id="L32">    }</span>
+
+    public DatabaseServiceResult(Service service, EntandoDatabaseService databaseService) {
+<span class="fc" id="L35">        this(service,</span>
+<span class="fc" id="L36">                DbmsVendorStrategy.forVendor(databaseService.getSpec().getDbms()),</span>
+<span class="fc" id="L37">                databaseService.getSpec().getDatabaseName(),</span>
+<span class="fc" id="L38">                databaseService.getSpec().getSecretName());</span>
+<span class="fc" id="L39">        this.databaseParameters = databaseService.getSpec().getJdbcParameters();</span>
+<span class="fc" id="L40">        this.tablespace = databaseService.getSpec().getTablespace().orElse(null);</span>
+<span class="fc" id="L41">    }</span>
+
+    public Optional&lt;String&gt; getTablespace() {
+<span class="fc" id="L44">        return Optional.ofNullable(tablespace);</span>
+    }
+
+    public Map&lt;String, String&gt; getJdbcParameters() {
+<span class="fc" id="L48">        return databaseParameters;</span>
+    }
 
     public String getDatabaseSecretName() {
-<span class="fc" id="L27">        return databaseSecretName;</span>
+<span class="fc" id="L52">        return databaseSecretName;</span>
     }
 
     public String getDatabaseName() {
-<span class="fc" id="L31">        return databaseName;</span>
+<span class="fc" id="L56">        return databaseName;</span>
     }
 
-    public DbmsImageVendor getVendor() {
-<span class="fc" id="L35">        return vendor;</span>
+    public DbmsVendorStrategy getVendor() {
+<span class="fc" id="L60">        return vendor;</span>
     }
 
     public boolean hasFailed() {
-<span class="fc" id="L39">        return pod.map(existingPod -&gt; PodResult.of(existingPod).hasFailed()).orElse(false);</span>
+<span class="fc" id="L64">        return Optional.ofNullable(pod).map(existingPod -&gt; PodResult.of(existingPod).hasFailed()).orElse(false);</span>
     }
 
 }
