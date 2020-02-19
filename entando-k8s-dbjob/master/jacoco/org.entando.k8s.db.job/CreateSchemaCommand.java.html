@@ -15,46 +15,48 @@ public class CreateSchemaCommand {
 <span class="fc" id="L15">    private static final Logger LOGGER = Logger.getLogger(CreateSchemaCommand.class.getName());</span>
     private DatabaseAdminConfig databaseAdminConfig;
 <span class="pc" id="L17">    private int status = 0;</span>
+<span class="pc" id="L18">    private Runnable autoExit = () -&gt; {</span>
+<span class="fc" id="L19">    };</span>
 
-<span class="nc" id="L19">    public CreateSchemaCommand() {</span>
-<span class="nc" id="L20">        this.databaseAdminConfig = new PropertiesBasedDatabaseAdminConfig(System.getenv());</span>
-<span class="nc" id="L21">    }</span>
+<span class="nc" id="L21">    public CreateSchemaCommand() {</span>
+<span class="nc" id="L22">        autoExit = () -&gt; System.exit(status);</span>
+<span class="nc" id="L23">        this.databaseAdminConfig = new PropertiesBasedDatabaseAdminConfig(System.getenv());</span>
+<span class="nc" id="L24">    }</span>
 
-<span class="fc" id="L23">    public CreateSchemaCommand(DatabaseAdminConfig databaseAdminConfig) {</span>
-<span class="fc" id="L24">        this.databaseAdminConfig = databaseAdminConfig;</span>
-<span class="fc" id="L25">    }</span>
+<span class="fc" id="L26">    public CreateSchemaCommand(DatabaseAdminConfig databaseAdminConfig) {</span>
+<span class="fc" id="L27">        this.databaseAdminConfig = databaseAdminConfig;</span>
+<span class="fc" id="L28">    }</span>
 
     public void onStartup(@Observes StartupEvent startupEvent) {
-<span class="nc" id="L28">        new Thread(() -&gt; System.exit(status)).start();</span>
-<span class="nc" id="L29">        LOGGER.severe(&quot;onStartup&quot;);</span>
+<span class="fc" id="L31">        LOGGER.severe(&quot;onStartup&quot;);</span>
         try {
-<span class="nc" id="L31">            execute();</span>
-<span class="nc" id="L32">        } catch (Exception e) {</span>
-<span class="nc" id="L33">            LOGGER.log(Level.SEVERE, &quot;Schema creation failed.&quot;, e);</span>
-<span class="nc" id="L34">            status = -1;</span>
+<span class="fc" id="L33">            execute();</span>
+<span class="nc" id="L34">        } catch (Exception e) {</span>
+<span class="nc" id="L35">            LOGGER.log(Level.SEVERE, &quot;Schema creation failed.&quot;, e);</span>
+<span class="nc" id="L36">            status = -1;</span>
         } finally {
-<span class="nc" id="L36">            LOGGER.severe(&quot;onStartup:finally&quot;);</span>
-<span class="nc" id="L37">            new Thread(() -&gt; System.exit(status)).start();</span>
+<span class="fc" id="L38">            LOGGER.severe(&quot;onStartup:finally&quot;);</span>
+<span class="fc" id="L39">            new Thread(autoExit).start();</span>
         }
-<span class="nc" id="L39">    }</span>
+<span class="fc" id="L41">    }</span>
 
     public void execute() throws SQLException {
-<span class="fc" id="L42">        DatabaseDialect dialect = DatabaseDialect.resolveFor(databaseAdminConfig.getDatabaseVendor());</span>
-<span class="fc bfc" id="L43" title="All 2 branches covered.">        if (!dialect.schemaExists(databaseAdminConfig)) {</span>
-<span class="fc" id="L44">            try (Connection connection = dialect.connect(this.databaseAdminConfig)) {</span>
-<span class="fc" id="L45">                Statement st = connection.createStatement();</span>
-<span class="fc" id="L46">                dialect.createUserAndSchema(st, this.databaseAdminConfig);</span>
+<span class="fc" id="L44">        DatabaseDialect dialect = DatabaseDialect.resolveFor(databaseAdminConfig.getDatabaseVendor());</span>
+<span class="fc bfc" id="L45" title="All 2 branches covered.">        if (!dialect.schemaExists(databaseAdminConfig)) {</span>
+<span class="fc" id="L46">            try (Connection connection = dialect.connect(this.databaseAdminConfig)) {</span>
+<span class="fc" id="L47">                Statement st = connection.createStatement();</span>
+<span class="fc" id="L48">                dialect.createUserAndSchema(st, this.databaseAdminConfig);</span>
             }
         }
-<span class="fc" id="L49">    }</span>
+<span class="fc" id="L51">    }</span>
 
     public void undo() throws SQLException {
-<span class="fc" id="L52">        DatabaseDialect dialect = DatabaseDialect.resolveFor(databaseAdminConfig.getDatabaseVendor());</span>
-<span class="fc" id="L53">        try (Connection connection = dialect.connect(this.databaseAdminConfig)) {</span>
-<span class="fc" id="L54">            Statement st = connection.createStatement();</span>
-<span class="fc" id="L55">            dialect.dropUserAndSchema(st, this.databaseAdminConfig);</span>
+<span class="fc" id="L54">        DatabaseDialect dialect = DatabaseDialect.resolveFor(databaseAdminConfig.getDatabaseVendor());</span>
+<span class="fc" id="L55">        try (Connection connection = dialect.connect(this.databaseAdminConfig)) {</span>
+<span class="fc" id="L56">            Statement st = connection.createStatement();</span>
+<span class="fc" id="L57">            dialect.dropUserAndSchema(st, this.databaseAdminConfig);</span>
         }
-<span class="fc" id="L57">    }</span>
+<span class="fc" id="L59">    }</span>
 
 }
 
