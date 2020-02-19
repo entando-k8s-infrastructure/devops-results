@@ -79,17 +79,17 @@ public class ControllerExecutor {
     }
 
     public Pod startControllerFor(Action action, EntandoCustomResource resource, String imageVersionToUse) {
-<span class="nc" id="L82">        Pod pod = buildControllerPod(action, resource, imageVersionToUse);</span>
-<span class="nc" id="L83">        return client.pods().start(pod);</span>
+<span class="fc" id="L82">        Pod pod = buildControllerPod(action, resource, imageVersionToUse);</span>
+<span class="fc" id="L83">        return client.pods().start(pod);</span>
     }
 
     public Pod runControllerFor(Action action, EntandoCustomResource resource, String imageVersionToUse) {
-<span class="nc" id="L87">        Pod pod = buildControllerPod(action, resource, imageVersionToUse);</span>
-<span class="nc" id="L88">        return client.pods().runToCompletion(pod);</span>
+<span class="fc" id="L87">        Pod pod = buildControllerPod(action, resource, imageVersionToUse);</span>
+<span class="fc" id="L88">        return client.pods().runToCompletion(pod);</span>
     }
 
     private Pod buildControllerPod(Action action, EntandoCustomResource resource, String imageVersionToUse) {
-<span class="pc" id="L92">        return new PodBuilder().withNewMetadata()</span>
+<span class="fc" id="L92">        return new PodBuilder().withNewMetadata()</span>
 <span class="fc" id="L93">                .withName(resource.getMetadata().getName() + &quot;-deployer-&quot; + RandomStringUtils.randomAlphanumeric(10).toLowerCase())</span>
 <span class="fc" id="L94">                .withNamespace(this.controllerNamespace)</span>
 <span class="fc" id="L95">                .addToLabels(KubeUtils.ENTANDO_RESOURCE_KIND_LABEL_NAME, resource.getKind())</span>
@@ -105,9 +105,9 @@ public class ControllerExecutor {
 <span class="fc" id="L105">                .withEnv(buildEnvVars(action, resource))</span>
 <span class="fc" id="L106">                .withVolumeMounts(maybeCreateTlsVolumeMounts())</span>
 <span class="fc" id="L107">                .endContainer()</span>
-<span class="nc" id="L108">                .withVolumes(maybeCreateTlsVolumes(resource))</span>
-<span class="nc" id="L109">                .endSpec()</span>
-<span class="nc" id="L110">                .build();</span>
+<span class="fc" id="L108">                .withVolumes(maybeCreateTlsVolumes(resource))</span>
+<span class="fc" id="L109">                .endSpec()</span>
+<span class="fc" id="L110">                .build();</span>
     }
 
     private String determineServiceAccountName() {
@@ -144,16 +144,16 @@ public class ControllerExecutor {
 <span class="fc" id="L144">        List&lt;Volume&gt; result = new ArrayList&lt;&gt;();</span>
 <span class="pc bpc" id="L145" title="1 of 2 branches missed.">        if (!EntandoOperatorConfig.getCertificateAuthorityCertPaths().isEmpty()) {</span>
 <span class="fc" id="L146">            Secret secret = new SecretBuilder().withNewMetadata().withName(resource.getMetadata().getName() + &quot;-controller-ca-cert-secret&quot;)</span>
-<span class="fc" id="L147">                    .endMetadata().build();</span>
+<span class="fc" id="L147">                    .endMetadata().withData(new ConcurrentHashMap&lt;&gt;()).build();</span>
             //Add all available CA Certs. No need to map the trustStore itself - the controller will build this up internally
-<span class="pc" id="L149">            EntandoOperatorConfig.getCertificateAuthorityCertPaths().forEach(path -&gt; secret.getData()</span>
-<span class="pc" id="L150">                    .put(path.getFileName().toString(), TlsHelper.getInstance().getTlsCaCertBase64(path)));</span>
-<span class="nc" id="L151">            client.secrets().overwriteControllerSecret(secret);</span>
-<span class="nc" id="L152">            result.add(new VolumeBuilder().withName(&quot;ca-cert-volume&quot;).withNewSecret()</span>
-<span class="nc" id="L153">                    .withSecretName(resource.getMetadata().getName() + &quot;-controller-ca-cert-secret&quot;).endSecret()</span>
-<span class="nc" id="L154">                    .build());</span>
+<span class="fc" id="L149">            EntandoOperatorConfig.getCertificateAuthorityCertPaths().forEach(path -&gt; secret.getData()</span>
+<span class="fc" id="L150">                    .put(path.getFileName().toString(), TlsHelper.getInstance().getTlsCaCertBase64(path)));</span>
+<span class="fc" id="L151">            client.secrets().overwriteControllerSecret(secret);</span>
+<span class="fc" id="L152">            result.add(new VolumeBuilder().withName(&quot;ca-cert-volume&quot;).withNewSecret()</span>
+<span class="fc" id="L153">                    .withSecretName(resource.getMetadata().getName() + &quot;-controller-ca-cert-secret&quot;).endSecret()</span>
+<span class="fc" id="L154">                    .build());</span>
         }
-<span class="nc bnc" id="L156" title="All 2 branches missed.">        if (TlsHelper.isDefaultTlsKeyPairAvailable()) {</span>
+<span class="pc bpc" id="L156" title="1 of 2 branches missed.">        if (TlsHelper.isDefaultTlsKeyPairAvailable()) {</span>
 <span class="nc" id="L157">            Secret secret = new SecretBuilder().withNewMetadata().withName(resource.getMetadata().getName() + &quot;-controller-tls-secret&quot;)</span>
 <span class="nc" id="L158">                    .endMetadata()</span>
 <span class="nc" id="L159">                    .withType(&quot;kubernetes.io/tls&quot;)</span>
@@ -165,7 +165,7 @@ public class ControllerExecutor {
 <span class="nc" id="L165">                    .withSecretName(resource.getMetadata().getName() + &quot;-controller-tls-secret&quot;).endSecret()</span>
 <span class="nc" id="L166">                    .build());</span>
         }
-<span class="nc" id="L168">        return result;</span>
+<span class="fc" id="L168">        return result;</span>
     }
 
     private List&lt;VolumeMount&gt; maybeCreateTlsVolumeMounts() {
