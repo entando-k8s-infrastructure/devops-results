@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EntandoPluginController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Kubernetes Service</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.controller</a> &gt; <span class="el_source">EntandoPluginController.java</span></div><h1>EntandoPluginController.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.controller;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
+import java.net.URI;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.util.Strings;
+import org.entando.kubernetes.exception.BadRequestExceptionFactory;
+import org.entando.kubernetes.exception.NotFoundExceptionFactory;
+import org.entando.kubernetes.model.plugin.EntandoPlugin;
+import org.entando.kubernetes.service.EntandoPluginService;
+import org.entando.kubernetes.service.assembler.EntandoPluginResourceAssembler;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.MediaTypes;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+
+<span class="nc" id="L32">@Slf4j</span>
+@RestController
+@RequestMapping(&quot;/plugins&quot;)
+public class EntandoPluginController {
+
+    private static final String JSON = MediaType.APPLICATION_JSON_VALUE;
+    private static final String HAL_JSON = MediaTypes.HAL_JSON_VALUE;
+
+    private final EntandoPluginService entandoPluginService;
+    private final EntandoPluginResourceAssembler resourceAssembler;
+
+    public EntandoPluginController(EntandoPluginService entandoPluginService,
+<span class="nc" id="L44">            EntandoPluginResourceAssembler resourceAssembler) {</span>
+<span class="nc" id="L45">        this.entandoPluginService = entandoPluginService;</span>
+<span class="nc" id="L46">        this.resourceAssembler = resourceAssembler;</span>
+<span class="nc" id="L47">    }</span>
+
+    @GetMapping(path = &quot;&quot;, produces = {JSON,HAL_JSON})
+    public ResponseEntity&lt;CollectionModel&lt;EntityModel&lt;EntandoPlugin&gt;&gt;&gt; list(
+            @RequestParam(value = &quot;namespace&quot;, required = false, defaultValue = &quot;&quot;) String namespace) {
+<span class="nc" id="L52">        log.info(&quot;Listing all deployed plugins in any namespace&quot;);</span>
+        List&lt;EntandoPlugin&gt; plugins;
+<span class="nc bnc" id="L54" title="All 2 branches missed.">        if (Strings.isEmpty(namespace)) {</span>
+<span class="nc" id="L55">            plugins = entandoPluginService.getPlugins();</span>
+        } else {
+<span class="nc" id="L57">            plugins = entandoPluginService.getPluginsInNamespace(namespace);</span>
+        }
+<span class="nc" id="L59">        return ResponseEntity</span>
+<span class="nc" id="L60">                .ok(new CollectionModel&lt;&gt;(plugins.stream().map(resourceAssembler::toModel).collect(Collectors.toList())));</span>
+    }
+
+    @GetMapping(path = &quot;/{pluginId}&quot;, produces = {JSON,HAL_JSON})
+    public ResponseEntity&lt;EntityModel&lt;EntandoPlugin&gt;&gt; get(@PathVariable final String pluginId) {
+<span class="nc" id="L65">        log.info(&quot;Requesting plugins with identifier {} in any namespace&quot;, pluginId);</span>
+<span class="nc" id="L66">        Optional&lt;EntandoPlugin&gt; plugin = entandoPluginService.findPluginById(pluginId);</span>
+<span class="nc" id="L67">        return ResponseEntity</span>
+<span class="nc" id="L68">                .ok(resourceAssembler.toModel(plugin.orElseThrow(NotFoundExceptionFactory::entandoPlugin)));</span>
+    }
+
+    @DeleteMapping(path = &quot;/{pluginId}&quot;, produces = {JSON,HAL_JSON})
+    public ResponseEntity delete(@PathVariable String pluginId) {
+<span class="nc" id="L73">        log.info(&quot;Deleting plugin with identifier {}&quot;, pluginId);</span>
+<span class="nc" id="L74">        entandoPluginService.deletePlugin(pluginId);</span>
+<span class="nc" id="L75">        return ResponseEntity.accepted().build();</span>
+    }
+
+    @PostMapping(consumes = JSON, produces = {JSON,HAL_JSON})
+    public ResponseEntity&lt;EntityModel&lt;EntandoPlugin&gt;&gt; create(@RequestBody EntandoPlugin entandoPlugin) {
+<span class="nc" id="L80">        throwExceptionIfAlreadyDeployed(entandoPlugin);</span>
+<span class="nc" id="L81">        EntandoPlugin deployedPlugin = entandoPluginService.deploy(entandoPlugin);</span>
+<span class="nc" id="L82">        URI resourceLink = linkTo(methodOn(getClass()).get(deployedPlugin.getMetadata().getName())).toUri();</span>
+<span class="nc" id="L83">        return ResponseEntity.created(resourceLink).body(resourceAssembler.toModel(deployedPlugin));</span>
+    }
+
+    private void throwExceptionIfAlreadyDeployed(EntandoPlugin entandoPlugin) {
+<span class="nc" id="L87">        Optional&lt;EntandoPlugin&gt; alreadyDeployedPlugin = entandoPluginService.findPluginByIdAndNamespace(</span>
+<span class="nc" id="L88">                entandoPlugin.getMetadata().getName(), entandoPlugin.getMetadata().getNamespace());</span>
+<span class="nc bnc" id="L89" title="All 2 branches missed.">        if (alreadyDeployedPlugin.isPresent()) {</span>
+<span class="nc" id="L90">            throw BadRequestExceptionFactory.pluginAlreadyDeployed(alreadyDeployedPlugin.get());</span>
+        }
+<span class="nc" id="L92">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EntandoPluginService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Kubernetes Service</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.service</a> &gt; <span class="el_source">EntandoPluginService.java</span></div><h1>EntandoPluginService.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.service;
+
+import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import io.fabric8.kubernetes.api.model.apiextensions.CustomResourceDefinition;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.dsl.MixedOperation;
+import io.fabric8.kubernetes.client.dsl.Resource;
+import io.fabric8.zjsonpatch.internal.guava.Strings;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
+import org.entando.kubernetes.model.plugin.DoneableEntandoPlugin;
+import org.entando.kubernetes.model.plugin.EntandoPlugin;
+import org.entando.kubernetes.model.plugin.EntandoPluginBuilder;
+import org.entando.kubernetes.model.plugin.EntandoPluginList;
+import org.entando.kubernetes.model.plugin.EntandoPluginOperationFactory;
+import org.springframework.stereotype.Service;
+
+<span class="nc" id="L25">@Slf4j</span>
+@Service
+public class EntandoPluginService {
+
+    private final KubernetesClient client;
+    private final List&lt;String&gt; observedNamespaces;
+
+<span class="nc" id="L32">    public EntandoPluginService(KubernetesClient client, List&lt;String&gt; observedNamespaces) {</span>
+<span class="nc" id="L33">        this.client = client;</span>
+<span class="nc" id="L34">        this.observedNamespaces = observedNamespaces;</span>
+<span class="nc" id="L35">    }</span>
+
+    public void deletePlugin(String pluginId) {
+<span class="nc" id="L38">        log.info(&quot;Delete plugin {} from any namespace&quot;, pluginId);</span>
+<span class="nc" id="L39">        Optional&lt;EntandoPlugin&gt; entandoPlugin = findPluginById(pluginId);</span>
+<span class="nc" id="L40">        entandoPlugin.ifPresent(pl -&gt; deletePluginInNamespace(pluginId, pl.getMetadata().getNamespace()));</span>
+<span class="nc" id="L41">    }</span>
+
+    public void deletePluginInNamespace(String pluginId, String namespace) {
+<span class="nc" id="L44">        log.info(&quot;Delete plugin {} from namespace {}&quot;, pluginId, namespace);</span>
+<span class="nc" id="L45">        EntandoPlugin pluginToRemove = new EntandoPlugin();</span>
+<span class="nc" id="L46">        ObjectMeta pluginMeta = new ObjectMetaBuilder().withName(pluginId).withNamespace(namespace).build();</span>
+<span class="nc" id="L47">        pluginToRemove.setMetadata(pluginMeta);</span>
+<span class="nc" id="L48">        getPluginOperations().inAnyNamespace().delete(pluginToRemove);</span>
+<span class="nc" id="L49">    }</span>
+
+    public List&lt;EntandoPlugin&gt; getPlugins() {
+<span class="nc" id="L52">        return getPluginsInNamespaceList(observedNamespaces);</span>
+    }
+
+    public List&lt;EntandoPlugin&gt; getPluginsInNamespace(String namespace) {
+<span class="nc" id="L56">        return getPluginOperations().inNamespace(namespace).list().getItems();</span>
+    }
+
+    public List&lt;EntandoPlugin&gt; getPluginsInNamespaceList(List&lt;String&gt; namespaceList) {
+<span class="nc" id="L60">        CompletableFuture&lt;List&lt;EntandoPlugin&gt;&gt;[] allRequests = namespaceList.stream()</span>
+<span class="nc" id="L61">                .map(ns -&gt; CompletableFuture.supplyAsync(() -&gt; getPluginsInNamespace(ns) ))</span>
+<span class="nc" id="L62">                .toArray(CompletableFuture[]::new);</span>
+
+<span class="nc" id="L64">        CompletableFuture&lt;List&lt;EntandoPlugin&gt;&gt; allPlugins = CompletableFuture.allOf(allRequests)</span>
+<span class="nc" id="L65">                .thenApply(v -&gt; Stream.of(allRequests).map(CompletableFuture::join)</span>
+<span class="nc" id="L66">                        .flatMap(Collection::stream)</span>
+<span class="nc" id="L67">                        .collect(Collectors.toList()))</span>
+<span class="nc" id="L68">                .exceptionally(ex -&gt; {</span>
+<span class="nc" id="L69">                    log.error(&quot;An error occurred while retrieving bundles from multiple namespaces&quot;, ex);</span>
+<span class="nc" id="L70">                    return Collections.emptyList();</span>
+                });
+
+<span class="nc" id="L73">        return allPlugins.join();</span>
+    }
+
+    public EntandoPlugin deploy(EntandoPlugin plugin) {
+<span class="nc" id="L77">        log.info(&quot;Deploying plugin {} in namespace {}&quot;, plugin.getMetadata().getName(),</span>
+<span class="nc" id="L78">                plugin.getMetadata().getNamespace());</span>
+<span class="nc" id="L79">        EntandoPlugin cleanPlugin = pluginCleanUp(plugin);</span>
+<span class="nc" id="L80">        return getPluginOperations().inNamespace(cleanPlugin.getMetadata().getNamespace()).create(cleanPlugin);</span>
+    }
+
+    private EntandoPlugin pluginCleanUp(EntandoPlugin plugin) {
+        //TODO verify the plugin has a name
+        //assert !Strings.isNullOrEmpty(plugin.getMetadata().getName());
+<span class="nc bnc" id="L86" title="All 2 branches missed.">        if (Strings.isNullOrEmpty(plugin.getMetadata().getNamespace())) {</span>
+<span class="nc" id="L87">            plugin.getMetadata().setNamespace(client.getNamespace());</span>
+        }
+<span class="nc" id="L89">        EntandoPlugin newPlugin = new EntandoPluginBuilder()</span>
+<span class="nc" id="L90">                .withNewMetadata()</span>
+<span class="nc" id="L91">                .withName(plugin.getMetadata().getName())</span>
+<span class="nc" id="L92">                .withNamespace(plugin.getMetadata().getNamespace())</span>
+<span class="nc" id="L93">                .endMetadata()</span>
+<span class="nc" id="L94">                .withSpec(plugin.getSpec())</span>
+<span class="nc" id="L95">                .build();</span>
+<span class="nc" id="L96">        newPlugin.setStatus(null);</span>
+<span class="nc" id="L97">        return newPlugin;</span>
+    }
+
+
+    public Optional&lt;EntandoPlugin&gt; findPluginById(String pluginId) {
+<span class="nc" id="L102">        return getPlugins().stream().filter(pl -&gt; pl.getMetadata().getName().equals(pluginId)).findFirst();</span>
+    }
+
+    public Optional&lt;EntandoPlugin&gt; findPluginByIdAndNamespace(String pluginId, String namespace) {
+<span class="nc" id="L106">        return getPluginsInNamespace(namespace).stream().filter(pl -&gt; pl.getMetadata().getName().equals(pluginId)).findFirst();</span>
+    }
+
+    //CHECKSTYLE:OFF
+    private MixedOperation&lt;EntandoPlugin, EntandoPluginList, DoneableEntandoPlugin, Resource&lt;EntandoPlugin, DoneableEntandoPlugin&gt;&gt; getPluginOperations() {
+        //CHECKSTYLE:ON
+<span class="nc" id="L112">        return EntandoPluginOperationFactory.produceAllEntandoPlugins(client);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
