@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WidgetProcessor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.model.bundle.processor</a> &gt; <span class="el_source">WidgetProcessor.java</span></div><h1>WidgetProcessor.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.model.bundle.processor;
+
+import static java.util.Optional.ofNullable;
+
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.entando.kubernetes.model.bundle.NpmBundleReader;
+import org.entando.kubernetes.model.bundle.descriptor.ComponentDescriptor;
+import org.entando.kubernetes.model.bundle.descriptor.ComponentSpecDescriptor;
+import org.entando.kubernetes.model.bundle.descriptor.WidgetDescriptor;
+import org.entando.kubernetes.model.bundle.installable.Installable;
+import org.entando.kubernetes.model.digitalexchange.ComponentType;
+import org.entando.kubernetes.model.digitalexchange.DigitalExchangeJob;
+import org.entando.kubernetes.model.digitalexchange.DigitalExchangeJobComponent;
+import org.entando.kubernetes.service.digitalexchange.entandocore.EntandoCoreService;
+import org.springframework.stereotype.Service;
+
+/**
+ * Processor to create Widgets, can handle descriptors
+ * with custom UI embedded or a separate custom UI file.
+ *
+ * @author Sergio Marcelino
+ */
+<span class="nc" id="L29">@Slf4j</span>
+@Service
+<span class="nc" id="L31">@RequiredArgsConstructor</span>
+public class WidgetProcessor implements ComponentProcessor {
+
+    private final EntandoCoreService engineService;
+
+    @Override
+    public List&lt;Installable&gt; process(final DigitalExchangeJob job, final NpmBundleReader npr,
+                                               final ComponentDescriptor descriptor) throws IOException {
+
+<span class="nc" id="L40">        final Optional&lt;List&lt;String&gt;&gt; widgetsDescriptor = ofNullable(descriptor.getComponents()).map(ComponentSpecDescriptor::getWidgets);</span>
+<span class="nc" id="L41">        final List&lt;Installable&gt; installables = new LinkedList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L43" title="All 2 branches missed.">        if (widgetsDescriptor.isPresent()) {</span>
+<span class="nc bnc" id="L44" title="All 2 branches missed.">            for (final String fileName : widgetsDescriptor.get()) {</span>
+<span class="nc" id="L45">                final WidgetDescriptor widgetDescriptor = npr.readDescriptorFile(fileName, WidgetDescriptor.class);</span>
+<span class="nc bnc" id="L46" title="All 2 branches missed.">                if (widgetDescriptor.getCustomUiPath() != null) {</span>
+<span class="nc" id="L47">                    String widgetUiPath = getRelativePath(fileName, widgetDescriptor.getCustomUiPath());</span>
+<span class="nc" id="L48">                    widgetDescriptor.setCustomUi(npr.readFileAsString(widgetUiPath));</span>
+                }
+<span class="nc" id="L50">                installables.add(new WidgetInstallable(widgetDescriptor));</span>
+<span class="nc" id="L51">            }</span>
+        }
+
+<span class="nc" id="L54">        return installables;</span>
+    }
+
+    @Override
+    public boolean shouldProcess(final ComponentType componentType) {
+<span class="nc bnc" id="L59" title="All 2 branches missed.">        return componentType == ComponentType.WIDGET;</span>
+    }
+
+    @Override
+    public void uninstall(final DigitalExchangeJobComponent component) {
+<span class="nc" id="L64">        log.info(&quot;Removing Widget {}&quot;, component.getName());</span>
+<span class="nc" id="L65">        engineService.deleteWidget(component.getName());</span>
+<span class="nc" id="L66">    }</span>
+
+    public class WidgetInstallable extends Installable&lt;WidgetDescriptor&gt; {
+
+<span class="nc" id="L70">        private WidgetInstallable(final WidgetDescriptor widgetDescriptor) {</span>
+<span class="nc" id="L71">            super(widgetDescriptor);</span>
+<span class="nc" id="L72">        }</span>
+
+        @Override
+        public CompletableFuture install() {
+<span class="nc" id="L76">            return CompletableFuture.runAsync(() -&gt; {</span>
+<span class="nc" id="L77">                log.info(&quot;Registering Widget {}&quot;, representation.getCode());</span>
+<span class="nc" id="L78">                engineService.registerWidget(representation);</span>
+<span class="nc" id="L79">            });</span>
+        }
+
+        @Override
+        public ComponentType getComponentType() {
+<span class="nc" id="L84">            return ComponentType.WIDGET;</span>
+        }
+
+        @Override
+        public String getName() {
+<span class="nc" id="L89">            return representation.getCode();</span>
+        }
+
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DigitalExchangeRestTemplateFactoryImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.client.digitalexchange</a> &gt; <span class="el_source">DigitalExchangeRestTemplateFactoryImpl.java</span></div><h1>DigitalExchangeRestTemplateFactoryImpl.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ * 
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.kubernetes.client.digitalexchange;
+
+import org.entando.kubernetes.model.digitalexchange.DigitalExchange;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.ClientHttpRequestFactory;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
+import org.springframework.security.oauth2.client.OAuth2RestTemplate;
+import org.springframework.security.oauth2.client.resource.OAuth2ProtectedResourceDetails;
+import org.springframework.security.oauth2.client.token.grant.client.ClientCredentialsAccessTokenProvider;
+import org.springframework.security.oauth2.client.token.grant.client.ClientCredentialsResourceDetails;
+import org.springframework.security.oauth2.common.AuthenticationScheme;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
+
+<span class="nc" id="L30">public class DigitalExchangeRestTemplateFactoryImpl implements DigitalExchangeRestTemplateFactory {</span>
+
+<span class="nc" id="L32">    private static final Logger logger = LoggerFactory.getLogger(DigitalExchangeRestTemplateFactoryImpl.class);</span>
+
+    private static final int DEFAULT_TIMEOUT = 10000;
+
+    @Value(&quot;${entando.auth-url}&quot;)
+    private String entandoAuthUrl;
+
+    @Override
+    public RestTemplate createRestTemplate(final DigitalExchange digitalExchange) {
+<span class="nc bnc" id="L41" title="All 4 branches missed.">        if (digitalExchange.getClientId() == null || digitalExchange.getClientSecret() == null) {</span>
+<span class="nc" id="L42">            final RestTemplate template = new RestTemplate();</span>
+<span class="nc" id="L43">            template.setRequestFactory(getRequestFactory(digitalExchange));</span>
+<span class="nc" id="L44">            return template;</span>
+        } else {
+<span class="nc" id="L46">            final OAuth2ProtectedResourceDetails resourceDetails = getResourceDetails(digitalExchange);</span>
+<span class="nc bnc" id="L47" title="All 2 branches missed.">            if (resourceDetails == null) {</span>
+<span class="nc" id="L48">                return null;</span>
+            }
+<span class="nc" id="L50">            final OAuth2RestTemplate template = new OAuth2RestTemplate(resourceDetails);</span>
+<span class="nc" id="L51">            template.setRequestFactory(getRequestFactory(digitalExchange));</span>
+<span class="nc" id="L52">            template.setAccessTokenProvider(new ClientCredentialsAccessTokenProvider());</span>
+<span class="nc" id="L53">            return template;</span>
+        }
+    }
+
+    @Override
+    public RestTemplate createRestTemplate() {
+<span class="nc" id="L59">        RestTemplate template = new RestTemplate();</span>
+<span class="nc" id="L60">        template.setRequestFactory(getRequestFactory());</span>
+<span class="nc" id="L61">        return template;</span>
+    }
+
+    private OAuth2ProtectedResourceDetails getResourceDetails(final DigitalExchange digitalExchange) {
+<span class="nc" id="L65">        final ClientCredentialsResourceDetails resourceDetails = new ClientCredentialsResourceDetails();</span>
+<span class="nc" id="L66">        resourceDetails.setAuthenticationScheme(AuthenticationScheme.header);</span>
+<span class="nc" id="L67">        resourceDetails.setClientId(digitalExchange.getClientId());</span>
+<span class="nc" id="L68">        resourceDetails.setClientSecret(digitalExchange.getClientSecret());</span>
+<span class="nc" id="L69">        resourceDetails.setClientAuthenticationScheme(AuthenticationScheme.form);</span>
+        try {
+<span class="nc" id="L71">            resourceDetails.setAccessTokenUri(getTokenUri());</span>
+<span class="nc" id="L72">        } catch (IllegalArgumentException ex) {</span>
+<span class="nc" id="L73">            logger.error(&quot;DigitalExchange {} has been configured with a wrong URL: {}&quot;,</span>
+<span class="nc" id="L74">                    digitalExchange.getName(), digitalExchange.getUrl());</span>
+<span class="nc" id="L75">            return null;</span>
+<span class="nc" id="L76">        }</span>
+<span class="nc" id="L77">        return resourceDetails;</span>
+    }
+
+    private String getTokenUri() {
+<span class="nc" id="L81">        return UriComponentsBuilder.fromUriString(entandoAuthUrl).toUriString();</span>
+    }
+
+    private ClientHttpRequestFactory getRequestFactory(final DigitalExchange digitalExchange) {
+<span class="nc bnc" id="L85" title="All 2 branches missed.">        int timeout = digitalExchange.getTimeout() &gt; 0 ? digitalExchange.getTimeout() : DEFAULT_TIMEOUT;</span>
+
+<span class="nc" id="L87">        return getRequestFactory(timeout);</span>
+    }
+
+    private ClientHttpRequestFactory getRequestFactory() {
+<span class="nc" id="L91">        return getRequestFactory(DEFAULT_TIMEOUT);</span>
+    }
+
+    private ClientHttpRequestFactory getRequestFactory(int timeout) {
+<span class="nc" id="L95">        final HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();</span>
+
+<span class="nc" id="L97">        requestFactory.setConnectionRequestTimeout(timeout);</span>
+<span class="nc" id="L98">        requestFactory.setConnectTimeout(timeout);</span>
+<span class="nc" id="L99">        requestFactory.setReadTimeout(timeout);</span>
+<span class="nc" id="L100">        return requestFactory;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
