@@ -42,38 +42,38 @@ public class DigitalExchangeUninstallService implements ApplicationContextAware 
 <span class="fc" id="L42">    private Collection&lt;ComponentProcessor&gt; componentProcessors = new ArrayList&lt;&gt;();</span>
 
     public DigitalExchangeJob uninstall(String componentId) {
-<span class="nc" id="L45">        EntandoDeBundle bundle = k8sService.getBundleByName(componentId)</span>
-<span class="nc" id="L46">                .orElseThrow(() -&gt; new K8SServiceClientException(&quot;Bundle with name &quot; + componentId + &quot; not found&quot;));</span>
-<span class="nc" id="L47">        DigitalExchangeJob lastAvailableJob = getLastAvaialableJob(bundle)</span>
-<span class="nc" id="L48">                .orElseThrow(() -&gt; new RuntimeException(&quot;No job found for &quot; + componentId));</span>
+<span class="fc" id="L45">        EntandoDeBundle bundle = k8sService.getBundleByName(componentId)</span>
+<span class="pc" id="L46">                .orElseThrow(() -&gt; new K8SServiceClientException(&quot;Bundle with name &quot; + componentId + &quot; not found&quot;));</span>
+<span class="fc" id="L47">        DigitalExchangeJob lastAvailableJob = getLastAvaialableJob(bundle)</span>
+<span class="pc" id="L48">                .orElseThrow(() -&gt; new RuntimeException(&quot;No job found for &quot; + componentId));</span>
 
-<span class="nc" id="L50">        verifyJobStatusCompatibleWithUninstall(lastAvailableJob);</span>
+<span class="fc" id="L50">        verifyJobStatusCompatibleWithUninstall(lastAvailableJob);</span>
 
         DigitalExchangeJob uninstallJob;
-<span class="nc bnc" id="L53" title="All 2 branches missed.">        if (JobType.isOfType(lastAvailableJob.getStatus(), JobType.INSTALL)) {</span>
-<span class="nc" id="L54">            uninstallJob = submitNewUninstallJob(lastAvailableJob);</span>
+<span class="pc bpc" id="L53" title="1 of 2 branches missed.">        if (JobType.isOfType(lastAvailableJob.getStatus(), JobType.INSTALL)) {</span>
+<span class="fc" id="L54">            uninstallJob = submitNewUninstallJob(lastAvailableJob);</span>
         } else {
 <span class="nc" id="L56">            DigitalExchangeJob lastInstallAttemptJob = findLastInstallJob(bundle)</span>
 <span class="nc" id="L57">                    .orElseThrow(() -&gt; new RuntimeException(&quot;No install job associated with &quot; + componentId + &quot; has been found&quot;));</span>
 <span class="nc" id="L58">            uninstallJob = submitNewUninstallJob(lastInstallAttemptJob);</span>
         }
 
-<span class="nc" id="L61">        return uninstallJob;</span>
+<span class="fc" id="L61">        return uninstallJob;</span>
 
     }
 
     private void verifyJobStatusCompatibleWithUninstall(DigitalExchangeJob job) {
-<span class="nc bnc" id="L66" title="All 2 branches missed.">        if (JobType.isOfType(job.getStatus(), JobType.UNFINISHED)) {</span>
-<span class="nc" id="L67">            throw new JobConflictException(&quot;Install job for the component &quot; + job.getComponentId() + &quot; is in progress - JOB ID: &quot; + job.getId());</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">        if (JobType.isOfType(job.getStatus(), JobType.UNFINISHED)) {</span>
+<span class="fc" id="L67">            throw new JobConflictException(&quot;Install job for the component &quot; + job.getComponentId() + &quot; is in progress - JOB ID: &quot; + job.getId());</span>
         }
-<span class="nc" id="L69">    }</span>
+<span class="fc" id="L69">    }</span>
 
 
     private Optional&lt;DigitalExchangeJob&gt; getLastAvaialableJob(EntandoDeBundle bundle) {
-<span class="nc" id="L73">        String digitalExchange = bundle.getMetadata().getNamespace();</span>
-<span class="nc" id="L74">        String componentId = bundle.getSpec().getDetails().getName();</span>
+<span class="fc" id="L73">        String digitalExchange = bundle.getMetadata().getNamespace();</span>
+<span class="fc" id="L74">        String componentId = bundle.getSpec().getDetails().getName();</span>
 
-<span class="nc" id="L76">        return jobRepository.findFirstByDigitalExchangeAndComponentIdOrderByStartedAtDesc(digitalExchange, componentId);</span>
+<span class="fc" id="L76">        return jobRepository.findFirstByDigitalExchangeAndComponentIdOrderByStartedAtDesc(digitalExchange, componentId);</span>
     }
 
     private Optional&lt;DigitalExchangeJob&gt; findLastInstallJob(EntandoDeBundle bundle) {
@@ -86,82 +86,82 @@ public class DigitalExchangeUninstallService implements ApplicationContextAware 
     }
 
     private DigitalExchangeJob submitNewUninstallJob(DigitalExchangeJob lastAvailableJob) {
-<span class="nc" id="L89">        List&lt;DigitalExchangeJobComponent&gt; components = componentRepository.findAllByJob(lastAvailableJob);</span>
+<span class="fc" id="L89">        List&lt;DigitalExchangeJobComponent&gt; components = componentRepository.findAllByJob(lastAvailableJob);</span>
 
-<span class="nc" id="L91">        DigitalExchangeJob uninstallJob = new DigitalExchangeJob();</span>
-<span class="nc" id="L92">        uninstallJob.setComponentId(lastAvailableJob.getComponentId());</span>
-<span class="nc" id="L93">        uninstallJob.setComponentName(lastAvailableJob.getComponentName());</span>
-<span class="nc" id="L94">        uninstallJob.setDigitalExchange(lastAvailableJob.getDigitalExchange());</span>
-<span class="nc" id="L95">        uninstallJob.setComponentVersion(lastAvailableJob.getComponentVersion());</span>
-<span class="nc" id="L96">        uninstallJob.setStartedAt(LocalDateTime.now());</span>
-<span class="nc" id="L97">        uninstallJob.setStatus(JobStatus.UNINSTALL_CREATED);</span>
-<span class="nc" id="L98">        uninstallJob.setProgress(0.0);</span>
+<span class="fc" id="L91">        DigitalExchangeJob uninstallJob = new DigitalExchangeJob();</span>
+<span class="fc" id="L92">        uninstallJob.setComponentId(lastAvailableJob.getComponentId());</span>
+<span class="fc" id="L93">        uninstallJob.setComponentName(lastAvailableJob.getComponentName());</span>
+<span class="fc" id="L94">        uninstallJob.setDigitalExchange(lastAvailableJob.getDigitalExchange());</span>
+<span class="fc" id="L95">        uninstallJob.setComponentVersion(lastAvailableJob.getComponentVersion());</span>
+<span class="fc" id="L96">        uninstallJob.setStartedAt(LocalDateTime.now());</span>
+<span class="fc" id="L97">        uninstallJob.setStatus(JobStatus.UNINSTALL_CREATED);</span>
+<span class="fc" id="L98">        uninstallJob.setProgress(0.0);</span>
 
-<span class="nc" id="L100">        DigitalExchangeJob savedJob = jobRepository.save(uninstallJob);</span>
-<span class="nc" id="L101">        submitUninstallAsync(uninstallJob, components);</span>
+<span class="fc" id="L100">        DigitalExchangeJob savedJob = jobRepository.save(uninstallJob);</span>
+<span class="fc" id="L101">        submitUninstallAsync(uninstallJob, components);</span>
 
-<span class="nc" id="L103">        return savedJob;</span>
+<span class="fc" id="L103">        return savedJob;</span>
     }
 
 
     private void submitUninstallAsync(DigitalExchangeJob job, List&lt;DigitalExchangeJobComponent&gt; components) {
-<span class="nc" id="L108">        CompletableFuture.runAsync(() -&gt; {</span>
-<span class="nc" id="L109">            jobRepository.updateJobStatus(job.getId(), JobStatus.UNINSTALL_IN_PROGRESS);</span>
+<span class="fc" id="L108">        CompletableFuture.runAsync(() -&gt; {</span>
+<span class="fc" id="L109">            jobRepository.updateJobStatus(job.getId(), JobStatus.UNINSTALL_IN_PROGRESS);</span>
 
             try {
-<span class="nc" id="L112">                cleanupResourceFolder(job, components);</span>
+<span class="fc" id="L112">                cleanupResourceFolder(job, components);</span>
 <span class="nc" id="L113">            } catch (Exception e) {</span>
 <span class="nc" id="L114">                jobRepository.updateJobStatus(job.getId(), JobStatus.UNINSTALL_ERROR);</span>
 <span class="nc" id="L115">                throw new JobExecutionException(&quot;An error occurred while cleaning up component &quot;</span>
 <span class="nc" id="L116">                        + job.getComponentId() + &quot; resources&quot;, e);</span>
-<span class="nc" id="L117">            }</span>
+<span class="fc" id="L117">            }</span>
 
-<span class="nc" id="L119">            CompletableFuture[] completableFutures = components.stream().map(component -&gt; {</span>
-<span class="nc bnc" id="L120" title="All 2 branches missed.">                if (component.getStatus() == JobStatus.INSTALL_COMPLETED</span>
-<span class="nc bnc" id="L121" title="All 2 branches missed.">                        &amp;&amp; component.getComponentType() != ComponentType.RESOURCE) {</span>
-<span class="nc" id="L122">                    CompletableFuture&lt;?&gt; future = deleteComponent(component);</span>
-<span class="nc" id="L123">                    future.exceptionally(ex -&gt; {</span>
+<span class="fc" id="L119">            CompletableFuture[] completableFutures = components.stream().map(component -&gt; {</span>
+<span class="pc bpc" id="L120" title="1 of 2 branches missed.">                if (component.getStatus() == JobStatus.INSTALL_COMPLETED</span>
+<span class="fc bfc" id="L121" title="All 2 branches covered.">                        &amp;&amp; component.getComponentType() != ComponentType.RESOURCE) {</span>
+<span class="fc" id="L122">                    CompletableFuture&lt;?&gt; future = deleteComponent(component);</span>
+<span class="fc" id="L123">                    future.exceptionally(ex -&gt; {</span>
 <span class="nc" id="L124">                        log.error(&quot;Error while trying to uninstall component {}&quot;, component.getId(), ex);</span>
 <span class="nc" id="L125">                        componentRepository</span>
 <span class="nc" id="L126">                                .updateJobStatus(component.getId(), JobStatus.UNINSTALL_ERROR, ex.getMessage());</span>
 <span class="nc" id="L127">                        return null;</span>
                     });
-<span class="nc" id="L129">                    future.thenApply(object -&gt; {</span>
-<span class="nc" id="L130">                        componentRepository.updateJobStatus(component.getId(), JobStatus.UNINSTALL_COMPLETED);</span>
-<span class="nc" id="L131">                        return object;</span>
+<span class="fc" id="L129">                    future.thenApply(object -&gt; {</span>
+<span class="fc" id="L130">                        componentRepository.updateJobStatus(component.getId(), JobStatus.UNINSTALL_COMPLETED);</span>
+<span class="fc" id="L131">                        return object;</span>
                     });
 
-<span class="nc" id="L134">                    return future;</span>
+<span class="fc" id="L134">                    return future;</span>
                 }
 
-<span class="nc" id="L137">                return null;</span>
-<span class="nc" id="L138">            }).filter(Objects::nonNull).toArray(CompletableFuture[]::new);</span>
+<span class="fc" id="L137">                return null;</span>
+<span class="fc" id="L138">            }).filter(Objects::nonNull).toArray(CompletableFuture[]::new);</span>
 
-<span class="nc" id="L140">            CompletableFuture.allOf(completableFutures).whenComplete((object, ex) -&gt; {</span>
-<span class="nc bnc" id="L141" title="All 2 branches missed.">                JobStatus status = ex == null ? JobStatus.UNINSTALL_COMPLETED : JobStatus.UNINSTALL_ERROR;</span>
-<span class="nc" id="L142">                jobRepository.updateJobStatus(job.getId(), status);</span>
-<span class="nc" id="L143">            });</span>
-<span class="nc" id="L144">        });</span>
-<span class="nc" id="L145">    }</span>
+<span class="fc" id="L140">            CompletableFuture.allOf(completableFutures).whenComplete((object, ex) -&gt; {</span>
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">                JobStatus status = ex == null ? JobStatus.UNINSTALL_COMPLETED : JobStatus.UNINSTALL_ERROR;</span>
+<span class="fc" id="L142">                jobRepository.updateJobStatus(job.getId(), status);</span>
+<span class="fc" id="L143">            });</span>
+<span class="fc" id="L144">        });</span>
+<span class="fc" id="L145">    }</span>
 
     private void cleanupResourceFolder(DigitalExchangeJob job, List&lt;DigitalExchangeJobComponent&gt; components) {
-<span class="nc" id="L148">        Optional&lt;DigitalExchangeJobComponent&gt; rootResourceFolder = components.stream().filter(component -&gt;</span>
-<span class="nc bnc" id="L149" title="All 2 branches missed.">                component.getComponentType() == ComponentType.RESOURCE</span>
-<span class="nc bnc" id="L150" title="All 2 branches missed.">                        &amp;&amp; component.getName().equals(&quot;/&quot; + job.getComponentId())</span>
-<span class="nc" id="L151">        ).findFirst();</span>
+<span class="fc" id="L148">        Optional&lt;DigitalExchangeJobComponent&gt; rootResourceFolder = components.stream().filter(component -&gt;</span>
+<span class="pc bpc" id="L149" title="1 of 2 branches missed.">                component.getComponentType() == ComponentType.RESOURCE</span>
+<span class="pc bpc" id="L150" title="1 of 2 branches missed.">                        &amp;&amp; component.getName().equals(&quot;/&quot; + job.getComponentId())</span>
+<span class="fc" id="L151">        ).findFirst();</span>
 
-<span class="nc bnc" id="L153" title="All 2 branches missed.">        if (rootResourceFolder.isPresent()) {</span>
-<span class="nc" id="L154">            engineService.deleteFolder(&quot;/&quot; + job.getComponentId());</span>
-<span class="nc bnc" id="L155" title="All 2 branches missed.">            components.stream().filter(component -&gt; component.getComponentType() == ComponentType.RESOURCE)</span>
-<span class="nc" id="L156">                    .forEach(component -&gt; componentRepository.updateJobStatus(component.getId(), JobStatus.UNINSTALL_COMPLETED));</span>
+<span class="pc bpc" id="L153" title="1 of 2 branches missed.">        if (rootResourceFolder.isPresent()) {</span>
+<span class="fc" id="L154">            engineService.deleteFolder(&quot;/&quot; + job.getComponentId());</span>
+<span class="fc bfc" id="L155" title="All 2 branches covered.">            components.stream().filter(component -&gt; component.getComponentType() == ComponentType.RESOURCE)</span>
+<span class="fc" id="L156">                    .forEach(component -&gt; componentRepository.updateJobStatus(component.getId(), JobStatus.UNINSTALL_COMPLETED));</span>
         }
-<span class="nc" id="L158">    }</span>
+<span class="fc" id="L158">    }</span>
 
     private CompletableFuture&lt;?&gt; deleteComponent(final DigitalExchangeJobComponent component) {
-<span class="nc" id="L161">        return CompletableFuture.runAsync(() -&gt;</span>
-<span class="nc" id="L162">                componentProcessors.stream()</span>
-<span class="nc" id="L163">                        .filter(processor -&gt; processor.shouldProcess(component.getComponentType()))</span>
-<span class="nc" id="L164">                        .forEach(processor -&gt; processor.uninstall(component))</span>
+<span class="fc" id="L161">        return CompletableFuture.runAsync(() -&gt;</span>
+<span class="fc" id="L162">                componentProcessors.stream()</span>
+<span class="fc" id="L163">                        .filter(processor -&gt; processor.shouldProcess(component.getComponentType()))</span>
+<span class="fc" id="L164">                        .forEach(processor -&gt; processor.uninstall(component))</span>
         );
     }
 
