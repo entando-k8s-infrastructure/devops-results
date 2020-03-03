@@ -18,58 +18,58 @@ import org.entando.kubernetes.model.app.EntandoAppList;
 import org.entando.kubernetes.model.app.EntandoAppOperationFactory;
 import org.springframework.stereotype.Service;
 
-<span class="nc" id="L21">@Slf4j</span>
+<span class="fc" id="L21">@Slf4j</span>
 @Service
 public class EntandoAppService {
 
     private final KubernetesClient client;
     private final List&lt;String&gt; observedNamespaces;
 
-<span class="nc" id="L28">    public EntandoAppService(KubernetesClient client, List&lt;String&gt; observedNamespaces) {</span>
-<span class="nc" id="L29">        this.client = client;</span>
-<span class="nc" id="L30">        this.observedNamespaces = observedNamespaces;</span>
+<span class="fc" id="L28">    public EntandoAppService(KubernetesClient client, List&lt;String&gt; observedNamespaces) {</span>
+<span class="fc" id="L29">        this.client = client;</span>
+<span class="fc" id="L30">        this.observedNamespaces = observedNamespaces;</span>
 
-<span class="nc" id="L32">    }</span>
+<span class="fc" id="L32">    }</span>
 
     public List&lt;EntandoApp&gt; getApps() {
-<span class="nc" id="L35">        return getAppsInNamespaceList(observedNamespaces);</span>
+<span class="fc" id="L35">        return getAppsInNamespaceList(observedNamespaces);</span>
     }
 
     public List&lt;EntandoApp&gt; getAppsInNamespace(String namespace) {
-<span class="nc" id="L39">        return getEntandoAppsOperations().inNamespace(namespace).list().getItems();</span>
+<span class="fc" id="L39">        return getEntandoAppsOperations().inNamespace(namespace).list().getItems();</span>
     }
 
     public List&lt;EntandoApp&gt; getAppsInNamespaceList(List&lt;String&gt; namespaceList) {
-<span class="nc" id="L43">        CompletableFuture&lt;List&lt;EntandoApp&gt;&gt;[] allRequests = namespaceList.stream()</span>
-<span class="nc" id="L44">                .map(ns -&gt; CompletableFuture.supplyAsync(() -&gt; getAppsInNamespace(ns) ))</span>
-<span class="nc" id="L45">                .toArray(CompletableFuture[]::new);</span>
+<span class="fc" id="L43">        CompletableFuture&lt;List&lt;EntandoApp&gt;&gt;[] allRequests = namespaceList.stream()</span>
+<span class="fc" id="L44">                .map(ns -&gt; CompletableFuture.supplyAsync(() -&gt; getAppsInNamespace(ns) ))</span>
+<span class="fc" id="L45">                .toArray(CompletableFuture[]::new);</span>
 
-<span class="nc" id="L47">        CompletableFuture&lt;List&lt;EntandoApp&gt;&gt; allEntandoApps = CompletableFuture.allOf(allRequests)</span>
-<span class="nc" id="L48">                .thenApply(v -&gt; Stream.of(allRequests).map(CompletableFuture::join)</span>
-<span class="nc" id="L49">                        .flatMap(Collection::stream)</span>
-<span class="nc" id="L50">                        .collect(Collectors.toList()))</span>
-<span class="nc" id="L51">                .exceptionally(ex -&gt; {</span>
+<span class="fc" id="L47">        CompletableFuture&lt;List&lt;EntandoApp&gt;&gt; allEntandoApps = CompletableFuture.allOf(allRequests)</span>
+<span class="fc" id="L48">                .thenApply(v -&gt; Stream.of(allRequests).map(CompletableFuture::join)</span>
+<span class="fc" id="L49">                        .flatMap(Collection::stream)</span>
+<span class="fc" id="L50">                        .collect(Collectors.toList()))</span>
+<span class="fc" id="L51">                .exceptionally(ex -&gt; {</span>
 <span class="nc" id="L52">                    log.error(&quot;An error occurred while retrieving bundles from multiple namespaces&quot;, ex);</span>
 <span class="nc" id="L53">                    return Collections.emptyList();</span>
                 });
 
-<span class="nc" id="L56">        return allEntandoApps.join();</span>
+<span class="fc" id="L56">        return allEntandoApps.join();</span>
     }
 
 
     public Optional&lt;EntandoApp&gt; findAppByName(String name) {
-<span class="nc" id="L61">        return getApps().stream().filter(pl -&gt; pl.getMetadata().getName().equals(name)).findFirst();</span>
+<span class="fc" id="L61">        return getApps().stream().filter(pl -&gt; pl.getMetadata().getName().equals(name)).findFirst();</span>
     }
 
     public Optional&lt;EntandoApp&gt; findAppByNameAndNamespace(String name, String namespace) {
-<span class="nc" id="L65">        return getAppsInNamespace(namespace).stream()</span>
-<span class="nc" id="L66">                .filter(pl -&gt; pl.getMetadata().getName().equals(name)).findFirst();</span>
+<span class="fc" id="L65">        return getAppsInNamespace(namespace).stream()</span>
+<span class="fc" id="L66">                .filter(pl -&gt; pl.getMetadata().getName().equals(name)).findFirst();</span>
     }
 
     //CHECKSTYLE:OFF
     private MixedOperation&lt;EntandoApp, EntandoAppList, DoneableEntandoApp, Resource&lt;EntandoApp, DoneableEntandoApp&gt;&gt; getEntandoAppsOperations() {
         //CHECKSTYLE:ON
-<span class="nc" id="L72">        return EntandoAppOperationFactory.produceAllEntandoApps(client);</span>
+<span class="fc" id="L72">        return EntandoAppOperationFactory.produceAllEntandoApps(client);</span>
     }
 
 }
