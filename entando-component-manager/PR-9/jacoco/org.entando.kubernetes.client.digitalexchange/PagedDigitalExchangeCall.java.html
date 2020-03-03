@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PagedDigitalExchangeCall.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.client.digitalexchange</a> &gt; <span class="el_source">PagedDigitalExchangeCall.java</span></div><h1>PagedDigitalExchangeCall.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ * 
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ * 
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.kubernetes.client.digitalexchange;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import org.entando.kubernetes.model.digitalexchange.DigitalExchange;
+import org.entando.kubernetes.model.web.ResilientPagedMetadata;
+import org.entando.kubernetes.model.web.request.PagedListRequest;
+import org.entando.kubernetes.model.web.request.RequestListProcessor;
+import org.entando.kubernetes.model.web.response.PagedMetadata;
+import org.entando.kubernetes.model.web.response.PagedRestResponse;
+import org.entando.kubernetes.model.web.response.RestError;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+
+/**
+ * Provides the logic for combining a set of PagedRestResponse retrieved from DE
+ * instances.
+ */
+public abstract class PagedDigitalExchangeCall&lt;T&gt; extends DigitalExchangeCall&lt;PagedRestResponse&lt;T&gt;, ResilientPagedMetadata&lt;T&gt;&gt; {
+
+    private final PagedListRequest request;
+
+    public PagedDigitalExchangeCall(final HttpMethod method,
+                                    final PagedListRequest listRequest,
+                                    final ParameterizedTypeReference&lt;PagedRestResponse&lt;T&gt;&gt; parameterizedTypeReference,
+                                    final String ... urlSegments) {
+<span class="nc" id="L41">        super(method, parameterizedTypeReference, urlSegments);</span>
+<span class="nc" id="L42">        this.request = listRequest;</span>
+<span class="nc" id="L43">    }</span>
+
+    public PagedDigitalExchangeCall(final PagedListRequest listRequest,
+                                    final ParameterizedTypeReference&lt;PagedRestResponse&lt;T&gt;&gt; parameterizedTypeReference,
+                                    final String ... urlSegments) {
+<span class="nc" id="L48">        this(HttpMethod.GET, listRequest, parameterizedTypeReference, urlSegments);</span>
+<span class="nc" id="L49">    }</span>
+
+    @Override
+    protected boolean isResponseParsable(final PagedRestResponse&lt;T&gt; response) {
+<span class="nc bnc" id="L53" title="All 4 branches missed.">        return super.isResponseParsable(response) &amp;&amp; response.getPayload() != null;</span>
+    }
+
+    @Override
+    protected String getURL(final DigitalExchange digitalExchange) {
+<span class="nc" id="L58">        String url = super.getURL(digitalExchange);</span>
+<span class="nc" id="L59">        return new PagedListRequestUriBuilder(url, transformRequest(request)).toUriString();</span>
+    }
+
+    /**
+     * When we forward a PagedListRequest to a DE instance we need to modify the
+     * pagination parameters, because filtering, sorting and pagination will be
+     * applied to the combined result and we need to retrieve all the
+     * potentially useful items.&lt;br/&gt;
+     * Example: if the user asks for page number 2 with a page size of 5 we need
+     * to retrieve the first 10 results from each DE instance in order to be
+     * sure to obtain the correct combined result.
+     */
+    private PagedListRequest transformRequest(PagedListRequest userRequest) {
+<span class="nc" id="L72">        PagedListRequest digitalExchangeRequest = new PagedListRequest();</span>
+
+        // retrieve all the items in one page
+<span class="nc" id="L75">        digitalExchangeRequest.setPage(1);</span>
+<span class="nc" id="L76">        digitalExchangeRequest.setPageSize(userRequest.getPage() * userRequest.getPageSize());</span>
+
+        // copy the other fields
+<span class="nc" id="L79">        digitalExchangeRequest.setSort(userRequest.getSort());</span>
+<span class="nc" id="L80">        digitalExchangeRequest.setDirection(userRequest.getDirection());</span>
+<span class="nc" id="L81">        digitalExchangeRequest.setFilters(userRequest.getFilters());</span>
+
+<span class="nc" id="L83">        return digitalExchangeRequest;</span>
+    }
+
+    @Override
+    protected PagedRestResponse&lt;T&gt; getEmptyRestResponse() {
+<span class="nc" id="L88">        return new PagedRestResponse&lt;&gt;(new PagedMetadata&lt;&gt;());</span>
+    }
+
+    /**
+     * This method can be overridden in order to manipulate a single response
+     * before combining it.
+     */
+    protected void preprocessResponse(String exchangeName, PagedRestResponse&lt;T&gt; response) {
+<span class="nc" id="L96">    }</span>
+
+    @Override
+    public ResilientPagedMetadata&lt;T&gt; combineResults(final Map&lt;String, PagedRestResponse&lt;T&gt;&gt; allResults) {
+<span class="nc" id="L100">        final List&lt;RestError&gt; errors = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L101">        List&lt;T&gt; joinedList = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L102">        int total = 0;</span>
+
+<span class="nc bnc" id="L104" title="All 2 branches missed.">        for (Map.Entry&lt;String, PagedRestResponse&lt;T&gt;&gt; entry : allResults.entrySet()) {</span>
+<span class="nc" id="L105">            final PagedRestResponse&lt;T&gt; response = entry.getValue();</span>
+
+<span class="nc" id="L107">            preprocessResponse(entry.getKey(), response);</span>
+
+<span class="nc bnc" id="L109" title="All 2 branches missed.">            if (response.getErrors().isEmpty()) {</span>
+<span class="nc" id="L110">                joinedList.addAll(response.getPayload());</span>
+<span class="nc" id="L111">                total += response.getMetaData().getTotalItems();</span>
+            } else {
+<span class="nc" id="L113">                errors.addAll(response.getErrors());</span>
+            }
+<span class="nc" id="L115">        }</span>
+
+<span class="nc" id="L117">        final RequestListProcessor&lt;T&gt; requestListProcessor = getRequestListProcessor(request, joinedList);</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">        if (requestListProcessor != null) {</span>
+<span class="nc" id="L119">            joinedList = requestListProcessor.filterAndSort().toList();</span>
+        }
+
+<span class="nc" id="L122">        final List&lt;T&gt; subList = request.getSublist(joinedList);</span>
+<span class="nc" id="L123">        final ResilientPagedMetadata&lt;T&gt; pagedMetadata = new ResilientPagedMetadata&lt;&gt;(request, subList, total);</span>
+
+<span class="nc" id="L125">        pagedMetadata.setFilters(request.getFilters());</span>
+<span class="nc" id="L126">        pagedMetadata.setErrors(errors);</span>
+
+<span class="nc" id="L128">        return pagedMetadata;</span>
+    }
+
+    protected abstract RequestListProcessor&lt;T&gt; getRequestListProcessor(PagedListRequest request, List&lt;T&gt; joinedList);
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
