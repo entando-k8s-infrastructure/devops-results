@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DigitalExchangeComponentsServiceImpl.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.service.digitalexchange.component</a> &gt; <span class="el_source">DigitalExchangeComponentsServiceImpl.java</span></div><h1>DigitalExchangeComponentsServiceImpl.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.kubernetes.service.digitalexchange.component;
+
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+import org.apache.logging.log4j.util.Strings;
+import org.entando.kubernetes.client.k8ssvc.K8SServiceClient;
+import org.entando.kubernetes.model.debundle.EntandoDeBundle;
+import org.entando.kubernetes.model.debundle.EntandoDeBundleDetails;
+import org.entando.kubernetes.model.digitalexchange.DigitalExchangeComponent;
+import org.entando.kubernetes.model.digitalexchange.JobStatus;
+import org.entando.kubernetes.repository.DigitalExchangeJobRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+@Service
+public class DigitalExchangeComponentsServiceImpl implements DigitalExchangeComponentsService {
+
+    private final K8SServiceClient k8SServiceClient;
+    private final List&lt;String&gt; accessibleDigitalExchanges;
+    private final DigitalExchangeJobRepository jobRepository;
+
+    public DigitalExchangeComponentsServiceImpl(K8SServiceClient k8SServiceClient,
+            @Value(&quot;${entando.digital-exchanges.name:}&quot;) List&lt;String&gt; accessibleDigitalExchanges,
+<span class="fc" id="L39">            DigitalExchangeJobRepository jobRepository) {</span>
+<span class="fc" id="L40">        this.k8SServiceClient = k8SServiceClient;</span>
+<span class="fc" id="L41">        this.accessibleDigitalExchanges = accessibleDigitalExchanges</span>
+<span class="fc" id="L42">                .stream().filter(Strings::isNotBlank).collect(Collectors.toList());</span>
+<span class="fc" id="L43">        this.jobRepository = jobRepository;</span>
+<span class="fc" id="L44">    }</span>
+
+
+    @Override
+    public List&lt;DigitalExchangeComponent&gt; getComponents() {
+        List&lt;EntandoDeBundle&gt; bundles;
+<span class="fc bfc" id="L50" title="All 2 branches covered.">        if(accessibleDigitalExchanges.isEmpty()) {</span>
+<span class="fc" id="L51">            bundles = k8SServiceClient.getBundlesInDefaultNamespace();</span>
+        } else {
+<span class="fc" id="L53">            bundles = k8SServiceClient.getBundlesInNamespaces(accessibleDigitalExchanges);</span>
+        }
+<span class="fc" id="L55">        return bundles.stream().map(this::convertBundleToLegacyComponent).collect(Collectors.toList());</span>
+    }
+
+
+    public DigitalExchangeComponent convertBundleToLegacyComponent(EntandoDeBundle bundle) {
+<span class="fc" id="L60">        DigitalExchangeComponent dec = new DigitalExchangeComponent();</span>
+<span class="fc" id="L61">        EntandoDeBundleDetails bd = bundle.getSpec().getDetails();</span>
+<span class="fc" id="L62">        dec.setName(bundle.getSpec().getDetails().getName());</span>
+<span class="fc" id="L63">        dec.setDescription(bd.getDescription());</span>
+<span class="fc" id="L64">        dec.setDigitalExchangeId(bundle.getMetadata().getNamespace());</span>
+<span class="fc" id="L65">        dec.setDigitalExchangeName(bundle.getMetadata().getNamespace());</span>
+<span class="fc" id="L66">        dec.setId(bd.getName());</span>
+<span class="fc" id="L67">        dec.setRating(5);</span>
+<span class="fc" id="L68">        dec.setInstalled(checkIfInstalled(bundle));</span>
+<span class="fc" id="L69">        dec.setType(&quot;Bundle&quot;);</span>
+<span class="fc" id="L70">        dec.setLastUpdate(new Date());</span>
+<span class="fc" id="L71">        dec.setSignature(&quot;&quot;);</span>
+<span class="fc" id="L72">        dec.setVersion(bd.getDistTags().get(&quot;latest&quot;).toString());</span>
+<span class="fc" id="L73">        dec.setImage(bd.getThumbnail());</span>
+<span class="fc" id="L74">        return dec;</span>
+    }
+
+    private boolean checkIfInstalled(EntandoDeBundle bundle) {
+<span class="fc" id="L78">        String deId = bundle.getMetadata().getNamespace();</span>
+<span class="fc" id="L79">        String componentId = bundle.getSpec().getDetails().getName();</span>
+<span class="fc" id="L80">        return jobRepository.findFirstByDigitalExchangeAndComponentIdOrderByStartedAtDesc(deId, componentId)</span>
+<span class="fc" id="L81">                .map(j -&gt; j.getStatus().equals(JobStatus.INSTALL_COMPLETED))</span>
+<span class="fc" id="L82">                .orElse(false);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
