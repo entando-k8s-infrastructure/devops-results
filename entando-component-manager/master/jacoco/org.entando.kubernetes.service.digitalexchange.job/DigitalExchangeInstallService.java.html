@@ -47,109 +47,109 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-<span class="nc" id="L50">@Slf4j</span>
+<span class="fc" id="L50">@Slf4j</span>
 @Service
-<span class="nc bnc" id="L52" title="All 6 branches missed.">@RequiredArgsConstructor</span>
+<span class="pc bpc" id="L52" title="3 of 6 branches missed.">@RequiredArgsConstructor</span>
 public class DigitalExchangeInstallService implements ApplicationContextAware {
 
     private final @NonNull KubernetesService k8sService;
     private final @NonNull DigitalExchangeJobRepository jobRepository;
     private final @NonNull DigitalExchangeJobComponentRepository componentRepository;
-<span class="nc" id="L58">    private Collection&lt;ComponentProcessor&gt; componentProcessors = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L58">    private Collection&lt;ComponentProcessor&gt; componentProcessors = new ArrayList&lt;&gt;();</span>
 
     public DigitalExchangeJob install(String componentId, String version) {
-<span class="nc" id="L61">        EntandoDeBundle bundle = k8sService.getBundleByName(componentId)</span>
-<span class="nc" id="L62">                .orElseThrow(() -&gt; new K8SServiceClientException(&quot;Bundle with name &quot; + componentId + &quot; not found&quot;));</span>
-<span class="nc" id="L63">        Optional&lt;DigitalExchangeJob&gt; optionalExistingJob = getExistingJob(bundle);</span>
+<span class="fc" id="L61">        EntandoDeBundle bundle = k8sService.getBundleByName(componentId)</span>
+<span class="fc" id="L62">                .orElseThrow(() -&gt; new K8SServiceClientException(&quot;Bundle with name &quot; + componentId + &quot; not found&quot;));</span>
+<span class="fc" id="L63">        Optional&lt;DigitalExchangeJob&gt; optionalExistingJob = getExistingJob(bundle);</span>
 
-<span class="nc bnc" id="L65" title="All 2 branches missed.">        if (optionalExistingJob.isPresent()) {</span>
-<span class="nc" id="L66">            DigitalExchangeJob j = optionalExistingJob.get();</span>
-<span class="nc" id="L67">            JobStatus js = j.getStatus();</span>
-<span class="nc bnc" id="L68" title="All 2 branches missed.">            if (js.equals(JobStatus.INSTALL_COMPLETED)) {</span>
-<span class="nc" id="L69">                return j;</span>
+<span class="fc bfc" id="L65" title="All 2 branches covered.">        if (optionalExistingJob.isPresent()) {</span>
+<span class="fc" id="L66">            DigitalExchangeJob j = optionalExistingJob.get();</span>
+<span class="fc" id="L67">            JobStatus js = j.getStatus();</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">            if (js.equals(JobStatus.INSTALL_COMPLETED)) {</span>
+<span class="fc" id="L69">                return j;</span>
             }
-<span class="nc bnc" id="L71" title="All 2 branches missed.">            if (JobType.isOfType(js, JobType.UNFINISHED)) {</span>
-<span class="nc" id="L72">                throw new JobConflictException(&quot;Conflict with another job for the component &quot; + j.getComponentId()</span>
-<span class="nc" id="L73">                        + &quot; - JOB ID: &quot; + j.getId());</span>
+<span class="pc bpc" id="L71" title="1 of 2 branches missed.">            if (JobType.isOfType(js, JobType.UNFINISHED)) {</span>
+<span class="fc" id="L72">                throw new JobConflictException(&quot;Conflict with another job for the component &quot; + j.getComponentId()</span>
+<span class="fc" id="L73">                        + &quot; - JOB ID: &quot; + j.getId());</span>
             }
         }
 
-<span class="nc" id="L77">        EntandoDeBundleTag versionToInstall = getBundleTag(bundle, version)</span>
-<span class="nc" id="L78">                .orElseThrow(() -&gt; new RuntimeException(&quot;Provided version is not available for package&quot;));</span>
-<span class="nc" id="L79">        DigitalExchangeJob job = createInstallJob(bundle, versionToInstall);</span>
+<span class="fc" id="L77">        EntandoDeBundleTag versionToInstall = getBundleTag(bundle, version)</span>
+<span class="pc" id="L78">                .orElseThrow(() -&gt; new RuntimeException(&quot;Provided version is not available for package&quot;));</span>
+<span class="fc" id="L79">        DigitalExchangeJob job = createInstallJob(bundle, versionToInstall);</span>
 
-<span class="nc" id="L81">        submitInstallAsync(job, versionToInstall);</span>
+<span class="fc" id="L81">        submitInstallAsync(job, versionToInstall);</span>
 
-<span class="nc" id="L83">        return job;</span>
+<span class="fc" id="L83">        return job;</span>
     }
 
     private Optional&lt;DigitalExchangeJob&gt; getExistingJob(EntandoDeBundle bundle) {
-<span class="nc" id="L87">        String digitalExchangeId = bundle.getMetadata().getNamespace();</span>
-<span class="nc" id="L88">        String componentId = bundle.getSpec().getDetails().getName();</span>
-<span class="nc" id="L89">        Optional&lt;DigitalExchangeJob&gt; lastJobStarted = jobRepository</span>
-<span class="nc" id="L90">                .findFirstByDigitalExchangeAndComponentIdOrderByStartedAtDesc(digitalExchangeId, componentId);</span>
-<span class="nc bnc" id="L91" title="All 2 branches missed.">        if (lastJobStarted.isPresent()) {</span>
+<span class="fc" id="L87">        String digitalExchangeId = bundle.getMetadata().getNamespace();</span>
+<span class="fc" id="L88">        String componentId = bundle.getSpec().getDetails().getName();</span>
+<span class="fc" id="L89">        Optional&lt;DigitalExchangeJob&gt; lastJobStarted = jobRepository</span>
+<span class="fc" id="L90">                .findFirstByDigitalExchangeAndComponentIdOrderByStartedAtDesc(digitalExchangeId, componentId);</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">        if (lastJobStarted.isPresent()) {</span>
             // To be an existing job it should be Running or completed
-<span class="nc bnc" id="L93" title="All 2 branches missed.">            if (lastJobStarted.get().getStatus() == JobStatus.UNINSTALL_COMPLETED) {</span>
-<span class="nc" id="L94">                return Optional.empty();</span>
+<span class="fc bfc" id="L93" title="All 2 branches covered.">            if (lastJobStarted.get().getStatus() == JobStatus.UNINSTALL_COMPLETED) {</span>
+<span class="fc" id="L94">                return Optional.empty();</span>
             }
-<span class="nc" id="L96">            return lastJobStarted;</span>
+<span class="fc" id="L96">            return lastJobStarted;</span>
         }
-<span class="nc" id="L98">        return Optional.empty();</span>
+<span class="fc" id="L98">        return Optional.empty();</span>
     }
 
     private Optional&lt;EntandoDeBundleTag&gt; getBundleTag(EntandoDeBundle bundle, String version) {
-<span class="nc" id="L102">        String versionToFind =</span>
-<span class="nc bnc" id="L103" title="All 2 branches missed.">                &quot;\\d+(\\.\\d+){1,2}&quot;.matches(version) ? version : (String) bundle.getSpec().getDetails().getDistTags().get(version);</span>
-<span class="nc" id="L104">        return bundle.getSpec().getTags().stream().filter(t -&gt; t.getVersion().equals(versionToFind)).findAny();</span>
+<span class="fc" id="L102">        String versionToFind =</span>
+<span class="pc bpc" id="L103" title="1 of 2 branches missed.">                &quot;\\d+(\\.\\d+){1,2}&quot;.matches(version) ? version : (String) bundle.getSpec().getDetails().getDistTags().get(version);</span>
+<span class="fc" id="L104">        return bundle.getSpec().getTags().stream().filter(t -&gt; t.getVersion().equals(versionToFind)).findAny();</span>
     }
 
     private DigitalExchangeJob createInstallJob(EntandoDeBundle bundle, EntandoDeBundleTag tag) {
-<span class="nc" id="L108">        final DigitalExchangeJob job = new DigitalExchangeJob();</span>
+<span class="fc" id="L108">        final DigitalExchangeJob job = new DigitalExchangeJob();</span>
 
-<span class="nc" id="L110">        job.setComponentId(bundle.getSpec().getDetails().getName());</span>
-<span class="nc" id="L111">        job.setComponentName(bundle.getSpec().getDetails().getName());</span>
-<span class="nc" id="L112">        job.setComponentVersion(tag.getVersion());</span>
-<span class="nc" id="L113">        job.setDigitalExchange(bundle.getMetadata().getNamespace());</span>
-<span class="nc" id="L114">        job.setProgress(0);</span>
-<span class="nc" id="L115">        job.setStartedAt(LocalDateTime.now());</span>
-<span class="nc" id="L116">        job.setStatus(JobStatus.INSTALL_CREATED);</span>
+<span class="fc" id="L110">        job.setComponentId(bundle.getSpec().getDetails().getName());</span>
+<span class="fc" id="L111">        job.setComponentName(bundle.getSpec().getDetails().getName());</span>
+<span class="fc" id="L112">        job.setComponentVersion(tag.getVersion());</span>
+<span class="fc" id="L113">        job.setDigitalExchange(bundle.getMetadata().getNamespace());</span>
+<span class="fc" id="L114">        job.setProgress(0);</span>
+<span class="fc" id="L115">        job.setStartedAt(LocalDateTime.now());</span>
+<span class="fc" id="L116">        job.setStatus(JobStatus.INSTALL_CREATED);</span>
 
-<span class="nc" id="L118">        jobRepository.save(job);</span>
-<span class="nc" id="L119">        return job;</span>
+<span class="fc" id="L118">        jobRepository.save(job);</span>
+<span class="fc" id="L119">        return job;</span>
     }
 
     public List&lt;DigitalExchangeJob&gt; getAllJobs(String componentId) {
-<span class="nc" id="L123">        EntandoDeBundle bundle = k8sService.getBundleByName(componentId)</span>
-<span class="nc" id="L124">                .orElseThrow(() -&gt; new K8SServiceClientException(&quot;Bundle with name &quot; + componentId + &quot; not found in digital-exchange &quot;));</span>
-<span class="nc" id="L125">        String digitalExchange = bundle.getMetadata().getNamespace();</span>
-<span class="nc" id="L126">        return jobRepository.findAllByDigitalExchangeAndComponentIdOrderByStartedAtDesc(digitalExchange, componentId);</span>
+<span class="fc" id="L123">        EntandoDeBundle bundle = k8sService.getBundleByName(componentId)</span>
+<span class="pc" id="L124">                .orElseThrow(() -&gt; new K8SServiceClientException(&quot;Bundle with name &quot; + componentId + &quot; not found in digital-exchange &quot;));</span>
+<span class="fc" id="L125">        String digitalExchange = bundle.getMetadata().getNamespace();</span>
+<span class="fc" id="L126">        return jobRepository.findAllByDigitalExchangeAndComponentIdOrderByStartedAtDesc(digitalExchange, componentId);</span>
     }
 
     private void submitInstallAsync(DigitalExchangeJob job, EntandoDeBundleTag tag) {
-<span class="nc" id="L130">        CompletableFuture.runAsync(() -&gt; {</span>
-<span class="nc" id="L131">            jobRepository.updateJobStatus(job.getId(), JobStatus.INSTALL_IN_PROGRESS);</span>
-<span class="nc" id="L132">            CompletableFuture&lt;InputStream&gt; downloadComponentPackageStep = CompletableFuture</span>
-<span class="nc" id="L133">                    .supplyAsync(() -&gt; downloadComponentPackage(tag));</span>
+<span class="fc" id="L130">        CompletableFuture.runAsync(() -&gt; {</span>
+<span class="fc" id="L131">            jobRepository.updateJobStatus(job.getId(), JobStatus.INSTALL_IN_PROGRESS);</span>
+<span class="fc" id="L132">            CompletableFuture&lt;InputStream&gt; downloadComponentPackageStep = CompletableFuture</span>
+<span class="fc" id="L133">                    .supplyAsync(() -&gt; downloadComponentPackage(tag));</span>
 
-<span class="nc" id="L135">            CompletableFuture&lt;Path&gt; copyPackageLocallyStep = downloadComponentPackageStep</span>
-<span class="nc" id="L136">                    .thenApply(is -&gt; savePackageStreamLocally(job.getComponentId(), is));</span>
+<span class="fc" id="L135">            CompletableFuture&lt;Path&gt; copyPackageLocallyStep = downloadComponentPackageStep</span>
+<span class="fc" id="L136">                    .thenApply(is -&gt; savePackageStreamLocally(job.getComponentId(), is));</span>
 
-<span class="nc" id="L138">            CompletableFuture&lt;Path&gt; verifySignatureStep = copyPackageLocallyStep.thenApply(tempPath -&gt;  tempPath);</span>
+<span class="fc" id="L138">            CompletableFuture&lt;Path&gt; verifySignatureStep = copyPackageLocallyStep.thenApply(tempPath -&gt;  tempPath);</span>
 
-<span class="nc" id="L140">            CompletableFuture&lt;List&lt;Installable&gt;&gt; extractInstallableFromPackageStep = verifySignatureStep</span>
-<span class="nc" id="L141">                    .thenApply(p -&gt; getInstallablesAndRemoveTempPackage(job, p));</span>
+<span class="fc" id="L140">            CompletableFuture&lt;List&lt;Installable&gt;&gt; extractInstallableFromPackageStep = verifySignatureStep</span>
+<span class="fc" id="L141">                    .thenApply(p -&gt; getInstallablesAndRemoveTempPackage(job, p));</span>
 
-<span class="nc" id="L143">            CompletableFuture&lt;JobStatus&gt; installComponentsStep = extractInstallableFromPackageStep</span>
-<span class="nc" id="L144">                    .thenApply(installableList -&gt; processInstallableList(job, installableList));</span>
+<span class="fc" id="L143">            CompletableFuture&lt;JobStatus&gt; installComponentsStep = extractInstallableFromPackageStep</span>
+<span class="fc" id="L144">                    .thenApply(installableList -&gt; processInstallableList(job, installableList));</span>
 
-<span class="nc" id="L146">            CompletableFuture&lt;JobStatus&gt; handlePossibleErrorsStep = installComponentsStep</span>
-<span class="nc" id="L147">                    .exceptionally(this::handlePipelineException);</span>
+<span class="fc" id="L146">            CompletableFuture&lt;JobStatus&gt; handlePossibleErrorsStep = installComponentsStep</span>
+<span class="fc" id="L147">                    .exceptionally(this::handlePipelineException);</span>
 
-<span class="nc" id="L149">            handlePossibleErrorsStep.thenAccept(jobStatus -&gt; jobRepository.updateJobStatus(job.getId(), jobStatus));</span>
+<span class="fc" id="L149">            handlePossibleErrorsStep.thenAccept(jobStatus -&gt; jobRepository.updateJobStatus(job.getId(), jobStatus));</span>
 
-<span class="nc" id="L151">        });</span>
-<span class="nc" id="L152">    }</span>
+<span class="fc" id="L151">        });</span>
+<span class="fc" id="L152">    }</span>
 
     private JobStatus handlePipelineException(Throwable th) {
 <span class="nc" id="L155">        log.error(&quot;An error occurred during digital-exchange component installation&quot;, th.getCause());</span>
@@ -165,65 +165,65 @@ public class DigitalExchangeInstallService implements ApplicationContextAware {
     }
 
     private JobStatus processInstallableList(DigitalExchangeJob job, List&lt;Installable&gt; installableList) {
-<span class="nc" id="L168">        installableList.forEach(installable -&gt; installable.setComponent(persistComponent(job, installable)));</span>
+<span class="fc" id="L168">        installableList.forEach(installable -&gt; installable.setComponent(persistComponent(job, installable)));</span>
 
-<span class="nc" id="L170">        List&lt;JobStatus&gt; statuses = installableList.stream().map(this::processInstallable).collect(Collectors.toList());</span>
+<span class="fc" id="L170">        List&lt;JobStatus&gt; statuses = installableList.stream().map(this::processInstallable).collect(Collectors.toList());</span>
 
-<span class="nc" id="L172">        log.info(&quot;All have been processed&quot;);</span>
-<span class="nc" id="L173">        Optional&lt;JobStatus&gt; anyError = statuses.stream().filter(js -&gt; js.equals(JobStatus.INSTALL_ERROR)).findAny();</span>
-<span class="nc" id="L174">        return anyError.orElse(JobStatus.INSTALL_COMPLETED);</span>
+<span class="fc" id="L172">        log.info(&quot;All have been processed&quot;);</span>
+<span class="fc" id="L173">        Optional&lt;JobStatus&gt; anyError = statuses.stream().filter(js -&gt; js.equals(JobStatus.INSTALL_ERROR)).findAny();</span>
+<span class="fc" id="L174">        return anyError.orElse(JobStatus.INSTALL_COMPLETED);</span>
     }
 
     private JobStatus processInstallable(Installable installable) {
-<span class="nc" id="L178">        DigitalExchangeJobComponent installableComponent = installable.getComponent();</span>
-<span class="nc" id="L179">        componentRepository.updateJobStatus(installableComponent.getId(), JobStatus.INSTALL_IN_PROGRESS);</span>
+<span class="fc" id="L178">        DigitalExchangeJobComponent installableComponent = installable.getComponent();</span>
+<span class="fc" id="L179">        componentRepository.updateJobStatus(installableComponent.getId(), JobStatus.INSTALL_IN_PROGRESS);</span>
 
-<span class="nc" id="L181">        CompletableFuture&lt;?&gt; future = installable.install();</span>
-<span class="nc" id="L182">        CompletableFuture&lt;JobStatus&gt; installResult = future.thenApply(vd -&gt; {</span>
-<span class="nc" id="L183">            log.info(&quot;Installable '{}' finished successfully&quot;, installable.getName());</span>
-<span class="nc" id="L184">            componentRepository.updateJobStatus(installableComponent.getId(), JobStatus.INSTALL_COMPLETED);</span>
-<span class="nc" id="L185">            return JobStatus.INSTALL_COMPLETED;</span>
-<span class="nc" id="L186">        }).exceptionally(th -&gt; {</span>
-<span class="nc" id="L187">            log.error(&quot;Installable '{}' has errors&quot;, installable.getName(), th.getCause());</span>
+<span class="fc" id="L181">        CompletableFuture&lt;?&gt; future = installable.install();</span>
+<span class="fc" id="L182">        CompletableFuture&lt;JobStatus&gt; installResult = future.thenApply(vd -&gt; {</span>
+<span class="fc" id="L183">            log.info(&quot;Installable '{}' finished successfully&quot;, installable.getName());</span>
+<span class="fc" id="L184">            componentRepository.updateJobStatus(installableComponent.getId(), JobStatus.INSTALL_COMPLETED);</span>
+<span class="fc" id="L185">            return JobStatus.INSTALL_COMPLETED;</span>
+<span class="fc" id="L186">        }).exceptionally(th -&gt; {</span>
+<span class="fc" id="L187">            log.error(&quot;Installable '{}' has errors&quot;, installable.getName(), th.getCause());</span>
 
-<span class="nc" id="L189">            installableComponent.setStatus(JobStatus.INSTALL_ERROR);</span>
-<span class="nc bnc" id="L190" title="All 2 branches missed.">            if (th.getCause() != null) {</span>
-<span class="nc" id="L191">                String message = th.getCause().getMessage();</span>
-<span class="nc bnc" id="L192" title="All 2 branches missed.">                if (th.getCause() instanceof HttpClientErrorException) {</span>
+<span class="fc" id="L189">            installableComponent.setStatus(JobStatus.INSTALL_ERROR);</span>
+<span class="pc bpc" id="L190" title="1 of 2 branches missed.">            if (th.getCause() != null) {</span>
+<span class="fc" id="L191">                String message = th.getCause().getMessage();</span>
+<span class="pc bpc" id="L192" title="1 of 2 branches missed.">                if (th.getCause() instanceof HttpClientErrorException) {</span>
 <span class="nc" id="L193">                    HttpClientErrorException httpException = (HttpClientErrorException) th.getCause();</span>
 <span class="nc" id="L194">                    message =</span>
 <span class="nc" id="L195">                            httpException.getMessage() + &quot;\n&quot; + httpException.getResponseBodyAsString();</span>
                 }
-<span class="nc" id="L197">                componentRepository</span>
-<span class="nc" id="L198">                        .updateJobStatus(installableComponent.getId(), JobStatus.INSTALL_ERROR, message);</span>
-<span class="nc" id="L199">            } else {</span>
+<span class="fc" id="L197">                componentRepository</span>
+<span class="fc" id="L198">                        .updateJobStatus(installableComponent.getId(), JobStatus.INSTALL_ERROR, message);</span>
+<span class="fc" id="L199">            } else {</span>
 <span class="nc" id="L200">                componentRepository</span>
 <span class="nc" id="L201">                        .updateJobStatus(installableComponent.getId(), JobStatus.INSTALL_ERROR, th.getMessage());</span>
             }
-<span class="nc" id="L203">            return JobStatus.INSTALL_ERROR;</span>
+<span class="fc" id="L203">            return JobStatus.INSTALL_ERROR;</span>
         });
-<span class="nc" id="L205">        return installResult.join();</span>
+<span class="fc" id="L205">        return installResult.join();</span>
     }
 
     private List&lt;Installable&gt; getInstallablesAndRemoveTempPackage(DigitalExchangeJob job, Path p) {
         try {
-<span class="nc" id="L210">            NpmBundleReader r = new NpmBundleReader(p);</span>
-<span class="nc" id="L211">            ComponentDescriptor descriptor = r.readBundleDescriptor();</span>
-<span class="nc" id="L212">            List&lt;Installable&gt; installableList = getInstallables(job, r, descriptor);</span>
-<span class="nc" id="L213">            r.destroy();</span>
-<span class="nc" id="L214">            Files.delete(p);</span>
-<span class="nc" id="L215">            return installableList;</span>
+<span class="fc" id="L210">            NpmBundleReader r = new NpmBundleReader(p);</span>
+<span class="fc" id="L211">            ComponentDescriptor descriptor = r.readBundleDescriptor();</span>
+<span class="fc" id="L212">            List&lt;Installable&gt; installableList = getInstallables(job, r, descriptor);</span>
+<span class="fc" id="L213">            r.destroy();</span>
+<span class="fc" id="L214">            Files.delete(p);</span>
+<span class="fc" id="L215">            return installableList;</span>
 <span class="nc" id="L216">        } catch (IOException e) {</span>
 <span class="nc" id="L217">            throw new JobPackageException(p, &quot;Unable to extract the list of installable from the zip file&quot;, e);</span>
         }
     }
 
     private Path savePackageStreamLocally(String componentId, InputStream is) {
-<span class="nc" id="L222">        Path tempPath = null;</span>
+<span class="fc" id="L222">        Path tempPath = null;</span>
         try {
-<span class="nc" id="L224">            tempPath = Files.createTempFile(componentId, &quot;&quot;);</span>
-<span class="nc" id="L225">            Files.copy(is, tempPath, StandardCopyOption.REPLACE_EXISTING);</span>
-<span class="nc" id="L226">            return tempPath;</span>
+<span class="fc" id="L224">            tempPath = Files.createTempFile(componentId, &quot;&quot;);</span>
+<span class="fc" id="L225">            Files.copy(is, tempPath, StandardCopyOption.REPLACE_EXISTING);</span>
+<span class="fc" id="L226">            return tempPath;</span>
 <span class="nc" id="L227">        } catch (IOException e) {</span>
 <span class="nc" id="L228">            throw new JobPackageException(tempPath,</span>
                     &quot;An error occurred while copying the package stream locally&quot;, e);
@@ -231,23 +231,23 @@ public class DigitalExchangeInstallService implements ApplicationContextAware {
     }
 
     private InputStream downloadComponentPackage(EntandoDeBundleTag tag) {
-<span class="nc" id="L234">        String tarballUrl = tag.getTarball();</span>
+<span class="fc" id="L234">        String tarballUrl = tag.getTarball();</span>
 
-<span class="nc" id="L236">        RestTemplate restTemplate = new RestTemplate();</span>
-<span class="nc" id="L237">        HttpHeaders headers = new HttpHeaders();</span>
-<span class="nc" id="L238">        headers.add(&quot;user-agent&quot;, &quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.99 Safari/537.36&quot;);</span>
-<span class="nc" id="L239">        headers.add(&quot;Accept&quot;, &quot;*/*&quot;);</span>
-<span class="nc" id="L240">        HttpEntity&lt;String&gt; entity = new HttpEntity&lt;&gt;(&quot;parameters&quot;, headers);</span>
+<span class="fc" id="L236">        RestTemplate restTemplate = new RestTemplate();</span>
+<span class="fc" id="L237">        HttpHeaders headers = new HttpHeaders();</span>
+<span class="fc" id="L238">        headers.add(&quot;user-agent&quot;, &quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.99 Safari/537.36&quot;);</span>
+<span class="fc" id="L239">        headers.add(&quot;Accept&quot;, &quot;*/*&quot;);</span>
+<span class="fc" id="L240">        HttpEntity&lt;String&gt; entity = new HttpEntity&lt;&gt;(&quot;parameters&quot;, headers);</span>
 
-<span class="nc" id="L242">        ResponseEntity&lt;Resource&gt; responseEntity =  restTemplate.exchange(</span>
+<span class="fc" id="L242">        ResponseEntity&lt;Resource&gt; responseEntity =  restTemplate.exchange(</span>
                 tarballUrl, HttpMethod.GET, entity, Resource.class);
 
-<span class="nc bnc" id="L245" title="All 2 branches missed.">        if (responseEntity.getBody() == null) {</span>
+<span class="pc bpc" id="L245" title="1 of 2 branches missed.">        if (responseEntity.getBody() == null) {</span>
 <span class="nc" id="L246">            throw new HttpMessageNotReadableException(&quot;Response body is null&quot;);</span>
         }
 
         try {
-<span class="nc" id="L250">            return responseEntity.getBody().getInputStream();</span>
+<span class="fc" id="L250">            return responseEntity.getBody().getInputStream();</span>
 <span class="nc" id="L251">        } catch (IOException ex) {</span>
 <span class="nc" id="L252">            throw new UncheckedIOException(ex);</span>
         }
@@ -256,28 +256,28 @@ public class DigitalExchangeInstallService implements ApplicationContextAware {
 
     private List&lt;Installable&gt; getInstallables(DigitalExchangeJob job, NpmBundleReader r,
             ComponentDescriptor descriptor) throws IOException {
-<span class="nc" id="L259">        List&lt;Installable&gt; installables = new LinkedList&lt;&gt;();</span>
-<span class="nc bnc" id="L260" title="All 2 branches missed.">        for (ComponentProcessor processor : componentProcessors) {</span>
-<span class="nc" id="L261">            ofNullable(processor.process(job, r, descriptor))</span>
-<span class="nc" id="L262">                    .ifPresent(installables::addAll);</span>
-<span class="nc" id="L263">        }</span>
-<span class="nc" id="L264">        return installables;</span>
+<span class="fc" id="L259">        List&lt;Installable&gt; installables = new LinkedList&lt;&gt;();</span>
+<span class="fc bfc" id="L260" title="All 2 branches covered.">        for (ComponentProcessor processor : componentProcessors) {</span>
+<span class="fc" id="L261">            ofNullable(processor.process(job, r, descriptor))</span>
+<span class="fc" id="L262">                    .ifPresent(installables::addAll);</span>
+<span class="fc" id="L263">        }</span>
+<span class="fc" id="L264">        return installables;</span>
     }
 
     private DigitalExchangeJobComponent persistComponent(DigitalExchangeJob job, Installable installable) {
-<span class="nc" id="L268">        DigitalExchangeJobComponent component = new DigitalExchangeJobComponent();</span>
-<span class="nc" id="L269">        component.setJob(job);</span>
-<span class="nc" id="L270">        component.setComponentType(installable.getComponentType());</span>
-<span class="nc" id="L271">        component.setName(installable.getName());</span>
-<span class="nc" id="L272">        component.setChecksum(installable.getChecksum());</span>
-<span class="nc" id="L273">        component.setStatus(JobStatus.INSTALL_CREATED);</span>
-<span class="nc" id="L274">        return componentRepository.save(component);</span>
+<span class="fc" id="L268">        DigitalExchangeJobComponent component = new DigitalExchangeJobComponent();</span>
+<span class="fc" id="L269">        component.setJob(job);</span>
+<span class="fc" id="L270">        component.setComponentType(installable.getComponentType());</span>
+<span class="fc" id="L271">        component.setName(installable.getName());</span>
+<span class="fc" id="L272">        component.setChecksum(installable.getChecksum());</span>
+<span class="fc" id="L273">        component.setStatus(JobStatus.INSTALL_CREATED);</span>
+<span class="fc" id="L274">        return componentRepository.save(component);</span>
     }
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) {
-<span class="nc" id="L279">        componentProcessors = applicationContext.getBeansOfType(ComponentProcessor.class).values();</span>
-<span class="nc" id="L280">    }</span>
+<span class="fc" id="L279">        componentProcessors = applicationContext.getBeansOfType(ComponentProcessor.class).values();</span>
+<span class="fc" id="L280">    }</span>
 
 }
 
