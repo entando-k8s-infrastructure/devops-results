@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AssetProcessor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.model.bundle.processor</a> &gt; <span class="el_source">AssetProcessor.java</span></div><h1>AssetProcessor.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.model.bundle.processor;
+
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.entando.kubernetes.model.bundle.NpmBundleReader;
+import org.entando.kubernetes.model.bundle.descriptor.ComponentDescriptor;
+import org.entando.kubernetes.model.bundle.descriptor.FileDescriptor;
+import org.entando.kubernetes.model.bundle.installable.Installable;
+import org.entando.kubernetes.model.digitalexchange.ComponentType;
+import org.entando.kubernetes.model.digitalexchange.DigitalExchangeJob;
+import org.entando.kubernetes.model.digitalexchange.DigitalExchangeJobComponent;
+import org.entando.kubernetes.service.digitalexchange.entandocore.EntandoCoreService;
+import org.entando.kubernetes.service.digitalexchange.job.DigitalExchangeUninstallService;
+import org.springframework.stereotype.Service;
+
+/**
+ * Processor to handle Static files to be stored by Entando.
+ * Commonly used for js, images and css.
+ *
+ * This processor will also create the folders.
+ *
+ * @author Sergio Marcelino
+ */
+<span class="fc" id="L29">@Slf4j</span>
+@Service
+@RequiredArgsConstructor
+public class AssetProcessor implements ComponentProcessor {
+
+    private final EntandoCoreService engineService;
+
+    @Override
+    public List&lt;Installable&gt; process(final DigitalExchangeJob job, final NpmBundleReader npr,
+                                               final ComponentDescriptor descriptor) throws IOException {
+
+<span class="fc" id="L40">        final List&lt;Installable&gt; installables = new LinkedList&lt;&gt;();</span>
+
+<span class="pc bpc" id="L42" title="1 of 2 branches missed.">        if (npr.containsResourceFolder()) {</span>
+<span class="fc" id="L43">            final String componentFolder = &quot;/&quot; + npr.getBundleId();</span>
+<span class="fc" id="L44">            installables.add(new DirectoryInstallable(componentFolder));</span>
+
+<span class="fc" id="L46">            final List&lt;String&gt; resourceFolders = npr.getResourceFolders();</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">            for (final String resourceFolder : resourceFolders) {</span>
+<span class="fc" id="L48">                installables.add(new DirectoryInstallable(componentFolder + &quot;/&quot; + resourceFolder));</span>
+<span class="fc" id="L49">            }</span>
+
+<span class="fc" id="L51">            final List&lt;String&gt; resourceFiles = npr.getResourceFiles();</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">            for (final String resourceFile : resourceFiles) {</span>
+<span class="fc" id="L53">                final FileDescriptor fileDescriptor = npr.readFileAsDescriptor(resourceFile);</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">                final String folder = StringUtils.isEmpty(fileDescriptor.getFolder())</span>
+                        ? componentFolder
+<span class="fc" id="L56">                        : componentFolder + &quot;/&quot; + fileDescriptor.getFolder();</span>
+<span class="fc" id="L57">                fileDescriptor.setFolder(folder);</span>
+<span class="fc" id="L58">                installables.add(new AssetInstallable(fileDescriptor));</span>
+<span class="fc" id="L59">            }</span>
+        }
+
+<span class="fc" id="L62">        return installables;</span>
+    }
+
+    /**
+     * This process will be hard coded in the {@link DigitalExchangeUninstallService}
+     * @param componentType The component type being processed
+     * @return always false
+     */
+    @Override
+    public boolean shouldProcess(final ComponentType componentType) {
+<span class="fc" id="L72">        return false;</span>
+    }
+
+    @Override
+    public void uninstall(final DigitalExchangeJobComponent component) {
+        // Not necessary
+<span class="nc" id="L78">    }</span>
+
+    public class AssetInstallable extends Installable&lt;FileDescriptor&gt; {
+
+<span class="fc" id="L82">        private AssetInstallable(final FileDescriptor fileDescriptor) {</span>
+<span class="fc" id="L83">            super(fileDescriptor);</span>
+<span class="fc" id="L84">        }</span>
+
+        @Override
+        public CompletableFuture install() {
+<span class="fc" id="L88">            return CompletableFuture.runAsync(() -&gt; {</span>
+<span class="fc" id="L89">                log.info(&quot;Uploading file {}&quot;, representation.getFilename());</span>
+<span class="fc" id="L90">                engineService.uploadFile(representation);</span>
+<span class="fc" id="L91">            });</span>
+        }
+
+        @Override
+        public ComponentType getComponentType() {
+<span class="fc" id="L96">            return ComponentType.RESOURCE;</span>
+        }
+
+        @Override
+        public String getName() {
+<span class="fc" id="L101">            return representation.getFolder() + &quot;/&quot; + representation.getFilename();</span>
+        }
+
+    }
+
+    public class DirectoryInstallable extends Installable&lt;String&gt; {
+
+<span class="fc" id="L108">        private DirectoryInstallable(final String directory) {</span>
+<span class="fc" id="L109">            super(directory);</span>
+<span class="fc" id="L110">        }</span>
+
+        @Override
+        public CompletableFuture install() {
+<span class="fc" id="L114">            return CompletableFuture.runAsync(() -&gt; {</span>
+<span class="fc" id="L115">                log.info(&quot;Creating directory {}&quot;, representation);</span>
+<span class="fc" id="L116">                engineService.createFolder(representation);</span>
+<span class="fc" id="L117">            });</span>
+        }
+
+        @Override
+        public ComponentType getComponentType() {
+<span class="fc" id="L122">            return ComponentType.RESOURCE;</span>
+        }
+
+        @Override
+        public String getName() {
+<span class="fc" id="L127">            return representation;</span>
+        }
+
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
