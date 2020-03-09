@@ -13,7 +13,6 @@
  */
 package org.entando.kubernetes.service.digitalexchange.component;
 
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -36,50 +35,50 @@ public class DigitalExchangeComponentsServiceImpl implements DigitalExchangeComp
 
     public DigitalExchangeComponentsServiceImpl(K8SServiceClient k8SServiceClient,
             @Value(&quot;${entando.digital-exchanges.name:}&quot;) List&lt;String&gt; accessibleDigitalExchanges,
-<span class="fc" id="L39">            DigitalExchangeJobRepository jobRepository) {</span>
-<span class="fc" id="L40">        this.k8SServiceClient = k8SServiceClient;</span>
-<span class="fc" id="L41">        this.accessibleDigitalExchanges = accessibleDigitalExchanges</span>
-<span class="fc" id="L42">                .stream().filter(Strings::isNotBlank).collect(Collectors.toList());</span>
-<span class="fc" id="L43">        this.jobRepository = jobRepository;</span>
-<span class="fc" id="L44">    }</span>
+<span class="fc" id="L38">            DigitalExchangeJobRepository jobRepository) {</span>
+<span class="fc" id="L39">        this.k8SServiceClient = k8SServiceClient;</span>
+<span class="fc" id="L40">        this.accessibleDigitalExchanges = accessibleDigitalExchanges</span>
+<span class="fc" id="L41">                .stream().filter(Strings::isNotBlank).collect(Collectors.toList());</span>
+<span class="fc" id="L42">        this.jobRepository = jobRepository;</span>
+<span class="fc" id="L43">    }</span>
 
 
     @Override
     public List&lt;DigitalExchangeComponent&gt; getComponents() {
         List&lt;EntandoDeBundle&gt; bundles;
-<span class="fc bfc" id="L50" title="All 2 branches covered.">        if(accessibleDigitalExchanges.isEmpty()) {</span>
-<span class="fc" id="L51">            bundles = k8SServiceClient.getBundlesInDefaultNamespace();</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">        if(accessibleDigitalExchanges.isEmpty()) {</span>
+<span class="fc" id="L50">            bundles = k8SServiceClient.getBundlesInDefaultNamespace();</span>
         } else {
-<span class="fc" id="L53">            bundles = k8SServiceClient.getBundlesInNamespaces(accessibleDigitalExchanges);</span>
+<span class="fc" id="L52">            bundles = k8SServiceClient.getBundlesInNamespaces(accessibleDigitalExchanges);</span>
         }
-<span class="fc" id="L55">        return bundles.stream().map(this::convertBundleToLegacyComponent).collect(Collectors.toList());</span>
+<span class="fc" id="L54">        return bundles.stream().map(this::convertBundleToLegacyComponent).collect(Collectors.toList());</span>
     }
 
 
     public DigitalExchangeComponent convertBundleToLegacyComponent(EntandoDeBundle bundle) {
-<span class="fc" id="L60">        DigitalExchangeComponent dec = new DigitalExchangeComponent();</span>
-<span class="fc" id="L61">        EntandoDeBundleDetails bd = bundle.getSpec().getDetails();</span>
-<span class="fc" id="L62">        dec.setName(bundle.getSpec().getDetails().getName());</span>
-<span class="fc" id="L63">        dec.setDescription(bd.getDescription());</span>
-<span class="fc" id="L64">        dec.setDigitalExchangeId(bundle.getMetadata().getNamespace());</span>
-<span class="fc" id="L65">        dec.setDigitalExchangeName(bundle.getMetadata().getNamespace());</span>
-<span class="fc" id="L66">        dec.setId(bd.getName());</span>
-<span class="fc" id="L67">        dec.setRating(5);</span>
-<span class="fc" id="L68">        dec.setInstalled(checkIfInstalled(bundle));</span>
-<span class="fc" id="L69">        dec.setType(&quot;Bundle&quot;);</span>
-<span class="fc" id="L70">        dec.setLastUpdate(new Date());</span>
-<span class="fc" id="L71">        dec.setSignature(&quot;&quot;);</span>
-<span class="fc" id="L72">        dec.setVersion(bd.getDistTags().get(&quot;latest&quot;).toString());</span>
-<span class="fc" id="L73">        dec.setImage(bd.getThumbnail());</span>
-<span class="fc" id="L74">        return dec;</span>
+<span class="fc" id="L59">        DigitalExchangeComponent dec = new DigitalExchangeComponent();</span>
+<span class="fc" id="L60">        EntandoDeBundleDetails bd = bundle.getSpec().getDetails();</span>
+<span class="fc" id="L61">        dec.setName(bundle.getSpec().getDetails().getName());</span>
+<span class="fc" id="L62">        dec.setDescription(bd.getDescription());</span>
+<span class="fc" id="L63">        dec.setDigitalExchangeId(bundle.getMetadata().getNamespace());</span>
+<span class="fc" id="L64">        dec.setDigitalExchangeName(bundle.getMetadata().getNamespace());</span>
+<span class="fc" id="L65">        dec.setId(bd.getName());</span>
+<span class="fc" id="L66">        dec.setRating(5);</span>
+<span class="fc" id="L67">        dec.setInstalled(checkIfInstalled(bundle));</span>
+<span class="fc" id="L68">        dec.setType(&quot;Bundle&quot;);</span>
+<span class="fc" id="L69">        dec.setLastUpdate(new Date());</span>
+<span class="fc" id="L70">        dec.setSignature(&quot;&quot;);</span>
+<span class="fc" id="L71">        dec.setVersion(bd.getDistTags().get(&quot;latest&quot;).toString());</span>
+<span class="fc" id="L72">        dec.setImage(bd.getThumbnail());</span>
+<span class="fc" id="L73">        return dec;</span>
     }
 
     private boolean checkIfInstalled(EntandoDeBundle bundle) {
-<span class="fc" id="L78">        String deId = bundle.getMetadata().getNamespace();</span>
-<span class="fc" id="L79">        String componentId = bundle.getSpec().getDetails().getName();</span>
-<span class="fc" id="L80">        return jobRepository.findFirstByDigitalExchangeAndComponentIdOrderByStartedAtDesc(deId, componentId)</span>
-<span class="fc" id="L81">                .map(j -&gt; j.getStatus().equals(JobStatus.INSTALL_COMPLETED))</span>
-<span class="fc" id="L82">                .orElse(false);</span>
+<span class="fc" id="L77">        String deId = bundle.getMetadata().getNamespace();</span>
+<span class="fc" id="L78">        String componentId = bundle.getSpec().getDetails().getName();</span>
+<span class="fc" id="L79">        return jobRepository.findFirstByDigitalExchangeAndComponentIdOrderByStartedAtDesc(deId, componentId)</span>
+<span class="fc" id="L80">                .map(j -&gt; j.getStatus().equals(JobStatus.INSTALL_COMPLETED))</span>
+<span class="fc" id="L81">                .orElse(false);</span>
     }
 
 }
