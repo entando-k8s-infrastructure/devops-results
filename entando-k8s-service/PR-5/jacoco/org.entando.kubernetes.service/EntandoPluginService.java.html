@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EntandoPluginService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Kubernetes Service</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.service</a> &gt; <span class="el_source">EntandoPluginService.java</span></div><h1>EntandoPluginService.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.service;
+
+import io.fabric8.kubernetes.api.model.ObjectMeta;
+import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.dsl.MixedOperation;
+import io.fabric8.kubernetes.client.dsl.Resource;
+import io.fabric8.zjsonpatch.internal.guava.Strings;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.entando.kubernetes.exception.BadRequestExceptionFactory;
+import org.entando.kubernetes.model.plugin.DoneableEntandoPlugin;
+import org.entando.kubernetes.model.plugin.EntandoPlugin;
+import org.entando.kubernetes.model.plugin.EntandoPluginBuilder;
+import org.entando.kubernetes.model.plugin.EntandoPluginList;
+import org.entando.kubernetes.model.plugin.EntandoPluginOperationFactory;
+import org.springframework.stereotype.Service;
+
+<span class="fc" id="L26">@Slf4j</span>
+@Service
+<span class="fc" id="L28">@RequiredArgsConstructor</span>
+public class EntandoPluginService {
+
+    private final KubernetesClient client;
+    private final List&lt;String&gt; observedNamespaces;
+    private final KubernetesUtils k8sUtils;
+
+    public void deletePlugin(String pluginId) {
+<span class="fc" id="L36">        log.info(&quot;Delete plugin {} from observed namespaces&quot;, pluginId);</span>
+<span class="fc" id="L37">        Optional&lt;EntandoPlugin&gt; entandoPlugin = findPluginByName(pluginId);</span>
+<span class="fc" id="L38">        entandoPlugin.ifPresent(this::deletePlugin);</span>
+<span class="fc" id="L39">    }</span>
+
+    public void deletePlugin(EntandoPlugin plugin) {
+<span class="fc" id="L42">        log.info(&quot;Delete plugin {} from observed namespaces&quot;, plugin.getMetadata().getName());</span>
+<span class="fc" id="L43">        getPluginOperations().delete(plugin);</span>
+<span class="fc" id="L44">    }</span>
+
+    public void deletePluginInNamespace(String pluginId, String namespace) {
+<span class="fc" id="L47">        log.info(&quot;Delete plugin {} from namespace {}&quot;, pluginId, namespace);</span>
+<span class="fc" id="L48">        EntandoPlugin pluginToRemove = new EntandoPlugin();</span>
+<span class="fc" id="L49">        ObjectMeta pluginMeta = new ObjectMetaBuilder().withName(pluginId).withNamespace(namespace).build();</span>
+<span class="fc" id="L50">        pluginToRemove.setMetadata(pluginMeta);</span>
+<span class="fc" id="L51">        getPluginOperations().inAnyNamespace().delete(pluginToRemove);</span>
+<span class="fc" id="L52">    }</span>
+
+    public List&lt;EntandoPlugin&gt; getPlugins() {
+<span class="fc" id="L55">        return getPluginsInNamespaceList(observedNamespaces);</span>
+    }
+
+    public List&lt;EntandoPlugin&gt; getPluginsInNamespace(String namespace) {
+<span class="fc" id="L59">        return getPluginOperations().inNamespace(namespace).list().getItems();</span>
+    }
+
+    public List&lt;EntandoPlugin&gt; getPluginsInNamespaceList(List&lt;String&gt; namespaceList) {
+<span class="fc" id="L63">        CompletableFuture&lt;List&lt;EntandoPlugin&gt;&gt;[] allRequests = namespaceList.stream()</span>
+<span class="fc" id="L64">                .map(ns -&gt; CompletableFuture.supplyAsync(() -&gt; getPluginsInNamespace(ns) ))</span>
+<span class="fc" id="L65">                .toArray(CompletableFuture[]::new);</span>
+
+<span class="fc" id="L67">        CompletableFuture&lt;List&lt;EntandoPlugin&gt;&gt; allPlugins = CompletableFuture.allOf(allRequests)</span>
+<span class="fc" id="L68">                .thenApply(v -&gt; Stream.of(allRequests).map(CompletableFuture::join)</span>
+<span class="fc" id="L69">                        .flatMap(Collection::stream)</span>
+<span class="fc" id="L70">                        .collect(Collectors.toList()))</span>
+<span class="fc" id="L71">                .exceptionally(ex -&gt; {</span>
+<span class="nc" id="L72">                    log.error(&quot;An error occurred while retrieving bundles from multiple namespaces&quot;, ex);</span>
+<span class="nc" id="L73">                    return Collections.emptyList();</span>
+                });
+
+<span class="fc" id="L76">        return allPlugins.join();</span>
+    }
+
+    public EntandoPlugin deploy(EntandoPlugin plugin) {
+<span class="fc" id="L80">        log.info(&quot;Deploying plugin {} in namespace {}&quot;, plugin.getMetadata().getName(),</span>
+<span class="fc" id="L81">                plugin.getMetadata().getNamespace());</span>
+<span class="fc" id="L82">        EntandoPlugin cleanPlugin = pluginCleanUp(plugin);</span>
+<span class="fc bfc" id="L83" title="All 2 branches covered.">        if (!this.observedNamespaces.contains(cleanPlugin.getMetadata().getNamespace())) {</span>
+<span class="fc" id="L84">            throw BadRequestExceptionFactory.pluginNamespaceNotObserved(cleanPlugin);</span>
+        }
+<span class="fc" id="L86">        return getPluginOperations().inNamespace(cleanPlugin.getMetadata().getNamespace()).create(cleanPlugin);</span>
+    }
+
+    private EntandoPlugin pluginCleanUp(EntandoPlugin plugin) {
+        //TODO verify the plugin has a name
+        //assert !Strings.isNullOrEmpty(plugin.getMetadata().getName());
+<span class="pc bpc" id="L92" title="1 of 2 branches missed.">        if (Strings.isNullOrEmpty(plugin.getMetadata().getNamespace())) {</span>
+<span class="nc" id="L93">            plugin.getMetadata().setNamespace(k8sUtils.getCurrentNamespace());</span>
+        }
+<span class="fc" id="L95">        EntandoPlugin newPlugin = new EntandoPluginBuilder()</span>
+<span class="fc" id="L96">                .withNewMetadata()</span>
+<span class="fc" id="L97">                .withName(plugin.getMetadata().getName())</span>
+<span class="fc" id="L98">                .withNamespace(plugin.getMetadata().getNamespace())</span>
+<span class="fc" id="L99">                .endMetadata()</span>
+<span class="fc" id="L100">                .withSpec(plugin.getSpec())</span>
+<span class="fc" id="L101">                .build();</span>
+<span class="fc" id="L102">        newPlugin.setStatus(null);</span>
+<span class="fc" id="L103">        return newPlugin;</span>
+    }
+
+
+    public Optional&lt;EntandoPlugin&gt; findPluginByName(String pluginId) {
+<span class="fc" id="L108">        return getPlugins().stream().filter(pl -&gt; pl.getMetadata().getName().equals(pluginId)).findFirst();</span>
+    }
+
+    public Optional&lt;EntandoPlugin&gt; findPluginByIdAndNamespace(String pluginId, String namespace) {
+<span class="fc" id="L112">        return getPluginsInNamespace(namespace).stream().filter(pl -&gt; pl.getMetadata().getName().equals(pluginId)).findFirst();</span>
+    }
+
+    //CHECKSTYLE:OFF
+    private MixedOperation&lt;EntandoPlugin, EntandoPluginList, DoneableEntandoPlugin, Resource&lt;EntandoPlugin, DoneableEntandoPlugin&gt;&gt; getPluginOperations() {
+        //CHECKSTYLE:ON
+<span class="fc" id="L118">        return EntandoPluginOperationFactory.produceAllEntandoPlugins(client);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
