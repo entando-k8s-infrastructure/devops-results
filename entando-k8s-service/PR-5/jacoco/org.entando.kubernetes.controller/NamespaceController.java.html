@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletResponse;
+import org.entando.kubernetes.exception.BadRequestExceptionFactory;
 import org.entando.kubernetes.exception.NotFoundExceptionFactory;
 import org.entando.kubernetes.model.app.EntandoApp;
 import org.entando.kubernetes.model.debundle.EntandoDeBundle;
@@ -28,49 +29,59 @@ public class NamespaceController {
     private final NamespaceResourceAssembler nsResourceAssembler;
     private final NamespaceService nsService;
 
-<span class="fc" id="L31">    public NamespaceController(NamespaceResourceAssembler nrs, NamespaceService nsService) {</span>
-<span class="fc" id="L32">       this.nsResourceAssembler = nrs;</span>
-<span class="fc" id="L33">       this.nsService = nsService;</span>
-<span class="fc" id="L34">    }</span>
+<span class="fc" id="L32">    public NamespaceController(NamespaceResourceAssembler nrs, NamespaceService nsService) {</span>
+<span class="fc" id="L33">       this.nsResourceAssembler = nrs;</span>
+<span class="fc" id="L34">       this.nsService = nsService;</span>
+<span class="fc" id="L35">    }</span>
 
     public ResponseEntity&lt;CollectionModel&lt;EntityModel&lt;Namespace&gt;&gt;&gt; list() {
-<span class="fc" id="L37">        List&lt;Namespace&gt; observedNamespaces = nsService.getObservedNamespaceList();</span>
-<span class="fc" id="L38">        CollectionModel&lt;EntityModel&lt;Namespace&gt;&gt; nsCollection = new CollectionModel&lt;&gt;(</span>
-<span class="fc" id="L39">                observedNamespaces.stream()</span>
-<span class="fc" id="L40">                        .map(nsResourceAssembler::toModel)</span>
-<span class="fc" id="L41">                        .collect(Collectors.toList()));</span>
-<span class="fc" id="L42">        nsCollection.add(linkTo(methodOn(EntandoAppController.class).list()).withRel(&quot;apps&quot;));</span>
-<span class="fc" id="L43">        nsCollection.add(linkTo(methodOn(EntandoPluginController.class).list()).withRel(&quot;plugins&quot;));</span>
-<span class="fc" id="L44">        nsCollection.add(linkTo(methodOn(EntandoDeBundleController.class).list()).withRel(&quot;bundles&quot;));</span>
-<span class="fc" id="L45">        return ResponseEntity.ok(nsCollection);</span>
+<span class="fc" id="L38">        List&lt;Namespace&gt; observedNamespaces = nsService.getObservedNamespaceList();</span>
+<span class="fc" id="L39">        CollectionModel&lt;EntityModel&lt;Namespace&gt;&gt; nsCollection = new CollectionModel&lt;&gt;(</span>
+<span class="fc" id="L40">                observedNamespaces.stream()</span>
+<span class="fc" id="L41">                        .map(nsResourceAssembler::toModel)</span>
+<span class="fc" id="L42">                        .collect(Collectors.toList()));</span>
+<span class="fc" id="L43">        nsCollection.add(linkTo(methodOn(EntandoAppController.class).list()).withRel(&quot;apps&quot;));</span>
+<span class="fc" id="L44">        nsCollection.add(linkTo(methodOn(EntandoPluginController.class).list()).withRel(&quot;plugins&quot;));</span>
+<span class="fc" id="L45">        nsCollection.add(linkTo(methodOn(EntandoDeBundleController.class).list()).withRel(&quot;bundles&quot;));</span>
+<span class="fc" id="L46">        return ResponseEntity.ok(nsCollection);</span>
     }
 
     @GetMapping(&quot;/{name}&quot;)
     public ResponseEntity&lt;EntityModel&lt;Namespace&gt;&gt; getByName(@PathVariable(&quot;name&quot;) String name) {
-<span class="fc" id="L50">        Optional&lt;Namespace&gt; observedNs = nsService.getObservedNamespace(name);</span>
-<span class="fc bfc" id="L51" title="All 2 branches covered.">        if (!observedNs.isPresent()) {</span>
-<span class="fc" id="L52">            throw NotFoundExceptionFactory.observedNamespace(name);</span>
+<span class="fc" id="L51">        Optional&lt;Namespace&gt; observedNs = nsService.getObservedNamespace(name);</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">        if (!observedNs.isPresent()) {</span>
+<span class="fc" id="L53">            throw NotFoundExceptionFactory.observedNamespace(name);</span>
         }
-<span class="fc" id="L54">        EntityModel&lt;Namespace&gt; ns = nsResourceAssembler.toModel(observedNs.get());</span>
-<span class="fc" id="L55">        return ResponseEntity.ok(ns);</span>
+<span class="fc" id="L55">        EntityModel&lt;Namespace&gt; ns = nsResourceAssembler.toModel(observedNs.get());</span>
+<span class="fc" id="L56">        return ResponseEntity.ok(ns);</span>
     }
 
     @GetMapping(&quot;/{name}/plugins&quot;)
     public void listPluginsInNamespace(@PathVariable(&quot;name&quot;) String name, HttpServletResponse resp) {
-<span class="nc" id="L60">        resp.setHeader(&quot;Location&quot;, &quot;/plugins?namespace=&quot;+name);</span>
-<span class="nc" id="L61">        resp.setStatus(302);</span>
-<span class="nc" id="L62">    }</span>
+<span class="fc" id="L61">        String validNamespace = validateNamespace(name);</span>
+<span class="fc" id="L62">        resp.setHeader(&quot;Location&quot;, &quot;/plugins?namespace=&quot;+validNamespace);</span>
+<span class="fc" id="L63">        resp.setStatus(302);</span>
+<span class="fc" id="L64">    }</span>
 
     @GetMapping(&quot;/{name}/apps&quot;)
     public void listAppsInNamespace(@PathVariable(&quot;name&quot;) String name, HttpServletResponse resp) {
-<span class="nc" id="L66">        resp.setHeader(&quot;Location&quot;, &quot;/apps?namespace=&quot;+name);</span>
-<span class="nc" id="L67">        resp.setStatus(302);</span>
-<span class="nc" id="L68">    }</span>
+<span class="fc" id="L68">        String validNamespace = validateNamespace(name);</span>
+<span class="fc" id="L69">        resp.setHeader(&quot;Location&quot;, &quot;/apps?namespace=&quot; + validNamespace);</span>
+<span class="fc" id="L70">        resp.setStatus(302);</span>
+<span class="fc" id="L71">    }</span>
 
     @GetMapping(&quot;/{name}/bundles&quot;)
     public void listBundlesInNamespace(@PathVariable(&quot;name&quot;) String name, HttpServletResponse resp) {
-<span class="nc" id="L72">        resp.setHeader(&quot;Location&quot;, &quot;/bundles?namespace=&quot;+name);</span>
-<span class="nc" id="L73">        resp.setStatus(302);</span>
-<span class="nc" id="L74">    }</span>
+<span class="fc" id="L75">        String validNamespace = validateNamespace(name);</span>
+<span class="fc" id="L76">        resp.setHeader(&quot;Location&quot;, &quot;/bundles?namespace=&quot; + validNamespace);</span>
+<span class="fc" id="L77">        resp.setStatus(302);</span>
+<span class="fc" id="L78">    }</span>
+
+    public String validateNamespace(String namespace) {
+<span class="fc bfc" id="L81" title="All 2 branches covered.">        if (!namespace.matches(&quot;[a-z0-9]([-a-z0-9]*[a-z0-9])?&quot;)) {</span>
+<span class="fc" id="L82">            throw BadRequestExceptionFactory.invalidNamespace(namespace);</span>
+        }
+<span class="fc" id="L84">        return namespace;</span>
+    }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

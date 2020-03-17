@@ -35,58 +35,84 @@ public class EntandoLinkService {
 <span class="fc" id="L35">        this.observedNamespaces = observedNamespaces;</span>
 <span class="fc" id="L36">    }</span>
 
+
+    public List&lt;EntandoAppPluginLink&gt; getLinks() {
+<span class="fc" id="L40">        return getLinksInNamespaceList(this.observedNamespaces);</span>
+    }
+
+    public List&lt;EntandoAppPluginLink&gt; getLinksInNamespaceList(List&lt;String&gt; namespaceList) {
+<span class="fc" id="L44">        CompletableFuture&lt;List&lt;EntandoAppPluginLink&gt;&gt;[] allRequests = namespaceList.stream()</span>
+<span class="fc" id="L45">                .map(ns -&gt; CompletableFuture.supplyAsync(() -&gt; getLinksInNamespace(ns) ))</span>
+<span class="fc" id="L46">                .toArray(CompletableFuture[]::new);</span>
+
+<span class="fc" id="L48">        CompletableFuture&lt;List&lt;EntandoAppPluginLink&gt;&gt; allPlugins = CompletableFuture.allOf(allRequests)</span>
+<span class="fc" id="L49">                .thenApply(v -&gt; Stream.of(allRequests).map(CompletableFuture::join)</span>
+<span class="fc" id="L50">                        .flatMap(Collection::stream)</span>
+<span class="fc" id="L51">                        .collect(Collectors.toList()))</span>
+<span class="fc" id="L52">                .exceptionally(ex -&gt; {</span>
+<span class="nc" id="L53">                    log.error(&quot;An error occurred while retrieving links from multiple namespaces&quot;, ex);</span>
+<span class="nc" id="L54">                    return Collections.emptyList();</span>
+                });
+
+<span class="fc" id="L57">        return allPlugins.join();</span>
+    }
+
+    public List&lt;EntandoAppPluginLink&gt; getLinksInNamespace(String namespace) {
+<span class="fc" id="L61">        return getLinksOperations().inNamespace(namespace).list().getItems();</span>
+    }
+
     public Optional&lt;EntandoAppPluginLink&gt; getLink(EntandoApp app, String pluginName) {
-<span class="nc" id="L39">        return getLinksOperations().inNamespace(app.getMetadata().getNamespace())</span>
-<span class="nc" id="L40">                .list().getItems().stream()</span>
-<span class="nc" id="L41">                .filter(l -&gt; l.getSpec().getEntandoPluginName().equals(pluginName))</span>
-<span class="nc" id="L42">                .findFirst();</span>
+<span class="nc" id="L65">        return getLinksOperations().inNamespace(app.getMetadata().getNamespace())</span>
+<span class="nc" id="L66">                .list().getItems().stream()</span>
+<span class="nc" id="L67">                .filter(l -&gt; l.getSpec().getEntandoPluginName().equals(pluginName))</span>
+<span class="nc" id="L68">                .findFirst();</span>
     }
 
-    public List&lt;EntandoAppPluginLink&gt; listAppLinks(EntandoApp app) {
-<span class="fc" id="L46">        return getLinksOperations().inNamespace(app.getMetadata().getNamespace()).list().getItems();</span>
+    public List&lt;EntandoAppPluginLink&gt; getAppLinks(EntandoApp app) {
+<span class="fc" id="L72">        return getLinksOperations().inNamespace(app.getMetadata().getNamespace()).list().getItems();</span>
     }
 
-    public List&lt;EntandoAppPluginLink&gt; listEntandoAppLinks(String namespace, String name) {
-<span class="fc" id="L50">        return getLinksOperations().inNamespace(namespace).list().getItems()</span>
-<span class="fc" id="L51">                .stream().filter(el -&gt; el.getSpec().getEntandoAppName().equals(name))</span>
-<span class="fc" id="L52">                .collect(Collectors.toList());</span>
+    public List&lt;EntandoAppPluginLink&gt; getPluginLinks(EntandoPlugin plugin) {
+<span class="fc" id="L76">       return getLinks().stream()</span>
+<span class="fc" id="L77">               .filter(l -&gt; l.getSpec().getEntandoPluginName().equals(plugin.getMetadata().getName()))</span>
+<span class="fc" id="L78">               .collect(Collectors.toList());</span>
     }
 
     public EntandoAppPluginLink deploy(EntandoAppPluginLink newLink) {
-<span class="fc" id="L56">        log.info(&quot;Link creation between EntandoApp {} on namespace {} and EntandoPlugin {} on namespace {}&quot;,</span>
-<span class="fc" id="L57">                newLink.getSpec().getEntandoAppName(), newLink.getSpec().getEntandoAppNamespace(),</span>
-<span class="fc" id="L58">                newLink.getSpec().getEntandoPluginName(), newLink.getSpec().getEntandoPluginNamespace());</span>
-<span class="fc" id="L59">        return getLinksOperations().inNamespace(newLink.getMetadata().getNamespace()).create(newLink);</span>
+<span class="fc" id="L82">        log.info(&quot;Link creation between EntandoApp {} on namespace {} and EntandoPlugin {} on namespace {}&quot;,</span>
+<span class="fc" id="L83">                newLink.getSpec().getEntandoAppName(), newLink.getSpec().getEntandoAppNamespace(),</span>
+<span class="fc" id="L84">                newLink.getSpec().getEntandoPluginName(), newLink.getSpec().getEntandoPluginNamespace());</span>
+<span class="fc" id="L85">        return getLinksOperations().inNamespace(newLink.getMetadata().getNamespace()).create(newLink);</span>
     }
 
     public void delete(EntandoAppPluginLink l) {
-<span class="fc" id="L63">        log.info(&quot;Deleting link between EntandoApp {} on namespace {} and EntandoPlugin {} on namespace {}&quot;,</span>
-<span class="fc" id="L64">                l.getSpec().getEntandoAppName(), l.getSpec().getEntandoAppNamespace(),</span>
-<span class="fc" id="L65">                l.getSpec().getEntandoPluginName(), l.getSpec().getEntandoPluginNamespace());</span>
-<span class="fc" id="L66">        getLinksOperations().inNamespace(l.getMetadata().getNamespace()).delete(l);</span>
-<span class="fc" id="L67">    }</span>
+<span class="fc" id="L89">        log.info(&quot;Deleting link between EntandoApp {} on namespace {} and EntandoPlugin {} on namespace {}&quot;,</span>
+<span class="fc" id="L90">                l.getSpec().getEntandoAppName(), l.getSpec().getEntandoAppNamespace(),</span>
+<span class="fc" id="L91">                l.getSpec().getEntandoPluginName(), l.getSpec().getEntandoPluginNamespace());</span>
+<span class="fc" id="L92">        getLinksOperations().inNamespace(l.getMetadata().getNamespace()).delete(l);</span>
+<span class="fc" id="L93">    }</span>
 
-    public EntandoAppPluginLink generateForAppAndPlugin(EntandoApp app, EntandoPlugin plugin) {
-<span class="fc" id="L70">        String appNamespace = app.getMetadata().getNamespace();</span>
-<span class="fc" id="L71">        String appName = app.getMetadata().getName();</span>
-<span class="fc" id="L72">        String pluginName = plugin.getMetadata().getName();</span>
-<span class="fc" id="L73">        String pluginNamespace = plugin.getMetadata().getNamespace();</span>
-<span class="fc" id="L74">        return new EntandoAppPluginLinkBuilder()</span>
-<span class="fc" id="L75">                .withNewMetadata()</span>
-<span class="fc" id="L76">                .withName(String.format(&quot;%s-%s-link&quot;, appName, pluginName))</span>
-<span class="fc" id="L77">                .withNamespace(appNamespace)</span>
-<span class="fc" id="L78">                .endMetadata()</span>
-<span class="fc" id="L79">                .withNewSpec()</span>
-<span class="fc" id="L80">                .withEntandoApp(appNamespace, appName)</span>
-<span class="fc" id="L81">                .withEntandoPlugin(pluginNamespace, pluginName)</span>
-<span class="fc" id="L82">                .endSpec()</span>
-<span class="fc" id="L83">                .build();</span>
+    public EntandoAppPluginLink buildBetweenAppAndPlugin(EntandoApp app, EntandoPlugin plugin) {
+<span class="fc" id="L96">        String appNamespace = app.getMetadata().getNamespace();</span>
+<span class="fc" id="L97">        String appName = app.getMetadata().getName();</span>
+<span class="fc" id="L98">        String pluginName = plugin.getMetadata().getName();</span>
+<span class="fc" id="L99">        String pluginNamespace = plugin.getMetadata().getNamespace();</span>
+<span class="fc" id="L100">        return new EntandoAppPluginLinkBuilder()</span>
+<span class="fc" id="L101">                .withNewMetadata()</span>
+<span class="fc" id="L102">                .withName(String.format(&quot;%s-%s-link&quot;, appName, pluginName))</span>
+<span class="fc" id="L103">                .withNamespace(appNamespace)</span>
+<span class="fc" id="L104">                .endMetadata()</span>
+<span class="fc" id="L105">                .withNewSpec()</span>
+<span class="fc" id="L106">                .withEntandoApp(appNamespace, appName)</span>
+<span class="fc" id="L107">                .withEntandoPlugin(pluginNamespace, pluginName)</span>
+<span class="fc" id="L108">                .endSpec()</span>
+<span class="fc" id="L109">                .build();</span>
     }
 
     //CHECKSTYLE:OFF
     private MixedOperation&lt;EntandoAppPluginLink, EntandoAppPluginLinkList, DoneableEntandoAppPluginLink, Resource&lt;EntandoAppPluginLink, DoneableEntandoAppPluginLink&gt;&gt; getLinksOperations() {
         //CHECKSTYLE:ON
-<span class="fc" id="L89">        return EntandoAppPluginLinkOperationFactory.produceAllEntandoAppPluginLinks(client);</span>
+<span class="fc" id="L115">        return EntandoAppPluginLinkOperationFactory.produceAllEntandoAppPluginLinks(client);</span>
     }
 
 }
