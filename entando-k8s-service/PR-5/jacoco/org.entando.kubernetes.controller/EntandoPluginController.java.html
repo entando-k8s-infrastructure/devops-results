@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EntandoPluginController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Kubernetes Service</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.controller</a> &gt; <span class="el_source">EntandoPluginController.java</span></div><h1>EntandoPluginController.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.controller;
 
+import static org.springframework.hateoas.MediaTypes.HAL_JSON_VALUE;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+import static org.springframework.http.MediaType.APPLICATION_JSON_VALUE;
 
 import java.net.URI;
 import java.util.List;
@@ -33,89 +35,86 @@ import org.springframework.web.bind.annotation.RestController;
 import org.zalando.problem.ThrowableProblem;
 
 
-<span class="fc" id="L36">@Slf4j</span>
+<span class="fc" id="L38">@Slf4j</span>
 @RestController
 @RequestMapping(&quot;/plugins&quot;)
-<span class="fc" id="L39">@RequiredArgsConstructor</span>
+<span class="fc" id="L41">@RequiredArgsConstructor</span>
 public class EntandoPluginController {
-
-    private static final String JSON = MediaType.APPLICATION_JSON_VALUE;
-    private static final String HAL_JSON = MediaTypes.HAL_JSON_VALUE;
 
     private final EntandoLinkService entandoLinkService;
     private final EntandoPluginService entandoPluginService;
     private final EntandoPluginResourceAssembler resourceAssembler;
     private final EntandoAppPluginLinkResourceAssembler linkResourceAssembler;
 
-    @GetMapping(produces = {JSON,HAL_JSON})
+    @GetMapping(produces = {APPLICATION_JSON_VALUE, HAL_JSON_VALUE})
     public ResponseEntity&lt;CollectionModel&lt;EntityModel&lt;EntandoPlugin&gt;&gt;&gt; list() {
-<span class="fc" id="L52">        log.info(&quot;Listing all deployed plugins in observed namespaces&quot;);</span>
-<span class="fc" id="L53">        List&lt;EntandoPlugin&gt; plugins = entandoPluginService.getPlugins();</span>
-<span class="fc" id="L54">        return ResponseEntity</span>
-<span class="fc" id="L55">                .ok(new CollectionModel&lt;&gt;(plugins.stream().map(resourceAssembler::toModel).collect(Collectors.toList())));</span>
+<span class="fc" id="L51">        log.info(&quot;Listing all deployed plugins in observed namespaces&quot;);</span>
+<span class="fc" id="L52">        List&lt;EntandoPlugin&gt; plugins = entandoPluginService.getAll();</span>
+<span class="fc" id="L53">        return ResponseEntity</span>
+<span class="fc" id="L54">                .ok(new CollectionModel&lt;&gt;(plugins.stream().map(resourceAssembler::toModel).collect(Collectors.toList())));</span>
     }
 
-    @GetMapping(produces = {JSON,HAL_JSON}, params = &quot;namespace&quot;)
+    @GetMapping(produces = {APPLICATION_JSON_VALUE, HAL_JSON_VALUE}, params = &quot;namespace&quot;)
     public ResponseEntity&lt;CollectionModel&lt;EntityModel&lt;EntandoPlugin&gt;&gt;&gt; listInNamespace(@RequestParam String namespace) {
-<span class="fc" id="L60">        log.info(&quot;Listing all deployed plugins in {} observed namespace&quot;, namespace);</span>
+<span class="fc" id="L59">        log.info(&quot;Listing all deployed plugins in {} observed namespace&quot;, namespace);</span>
         //TODO: Throw an error when querying a non observed namespace
-<span class="fc" id="L62">        List&lt;EntandoPlugin&gt; plugins = entandoPluginService.getPluginsInNamespace(namespace);</span>
-<span class="fc" id="L63">        return ResponseEntity</span>
-<span class="fc" id="L64">                .ok(new CollectionModel&lt;&gt;(plugins.stream().map(resourceAssembler::toModel).collect(Collectors.toList())));</span>
+<span class="fc" id="L61">        List&lt;EntandoPlugin&gt; plugins = entandoPluginService.getAllInNamespace(namespace);</span>
+<span class="fc" id="L62">        return ResponseEntity</span>
+<span class="fc" id="L63">                .ok(new CollectionModel&lt;&gt;(plugins.stream().map(resourceAssembler::toModel).collect(Collectors.toList())));</span>
     }
 
-    @GetMapping(path = &quot;/{name}&quot;, produces = {JSON,HAL_JSON})
+    @GetMapping(path = &quot;/{name}&quot;, produces = {APPLICATION_JSON_VALUE, HAL_JSON_VALUE})
     public ResponseEntity&lt;EntityModel&lt;EntandoPlugin&gt;&gt; get(@PathVariable(&quot;name&quot;) final String pluginName) {
-<span class="fc" id="L69">        log.info(&quot;Searching plugin with name {} in observed namespaces&quot;, pluginName);</span>
-<span class="fc" id="L70">        EntandoPlugin plugin = getEntandoPluginOrFail(pluginName);</span>
-<span class="fc" id="L71">        return ResponseEntity.ok(resourceAssembler.toModel(plugin));</span>
+<span class="fc" id="L68">        log.info(&quot;Searching plugin with name {} in observed namespaces&quot;, pluginName);</span>
+<span class="fc" id="L69">        EntandoPlugin plugin = getEntandoPluginOrFail(pluginName);</span>
+<span class="fc" id="L70">        return ResponseEntity.ok(resourceAssembler.toModel(plugin));</span>
     }
 
 
-    @DeleteMapping(path = &quot;/{name}&quot;, produces = {JSON,HAL_JSON})
+    @DeleteMapping(path = &quot;/{name}&quot;, produces = {APPLICATION_JSON_VALUE, HAL_JSON_VALUE})
     public ResponseEntity&lt;Void&gt; delete(@PathVariable(&quot;name&quot;) String pluginName) {
-<span class="fc" id="L77">        log.info(&quot;Deleting plugin with identifier {} from observed namespaces&quot;, pluginName);</span>
-<span class="fc" id="L78">        EntandoPlugin plugin = getEntandoPluginOrFail(pluginName);</span>
-<span class="fc" id="L79">        entandoPluginService.deletePlugin(plugin);</span>
-<span class="fc" id="L80">        return ResponseEntity.accepted().build();</span>
+<span class="fc" id="L76">        log.info(&quot;Deleting plugin with identifier {} from observed namespaces&quot;, pluginName);</span>
+<span class="fc" id="L77">        EntandoPlugin plugin = getEntandoPluginOrFail(pluginName);</span>
+<span class="fc" id="L78">        entandoPluginService.deletePlugin(plugin);</span>
+<span class="fc" id="L79">        return ResponseEntity.accepted().build();</span>
     }
 
-    @PostMapping(consumes = JSON, produces = {JSON,HAL_JSON})
+    @PostMapping(consumes = APPLICATION_JSON_VALUE, produces = {APPLICATION_JSON_VALUE, HAL_JSON_VALUE})
     public ResponseEntity&lt;EntityModel&lt;EntandoPlugin&gt;&gt; create(
             @RequestBody EntandoPlugin entandoPlugin) {
-<span class="fc" id="L86">        throwExceptionIfAlreadyDeployed(entandoPlugin);</span>
+<span class="fc" id="L85">        throwExceptionIfAlreadyDeployed(entandoPlugin);</span>
         //TODO: throw exception if working with non observed namespace
-<span class="fc" id="L88">        EntandoPlugin deployedPlugin = entandoPluginService.deploy(entandoPlugin);</span>
-<span class="fc" id="L89">        URI resourceLink = linkTo(methodOn(getClass()).get(deployedPlugin.getMetadata().getName())).toUri();</span>
-<span class="fc" id="L90">        return ResponseEntity.created(resourceLink).body(resourceAssembler.toModel(deployedPlugin));</span>
+<span class="fc" id="L87">        EntandoPlugin deployedPlugin = entandoPluginService.deploy(entandoPlugin);</span>
+<span class="fc" id="L88">        URI resourceLink = linkTo(methodOn(getClass()).get(deployedPlugin.getMetadata().getName())).toUri();</span>
+<span class="fc" id="L89">        return ResponseEntity.created(resourceLink).body(resourceAssembler.toModel(deployedPlugin));</span>
     }
 
-    @GetMapping(path = &quot;/{name}/links&quot;, produces = {JSON,HAL_JSON})
+    @GetMapping(path = &quot;/{name}/links&quot;, produces = {APPLICATION_JSON_VALUE, HAL_JSON_VALUE})
     public ResponseEntity&lt;CollectionModel&lt;EntityModel&lt;EntandoAppPluginLink&gt;&gt;&gt; listLinks(
             @PathVariable(&quot;name&quot;) String pluginName) {
-<span class="fc" id="L96">        EntandoPlugin entandoPlugin = getEntandoPluginOrFail(pluginName);</span>
-<span class="fc" id="L97">        List&lt;EntandoAppPluginLink&gt; appLinks = entandoLinkService.getPluginLinks(entandoPlugin);</span>
-<span class="fc" id="L98">        List&lt;EntityModel&lt;EntandoAppPluginLink&gt;&gt; linkResources = appLinks.stream()</span>
-<span class="fc" id="L99">                .map(linkResourceAssembler::toModel)</span>
-<span class="fc" id="L100">                .collect(Collectors.toList());</span>
-<span class="fc" id="L101">        return ResponseEntity.ok(new CollectionModel&lt;&gt;(linkResources));</span>
+<span class="fc" id="L95">        EntandoPlugin entandoPlugin = getEntandoPluginOrFail(pluginName);</span>
+<span class="fc" id="L96">        List&lt;EntandoAppPluginLink&gt; appLinks = entandoLinkService.getPluginLinks(entandoPlugin);</span>
+<span class="fc" id="L97">        List&lt;EntityModel&lt;EntandoAppPluginLink&gt;&gt; linkResources = appLinks.stream()</span>
+<span class="fc" id="L98">                .map(linkResourceAssembler::toModel)</span>
+<span class="fc" id="L99">                .collect(Collectors.toList());</span>
+<span class="fc" id="L100">        return ResponseEntity.ok(new CollectionModel&lt;&gt;(linkResources));</span>
     }
 
     private EntandoPlugin getEntandoPluginOrFail(String pluginName) {
-<span class="fc" id="L105">        return entandoPluginService</span>
-<span class="fc" id="L106">                .findPluginByName(pluginName)</span>
-<span class="fc" id="L107">                .&lt;ThrowableProblem&gt;orElseThrow(() -&gt; {</span>
-<span class="nc" id="L108">                    throw NotFoundExceptionFactory.entandoPlugin(pluginName);</span>
+<span class="fc" id="L104">        return entandoPluginService</span>
+<span class="fc" id="L105">                .findByName(pluginName)</span>
+<span class="fc" id="L106">                .&lt;ThrowableProblem&gt;orElseThrow(() -&gt; {</span>
+<span class="nc" id="L107">                    throw NotFoundExceptionFactory.entandoPlugin(pluginName);</span>
                 });
     }
 
     private void throwExceptionIfAlreadyDeployed(EntandoPlugin entandoPlugin) {
-<span class="fc" id="L113">        Optional&lt;EntandoPlugin&gt; alreadyDeployedPlugin = entandoPluginService</span>
-<span class="fc" id="L114">                .findPluginByName(entandoPlugin.getMetadata().getName());</span>
-<span class="fc bfc" id="L115" title="All 2 branches covered.">        if (alreadyDeployedPlugin.isPresent()) {</span>
-<span class="fc" id="L116">            throw BadRequestExceptionFactory.pluginAlreadyDeployed(alreadyDeployedPlugin.get());</span>
+<span class="fc" id="L112">        Optional&lt;EntandoPlugin&gt; alreadyDeployedPlugin = entandoPluginService</span>
+<span class="fc" id="L113">                .findByName(entandoPlugin.getMetadata().getName());</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">        if (alreadyDeployedPlugin.isPresent()) {</span>
+<span class="fc" id="L115">            throw BadRequestExceptionFactory.pluginAlreadyDeployed(alreadyDeployedPlugin.get());</span>
         }
-<span class="fc" id="L118">    }</span>
+<span class="fc" id="L117">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

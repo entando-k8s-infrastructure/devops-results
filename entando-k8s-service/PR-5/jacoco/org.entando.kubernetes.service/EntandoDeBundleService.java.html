@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EntandoDeBundleService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Kubernetes Service</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.service</a> &gt; <span class="el_source">EntandoDeBundleService.java</span></div><h1>EntandoDeBundleService.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.service;
 
-import io.fabric8.kubernetes.api.model.apiextensions.CustomResourceDefinition;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.MixedOperation;
 import io.fabric8.kubernetes.client.dsl.Resource;
@@ -11,79 +10,45 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.entando.kubernetes.model.ObservedNamespaces;
 import org.entando.kubernetes.model.debundle.DoneableEntandoDeBundle;
 import org.entando.kubernetes.model.debundle.EntandoDeBundle;
 import org.entando.kubernetes.model.debundle.EntandoDeBundleList;
 import org.entando.kubernetes.model.debundle.EntandoDeBundleOperationFactory;
 import org.springframework.stereotype.Service;
 
-<span class="fc" id="L21">@Slf4j</span>
+<span class="fc" id="L22">@Slf4j</span>
 @Service
-public class EntandoDeBundleService {
+public class EntandoDeBundleService extends EntandoKubernetesResourceCollector&lt;EntandoDeBundle&gt;{
 
-    private final KubernetesClient client;
-    private final List&lt;String&gt; observedNamespaces;
+    public EntandoDeBundleService(KubernetesClient client,
+            ObservedNamespaces observedNamespaces) {
+<span class="fc" id="L28">        super(client, observedNamespaces);</span>
+<span class="fc" id="L29">    }</span>
 
-<span class="fc" id="L28">    public EntandoDeBundleService(KubernetesClient client, List&lt;String&gt; observedNamespaces) {</span>
-<span class="fc" id="L29">        this.client = client;</span>
-<span class="fc" id="L30">        this.observedNamespaces = observedNamespaces;</span>
-<span class="fc" id="L31">    }</span>
-
-
-    public List&lt;EntandoDeBundle&gt; getBundles() {
-<span class="fc" id="L35">        return getBundlesInNamespaceList(observedNamespaces);</span>
-    }
-
-    public List&lt;EntandoDeBundle&gt; getBundlesInNamespace(String namespace) {
-<span class="fc" id="L39">        return getBundleOperations().inNamespace(namespace).list().getItems();</span>
-    }
-
-    public List&lt;EntandoDeBundle&gt; getBundlesInNamespaceList(List&lt;String&gt; namespaceList) {
-<span class="fc" id="L43">        CompletableFuture&lt;List&lt;EntandoDeBundle&gt;&gt;[] allRequests = namespaceList.stream()</span>
-<span class="fc" id="L44">                .map(ns -&gt; CompletableFuture.supplyAsync(() -&gt; getBundlesInNamespace(ns) ))</span>
-<span class="fc" id="L45">                .toArray(CompletableFuture[]::new);</span>
-
-<span class="fc" id="L47">        CompletableFuture&lt;List&lt;EntandoDeBundle&gt;&gt; allBundles = CompletableFuture.allOf(allRequests)</span>
-<span class="fc" id="L48">                .thenApply(v -&gt; Stream.of(allRequests).map(CompletableFuture::join)</span>
-<span class="fc" id="L49">                            .flatMap(Collection::stream)</span>
-<span class="fc" id="L50">                            .collect(Collectors.toList()))</span>
-<span class="fc" id="L51">                .exceptionally(ex -&gt; {</span>
-<span class="nc" id="L52">                    log.error(&quot;An error occurred while retrieving bundles from multiple namespaces&quot;, ex);</span>
-<span class="nc" id="L53">                    return Collections.emptyList();</span>
-                });
-
-<span class="fc" id="L56">        return allBundles.join();</span>
-    }
-
-    public List&lt;EntandoDeBundle&gt; findBundlesByName(String bundleName) {
-<span class="fc" id="L60">        return getBundles().stream()</span>
-<span class="fc" id="L61">                .filter(b -&gt; b.getSpec().getDetails().getName().equals(bundleName))</span>
-<span class="fc" id="L62">                .collect(Collectors.toList());</span>
-    }
-
-    public Optional&lt;EntandoDeBundle&gt; findBundleByNameAndNamespace(String bundleName, String namespace) {
-<span class="fc" id="L66">        return getBundlesInNamespace(namespace).stream()</span>
-<span class="fc" id="L67">                .filter(b -&gt; b.getSpec().getDetails().getName().equals(bundleName))</span>
-<span class="fc" id="L68">                .findFirst();</span>
+    @Override
+    protected List&lt;EntandoDeBundle&gt; getInNamespaceWithoutChecking(String namespace) {
+<span class="fc" id="L33">        return getBundleOperations().inNamespace(namespace).list().getItems();</span>
     }
 
     public List&lt;EntandoDeBundle&gt; findBundlesByAnyKeywords(List&lt;String&gt; keywords) {
-<span class="fc" id="L72">        return getBundles().stream()</span>
-<span class="fc" id="L73">                .filter(b -&gt; b.getSpec().getDetails().getKeywords().stream().anyMatch(keywords::contains))</span>
-<span class="fc" id="L74">                .collect(Collectors.toList());</span>
+<span class="fc" id="L37">        return getAll().stream()</span>
+<span class="fc" id="L38">                .filter(b -&gt; b.getSpec().getDetails().getKeywords().stream().anyMatch(keywords::contains))</span>
+<span class="fc" id="L39">                .collect(Collectors.toList());</span>
     }
 
     public List&lt;EntandoDeBundle&gt; findBundlesByAllKeywords(List&lt;String&gt; keywords) {
-<span class="fc" id="L78">        return getBundles().stream()</span>
-<span class="fc" id="L79">                .filter(b -&gt; keywords.containsAll(b.getSpec().getDetails().getKeywords()))</span>
-<span class="fc" id="L80">                .collect(Collectors.toList());</span>
+<span class="fc" id="L43">        return getAll().stream()</span>
+<span class="fc" id="L44">                .filter(b -&gt; keywords.containsAll(b.getSpec().getDetails().getKeywords()))</span>
+<span class="fc" id="L45">                .collect(Collectors.toList());</span>
     }
 
     //CHECKSTYLE:OFF
     private MixedOperation&lt;EntandoDeBundle, EntandoDeBundleList, DoneableEntandoDeBundle, Resource&lt;EntandoDeBundle, DoneableEntandoDeBundle&gt;&gt; getBundleOperations() {
         //CHECKSTYLE:ON
-<span class="fc" id="L86">        return EntandoDeBundleOperationFactory.produceAllEntandoDeBundles(client);</span>
+<span class="fc" id="L51">        return EntandoDeBundleOperationFactory.produceAllEntandoDeBundles(client);</span>
     }
 
 }

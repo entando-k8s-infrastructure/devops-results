@@ -6,16 +6,10 @@ import io.fabric8.kubernetes.client.KubernetesClient;
 import io.fabric8.kubernetes.client.dsl.MixedOperation;
 import io.fabric8.kubernetes.client.dsl.Resource;
 import io.fabric8.zjsonpatch.internal.guava.Strings;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.entando.kubernetes.exception.BadRequestExceptionFactory;
+import org.entando.kubernetes.model.ObservedNamespaces;
 import org.entando.kubernetes.model.plugin.DoneableEntandoPlugin;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.entando.kubernetes.model.plugin.EntandoPluginBuilder;
@@ -23,18 +17,24 @@ import org.entando.kubernetes.model.plugin.EntandoPluginList;
 import org.entando.kubernetes.model.plugin.EntandoPluginOperationFactory;
 import org.springframework.stereotype.Service;
 
-<span class="fc" id="L26">@Slf4j</span>
+<span class="fc" id="L20">@Slf4j</span>
 @Service
-<span class="fc" id="L28">@RequiredArgsConstructor</span>
-public class EntandoPluginService {
+public class EntandoPluginService extends EntandoKubernetesResourceCollector&lt;EntandoPlugin&gt; {
 
-    private final KubernetesClient client;
-    private final List&lt;String&gt; observedNamespaces;
-    private final KubernetesUtils k8sUtils;
+
+    public EntandoPluginService(KubernetesClient client,
+            ObservedNamespaces observedNamespaces) {
+<span class="fc" id="L27">        super(client, observedNamespaces);</span>
+<span class="fc" id="L28">    }</span>
+
+    @Override
+    protected List&lt;EntandoPlugin&gt; getInNamespaceWithoutChecking(String namespace) {
+<span class="fc" id="L32">        return getPluginOperations().inNamespace(namespace).list().getItems();</span>
+    }
 
     public void deletePlugin(String pluginId) {
 <span class="fc" id="L36">        log.info(&quot;Delete plugin {} from observed namespaces&quot;, pluginId);</span>
-<span class="fc" id="L37">        Optional&lt;EntandoPlugin&gt; entandoPlugin = findPluginByName(pluginId);</span>
+<span class="fc" id="L37">        Optional&lt;EntandoPlugin&gt; entandoPlugin = findByName(pluginId);</span>
 <span class="fc" id="L38">        entandoPlugin.ifPresent(this::deletePlugin);</span>
 <span class="fc" id="L39">    }</span>
 
@@ -44,78 +44,44 @@ public class EntandoPluginService {
 <span class="fc" id="L44">    }</span>
 
     public void deletePluginInNamespace(String pluginId, String namespace) {
-<span class="fc" id="L47">        log.info(&quot;Delete plugin {} from namespace {}&quot;, pluginId, namespace);</span>
-<span class="fc" id="L48">        EntandoPlugin pluginToRemove = new EntandoPlugin();</span>
-<span class="fc" id="L49">        ObjectMeta pluginMeta = new ObjectMetaBuilder().withName(pluginId).withNamespace(namespace).build();</span>
-<span class="fc" id="L50">        pluginToRemove.setMetadata(pluginMeta);</span>
-<span class="fc" id="L51">        getPluginOperations().inAnyNamespace().delete(pluginToRemove);</span>
-<span class="fc" id="L52">    }</span>
-
-    public List&lt;EntandoPlugin&gt; getPlugins() {
-<span class="fc" id="L55">        return getPluginsInNamespaceList(observedNamespaces);</span>
-    }
-
-    public List&lt;EntandoPlugin&gt; getPluginsInNamespace(String namespace) {
-<span class="fc" id="L59">        return getPluginOperations().inNamespace(namespace).list().getItems();</span>
-    }
-
-    public List&lt;EntandoPlugin&gt; getPluginsInNamespaceList(List&lt;String&gt; namespaceList) {
-<span class="fc" id="L63">        CompletableFuture&lt;List&lt;EntandoPlugin&gt;&gt;[] allRequests = namespaceList.stream()</span>
-<span class="fc" id="L64">                .map(ns -&gt; CompletableFuture.supplyAsync(() -&gt; getPluginsInNamespace(ns) ))</span>
-<span class="fc" id="L65">                .toArray(CompletableFuture[]::new);</span>
-
-<span class="fc" id="L67">        CompletableFuture&lt;List&lt;EntandoPlugin&gt;&gt; allPlugins = CompletableFuture.allOf(allRequests)</span>
-<span class="fc" id="L68">                .thenApply(v -&gt; Stream.of(allRequests).map(CompletableFuture::join)</span>
-<span class="fc" id="L69">                        .flatMap(Collection::stream)</span>
-<span class="fc" id="L70">                        .collect(Collectors.toList()))</span>
-<span class="fc" id="L71">                .exceptionally(ex -&gt; {</span>
-<span class="nc" id="L72">                    log.error(&quot;An error occurred while retrieving plugins from multiple namespaces&quot;, ex);</span>
-<span class="nc" id="L73">                    return Collections.emptyList();</span>
-                });
-
-<span class="fc" id="L76">        return allPlugins.join();</span>
-    }
+<span class="fc" id="L47">        observedNamespaces.failIfNotObserved(namespace);</span>
+<span class="fc" id="L48">        log.info(&quot;Delete plugin {} from namespace {}&quot;, pluginId, namespace);</span>
+<span class="fc" id="L49">        EntandoPlugin pluginToRemove = new EntandoPlugin();</span>
+<span class="fc" id="L50">        ObjectMeta pluginMeta = new ObjectMetaBuilder().withName(pluginId).withNamespace(namespace).build();</span>
+<span class="fc" id="L51">        pluginToRemove.setMetadata(pluginMeta);</span>
+<span class="fc" id="L52">        getPluginOperations().inAnyNamespace().delete(pluginToRemove);</span>
+<span class="fc" id="L53">    }</span>
 
     public EntandoPlugin deploy(EntandoPlugin plugin) {
-<span class="fc" id="L80">        log.info(&quot;Deploying plugin {} in namespace {}&quot;, plugin.getMetadata().getName(),</span>
-<span class="fc" id="L81">                plugin.getMetadata().getNamespace());</span>
-<span class="fc" id="L82">        EntandoPlugin cleanPlugin = pluginCleanUp(plugin);</span>
-<span class="fc bfc" id="L83" title="All 2 branches covered.">        if (!this.observedNamespaces.contains(cleanPlugin.getMetadata().getNamespace())) {</span>
-<span class="fc" id="L84">            throw BadRequestExceptionFactory.pluginNamespaceNotObserved(cleanPlugin);</span>
-        }
-<span class="fc" id="L86">        return getPluginOperations().inNamespace(cleanPlugin.getMetadata().getNamespace()).create(cleanPlugin);</span>
+<span class="fc" id="L56">        log.info(&quot;Deploying plugin {} in namespace {}&quot;, plugin.getMetadata().getName(),</span>
+<span class="fc" id="L57">                plugin.getMetadata().getNamespace());</span>
+<span class="fc" id="L58">        EntandoPlugin cleanPlugin = pluginCleanUp(plugin);</span>
+<span class="fc" id="L59">        observedNamespaces.failIfNotObserved(cleanPlugin.getMetadata().getNamespace());</span>
+<span class="fc" id="L60">        return getPluginOperations().inNamespace(cleanPlugin.getMetadata().getNamespace()).create(cleanPlugin);</span>
     }
 
     private EntandoPlugin pluginCleanUp(EntandoPlugin plugin) {
         //TODO verify the plugin has a name
         //assert !Strings.isNullOrEmpty(plugin.getMetadata().getName());
-<span class="fc bfc" id="L92" title="All 2 branches covered.">        if (Strings.isNullOrEmpty(plugin.getMetadata().getNamespace())) {</span>
-<span class="fc" id="L93">            plugin.getMetadata().setNamespace(k8sUtils.getCurrentNamespace());</span>
+<span class="fc bfc" id="L66" title="All 2 branches covered.">        if (Strings.isNullOrEmpty(plugin.getMetadata().getNamespace())) {</span>
+<span class="fc" id="L67">            plugin.getMetadata().setNamespace(observedNamespaces.getCurrentNamespace());</span>
         }
-<span class="fc" id="L95">        EntandoPlugin newPlugin = new EntandoPluginBuilder()</span>
-<span class="fc" id="L96">                .withNewMetadata()</span>
-<span class="fc" id="L97">                .withName(plugin.getMetadata().getName())</span>
-<span class="fc" id="L98">                .withNamespace(plugin.getMetadata().getNamespace())</span>
-<span class="fc" id="L99">                .endMetadata()</span>
-<span class="fc" id="L100">                .withSpec(plugin.getSpec())</span>
-<span class="fc" id="L101">                .build();</span>
-<span class="fc" id="L102">        newPlugin.setStatus(null);</span>
-<span class="fc" id="L103">        return newPlugin;</span>
+<span class="fc" id="L69">        EntandoPlugin newPlugin = new EntandoPluginBuilder()</span>
+<span class="fc" id="L70">                .withNewMetadata()</span>
+<span class="fc" id="L71">                .withName(plugin.getMetadata().getName())</span>
+<span class="fc" id="L72">                .withNamespace(plugin.getMetadata().getNamespace())</span>
+<span class="fc" id="L73">                .endMetadata()</span>
+<span class="fc" id="L74">                .withSpec(plugin.getSpec())</span>
+<span class="fc" id="L75">                .build();</span>
+<span class="fc" id="L76">        newPlugin.setStatus(null);</span>
+<span class="fc" id="L77">        return newPlugin;</span>
     }
 
-
-    public Optional&lt;EntandoPlugin&gt; findPluginByName(String pluginId) {
-<span class="fc" id="L108">        return getPlugins().stream().filter(pl -&gt; pl.getMetadata().getName().equals(pluginId)).findFirst();</span>
-    }
-
-    public Optional&lt;EntandoPlugin&gt; findPluginByIdAndNamespace(String pluginId, String namespace) {
-<span class="fc" id="L112">        return getPluginsInNamespace(namespace).stream().filter(pl -&gt; pl.getMetadata().getName().equals(pluginId)).findFirst();</span>
-    }
 
     //CHECKSTYLE:OFF
     private MixedOperation&lt;EntandoPlugin, EntandoPluginList, DoneableEntandoPlugin, Resource&lt;EntandoPlugin, DoneableEntandoPlugin&gt;&gt; getPluginOperations() {
         //CHECKSTYLE:ON
-<span class="fc" id="L118">        return EntandoPluginOperationFactory.produceAllEntandoPlugins(client);</span>
+<span class="fc" id="L84">        return EntandoPluginOperationFactory.produceAllEntandoPlugins(client);</span>
     }
 
 }
