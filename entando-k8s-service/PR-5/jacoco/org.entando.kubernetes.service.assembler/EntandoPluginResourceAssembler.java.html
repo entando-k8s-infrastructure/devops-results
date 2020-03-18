@@ -4,32 +4,35 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 import org.entando.kubernetes.controller.EntandoPluginController;
+import org.entando.kubernetes.controller.KubernetesNamespaceController;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.Links;
 import org.springframework.hateoas.server.RepresentationModelAssembler;
 import org.springframework.stereotype.Service;
 
 @Service
-<span class="fc" id="L13">public class EntandoPluginResourceAssembler implements</span>
+<span class="fc" id="L15">public class EntandoPluginResourceAssembler implements</span>
         RepresentationModelAssembler&lt;EntandoPlugin, EntityModel&lt;EntandoPlugin&gt;&gt; {
 
 
     @Override
     public EntityModel&lt;EntandoPlugin&gt; toModel(EntandoPlugin entity) {
-<span class="fc" id="L19">        EntityModel&lt;EntandoPlugin&gt; response = new EntityModel&lt;&gt;(entity);</span>
-
-<span class="fc" id="L21">        applyRel(response);</span>
-
+<span class="fc" id="L21">        EntityModel&lt;EntandoPlugin&gt; response = new EntityModel&lt;&gt;(entity);</span>
+<span class="fc" id="L22">        response.add(getLinks(entity));</span>
 <span class="fc" id="L23">        return response;</span>
 
     }
 
-    private void applyRel(EntityModel&lt;EntandoPlugin&gt; response) {
-<span class="fc" id="L28">        String pluginName = response.getContent().getMetadata().getName();</span>
-<span class="fc" id="L29">        String pluginNamespace = response.getContent().getMetadata().getNamespace();</span>
-<span class="fc" id="L30">        response.add(linkTo(methodOn(EntandoPluginController.class).get(pluginName)) .withSelfRel());</span>
-<span class="fc" id="L31">        response.add(linkTo(methodOn(EntandoPluginController.class).listInNamespace(pluginNamespace)).withRel(&quot;namespace_plugin&quot;));</span>
-<span class="fc" id="L32">        response.add(linkTo(methodOn(EntandoPluginController.class).list()).withRel(&quot;plugins&quot;));</span>
-<span class="fc" id="L33">    }</span>
+    private Links getLinks(EntandoPlugin plugin) {
+<span class="fc" id="L28">        String pluginName = plugin.getMetadata().getName();</span>
+<span class="fc" id="L29">        String pluginNamespace = plugin.getMetadata().getNamespace();</span>
+<span class="fc" id="L30">        return Links.of(</span>
+<span class="fc" id="L31">            linkTo(methodOn(EntandoPluginController.class).get(pluginName)).withSelfRel(),</span>
+<span class="fc" id="L32">            linkTo(methodOn(EntandoPluginController.class).list()).withRel(&quot;plugins&quot;),</span>
+<span class="fc" id="L33">            linkTo(methodOn(EntandoPluginController.class).listInNamespace(pluginNamespace)).withRel(&quot;plugins-in-namespace&quot;),</span>
+<span class="fc" id="L34">            linkTo(methodOn(KubernetesNamespaceController.class).getByName(pluginNamespace)).withRel(&quot;namespace&quot;)</span>
+        );
+    }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
