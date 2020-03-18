@@ -88,12 +88,24 @@ public class EntandoAppController {
 <span class="fc" id="L88">        return ResponseEntity.ok(linksCollection);</span>
     }
 
+    @GetMapping(path = &quot;/{name}/links/{linkName}&quot;, produces = {APPLICATION_JSON_VALUE,
+            HAL_JSON_VALUE})
+    public ResponseEntity&lt;EntityModel&lt;EntandoAppPluginLink&gt;&gt; getAppLink(
+            @PathVariable(&quot;name&quot;) String appName, @PathVariable(&quot;linkName&quot;) String linkName) {
+<span class="nc" id="L95">        EntandoApp entandoApp = getEntandoAppOrFail(appName);</span>
+<span class="nc" id="L96">        List&lt;EntandoAppPluginLink&gt; appLinks = entandoLinkService.getAppLinks(entandoApp);</span>
+<span class="nc" id="L97">        EntandoAppPluginLink link = appLinks.stream()</span>
+<span class="nc" id="L98">                .filter(l -&gt; l.getMetadata().getName().equals(linkName)).findFirst()</span>
+<span class="nc" id="L99">                .&lt;ThrowableProblem&gt;orElseThrow(() -&gt; NotFoundExceptionFactory.entandoLinkWithName(linkName));</span>
+<span class="nc" id="L100">        return ResponseEntity.ok(linkResourceAssembler.toModel(link));</span>
+    }
+
     @GetMapping(path = &quot;/{name}/links&quot;, produces = {APPLICATION_JSON_VALUE,
             HAL_JSON_VALUE}, params = &quot;plugin&quot;)
     public ResponseEntity&lt;EntityModel&lt;EntandoAppPluginLink&gt;&gt; listLinks(
             @PathVariable(&quot;name&quot;) String appName, @RequestParam(&quot;plugin&quot;) String pluginName) {
-<span class="nc" id="L95">        EntandoAppPluginLink appPluginLink = getLinkOrFail(appName, pluginName);</span>
-<span class="nc" id="L96">        return ResponseEntity.ok(linkResourceAssembler.toModel(appPluginLink));</span>
+<span class="nc" id="L107">        EntandoAppPluginLink appPluginLink = getAppPluginLinkOrFail(appName, pluginName);</span>
+<span class="nc" id="L108">        return ResponseEntity.ok(linkResourceAssembler.toModel(appPluginLink));</span>
     }
 
 
@@ -102,11 +114,11 @@ public class EntandoAppController {
     public ResponseEntity&lt;EntityModel&lt;EntandoAppPluginLink&gt;&gt; linkToPlugin(
             @PathVariable(&quot;name&quot;) String appName,
             @RequestBody EntandoPlugin entandoPlugin) {
-<span class="fc" id="L105">        EntandoApp entandoApp = getEntandoAppOrFail(appName);</span>
-<span class="fc" id="L106">        EntandoPlugin plugin = getOrCreatePlugin(entandoPlugin);</span>
-<span class="fc" id="L107">        EntandoAppPluginLink newLink = entandoLinkService.buildBetweenAppAndPlugin(entandoApp, plugin);</span>
-<span class="fc" id="L108">        EntandoAppPluginLink deployedLink = entandoLinkService.deploy(newLink);</span>
-<span class="fc" id="L109">        return ResponseEntity.status(HttpStatus.CREATED).body(linkResourceAssembler.toModel(deployedLink));</span>
+<span class="fc" id="L117">        EntandoApp entandoApp = getEntandoAppOrFail(appName);</span>
+<span class="fc" id="L118">        EntandoPlugin plugin = getOrCreatePlugin(entandoPlugin);</span>
+<span class="fc" id="L119">        EntandoAppPluginLink newLink = entandoLinkService.buildBetweenAppAndPlugin(entandoApp, plugin);</span>
+<span class="fc" id="L120">        EntandoAppPluginLink deployedLink = entandoLinkService.deploy(newLink);</span>
+<span class="fc" id="L121">        return ResponseEntity.status(HttpStatus.CREATED).body(linkResourceAssembler.toModel(deployedLink));</span>
     }
 
     @DeleteMapping(path = &quot;/{name}/links&quot;, produces = {
@@ -114,59 +126,66 @@ public class EntandoAppController {
     public ResponseEntity&lt;Void&gt; unlink(
             @PathVariable(&quot;name&quot;) String appName,
             @RequestParam(&quot;plugin&quot;) String pluginName) {
-<span class="fc" id="L117">        EntandoAppPluginLink linkToRemove = getLinkOrFail(appName, pluginName);</span>
-<span class="fc" id="L118">        entandoLinkService.delete(linkToRemove);</span>
-<span class="fc" id="L119">        return ResponseEntity.accepted().build();</span>
+<span class="fc" id="L129">        EntandoAppPluginLink linkToRemove = getAppPluginLinkOrFail(appName, pluginName);</span>
+<span class="fc" id="L130">        entandoLinkService.delete(linkToRemove);</span>
+<span class="fc" id="L131">        return ResponseEntity.accepted().build();</span>
     }
 
 
     private EntandoApp getEntandoAppOrFail(String appName) {
-<span class="fc" id="L124">        return entandoAppService</span>
-<span class="fc" id="L125">                .findByName(appName)</span>
-<span class="fc" id="L126">                .&lt;ThrowableProblem&gt;orElseThrow(() -&gt; {</span>
-<span class="fc" id="L127">                    throw NotFoundExceptionFactory.entandoApp(appName);</span>
+<span class="fc" id="L136">        return entandoAppService</span>
+<span class="fc" id="L137">                .findByName(appName)</span>
+<span class="fc" id="L138">                .&lt;ThrowableProblem&gt;orElseThrow(() -&gt; {</span>
+<span class="fc" id="L139">                    throw NotFoundExceptionFactory.entandoApp(appName);</span>
                 });
     }
 
-    private EntandoAppPluginLink getLinkOrFail(String appName, String pluginName) {
-<span class="fc" id="L132">        return entandoLinkService.findByAppNameAndPluginName(appName, pluginName)</span>
-<span class="fc" id="L133">                .&lt;ThrowableProblem&gt;orElseThrow(() -&gt; {</span>
-<span class="nc" id="L134">                    throw NotFoundExceptionFactory.entandoLink(appName, pluginName);</span>
+    private EntandoAppPluginLink getAppPluginLinkOrFail(String appName, String pluginName) {
+<span class="fc" id="L144">        return entandoLinkService.findByAppNameAndPluginName(appName, pluginName)</span>
+<span class="fc" id="L145">                .&lt;ThrowableProblem&gt;orElseThrow(() -&gt; {</span>
+<span class="nc" id="L146">                    throw NotFoundExceptionFactory.entandoLink(appName, pluginName);</span>
+                });
+    }
+
+    private EntandoAppPluginLink getLink(String linkName) {
+<span class="nc" id="L151">        return entandoLinkService.findByName(linkName)</span>
+<span class="nc" id="L152">                .&lt;ThrowableProblem&gt;orElseThrow(() -&gt; {</span>
+<span class="nc" id="L153">                    throw NotFoundExceptionFactory.entandoLinkWithName(linkName);</span>
                 });
     }
 
     private EntandoPlugin getOrCreatePlugin(EntandoPlugin plugin) {
-<span class="fc" id="L139">        String pluginName = plugin.getMetadata().getName();</span>
-<span class="fc" id="L140">        Optional&lt;EntandoPlugin&gt; optionalPlugin = entandoPluginService.findByName(pluginName);</span>
-<span class="fc" id="L141">        return optionalPlugin.orElseGet(() -&gt; {</span>
-<span class="fc" id="L142">            String pluginNamespace = Optional.ofNullable(plugin.getMetadata().getNamespace())</span>
-<span class="pc bpc" id="L143" title="1 of 2 branches missed.">                    .filter(ns -&gt; !ns.isEmpty())</span>
-<span class="fc" id="L144">                    .orElse(k8sUtils.getCurrentNamespace());</span>
-<span class="fc" id="L145">            plugin.getMetadata().setNamespace(pluginNamespace);</span>
-<span class="fc" id="L146">            return entandoPluginService.deploy(plugin);</span>
+<span class="fc" id="L158">        String pluginName = plugin.getMetadata().getName();</span>
+<span class="fc" id="L159">        Optional&lt;EntandoPlugin&gt; optionalPlugin = entandoPluginService.findByName(pluginName);</span>
+<span class="fc" id="L160">        return optionalPlugin.orElseGet(() -&gt; {</span>
+<span class="fc" id="L161">            String pluginNamespace = Optional.ofNullable(plugin.getMetadata().getNamespace())</span>
+<span class="pc bpc" id="L162" title="1 of 2 branches missed.">                    .filter(ns -&gt; !ns.isEmpty())</span>
+<span class="fc" id="L163">                    .orElse(k8sUtils.getCurrentNamespace());</span>
+<span class="fc" id="L164">            plugin.getMetadata().setNamespace(pluginNamespace);</span>
+<span class="fc" id="L165">            return entandoPluginService.deploy(plugin);</span>
         });
 
     }
 
     private void addAppCollectionLinks(CollectionModel&lt;EntityModel&lt;EntandoApp&gt;&gt; collection) {
-<span class="fc" id="L152">        collection.add(linkTo(methodOn(EntandoAppController.class).get(null)).withRel(&quot;app&quot;));</span>
-<span class="fc" id="L153">        collection.add(linkTo(methodOn(EntandoAppController.class).listLinks(null)).withRel(&quot;app-links&quot;));</span>
-<span class="fc" id="L154">        collection.add(linkTo(methodOn(EntandoAppController.class).listInNamespace(null)).withRel(&quot;apps-in-namespace&quot;));</span>
-<span class="fc" id="L155">    }</span>
+<span class="fc" id="L171">        collection.add(linkTo(methodOn(EntandoAppController.class).get(null)).withRel(&quot;app&quot;));</span>
+<span class="fc" id="L172">        collection.add(linkTo(methodOn(EntandoAppController.class).listLinks(null)).withRel(&quot;app-links&quot;));</span>
+<span class="fc" id="L173">        collection.add(linkTo(methodOn(EntandoAppController.class).listInNamespace(null)).withRel(&quot;apps-in-namespace&quot;));</span>
+<span class="fc" id="L174">    }</span>
 
     private void addLinkCollectionLinks(CollectionModel&lt;EntityModel&lt;EntandoAppPluginLink&gt;&gt; linksCollection) {
-<span class="fc" id="L158">        linksCollection.add(linkTo(methodOn(EntandoAppController.class).unlink(null, null)).withRel(&quot;unlink&quot;));</span>
-<span class="fc" id="L159">    }</span>
+<span class="fc" id="L177">        linksCollection.add(linkTo(methodOn(EntandoAppController.class).unlink(null, null)).withRel(&quot;unlink&quot;));</span>
+<span class="fc" id="L178">    }</span>
 
     private CollectionModel&lt;EntityModel&lt;EntandoApp&gt;&gt; getAppsCollectionModel(List&lt;EntandoApp&gt; entandoApps) {
-<span class="fc" id="L162">        return new CollectionModel&lt;&gt;(</span>
-<span class="fc" id="L163">                entandoApps.stream().map(appResourceAssembler::toModel).collect(Collectors.toList()));</span>
+<span class="fc" id="L181">        return new CollectionModel&lt;&gt;(</span>
+<span class="fc" id="L182">                entandoApps.stream().map(appResourceAssembler::toModel).collect(Collectors.toList()));</span>
     }
 
     private CollectionModel&lt;EntityModel&lt;EntandoAppPluginLink&gt;&gt; getLinksCollectionModel(List&lt;EntandoAppPluginLink&gt; appLinks) {
-<span class="fc" id="L167">        return new CollectionModel&lt;&gt;(appLinks.stream()</span>
-<span class="fc" id="L168">                .map(linkResourceAssembler::toModel)</span>
-<span class="fc" id="L169">                .collect(Collectors.toList()));</span>
+<span class="fc" id="L186">        return new CollectionModel&lt;&gt;(appLinks.stream()</span>
+<span class="fc" id="L187">                .map(linkResourceAssembler::toModel)</span>
+<span class="fc" id="L188">                .collect(Collectors.toList()));</span>
     }
 
 }
