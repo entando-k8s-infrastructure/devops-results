@@ -4,39 +4,41 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 import org.entando.kubernetes.controller.EntandoAppController;
+import org.entando.kubernetes.controller.EntandoLinksController;
 import org.entando.kubernetes.controller.EntandoPluginController;
+import org.entando.kubernetes.controller.ObservedNamespaceController;
 import org.entando.kubernetes.model.link.EntandoAppPluginLink;
 import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.Links;
 import org.springframework.hateoas.server.RepresentationModelAssembler;
 import org.springframework.stereotype.Service;
 
-<span class="pc bpc" id="L13" title="1 of 2 branches missed.">@Service</span>
-<span class="fc" id="L14">public class EntandoAppPluginLinkResourceAssembler implements</span>
+@Service
+<span class="fc" id="L17">public class EntandoAppPluginLinkResourceAssembler implements</span>
         RepresentationModelAssembler&lt;EntandoAppPluginLink, EntityModel&lt;EntandoAppPluginLink&gt;&gt; {
 
 
     @Override
     public EntityModel&lt;EntandoAppPluginLink&gt; toModel(EntandoAppPluginLink entity) {
-<span class="fc" id="L20">        EntityModel&lt;EntandoAppPluginLink&gt; response = new EntityModel&lt;&gt;(entity);</span>
+<span class="fc" id="L23">        EntityModel&lt;EntandoAppPluginLink&gt; response = new EntityModel&lt;&gt;(entity);</span>
 
-<span class="fc" id="L22">        applyRel(response);</span>
+<span class="fc" id="L25">        response.add(getLinks(entity));</span>
 
-<span class="fc" id="L24">        return response;</span>
+<span class="fc" id="L27">        return response;</span>
 
     }
 
-    private void applyRel(EntityModel&lt;EntandoAppPluginLink&gt; response) {
-<span class="fc" id="L29">        EntandoAppPluginLink link = response.getContent();</span>
-<span class="pc bpc" id="L30" title="2 of 4 branches missed.">        assert link != null;</span>
-<span class="fc" id="L31">        String pluginName = link.getSpec().getEntandoPluginName();</span>
-<span class="fc" id="L32">        String pluginNamespace = link.getSpec().getEntandoPluginNamespace();</span>
+    private Links getLinks(EntandoAppPluginLink link) {
+<span class="fc" id="L32">        String pluginName = link.getSpec().getEntandoPluginName();</span>
 <span class="fc" id="L33">        String appName = link.getSpec().getEntandoAppName();</span>
-<span class="fc" id="L34">        String appNamespace = link.getSpec().getEntandoAppNamespace();</span>
-
-<span class="fc" id="L36">        response.add(linkTo(methodOn(EntandoAppController.class)</span>
-<span class="fc" id="L37">                .get(appNamespace, appName)).withRel(&quot;app&quot;));</span>
-<span class="fc" id="L38">        response.add(linkTo(methodOn(EntandoPluginController.class)</span>
-<span class="fc" id="L39">                .get(pluginNamespace, pluginName)).withRel(&quot;plugin&quot;));</span>
-<span class="fc" id="L40">    }</span>
+<span class="fc" id="L34">        String linkName = link.getMetadata().getName();</span>
+<span class="fc" id="L35">        return Links.of(</span>
+<span class="fc" id="L36">            linkTo(methodOn(EntandoLinksController.class).get(linkName)).withSelfRel(),</span>
+<span class="fc" id="L37">            linkTo(methodOn(EntandoAppController.class).get(appName)).withRel(&quot;app&quot;),</span>
+<span class="fc" id="L38">            linkTo(methodOn(EntandoPluginController.class).get(pluginName)).withRel(&quot;plugin&quot;),</span>
+<span class="fc" id="L39">            linkTo(methodOn(EntandoLinksController.class).delete(linkName)).withRel(&quot;delete&quot;),</span>
+<span class="fc" id="L40">            linkTo(methodOn(ObservedNamespaceController.class).getByName(link.getMetadata().getNamespace())).withRel(&quot;namespace&quot;)</span>
+        );
+    }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
