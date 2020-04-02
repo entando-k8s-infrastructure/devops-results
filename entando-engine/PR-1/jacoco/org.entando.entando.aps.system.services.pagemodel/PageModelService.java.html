@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PageModelService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.system.services.pagemodel</a> &gt; <span class="el_source">PageModelService.java</span></div><h1>PageModelService.java</h1><pre class="source lang-java linenums">package org.entando.entando.aps.system.services.pagemodel;
+
+import com.agiletec.aps.system.common.FieldSearchFilter;
+import com.agiletec.aps.system.common.model.dao.SearcherDaoPaginatedResult;
+import com.agiletec.aps.system.exception.ApsSystemException;
+import com.agiletec.aps.system.services.pagemodel.Frame;
+import com.agiletec.aps.system.services.pagemodel.IPageModelManager;
+import com.agiletec.aps.system.services.pagemodel.PageModel;
+import com.agiletec.aps.system.services.pagemodel.PageModelUtilizer;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import org.entando.entando.aps.system.exception.ResourceNotFoundException;
+import org.entando.entando.aps.system.exception.RestServerError;
+import org.entando.entando.aps.system.services.IDtoBuilder;
+import org.entando.entando.aps.system.services.pagemodel.model.PageModelDto;
+import org.entando.entando.web.common.exceptions.ValidationConflictException;
+import org.entando.entando.web.common.model.PagedMetadata;
+import org.entando.entando.web.common.model.RestListRequest;
+import org.entando.entando.web.pagemodel.model.PageModelFrameReq;
+import org.entando.entando.web.pagemodel.model.PageModelRequest;
+import org.entando.entando.web.pagemodel.validator.PageModelValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.stereotype.Service;
+import org.springframework.validation.BeanPropertyBindingResult;
+
+@Service
+public class PageModelService implements IPageModelService, ApplicationContextAware {
+
+<span class="nc" id="L36">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+
+    private final IPageModelManager pageModelManager;
+
+    private final IDtoBuilder&lt;PageModel, PageModelDto&gt; dtoBuilder;
+
+    private ApplicationContext applicationContext;
+
+    @Autowired
+<span class="nc" id="L45">    public PageModelService(IPageModelManager pageModelManager, IDtoBuilder&lt;PageModel, PageModelDto&gt; dtoBuilder) {</span>
+<span class="nc" id="L46">        this.pageModelManager = pageModelManager;</span>
+<span class="nc" id="L47">        this.dtoBuilder = dtoBuilder;</span>
+<span class="nc" id="L48">    }</span>
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) {
+<span class="nc" id="L52">        this.applicationContext = applicationContext;</span>
+<span class="nc" id="L53">    }</span>
+
+    @Override
+    public PagedMetadata&lt;PageModelDto&gt; getPageModels(RestListRequest restListReq, Map&lt;String, String&gt; requestParams) {
+        try {
+            //transforms the filters by overriding the key specified in the request with the correct one known by the dto
+<span class="nc" id="L59">            List&lt;FieldSearchFilter&gt; filters = new ArrayList&lt;&gt;(restListReq.buildFieldSearchFilters());</span>
+<span class="nc" id="L60">            filters.stream()</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">                    .filter(i -&gt; i.getKey() != null)</span>
+<span class="nc" id="L62">                    .forEach(i -&gt; i.setKey(PageModelDto.getEntityFieldName(i.getKey())));</span>
+
+<span class="nc" id="L64">            SearcherDaoPaginatedResult&lt;PageModel&gt; pageModels = pageModelManager.searchPageModels(filters);</span>
+
+<span class="nc" id="L66">            List&lt;PageModelDto&gt; dtoList = null;</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">            if (null != pageModels) {</span>
+<span class="nc" id="L68">                dtoList = dtoBuilder.convert(pageModels.getList());</span>
+            }
+
+<span class="nc" id="L71">            PagedMetadata&lt;PageModelDto&gt; pagedMetadata = new PagedMetadata&lt;&gt;(restListReq, pageModels);</span>
+<span class="nc" id="L72">            pagedMetadata.setBody(dtoList);</span>
+
+<span class="nc" id="L74">            return pagedMetadata;</span>
+<span class="nc" id="L75">        } catch (Throwable t) {</span>
+<span class="nc" id="L76">            logger.error(&quot;error in search pageModels&quot;, t);</span>
+<span class="nc" id="L77">            throw new RestServerError(&quot;error in search pageModels&quot;, t);</span>
+        }
+    }
+
+    @Override
+    public PageModelDto getPageModel(String code) {
+<span class="nc" id="L83">        PageModel pageModel = pageModelManager.getPageModel(code);</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">        if (null == pageModel) {</span>
+<span class="nc" id="L85">            logger.warn(&quot;no pageModel found with code {}&quot;, code);</span>
+<span class="nc" id="L86">            throw new ResourceNotFoundException(PageModelValidator.ERRCODE_PAGEMODEL_NOT_FOUND, &quot;pageModel&quot;, code);</span>
+        }
+<span class="nc" id="L88">        PageModelDto dto = dtoBuilder.convert(pageModel);</span>
+<span class="nc" id="L89">        dto.setReferences(this.getReferencesInfo(pageModel));</span>
+<span class="nc" id="L90">        return dto;</span>
+    }
+
+    @Override
+    public PageModelDto addPageModel(PageModelRequest pageModelRequest) {
+        try {
+<span class="nc" id="L96">            BeanPropertyBindingResult validationResult = this.validateAdd(pageModelRequest);</span>
+<span class="nc bnc" id="L97" title="All 2 branches missed.">            if (validationResult.hasErrors()) {</span>
+<span class="nc" id="L98">                throw new ValidationConflictException(validationResult);</span>
+            }
+<span class="nc" id="L100">            PageModel pageModel = this.createPageModel(pageModelRequest);</span>
+<span class="nc" id="L101">            pageModelManager.addPageModel(pageModel);</span>
+<span class="nc" id="L102">            return dtoBuilder.convert(pageModel);</span>
+<span class="nc" id="L103">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L104">            logger.error(&quot;Error in add pageModel&quot;, e);</span>
+<span class="nc" id="L105">            throw new RestServerError(&quot;error in add pageModel&quot;, e);</span>
+        }
+    }
+
+    @Override
+    public PageModelDto updatePageModel(PageModelRequest pageModelRequest) {
+        try {
+<span class="nc" id="L112">            PageModel pageModel = pageModelManager.getPageModel(pageModelRequest.getCode());</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">            if (null == pageModel) {</span>
+<span class="nc" id="L114">                throw new ResourceNotFoundException(PageModelValidator.ERRCODE_PAGEMODEL_NOT_FOUND, &quot;pageModel&quot;,</span>
+<span class="nc" id="L115">                        pageModelRequest.getCode());</span>
+            }
+<span class="nc" id="L117">            this.copyProperties(pageModelRequest, pageModel);</span>
+<span class="nc" id="L118">            pageModelManager.updatePageModel(pageModel);</span>
+<span class="nc" id="L119">            return dtoBuilder.convert(pageModel);</span>
+<span class="nc" id="L120">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L121">            logger.error(&quot;Error in update pageModel {}&quot;, pageModelRequest.getCode(), e);</span>
+<span class="nc" id="L122">            throw new RestServerError(&quot;error in update pageMdel&quot;, e);</span>
+        }
+    }
+
+    @Override
+    public void removePageModel(String code) {
+        try {
+<span class="nc" id="L129">            PageModel pageModel = pageModelManager.getPageModel(code);</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">            if (null == pageModel) {</span>
+<span class="nc" id="L131">                return;</span>
+            }
+<span class="nc" id="L133">            BeanPropertyBindingResult validationResult = this.validateDelete(pageModel);</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">            if (validationResult.hasErrors()) {</span>
+<span class="nc" id="L135">                throw new ValidationConflictException(validationResult);</span>
+            }
+<span class="nc" id="L137">            pageModelManager.deletePageModel(code);</span>
+
+<span class="nc" id="L139">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L140">            logger.error(&quot;Error in delete pagemodel {}&quot;, code, e);</span>
+<span class="nc" id="L141">            throw new RestServerError(&quot;error in delete pagemodel&quot;, e);</span>
+<span class="nc" id="L142">        }</span>
+<span class="nc" id="L143">    }</span>
+
+    @Override
+    public PagedMetadata&lt;?&gt; getPageModelReferences(String pageModelCode, String managerName, RestListRequest restRequest) {
+<span class="nc" id="L147">        PageModel pageModel = pageModelManager.getPageModel(pageModelCode);</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">        if (null == pageModel) {</span>
+<span class="nc" id="L149">            logger.warn(&quot;no pageModel found with code {}&quot;, pageModelCode);</span>
+<span class="nc" id="L150">            throw new ResourceNotFoundException(PageModelValidator.ERRCODE_PAGEMODEL_NOT_FOUND, &quot;pageModel&quot;, pageModelCode);</span>
+        }
+<span class="nc" id="L152">        PageModelServiceUtilizer&lt;?&gt; utilizer = this.getPageModelServiceUtilizer(managerName);</span>
+<span class="nc bnc" id="L153" title="All 2 branches missed.">        if (null == utilizer) {</span>
+<span class="nc" id="L154">            logger.warn(&quot;no references found for {}&quot;, managerName);</span>
+
+<span class="nc" id="L156">            throw new ResourceNotFoundException(PageModelValidator.ERRCODE_PAGEMODEL_REFERENCES, &quot;reference&quot;, managerName);</span>
+        }
+<span class="nc" id="L158">        List&lt;?&gt; dtoList = utilizer.getPageModelUtilizer(pageModelCode);</span>
+<span class="nc" id="L159">        List&lt;?&gt; subList = restRequest.getSublist(dtoList);</span>
+<span class="nc" id="L160">        SearcherDaoPaginatedResult&lt;?&gt; pagedResult = new SearcherDaoPaginatedResult&lt;&gt;(dtoList.size(), subList);</span>
+<span class="nc" id="L161">        PagedMetadata&lt;Object&gt; pagedMetadata = new PagedMetadata&lt;&gt;(restRequest, pagedResult);</span>
+<span class="nc" id="L162">        pagedMetadata.setBody((List&lt;Object&gt;) subList);</span>
+<span class="nc" id="L163">        return pagedMetadata;</span>
+    }
+
+    protected PageModel createPageModel(PageModelRequest pageModelRequest) {
+<span class="nc" id="L167">        PageModel pageModel = new PageModel();</span>
+<span class="nc" id="L168">        copyProperties(pageModelRequest, pageModel);</span>
+<span class="nc" id="L169">        return pageModel;</span>
+    }
+
+    protected void copyProperties(PageModelRequest srcPpageModelRequest, PageModel descPageModel) {
+<span class="nc" id="L173">        descPageModel.setCode(srcPpageModelRequest.getCode());</span>
+<span class="nc" id="L174">        descPageModel.setDescription(srcPpageModelRequest.getDescr());</span>
+<span class="nc" id="L175">        descPageModel.setTemplate(srcPpageModelRequest.getTemplate());</span>
+<span class="nc" id="L176">        descPageModel.setPluginCode(srcPpageModelRequest.getPluginCode());</span>
+<span class="nc" id="L177">        descPageModel.setConfiguration(this.createPageModelConfiguration(srcPpageModelRequest));</span>
+<span class="nc" id="L178">    }</span>
+
+    protected Frame[] createPageModelConfiguration(PageModelRequest pageModelRequest) {
+<span class="nc" id="L181">        Frame[] destConfiguration = null;</span>
+<span class="nc" id="L182">        List&lt;PageModelFrameReq&gt; frameRequestList = pageModelRequest.getConfiguration().getFrames();</span>
+<span class="nc bnc" id="L183" title="All 4 branches missed.">        if (null == frameRequestList || frameRequestList.isEmpty()) {</span>
+<span class="nc" id="L184">            return destConfiguration;</span>
+        }
+
+<span class="nc" id="L187">        return frameRequestList.stream()</span>
+<span class="nc" id="L188">                .map(this::createFrame)</span>
+<span class="nc" id="L189">                .toArray(Frame[]::new);</span>
+    }
+
+    protected Frame createFrame(PageModelFrameReq pageModelFrameReq) {
+<span class="nc" id="L193">        Frame frame = new Frame();</span>
+<span class="nc" id="L194">        frame.setPos(pageModelFrameReq.getPos());</span>
+<span class="nc" id="L195">        frame.setDescription(pageModelFrameReq.getDescr());</span>
+<span class="nc" id="L196">        frame.setMainFrame(pageModelFrameReq.isMainFrame());</span>
+<span class="nc" id="L197">        frame.setSketch(pageModelFrameReq.getSketch());</span>
+<span class="nc" id="L198">        return frame;</span>
+    }
+
+    protected BeanPropertyBindingResult validateAdd(PageModelRequest pageModelRequest) {
+<span class="nc" id="L202">        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(pageModelRequest, &quot;pageModel&quot;);</span>
+<span class="nc" id="L203">        PageModel pageModel = pageModelManager.getPageModel(pageModelRequest.getCode());</span>
+<span class="nc bnc" id="L204" title="All 2 branches missed.">        if (null == pageModel) {</span>
+<span class="nc" id="L205">            return bindingResult;</span>
+        }
+<span class="nc" id="L207">        bindingResult.reject(PageModelValidator.ERRCODE_CODE_EXISTS, new String[]{pageModelRequest.getCode()}, &quot;pageModel.code.exists&quot;);</span>
+<span class="nc" id="L208">        return bindingResult;</span>
+    }
+
+    protected BeanPropertyBindingResult validateDelete(PageModel pageModel) throws ApsSystemException {
+<span class="nc" id="L212">        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(pageModel, &quot;pageModel&quot;);</span>
+
+<span class="nc" id="L214">        Map&lt;String, List&lt;Object&gt;&gt; references = this.getReferencingObjects(pageModel);</span>
+<span class="nc bnc" id="L215" title="All 2 branches missed.">        if (references.size() &gt; 0) {</span>
+<span class="nc" id="L216">            bindingResult.reject(PageModelValidator.ERRCODE_PAGEMODEL_REFERENCES, new Object[]{pageModel.getCode(), references},</span>
+                    &quot;pageModel.cannot.delete.references&quot;);
+        }
+<span class="nc" id="L219">        return bindingResult;</span>
+
+    }
+
+    @SuppressWarnings(&quot;unchecked&quot;)
+    public Map&lt;String, List&lt;Object&gt;&gt; getReferencingObjects(PageModel pageModel) throws ApsSystemException {
+<span class="nc" id="L225">        Map&lt;String, List&lt;Object&gt;&gt; references = new HashMap&lt;&gt;();</span>
+        try {
+<span class="nc" id="L227">            String[] defNames = applicationContext.getBeanNamesForType(PageModelUtilizer.class);</span>
+
+<span class="nc bnc" id="L229" title="All 2 branches missed.">            for (String beanName : defNames) {</span>
+<span class="nc" id="L230">                Object service = null;</span>
+                try {
+<span class="nc" id="L232">                    service = applicationContext.getBean(beanName);</span>
+<span class="nc" id="L233">                } catch (Throwable t) {</span>
+<span class="nc" id="L234">                    logger.error(&quot;error in hasReferencingObjects&quot;, t);</span>
+<span class="nc" id="L235">                    service = null;</span>
+<span class="nc" id="L236">                }</span>
+<span class="nc bnc" id="L237" title="All 2 branches missed.">                if (service != null) {</span>
+<span class="nc" id="L238">                    PageModelUtilizer pageModelUtilizer = (PageModelUtilizer) service;</span>
+<span class="nc" id="L239">                    List&lt;Object&gt; utilizers = pageModelUtilizer.getPageModelUtilizers(pageModel.getCode());</span>
+<span class="nc bnc" id="L240" title="All 4 branches missed.">                    if (utilizers != null &amp;&amp; !utilizers.isEmpty()) {</span>
+<span class="nc" id="L241">                        references.put(pageModelUtilizer.getName() + &quot;Utilizers&quot;, utilizers);</span>
+                    }
+                }
+            }
+
+<span class="nc" id="L246">        } catch (Throwable t) {</span>
+<span class="nc" id="L247">            throw new ApsSystemException(&quot;Error on getReferencingObjects methods&quot;, t);</span>
+<span class="nc" id="L248">        }</span>
+<span class="nc" id="L249">        return references;</span>
+    }
+
+    public Map&lt;String, Boolean&gt; getReferencesInfo(PageModel pageModel) {
+<span class="nc" id="L253">        Map&lt;String, Boolean&gt; references = new HashMap&lt;&gt;();</span>
+        try {
+<span class="nc" id="L255">            String[] defNames = applicationContext.getBeanNamesForType(PageModelUtilizer.class);</span>
+<span class="nc bnc" id="L256" title="All 2 branches missed.">            for (String defName : defNames) {</span>
+<span class="nc" id="L257">                Object service = null;</span>
+                try {
+<span class="nc" id="L259">                    service = applicationContext.getBean(defName);</span>
+<span class="nc" id="L260">                } catch (Throwable t) {</span>
+<span class="nc" id="L261">                    logger.error(&quot;error in hasReferencingObjects&quot;, t);</span>
+<span class="nc" id="L262">                    service = null;</span>
+<span class="nc" id="L263">                }</span>
+<span class="nc bnc" id="L264" title="All 2 branches missed.">                if (service != null) {</span>
+<span class="nc" id="L265">                    PageModelUtilizer pageModelUtilizer = (PageModelUtilizer) service;</span>
+<span class="nc" id="L266">                    List&lt;?&gt; utilizers = pageModelUtilizer.getPageModelUtilizers(pageModel.getCode());</span>
+<span class="nc bnc" id="L267" title="All 4 branches missed.">                    if (utilizers != null &amp;&amp; !utilizers.isEmpty()) {</span>
+<span class="nc" id="L268">                        references.put(pageModelUtilizer.getName(), true);</span>
+                    } else {
+<span class="nc" id="L270">                        references.put(pageModelUtilizer.getName(), false);</span>
+                    }
+                }
+            }
+<span class="nc" id="L274">        } catch (ApsSystemException ex) {</span>
+<span class="nc" id="L275">            logger.error(&quot;error loading references for pageModel {}&quot;, pageModel.getCode(), ex);</span>
+<span class="nc" id="L276">            throw new RestServerError(&quot;error in getReferencingObjects &quot;, ex);</span>
+<span class="nc" id="L277">        }</span>
+<span class="nc" id="L278">        return references;</span>
+    }
+
+    @SuppressWarnings(&quot;rawtypes&quot;)
+    private PageModelServiceUtilizer&lt;?&gt; getPageModelServiceUtilizer(String managerName) {
+<span class="nc" id="L283">        Map&lt;String, PageModelServiceUtilizer&gt; beans = applicationContext.getBeansOfType(PageModelServiceUtilizer.class);</span>
+<span class="nc" id="L284">        Optional&lt;PageModelServiceUtilizer&gt; defName = beans.values().stream()</span>
+<span class="nc" id="L285">                .filter(service -&gt; service.getManagerName().equals(managerName))</span>
+<span class="nc" id="L286">                .findFirst();</span>
+<span class="nc" id="L287">        return defName.orElse(null);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

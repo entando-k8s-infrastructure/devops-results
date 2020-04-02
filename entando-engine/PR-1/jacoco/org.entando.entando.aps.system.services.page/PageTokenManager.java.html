@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PageTokenManager.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.system.services.page</a> &gt; <span class="el_source">PageTokenManager.java</span></div><h1>PageTokenManager.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando S.r.l. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package org.entando.entando.aps.system.services.page;
+
+import com.agiletec.aps.system.SystemConstants;
+import com.agiletec.aps.system.common.AbstractService;
+import com.agiletec.aps.system.services.baseconfig.ConfigInterface;
+import com.agiletec.aps.system.services.baseconfig.SystemParamsUtils;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.util.Base64;
+import java.util.Map;
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.PBEParameterSpec;
+import org.apache.commons.lang.RandomStringUtils;
+import org.apache.commons.lang.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+<span class="nc" id="L36">public class PageTokenManager extends AbstractService implements IPageTokenManager {</span>
+
+<span class="nc" id="L38">    private static final Logger logger = LoggerFactory.getLogger(PageTokenManager.class);</span>
+
+    private static final int SALT_LENGTH = 8;
+    private static final int HASH_LENGTH = 20;
+
+    private String salt;
+    private String password;
+
+    private ConfigInterface configManager;
+
+    protected static byte[] base64Decode(String property) throws IOException {
+<span class="nc" id="L49">        return Base64.getDecoder().decode(property);</span>
+    }
+
+    protected static String base64Encode(byte[] bytes) {
+<span class="nc" id="L53">        return Base64.getEncoder().encodeToString(bytes);</span>
+    }
+
+    public String getSalt() {
+<span class="nc" id="L57">        return salt;</span>
+    }
+
+    public String getPassword() {
+<span class="nc" id="L61">        return password;</span>
+    }
+
+    protected ConfigInterface getConfigManager() {
+<span class="nc" id="L65">        return configManager;</span>
+    }
+
+    public void setConfigManager(ConfigInterface configManager) {
+<span class="nc" id="L69">        this.configManager = configManager;</span>
+<span class="nc" id="L70">    }</span>
+
+    @Override
+    public void init() throws Exception {
+<span class="nc" id="L74">        String param = this.getConfigManager().getParam(PREVIEW_HASH);</span>
+<span class="nc bnc" id="L75" title="All 4 branches missed.">        if (StringUtils.isBlank(param) || param.trim().length() &lt; HASH_LENGTH) {</span>
+<span class="nc" id="L76">            param = this.generateRandomHash();</span>
+        }
+<span class="nc" id="L78">        this.generateInternalSaltAndPassword(param);</span>
+<span class="nc" id="L79">    }</span>
+
+    @Override
+    public String encrypt(String property) {
+        SecretKeyFactory keyFactory;
+        try {
+<span class="nc" id="L85">            keyFactory = SecretKeyFactory.getInstance(&quot;PBEWithMD5AndDES&quot;);</span>
+<span class="nc" id="L86">            SecretKey key = keyFactory.generateSecret(new PBEKeySpec(this.getPasswordCharArray()));</span>
+<span class="nc" id="L87">            Cipher pbeCipher = Cipher.getInstance(&quot;PBEWithMD5AndDES&quot;);</span>
+
+<span class="nc" id="L89">            pbeCipher.init(Cipher.ENCRYPT_MODE, key, new PBEParameterSpec(this.getSalt().getBytes(), 20));</span>
+<span class="nc" id="L90">            return base64Encode(pbeCipher.doFinal(property.getBytes(StandardCharsets.UTF_8)));</span>
+
+<span class="nc" id="L92">        } catch (GeneralSecurityException e) {</span>
+<span class="nc" id="L93">            logger.error(&quot;Error in encrypt&quot;, e);</span>
+        }
+<span class="nc" id="L95">        return null;</span>
+    }
+
+    @Override
+    public String decrypt(String property) {
+        SecretKeyFactory keyFactory;
+        try {
+<span class="nc" id="L102">            keyFactory = SecretKeyFactory.getInstance(&quot;PBEWithMD5AndDES&quot;);</span>
+<span class="nc" id="L103">            SecretKey key = keyFactory.generateSecret(new PBEKeySpec(this.getPasswordCharArray()));</span>
+<span class="nc" id="L104">            Cipher pbeCipher = Cipher.getInstance(&quot;PBEWithMD5AndDES&quot;);</span>
+<span class="nc" id="L105">            pbeCipher.init(Cipher.DECRYPT_MODE, key, new PBEParameterSpec(this.getSalt().getBytes(), 20));</span>
+<span class="nc" id="L106">            return new String(pbeCipher.doFinal(base64Decode(property)), StandardCharsets.UTF_8);</span>
+<span class="nc" id="L107">        } catch (GeneralSecurityException | IOException e) {</span>
+<span class="nc" id="L108">            logger.error(&quot;Error in decrypt&quot;, e);</span>
+        }
+<span class="nc" id="L110">        return null;</span>
+    }
+
+    protected void generateInternalSaltAndPassword(String param) {
+<span class="nc" id="L114">        this.salt = StringUtils.left(param, SALT_LENGTH);</span>
+<span class="nc" id="L115">        this.password = StringUtils.substring(param, SALT_LENGTH);</span>
+<span class="nc" id="L116">    }</span>
+
+    protected String generateRandomHash() throws Exception {
+<span class="nc" id="L119">        String param = &quot;&quot;;</span>
+        try {
+<span class="nc" id="L121">            String xmlParams = this.getConfigManager().getConfigItem(SystemConstants.CONFIG_ITEM_PARAMS);</span>
+<span class="nc" id="L122">            Map&lt;String, String&gt; params = SystemParamsUtils.getParams(xmlParams);</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">            if (!params.containsKey(IPageTokenManager.PREVIEW_HASH)) {</span>
+<span class="nc" id="L124">                param = RandomStringUtils.randomAlphanumeric(HASH_LENGTH);</span>
+<span class="nc" id="L125">                params.put(PREVIEW_HASH, param);</span>
+<span class="nc" id="L126">                String newXmlParams = SystemParamsUtils.getNewXmlParams(xmlParams, params);</span>
+<span class="nc" id="L127">                this.getConfigManager().updateConfigItem(SystemConstants.CONFIG_ITEM_PARAMS, newXmlParams);</span>
+            }
+<span class="nc" id="L129">            logger.info(&quot;Successfully created a random page_preview_hash&quot;);</span>
+<span class="nc" id="L130">        } catch (Throwable t) {</span>
+<span class="nc" id="L131">            throw new Exception(&quot;Error occurred generating a random page_preview_hash&quot;, t);</span>
+<span class="nc" id="L132">        }</span>
+<span class="nc" id="L133">        return param;</span>
+    }
+
+    protected char[] getPasswordCharArray() {
+<span class="nc" id="L137">        return this.getPassword().toCharArray();</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

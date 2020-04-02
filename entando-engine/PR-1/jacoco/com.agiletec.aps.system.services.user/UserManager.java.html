@@ -1,0 +1,318 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserManager.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.services.user</a> &gt; <span class="el_source">UserManager.java</span></div><h1>UserManager.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package com.agiletec.aps.system.services.user;
+
+import com.agiletec.aps.system.SystemConstants;
+import com.agiletec.aps.system.common.AbstractService;
+import com.agiletec.aps.system.exception.ApsSystemException;
+import com.agiletec.aps.system.services.baseconfig.ConfigInterface;
+import com.agiletec.aps.system.services.baseconfig.SystemParamsUtils;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
+import org.entando.entando.aps.util.crypto.LegacyPasswordEncryptor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Servizio di gestione degli utenti.
+ *
+ * @author M.Diana - E.Santoboni
+ */
+<span class="nc" id="L35">public class UserManager extends AbstractService implements IUserManager {</span>
+
+<span class="nc" id="L37">    private static final Logger logger = LoggerFactory.getLogger(UserManager.class);</span>
+
+    private IUserDAO userDao;
+    private ConfigInterface configManager;
+
+    @Override
+    public void init() throws Exception {
+<span class="nc bnc" id="L44" title="All 2 branches missed.">        if (!this.getConfigManager().areLegacyPasswordsUpdated()) {</span>
+<span class="nc" id="L45">            List&lt;UserDetails&gt; users = this.getUserDAO().loadUsers();</span>
+<span class="nc bnc" id="L46" title="All 2 branches missed.">            for (UserDetails user : users) {</span>
+<span class="nc" id="L47">                updateLegacyPassword(user);</span>
+<span class="nc" id="L48">            }</span>
+<span class="nc" id="L49">            Map&lt;String, String&gt; newParam = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L50">            newParam.put(ConfigInterface.LEGACY_PASSWORDS_UPDATED, &quot;true&quot;);</span>
+<span class="nc" id="L51">            String oldParam = this.getConfigManager().getConfigItem(SystemConstants.CONFIG_ITEM_PARAMS);</span>
+<span class="nc" id="L52">            String newXmlParams = null;</span>
+            try {
+<span class="nc" id="L54">                newXmlParams = SystemParamsUtils.getNewXmlParams(oldParam, newParam);</span>
+<span class="nc" id="L55">            } catch (Throwable ex) {</span>
+<span class="nc" id="L56">                logger.error(&quot;Error updating XML param&quot;, ex);</span>
+<span class="nc" id="L57">            }</span>
+<span class="nc" id="L58">            this.getConfigManager().updateConfigItem(SystemConstants.CONFIG_ITEM_PARAMS, newXmlParams);</span>
+        }
+<span class="nc" id="L60">        logger.debug(&quot;{} ready&quot;, this.getClass().getName());</span>
+<span class="nc" id="L61">    }</span>
+
+    @Override
+    public List&lt;String&gt; getUsernames() throws ApsSystemException {
+<span class="nc" id="L65">        return this.searchUsernames(null);</span>
+    }
+
+    @Override
+    public List&lt;String&gt; searchUsernames(String text) throws ApsSystemException {
+<span class="nc" id="L70">        List&lt;String&gt; usernames = null;</span>
+        try {
+<span class="nc" id="L72">            usernames = this.getUserDAO().searchUsernames(text);</span>
+<span class="nc" id="L73">        } catch (Throwable t) {</span>
+<span class="nc" id="L74">            logger.error(&quot;Error searching usernames by text '{}'&quot;, text, t);</span>
+<span class="nc" id="L75">            throw new ApsSystemException(&quot;Error loading the username list&quot;, t);</span>
+<span class="nc" id="L76">        }</span>
+<span class="nc" id="L77">        return usernames;</span>
+    }
+
+    /**
+     * Restituisce la lista completa degli utenti (in oggetti User).
+     *
+     * @return La lista completa degli utenti (in oggetti User).
+     * @throws ApsSystemException In caso di errore in accesso al db.
+     */
+    @Override
+    public List&lt;UserDetails&gt; getUsers() throws ApsSystemException {
+<span class="nc" id="L88">        return this.searchUsers(null);</span>
+    }
+
+    @Override
+    public List&lt;UserDetails&gt; searchUsers(String text) throws ApsSystemException {
+<span class="nc" id="L93">        List&lt;UserDetails&gt; users = null;</span>
+        try {
+<span class="nc" id="L95">            users = this.getUserDAO().searchUsers(text);</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">            for (int i = 0; i &lt; users.size(); i++) {</span>
+<span class="nc" id="L97">                this.setUserCredentialCheckParams(users.get(i));</span>
+            }
+<span class="nc" id="L99">        } catch (Throwable t) {</span>
+<span class="nc" id="L100">            logger.error(&quot;Error searching users by text '{}'&quot;, text, t);</span>
+<span class="nc" id="L101">            throw new ApsSystemException(&quot;Error loading the user list&quot;, t);</span>
+<span class="nc" id="L102">        }</span>
+<span class="nc" id="L103">        return users;</span>
+    }
+
+    /**
+     * Elimina un'utente dal db.
+     *
+     * @param user L'utente da eliminare dal db.
+     * @throws ApsSystemException in caso di errore nell'accesso al db.
+     */
+    @Override
+    public void removeUser(UserDetails user) throws ApsSystemException {
+        try {
+<span class="nc" id="L115">            this.getUserDAO().deleteUser(user);</span>
+<span class="nc" id="L116">        } catch (Throwable t) {</span>
+<span class="nc" id="L117">            logger.error(&quot;Error deleting user '{}'&quot;, user, t);</span>
+<span class="nc" id="L118">            throw new ApsSystemException(&quot;Error deleting a user&quot;, t);</span>
+<span class="nc" id="L119">        }</span>
+<span class="nc" id="L120">    }</span>
+
+    @Override
+    public void removeUser(String username) throws ApsSystemException {
+        try {
+<span class="nc" id="L125">            this.getUserDAO().deleteUser(username);</span>
+<span class="nc" id="L126">        } catch (Throwable t) {</span>
+<span class="nc" id="L127">            logger.error(&quot;Error deleting user '{}'&quot;, username, t);</span>
+<span class="nc" id="L128">            throw new ApsSystemException(&quot;Error deleting a user&quot;, t);</span>
+<span class="nc" id="L129">        }</span>
+<span class="nc" id="L130">    }</span>
+
+    /**
+     * Aggiorna un utente nel db.
+     *
+     * @param user L'utente da aggiornare nel db.
+     * @throws ApsSystemException in caso di errore nell'accesso al db.
+     */
+    @Override
+    public void updateUser(UserDetails user) throws ApsSystemException {
+        try {
+<span class="nc" id="L141">            this.getUserDAO().updateUser(user);</span>
+<span class="nc" id="L142">        } catch (Throwable t) {</span>
+<span class="nc" id="L143">            logger.error(&quot;Error updating user '{}'&quot;, user, t);</span>
+<span class="nc" id="L144">            throw new ApsSystemException(&quot;Error updating the User&quot;, t);</span>
+<span class="nc" id="L145">        }</span>
+<span class="nc" id="L146">    }</span>
+
+    @Override
+    public void changePassword(String username, String password) throws ApsSystemException {
+        try {
+<span class="nc" id="L151">            this.getUserDAO().changePassword(username, password);</span>
+<span class="nc" id="L152">        } catch (Throwable t) {</span>
+<span class="nc" id="L153">            logger.error(&quot;Error on change password for user '{}'&quot;, username, t);</span>
+<span class="nc" id="L154">            throw new ApsSystemException(&quot;Error updating the password of the User&quot; + username, t);</span>
+<span class="nc" id="L155">        }</span>
+<span class="nc" id="L156">    }</span>
+
+    @Override
+    public void updateLastAccess(UserDetails user) throws ApsSystemException {
+<span class="nc bnc" id="L160" title="All 2 branches missed.">        if (!user.isEntandoUser()) {</span>
+<span class="nc" id="L161">            return;</span>
+        }
+        try {
+<span class="nc" id="L164">            this.getUserDAO().updateLastAccess(user.getUsername());</span>
+<span class="nc" id="L165">        } catch (Throwable t) {</span>
+<span class="nc" id="L166">            logger.error(&quot;Error on update last access for user '{}'&quot;, user, t);</span>
+<span class="nc" id="L167">            throw new ApsSystemException(&quot;Error while refreshing the last access date of the User &quot; + user.getUsername(), t);</span>
+<span class="nc" id="L168">        }</span>
+<span class="nc" id="L169">    }</span>
+
+    /**
+     * Aggiunge un utente nel db.
+     *
+     * @param user L'utente da aggiungere nel db.
+     * @throws ApsSystemException in caso di errore nell'accesso al db.
+     */
+    @Override
+    public void addUser(UserDetails user) throws ApsSystemException {
+        try {
+<span class="nc" id="L180">            this.getUserDAO().addUser(user);</span>
+<span class="nc" id="L181">        } catch (Throwable t) {</span>
+<span class="nc" id="L182">            logger.error(&quot;Error on add user '{}'&quot;, user, t);</span>
+<span class="nc" id="L183">            throw new ApsSystemException(&quot;Error adding a new user &quot;, t);</span>
+<span class="nc" id="L184">        }</span>
+<span class="nc" id="L185">    }</span>
+
+    /**
+     * Recupera un'user caricandolo da db. Se la userName non corrisponde ad un utente restituisce null.
+     *
+     * @param username Lo username dell'utente da restituire.
+     * @return L'utente cercato, null se non vi è nessun utente corrispondente alla username immessa.
+     * @throws ApsSystemException in caso di errore nell'accesso al db.
+     */
+    @Override
+    public UserDetails getUser(String username) throws ApsSystemException {
+<span class="nc" id="L196">        UserDetails user = null;</span>
+        try {
+<span class="nc" id="L198">            user = this.getUserDAO().loadUser(username);</span>
+<span class="nc" id="L199">        } catch (Throwable t) {</span>
+<span class="nc" id="L200">            logger.error(&quot;Error loading user by username '{}'&quot;, username, t);</span>
+<span class="nc" id="L201">            throw new ApsSystemException(&quot;Error loading user&quot;, t);</span>
+<span class="nc" id="L202">        }</span>
+<span class="nc" id="L203">        this.setUserCredentialCheckParams(user);</span>
+<span class="nc" id="L204">        return user;</span>
+    }
+
+    /**
+     * Recupera un'user caricandolo da db. Se userName e password non corrispondono ad un utente, restituisce null.
+     *
+     * @param username Lo username dell'utente da restituire.
+     * @param password La password dell'utente da restituire.
+     * @return L'utente cercato, null se non vi è nessun utente corrispondente alla username e password immessa.
+     * @throws ApsSystemException in caso di errore nell'accesso al db.
+     */
+    @Override
+    public UserDetails getUser(String username, String password) throws ApsSystemException {
+<span class="nc" id="L217">        UserDetails user = null;</span>
+        try {
+<span class="nc" id="L219">            user = this.getUserDAO().loadUser(username, password);</span>
+<span class="nc" id="L220">        } catch (Throwable t) {</span>
+<span class="nc" id="L221">            logger.error(&quot;Error loading user by username and password. username: '{}'&quot;, username, t);</span>
+<span class="nc" id="L222">            throw new ApsSystemException(&quot;Error loading user&quot;, t);</span>
+<span class="nc" id="L223">        }</span>
+<span class="nc" id="L224">        this.setUserCredentialCheckParams(user);</span>
+<span class="nc" id="L225">        return user;</span>
+    }
+
+    /**
+     * Inserisce nell'utenza le informazioni necessarie per la verifica della validità delle credenziali. In particolare, in base allo stato
+     * del Modulo Privacy (attivo oppure no), inserisce le informazioni riguardo il numero massimo di mesi consentiti dal ultimo accesso e
+     * il numero massimo di mesi consentiti dal ultimo cambio password (parametri estratti dalla configurazioni di sistema).
+     *
+     * @param user L'utenza sulla quale inserire le informazioni necessarie per la verifica della validità delle credenziali.
+     */
+    protected void setUserCredentialCheckParams(UserDetails user) {
+<span class="nc bnc" id="L236" title="All 4 branches missed.">        if (null != user &amp;&amp; user.isEntandoUser()) {</span>
+<span class="nc" id="L237">            User japsUser = (User) user;</span>
+<span class="nc" id="L238">            String enabledPrivacyModuleParValue = this.getConfigManager().getParam(SystemConstants.CONFIG_PARAM_PM_ENABLED);</span>
+<span class="nc" id="L239">            boolean enabledPrivacyModule = Boolean.parseBoolean(enabledPrivacyModuleParValue);</span>
+<span class="nc" id="L240">            japsUser.setCheckCredentials(enabledPrivacyModule);</span>
+<span class="nc bnc" id="L241" title="All 2 branches missed.">            if (enabledPrivacyModule) {</span>
+<span class="nc" id="L242">                int maxMonthsSinceLastAccess = this.extractNumberParamValue(SystemConstants.CONFIG_PARAM_PM_MM_LAST_ACCESS, 6);</span>
+<span class="nc" id="L243">                japsUser.setMaxMonthsSinceLastAccess(maxMonthsSinceLastAccess);</span>
+<span class="nc" id="L244">                int maxMonthsSinceLastPasswordChange = this</span>
+<span class="nc" id="L245">                        .extractNumberParamValue(SystemConstants.CONFIG_PARAM_PM_MM_LAST_PASSWORD_CHANGE, 3);</span>
+<span class="nc" id="L246">                japsUser.setMaxMonthsSinceLastPasswordChange(maxMonthsSinceLastPasswordChange);</span>
+            }
+        }
+<span class="nc" id="L249">    }</span>
+
+    private int extractNumberParamValue(String paramName, int defaultValue) {
+<span class="nc" id="L252">        String parValue = this.getConfigManager().getParam(paramName);</span>
+<span class="nc" id="L253">        int value = 0;</span>
+        try {
+<span class="nc" id="L255">            value = Integer.parseInt(parValue);</span>
+<span class="nc" id="L256">        } catch (NumberFormatException e) {</span>
+<span class="nc" id="L257">            value = defaultValue;</span>
+<span class="nc" id="L258">        }</span>
+<span class="nc" id="L259">        return value;</span>
+    }
+
+    private void updateLegacyPassword(UserDetails user) throws ApsSystemException {
+<span class="nc" id="L263">        String pwd = user.getPassword();</span>
+<span class="nc bnc" id="L264" title="All 4 branches missed.">        if (!isBCryptEncoded(pwd) &amp;&amp; !isArgon2Encoded(pwd)) {</span>
+            try {
+<span class="nc" id="L266">                pwd = new LegacyPasswordEncryptor().decrypt(pwd);</span>
+<span class="nc" id="L267">            } catch (Exception e) {</span>
+<span class="nc" id="L268">                logger.warn(&quot;Plain text password for user {}&quot;, user.getUsername());</span>
+<span class="nc" id="L269">                pwd = user.getPassword();</span>
+<span class="nc" id="L270">            }</span>
+<span class="nc" id="L271">            this.changePassword(user.getUsername(), pwd);</span>
+        }
+<span class="nc" id="L273">    }</span>
+
+    private boolean isArgon2Encoded(String encoded) {
+<span class="nc bnc" id="L276" title="All 2 branches missed.">        if (StringUtils.isBlank(encoded)) {</span>
+<span class="nc" id="L277">            return false;</span>
+        }
+<span class="nc" id="L279">        return encoded.startsWith(&quot;$argon2&quot;);</span>
+    }
+
+    private boolean isBCryptEncoded(String encoded) {
+<span class="nc bnc" id="L283" title="All 2 branches missed.">        if (StringUtils.isBlank(encoded)) {</span>
+<span class="nc" id="L284">            return false;</span>
+        }
+<span class="nc" id="L286">        return encoded.startsWith(&quot;{bcrypt}&quot;);</span>
+    }
+
+    /**
+     * Restituisce l'utente di default di sistema. L'utente di default rappresenta un utente &quot;ospite&quot; senza nessuna autorizzazione di
+     * accesso ad elementi non &quot;liberi&quot; e senza nessuna autorizzazione ad eseguire qualunque azione sugli elementi del sistema.
+     *
+     * @return L'utente di default di sistema.
+     */
+    @Override
+    public UserDetails getGuestUser() {
+<span class="nc" id="L297">        User user = new User();</span>
+<span class="nc" id="L298">        user.setUsername(SystemConstants.GUEST_USER_NAME);</span>
+<span class="nc" id="L299">        return user;</span>
+    }
+
+    protected ConfigInterface getConfigManager() {
+<span class="nc" id="L303">        return configManager;</span>
+    }
+
+    public void setConfigManager(ConfigInterface configManager) {
+<span class="nc" id="L307">        this.configManager = configManager;</span>
+<span class="nc" id="L308">    }</span>
+
+    protected IUserDAO getUserDAO() {
+<span class="nc" id="L311">        return userDao;</span>
+    }
+
+    public void setUserDAO(IUserDAO userDao) {
+<span class="nc" id="L315">        this.userDao = userDao;</span>
+<span class="nc" id="L316">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

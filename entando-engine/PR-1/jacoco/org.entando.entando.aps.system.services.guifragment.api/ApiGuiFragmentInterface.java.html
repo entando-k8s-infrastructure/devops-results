@@ -1,0 +1,246 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApiGuiFragmentInterface.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.system.services.guifragment.api</a> &gt; <span class="el_source">ApiGuiFragmentInterface.java</span></div><h1>ApiGuiFragmentInterface.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package org.entando.entando.aps.system.services.guifragment.api;
+
+import com.agiletec.aps.system.SystemConstants;
+import com.agiletec.aps.system.common.FieldSearchFilter;
+import com.agiletec.aps.system.exception.ApsSystemException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import org.apache.commons.lang.StringUtils;
+import org.entando.entando.aps.system.services.api.IApiErrorCodes;
+import org.entando.entando.aps.system.services.api.IApiExportable;
+import org.entando.entando.aps.system.services.api.model.ApiException;
+import org.entando.entando.aps.system.services.api.model.LinkedListItem;
+import org.entando.entando.aps.system.services.guifragment.GuiFragment;
+import org.entando.entando.aps.system.services.guifragment.GuiFragmentUtilizer;
+import org.entando.entando.aps.system.services.guifragment.IGuiFragmentManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.BeanFactoryAware;
+import org.springframework.beans.factory.ListableBeanFactory;
+
+/**
+ * @author E.Santoboni
+ */
+<span class="nc" id="L45">public class ApiGuiFragmentInterface implements BeanFactoryAware, IApiExportable {</span>
+
+<span class="nc" id="L47">    private static final Logger _logger = LoggerFactory.getLogger(ApiGuiFragmentInterface.class);</span>
+    private BeanFactory _beanFactory;
+    private IGuiFragmentManager _guiFragmentManager;
+
+    public List&lt;LinkedListItem&gt; getGuiFragments(Properties properties) throws Throwable {
+<span class="nc" id="L52">        List&lt;LinkedListItem&gt; list = new ArrayList&lt;LinkedListItem&gt;();</span>
+        try {
+<span class="nc" id="L54">            String code = properties.getProperty(&quot;code&quot;);</span>
+<span class="nc" id="L55">            String widgettypecode = properties.getProperty(&quot;widgettypecode&quot;);</span>
+<span class="nc" id="L56">            String plugincode = properties.getProperty(&quot;plugincode&quot;);</span>
+<span class="nc" id="L57">            FieldSearchFilter[] filters = new FieldSearchFilter[0];</span>
+<span class="nc" id="L58">            FieldSearchFilter codeFilterToAdd = null;</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">            if (StringUtils.isNotBlank(code)) {</span>
+<span class="nc" id="L60">                codeFilterToAdd = new FieldSearchFilter(&quot;code&quot;, code, true);</span>
+            } else {
+<span class="nc" id="L62">                codeFilterToAdd = new FieldSearchFilter(&quot;code&quot;);</span>
+            }
+<span class="nc" id="L64">            codeFilterToAdd.setOrder(FieldSearchFilter.Order.ASC);</span>
+<span class="nc" id="L65">            filters = this.addFilter(filters, codeFilterToAdd);</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">            if (StringUtils.isNotBlank(widgettypecode)) {</span>
+<span class="nc" id="L67">                FieldSearchFilter filterToAdd = new FieldSearchFilter(&quot;widgettypecode&quot;, widgettypecode, true);</span>
+<span class="nc" id="L68">                filters = this.addFilter(filters, filterToAdd);</span>
+            }
+<span class="nc bnc" id="L70" title="All 2 branches missed.">            if (StringUtils.isNotBlank(plugincode)) {</span>
+<span class="nc" id="L71">                FieldSearchFilter filterToAdd = new FieldSearchFilter(&quot;plugincode&quot;, plugincode, true);</span>
+<span class="nc" id="L72">                filters = this.addFilter(filters, filterToAdd);</span>
+            }
+<span class="nc" id="L74">            List&lt;String&gt; codes = this.getGuiFragmentManager().searchGuiFragments(filters);</span>
+<span class="nc bnc" id="L75" title="All 2 branches missed.">            for (int i = 0; i &lt; codes.size(); i++) {</span>
+<span class="nc" id="L76">                String fragmantCode = codes.get(i);</span>
+<span class="nc" id="L77">                String url = this</span>
+<span class="nc" id="L78">                        .getApiResourceUrl(fragmantCode, properties.getProperty(SystemConstants.API_APPLICATION_BASE_URL_PARAMETER),</span>
+<span class="nc" id="L79">                                properties.getProperty(SystemConstants.API_LANG_CODE_PARAMETER),</span>
+<span class="nc" id="L80">                                (MediaType) properties.get(SystemConstants.API_PRODUCES_MEDIA_TYPE_PARAMETER));</span>
+<span class="nc" id="L81">                LinkedListItem item = new LinkedListItem();</span>
+<span class="nc" id="L82">                item.setCode(fragmantCode);</span>
+<span class="nc" id="L83">                item.setUrl(url);</span>
+<span class="nc" id="L84">                list.add(item);</span>
+            }
+<span class="nc" id="L86">        } catch (Throwable t) {</span>
+<span class="nc" id="L87">            _logger.error(&quot;Error extracting list of fragments&quot;, t);</span>
+<span class="nc" id="L88">            throw t;</span>
+<span class="nc" id="L89">        }</span>
+<span class="nc" id="L90">        return list;</span>
+    }
+
+    protected FieldSearchFilter[] addFilter(FieldSearchFilter[] filters, FieldSearchFilter filterToAdd) {
+<span class="nc" id="L94">        int len = filters.length;</span>
+<span class="nc" id="L95">        FieldSearchFilter[] newFilters = new FieldSearchFilter[len + 1];</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">        for (int i = 0; i &lt; len; i++) {</span>
+<span class="nc" id="L97">            newFilters[i] = filters[i];</span>
+        }
+<span class="nc" id="L99">        newFilters[len] = filterToAdd;</span>
+<span class="nc" id="L100">        return newFilters;</span>
+    }
+
+    public JAXBGuiFragment getGuiFragment(Properties properties) throws Throwable {
+<span class="nc" id="L104">        String code = properties.getProperty(&quot;code&quot;);</span>
+<span class="nc" id="L105">        JAXBGuiFragment jaxbGuiFragment = null;</span>
+        try {
+<span class="nc" id="L107">            GuiFragment guiFragment = this.getGuiFragmentManager().getGuiFragment(code);</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">            if (null == guiFragment) {</span>
+<span class="nc" id="L109">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR, &quot;GuiFragment with id '&quot; + code + &quot;' does not exist&quot;,</span>
+                        Response.Status.CONFLICT);
+            }
+<span class="nc" id="L112">            jaxbGuiFragment = new JAXBGuiFragment(guiFragment);</span>
+<span class="nc" id="L113">        } catch (ApiException ae) {</span>
+<span class="nc" id="L114">            throw ae;</span>
+<span class="nc" id="L115">        } catch (Throwable t) {</span>
+<span class="nc" id="L116">            _logger.error(&quot;Error creating jaxb object of fragment - code '{}'&quot;, code, t);</span>
+<span class="nc" id="L117">            throw t;</span>
+<span class="nc" id="L118">        }</span>
+<span class="nc" id="L119">        return jaxbGuiFragment;</span>
+    }
+
+    public void addGuiFragment(JAXBGuiFragment jaxbGuiFragment) throws Throwable {
+        try {
+<span class="nc bnc" id="L124" title="All 2 branches missed.">            if (null != this.getGuiFragmentManager().getGuiFragment(jaxbGuiFragment.getCode())) {</span>
+<span class="nc" id="L125">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR,</span>
+<span class="nc" id="L126">                        &quot;GuiFragment with code &quot; + jaxbGuiFragment.getCode() + &quot; already exists&quot;, Response.Status.CONFLICT);</span>
+            }
+<span class="nc" id="L128">            GuiFragment guiFragment = jaxbGuiFragment.getGuiFragment();</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">            if (StringUtils.isBlank(guiFragment.getCurrentGui())) {</span>
+<span class="nc" id="L130">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR, &quot;one between A and B must be valued&quot;, Response.Status.CONFLICT);</span>
+            }
+<span class="nc" id="L132">            this.getGuiFragmentManager().addGuiFragment(guiFragment);</span>
+<span class="nc" id="L133">        } catch (ApiException ae) {</span>
+<span class="nc" id="L134">            throw ae;</span>
+<span class="nc" id="L135">        } catch (Throwable t) {</span>
+<span class="nc" id="L136">            _logger.error(&quot;Error adding new fragment&quot;, t);</span>
+<span class="nc" id="L137">            throw t;</span>
+<span class="nc" id="L138">        }</span>
+<span class="nc" id="L139">    }</span>
+
+    public void updateGuiFragment(JAXBGuiFragment jaxbGuiFragment) throws Throwable {
+        try {
+<span class="nc bnc" id="L143" title="All 2 branches missed.">            if (null == this.getGuiFragmentManager().getGuiFragment(jaxbGuiFragment.getCode())) {</span>
+<span class="nc" id="L144">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR,</span>
+<span class="nc" id="L145">                        &quot;GuiFragment with code '&quot; + jaxbGuiFragment.getCode() + &quot;' does not exist&quot;, Response.Status.CONFLICT);</span>
+            }
+<span class="nc" id="L147">            GuiFragment guiFragment = jaxbGuiFragment.getGuiFragment();</span>
+<span class="nc bnc" id="L148" title="All 2 branches missed.">            if (StringUtils.isBlank(guiFragment.getCurrentGui())) {</span>
+<span class="nc" id="L149">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR, &quot;one between A and B must be valued&quot;, Response.Status.CONFLICT);</span>
+            }
+<span class="nc" id="L151">            this.getGuiFragmentManager().updateGuiFragment(guiFragment);</span>
+<span class="nc" id="L152">        } catch (ApiException ae) {</span>
+<span class="nc" id="L153">            throw ae;</span>
+<span class="nc" id="L154">        } catch (Throwable t) {</span>
+<span class="nc" id="L155">            _logger.error(&quot;Error updating fragment&quot;, t);</span>
+<span class="nc" id="L156">            throw t;</span>
+<span class="nc" id="L157">        }</span>
+<span class="nc" id="L158">    }</span>
+
+    public void deleteGuiFragment(Properties properties) throws Throwable {
+<span class="nc" id="L161">        String code = properties.getProperty(&quot;code&quot;);</span>
+        try {
+<span class="nc" id="L163">            GuiFragment guiFragment = this.getGuiFragmentManager().getGuiFragment(code);</span>
+<span class="nc bnc" id="L164" title="All 2 branches missed.">            if (null == guiFragment) {</span>
+<span class="nc" id="L165">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR, &quot;GuiFragment with code '&quot; + code + &quot;' does not exist&quot;,</span>
+                        Response.Status.CONFLICT);
+            }
+<span class="nc bnc" id="L168" title="All 2 branches missed.">            if (guiFragment.isLocked()) {</span>
+<span class="nc" id="L169">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR, &quot;GuiFragment with code '&quot; + code + &quot;' are locked&quot;,</span>
+                        Response.Status.CONFLICT);
+            }
+<span class="nc" id="L172">            Map&lt;String, List&lt;Object&gt;&gt; references = new HashMap&lt;String, List&lt;Object&gt;&gt;();</span>
+<span class="nc" id="L173">            ListableBeanFactory factory = (ListableBeanFactory) this.getBeanFactory();</span>
+<span class="nc" id="L174">            String[] defNames = factory.getBeanNamesForType(GuiFragmentUtilizer.class);</span>
+<span class="nc bnc" id="L175" title="All 2 branches missed.">            for (int i = 0; i &lt; defNames.length; i++) {</span>
+<span class="nc" id="L176">                Object service = null;</span>
+                try {
+<span class="nc" id="L178">                    service = this.getBeanFactory().getBean(defNames[i]);</span>
+<span class="nc" id="L179">                } catch (Throwable t) {</span>
+<span class="nc" id="L180">                    _logger.error(&quot;error extracting bean with name '{}'&quot;, defNames[i], t);</span>
+<span class="nc" id="L181">                    throw new ApsSystemException(&quot;error extracting bean with name '&quot; + defNames[i] + &quot;'&quot;, t);</span>
+<span class="nc" id="L182">                }</span>
+<span class="nc bnc" id="L183" title="All 2 branches missed.">                if (service != null) {</span>
+<span class="nc" id="L184">                    GuiFragmentUtilizer guiFragUtilizer = (GuiFragmentUtilizer) service;</span>
+<span class="nc" id="L185">                    List&lt;Object&gt; utilizers = guiFragUtilizer.getGuiFragmentUtilizers(code);</span>
+<span class="nc bnc" id="L186" title="All 4 branches missed.">                    if (utilizers != null &amp;&amp; !utilizers.isEmpty()) {</span>
+<span class="nc" id="L187">                        references.put(guiFragUtilizer.getName(), utilizers);</span>
+                    }
+                }
+            }
+<span class="nc bnc" id="L191" title="All 2 branches missed.">            if (!references.isEmpty()) {</span>
+<span class="nc" id="L192">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR,</span>
+                        &quot;GuiFragment with code &quot; + code + &quot; has references with other object&quot;, Response.Status.CONFLICT);
+            }
+<span class="nc" id="L195">            this.getGuiFragmentManager().deleteGuiFragment(code);</span>
+<span class="nc" id="L196">        } catch (ApiException ae) {</span>
+<span class="nc" id="L197">            throw ae;</span>
+<span class="nc" id="L198">        } catch (Throwable t) {</span>
+<span class="nc" id="L199">            _logger.error(&quot;Error deleting fragment throw api&quot;, t);</span>
+<span class="nc" id="L200">            throw t;</span>
+<span class="nc" id="L201">        }</span>
+<span class="nc" id="L202">    }</span>
+
+    @Override
+    public String getApiResourceUrl(Object object, String applicationBaseUrl, String langCode, MediaType mediaType) {
+<span class="nc bnc" id="L206" title="All 2 branches missed.">        if (!(object instanceof GuiFragment)) {</span>
+<span class="nc" id="L207">            return null;</span>
+        }
+<span class="nc" id="L209">        GuiFragment fragment = (GuiFragment) object;</span>
+<span class="nc" id="L210">        return this.getApiResourceUrl(fragment.getCode(), applicationBaseUrl, langCode, mediaType);</span>
+    }
+
+    private String getApiResourceUrl(String fragmentCode, String applicationBaseUrl, String langCode, MediaType mediaType) {
+<span class="nc bnc" id="L214" title="All 6 branches missed.">        if (null == fragmentCode || null == applicationBaseUrl || null == langCode) {</span>
+<span class="nc" id="L215">            return null;</span>
+        }
+<span class="nc" id="L217">        StringBuilder stringBuilder = new StringBuilder(applicationBaseUrl);</span>
+<span class="nc" id="L218">        stringBuilder.append(&quot;api/rs/&quot;).append(langCode).append(&quot;/core/guiFragment&quot;);//?code=&quot;).append(fragmentCode);</span>
+<span class="nc bnc" id="L219" title="All 4 branches missed.">        if (null == mediaType || mediaType.equals(MediaType.APPLICATION_XML_TYPE)) {</span>
+<span class="nc" id="L220">            stringBuilder.append(&quot;.xml&quot;);</span>
+        } else {
+<span class="nc" id="L222">            stringBuilder.append(&quot;.json&quot;);</span>
+        }
+<span class="nc" id="L224">        stringBuilder.append(&quot;?code=&quot;).append(fragmentCode);</span>
+<span class="nc" id="L225">        return stringBuilder.toString();</span>
+    }
+
+    protected BeanFactory getBeanFactory() {
+<span class="nc" id="L229">        return _beanFactory;</span>
+    }
+
+    @Override
+    public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+<span class="nc" id="L234">        this._beanFactory = beanFactory;</span>
+<span class="nc" id="L235">    }</span>
+
+    protected IGuiFragmentManager getGuiFragmentManager() {
+<span class="nc" id="L238">        return _guiFragmentManager;</span>
+    }
+
+    public void setGuiFragmentManager(IGuiFragmentManager guiFragmentManager) {
+<span class="nc" id="L242">        this._guiFragmentManager = guiFragmentManager;</span>
+<span class="nc" id="L243">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

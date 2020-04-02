@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LangDOM.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.services.lang</a> &gt; <span class="el_source">LangDOM.java</span></div><h1>LangDOM.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package com.agiletec.aps.system.services.lang;
+
+import com.agiletec.aps.system.exception.ApsSystemException;
+import java.io.StringReader;
+import java.util.ArrayList;
+import java.util.List;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.input.SAXBuilder;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Classe di supporto all'interpretazione dell'XML indicante le lingue del sistema. La classe viene utilizzata anche per l'interpretazione
+ * dell'xml delle lingue &quot;assegnabili&quot; al sistema.
+ *
+ * @author E.Santoboni
+ */
+public class LangDOM {
+
+<span class="nc" id="L37">    private static final Logger logger = LoggerFactory.getLogger(LangDOM.class);</span>
+
+    private Document doc;
+
+    /**
+     * Costruttore base della classe dom.
+     */
+<span class="nc" id="L44">    public LangDOM() {</span>
+<span class="nc" id="L45">        this.doc = new Document();</span>
+<span class="nc" id="L46">        Element elementRoot = new Element(&quot;Langs&quot;);</span>
+<span class="nc" id="L47">        this.doc.setRootElement(elementRoot);</span>
+<span class="nc" id="L48">    }</span>
+
+    /**
+     * Costruttore della classe dom.
+     *
+     * @param xmlText L'xml delle lingue tramite inizializzare il cocumento.
+     * @throws ApsSystemException In caso di errore nell'interpretazione del documento.
+     */
+<span class="nc" id="L56">    public LangDOM(String xmlText) throws ApsSystemException {</span>
+<span class="nc" id="L57">        this.decodeDOM(xmlText);</span>
+<span class="nc" id="L58">    }</span>
+
+    /**
+     * Aggiunge una lista di lingue al documento.
+     *
+     * @param langs La lista di lingue da aggiungere.
+     */
+    public void addLangs(List&lt;Lang&gt; langs) {
+<span class="nc bnc" id="L66" title="All 2 branches missed.">        for (Lang lang : langs) {</span>
+<span class="nc" id="L67">            this.addLang(lang);</span>
+<span class="nc" id="L68">        }</span>
+<span class="nc" id="L69">    }</span>
+
+    private void addLang(Lang lang) {
+<span class="nc" id="L72">        Element langElement = new Element(&quot;Lang&quot;);</span>
+<span class="nc" id="L73">        Element codeElement = new Element(&quot;code&quot;);</span>
+<span class="nc" id="L74">        codeElement.setText(lang.getCode());</span>
+<span class="nc" id="L75">        langElement.addContent(codeElement);</span>
+<span class="nc" id="L76">        Element descrElement = new Element(&quot;descr&quot;);</span>
+<span class="nc" id="L77">        descrElement.setText(lang.getDescr());</span>
+<span class="nc" id="L78">        langElement.addContent(descrElement);</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">        if (lang.isDefault()) {</span>
+<span class="nc" id="L80">            Element defaultElement = new Element(&quot;default&quot;);</span>
+<span class="nc" id="L81">            defaultElement.setText(new Boolean(lang.isDefault()).toString());</span>
+<span class="nc" id="L82">            langElement.addContent(defaultElement);</span>
+        }
+<span class="nc" id="L84">        this.doc.getRootElement().addContent(langElement);</span>
+<span class="nc" id="L85">    }</span>
+
+    /**
+     * Restituisce la lista di lingue contenute nel documento.
+     *
+     * @return La lista di lingue contenute nel documento.
+     */
+    public List&lt;Lang&gt; getLangs() {
+<span class="nc" id="L93">        List&lt;Lang&gt; langs = new ArrayList&lt;Lang&gt;();</span>
+<span class="nc" id="L94">        List&lt;Element&gt; langElements = this.doc.getRootElement().getChildren();</span>
+<span class="nc bnc" id="L95" title="All 2 branches missed.">        for (Element langElement : langElements) {</span>
+<span class="nc" id="L96">            Lang lang = new Lang();</span>
+<span class="nc" id="L97">            Element codeElement = langElement.getChild(&quot;code&quot;);</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">            if (null != codeElement) {</span>
+<span class="nc" id="L99">                String code = codeElement.getText();</span>
+<span class="nc" id="L100">                lang.setCode(code);</span>
+            }
+<span class="nc" id="L102">            Element descrElement = langElement.getChild(&quot;descr&quot;);</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">            if (null != descrElement) {</span>
+<span class="nc" id="L104">                String descr = descrElement.getText();</span>
+<span class="nc" id="L105">                lang.setDescr(descr);</span>
+            }
+<span class="nc" id="L107">            Element defaultElement = langElement.getChild(&quot;default&quot;);</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">            if (null != defaultElement) {</span>
+<span class="nc" id="L109">                String isDefaultString = defaultElement.getText();</span>
+<span class="nc" id="L110">                lang.setDefault(new Boolean(isDefaultString).booleanValue());</span>
+<span class="nc" id="L111">            } else {</span>
+<span class="nc" id="L112">                lang.setDefault(false);</span>
+            }
+<span class="nc" id="L114">            langs.add(lang);</span>
+<span class="nc" id="L115">        }</span>
+<span class="nc" id="L116">        return langs;</span>
+    }
+
+    /**
+     * Restutuisce l'xml del documento.
+     *
+     * @return L'xml del documento.
+     */
+    public String getXMLDocument() {
+<span class="nc" id="L125">        XMLOutputter out = new XMLOutputter();</span>
+<span class="nc" id="L126">        Format format = Format.getPrettyFormat();</span>
+<span class="nc" id="L127">        out.setFormat(format);</span>
+<span class="nc" id="L128">        String xml = out.outputString(this.doc);</span>
+<span class="nc" id="L129">        return xml;</span>
+    }
+
+    private void decodeDOM(String xmlText) throws ApsSystemException {
+<span class="nc" id="L133">        SAXBuilder builder = new SAXBuilder();</span>
+<span class="nc" id="L134">        builder.setValidation(false);</span>
+<span class="nc" id="L135">        StringReader reader = new StringReader(xmlText);</span>
+        try {
+<span class="nc" id="L137">            this.doc = builder.build(reader);</span>
+<span class="nc" id="L138">        } catch (Throwable t) {</span>
+<span class="nc" id="L139">            logger.error(&quot;Error while parsing xml : {}&quot;, xmlText, t);</span>
+<span class="nc" id="L140">            throw new ApsSystemException(&quot;Error detected while parsing the XML&quot;, t);</span>
+<span class="nc" id="L141">        }</span>
+<span class="nc" id="L142">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

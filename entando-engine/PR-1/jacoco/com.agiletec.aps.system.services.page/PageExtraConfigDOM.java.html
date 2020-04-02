@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PageExtraConfigDOM.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.services.page</a> &gt; <span class="el_source">PageExtraConfigDOM.java</span></div><h1>PageExtraConfigDOM.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package com.agiletec.aps.system.services.page;
+
+import com.agiletec.aps.system.exception.ApsSystemException;
+import java.io.StringReader;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.input.SAXBuilder;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Dom class for parse the xml of extra page config
+ *
+ * @author E.Santoboni
+ */
+<span class="nc" id="L35">public class PageExtraConfigDOM {</span>
+
+<span class="nc" id="L37">    private static final Logger _logger = LoggerFactory.getLogger(PageExtraConfigDOM.class);</span>
+    private static final String USE_EXTRA_TITLES_ELEMENT_NAME = &quot;useextratitles&quot;;
+    private static final String EXTRA_GROUPS_ELEMENT_NAME = &quot;extragroups&quot;;
+    private static final String EXTRA_GROUP_ELEMENT_NAME = &quot;group&quot;;
+    private static final String EXTRA_GROUP_NAME_ATTRIBUTE = &quot;name&quot;;
+    private static final String MIMETYPE_ELEMENT_NAME = &quot;mimeType&quot;;
+    private static final String CHARSET_ELEMENT_NAME = &quot;charset&quot;;
+
+    public void addExtraConfig(PageMetadata page, String xml) throws ApsSystemException {
+<span class="nc" id="L46">        Document doc = this.decodeDOM(xml);</span>
+<span class="nc" id="L47">        this.addExtraConfig(page, doc);</span>
+<span class="nc" id="L48">    }</span>
+
+    protected void addExtraConfig(PageMetadata page, Document doc) {
+<span class="nc" id="L51">        Element rootElement = doc.getRootElement();</span>
+<span class="nc" id="L52">        Element useExtraTitlesElement = rootElement.getChild(USE_EXTRA_TITLES_ELEMENT_NAME);</span>
+<span class="nc bnc" id="L53" title="All 2 branches missed.">        if (null != useExtraTitlesElement) {</span>
+<span class="nc" id="L54">            Boolean value = Boolean.valueOf(useExtraTitlesElement.getText());</span>
+<span class="nc" id="L55">            page.setUseExtraTitles(value.booleanValue());</span>
+        }
+<span class="nc" id="L57">        Element extraGroupsElement = rootElement.getChild(EXTRA_GROUPS_ELEMENT_NAME);</span>
+<span class="nc bnc" id="L58" title="All 2 branches missed.">        if (null != extraGroupsElement) {</span>
+<span class="nc" id="L59">            List&lt;Element&gt; groupElements = extraGroupsElement.getChildren(EXTRA_GROUP_ELEMENT_NAME);</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">            for (int i = 0; i &lt; groupElements.size(); i++) {</span>
+<span class="nc" id="L61">                Element groupElement = groupElements.get(i);</span>
+<span class="nc" id="L62">                page.addExtraGroup(groupElement.getAttributeValue(EXTRA_GROUP_NAME_ATTRIBUTE));</span>
+            }
+        }
+<span class="nc" id="L65">        Element mimetypeElement = rootElement.getChild(MIMETYPE_ELEMENT_NAME);</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">        if (null != mimetypeElement) {</span>
+<span class="nc" id="L67">            String mimetype = mimetypeElement.getText();</span>
+<span class="nc bnc" id="L68" title="All 4 branches missed.">            if (null != mimetype &amp;&amp; mimetype.trim().length() &gt; 0) {</span>
+<span class="nc" id="L69">                page.setMimeType(mimetype);</span>
+            }
+        }
+<span class="nc" id="L72">        Element charsetElement = rootElement.getChild(CHARSET_ELEMENT_NAME);</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">        if (null != charsetElement) {</span>
+<span class="nc" id="L74">            String charset = charsetElement.getText();</span>
+<span class="nc bnc" id="L75" title="All 4 branches missed.">            if (null != charset &amp;&amp; charset.trim().length() &gt; 0) {</span>
+<span class="nc" id="L76">                page.setCharset(charset);</span>
+            }
+        }
+<span class="nc" id="L79">    }</span>
+
+    public String extractXml(PageMetadata page) {
+<span class="nc" id="L82">        Document doc = new Document();</span>
+<span class="nc" id="L83">        Element elementRoot = new Element(&quot;config&quot;);</span>
+<span class="nc" id="L84">        doc.setRootElement(elementRoot);</span>
+<span class="nc" id="L85">        this.fillDocument(doc, page);</span>
+<span class="nc" id="L86">        return this.getXMLDocument(doc);</span>
+    }
+
+    protected void fillDocument(Document doc, PageMetadata page) {
+<span class="nc" id="L90">        Set&lt;String&gt; extraGroups = page.getExtraGroups();</span>
+<span class="nc" id="L91">        Element useExtraTitlesElement = new Element(USE_EXTRA_TITLES_ELEMENT_NAME);</span>
+<span class="nc" id="L92">        useExtraTitlesElement.setText(String.valueOf(page.isUseExtraTitles()));</span>
+<span class="nc" id="L93">        doc.getRootElement().addContent(useExtraTitlesElement);</span>
+<span class="nc bnc" id="L94" title="All 4 branches missed.">        if (null != extraGroups &amp;&amp; extraGroups.size() &gt; 0) {</span>
+<span class="nc" id="L95">            Element extraGroupsElement = new Element(EXTRA_GROUPS_ELEMENT_NAME);</span>
+<span class="nc" id="L96">            doc.getRootElement().addContent(extraGroupsElement);</span>
+<span class="nc" id="L97">            Iterator&lt;String&gt; iterator = extraGroups.iterator();</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">            while (iterator.hasNext()) {</span>
+<span class="nc" id="L99">                String group = iterator.next();</span>
+<span class="nc" id="L100">                Element extraGroupElement = new Element(EXTRA_GROUP_ELEMENT_NAME);</span>
+<span class="nc" id="L101">                extraGroupElement.setAttribute(EXTRA_GROUP_NAME_ATTRIBUTE, group);</span>
+<span class="nc" id="L102">                extraGroupsElement.addContent(extraGroupElement);</span>
+<span class="nc" id="L103">            }</span>
+        }
+<span class="nc" id="L105">        String charset = page.getCharset();</span>
+<span class="nc bnc" id="L106" title="All 4 branches missed.">        if (null != charset &amp;&amp; charset.trim().length() &gt; 0) {</span>
+<span class="nc" id="L107">            Element charsetElement = new Element(CHARSET_ELEMENT_NAME);</span>
+<span class="nc" id="L108">            charsetElement.setText(charset);</span>
+<span class="nc" id="L109">            doc.getRootElement().addContent(charsetElement);</span>
+        }
+<span class="nc" id="L111">        String mimeType = page.getMimeType();</span>
+<span class="nc bnc" id="L112" title="All 4 branches missed.">        if (null != mimeType &amp;&amp; mimeType.trim().length() &gt; 0) {</span>
+<span class="nc" id="L113">            Element mimeTypeElement = new Element(MIMETYPE_ELEMENT_NAME);</span>
+<span class="nc" id="L114">            mimeTypeElement.setText(mimeType);</span>
+<span class="nc" id="L115">            doc.getRootElement().addContent(mimeTypeElement);</span>
+        }
+<span class="nc" id="L117">    }</span>
+
+    private Document decodeDOM(String xml) throws ApsSystemException {
+<span class="nc" id="L120">        Document doc = null;</span>
+<span class="nc" id="L121">        SAXBuilder builder = new SAXBuilder();</span>
+<span class="nc" id="L122">        builder.setValidation(false);</span>
+<span class="nc" id="L123">        StringReader reader = new StringReader(xml);</span>
+        try {
+<span class="nc" id="L125">            doc = builder.build(reader);</span>
+<span class="nc" id="L126">        } catch (Throwable t) {</span>
+<span class="nc" id="L127">            _logger.error(&quot;Error while parsing xml: {} &quot;, xml, t);</span>
+<span class="nc" id="L128">            throw new ApsSystemException(&quot;Error detected while parsing the XML&quot;, t);</span>
+<span class="nc" id="L129">        }</span>
+<span class="nc" id="L130">        return doc;</span>
+    }
+
+    protected String getXMLDocument(Document doc) {
+<span class="nc" id="L134">        XMLOutputter out = new XMLOutputter();</span>
+<span class="nc" id="L135">        Format format = Format.getPrettyFormat();</span>
+<span class="nc" id="L136">        out.setFormat(format);</span>
+<span class="nc" id="L137">        return out.outputString(doc);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

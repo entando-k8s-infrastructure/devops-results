@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EnumeratorMapAttribute.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.system.common.entity.model.attribute</a> &gt; <span class="el_source">EnumeratorMapAttribute.java</span></div><h1>EnumeratorMapAttribute.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package org.entando.entando.aps.system.common.entity.model.attribute;
+
+import com.agiletec.aps.system.common.entity.model.attribute.AbstractJAXBAttribute;
+import com.agiletec.aps.system.common.entity.model.attribute.EnumeratorAttribute;
+import com.agiletec.aps.util.SelectItem;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import org.apache.commons.beanutils.BeanComparator;
+import org.apache.commons.lang.StringUtils;
+import org.entando.entando.aps.system.common.entity.model.attribute.util.EnumeratorMapAttributeItemsExtractor;
+import org.jdom.Element;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * This class describes an &quot;EnumeratorMap&quot; Attribute.
+ *
+ * @author E.Santoboni
+ */
+<span class="nc" id="L35">public class EnumeratorMapAttribute extends EnumeratorAttribute {</span>
+
+<span class="nc" id="L37">    private static final Logger _logger = LoggerFactory.getLogger(EnumeratorMapAttribute.class);</span>
+    private static final String DEFAULT_KEY_VALUE_SEPARATOR = &quot;=&quot;;
+    private SelectItem[] _mapItems;
+
+    @Override
+    public Object getAttributePrototype() {
+<span class="nc" id="L43">        EnumeratorMapAttribute prototype = (EnumeratorMapAttribute) super.getAttributePrototype();</span>
+<span class="nc" id="L44">        prototype.setMapItems(this.getMapItems());</span>
+<span class="nc" id="L45">        return prototype;</span>
+    }
+
+    @Override
+    protected void initItems() {
+<span class="nc bnc" id="L50" title="All 4 branches missed.">        if (null != this.getStaticItems() &amp;&amp; this.getStaticItems().trim().length() &gt; 0) {</span>
+<span class="nc" id="L51">            this.setMapItems(this.extractStaticItems());</span>
+        }
+<span class="nc bnc" id="L53" title="All 2 branches missed.">        if (null != this.getExtractorBeanName()) {</span>
+            try {
+<span class="nc" id="L55">                EnumeratorMapAttributeItemsExtractor extractor = this.getBeanFactory()</span>
+<span class="nc" id="L56">                        .getBean(this.getExtractorBeanName(), EnumeratorMapAttributeItemsExtractor.class);</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">                if (null != extractor) {</span>
+<span class="nc" id="L58">                    List&lt;SelectItem&gt; items = extractor.getMapItems();</span>
+<span class="nc bnc" id="L59" title="All 4 branches missed.">                    if (items != null &amp;&amp; items.size() &gt; 0) {</span>
+<span class="nc" id="L60">                        this.addExtractedItems(items);</span>
+                    }
+                }
+<span class="nc" id="L63">            } catch (Throwable t) {</span>
+<span class="nc" id="L64">                _logger.error(&quot;Error while extract items from bean extractor '{}'&quot;, this.getExtractorBeanName(), t);</span>
+<span class="nc" id="L65">            }</span>
+        }
+<span class="nc" id="L67">    }</span>
+
+    private void addExtractedItems(List&lt;SelectItem&gt; items) {
+<span class="nc" id="L70">        SelectItem[] values = null;</span>
+<span class="nc bnc" id="L71" title="All 4 branches missed.">        if (null == this.getMapItems() || this.getMapItems().length == 0) {</span>
+<span class="nc" id="L72">            values = new SelectItem[items.size()];</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">            for (int i = 0; i &lt; items.size(); i++) {</span>
+<span class="nc" id="L74">                SelectItem item = items.get(i);</span>
+<span class="nc" id="L75">                values[i] = item;</span>
+            }
+        } else {
+<span class="nc" id="L78">            values = new SelectItem[this.getMapItems().length + items.size()];</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">            for (int i = 0; i &lt; this.getMapItems().length; i++) {</span>
+<span class="nc" id="L80">                SelectItem item = this.getMapItems()[i];</span>
+<span class="nc" id="L81">                values[i] = item;</span>
+            }
+<span class="nc bnc" id="L83" title="All 2 branches missed.">            for (int i = 0; i &lt; items.size(); i++) {</span>
+<span class="nc" id="L84">                SelectItem item = items.get(i);</span>
+<span class="nc" id="L85">                values[i + this.getMapItems().length] = item;</span>
+            }
+        }
+<span class="nc" id="L88">        this.setMapItems(values);</span>
+<span class="nc" id="L89">    }</span>
+
+    private SelectItem[] extractStaticItems() {
+<span class="nc" id="L92">        List&lt;SelectItem&gt; items = new ArrayList&lt;SelectItem&gt;();</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">        if (!StringUtils.isEmpty(this.getStaticItems())) {</span>
+<span class="nc" id="L94">            String[] entries = this.getStaticItems().split(this.getCustomSeparator());</span>
+<span class="nc bnc" id="L95" title="All 2 branches missed.">            for (String entry : entries) {</span>
+<span class="nc bnc" id="L96" title="All 4 branches missed.">                if (!StringUtils.isEmpty(entry) &amp;&amp; entry.contains(DEFAULT_KEY_VALUE_SEPARATOR)) {</span>
+<span class="nc" id="L97">                    String[] keyValue = entry.split(DEFAULT_KEY_VALUE_SEPARATOR);</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">                    if (keyValue.length == 2) {</span>
+<span class="nc" id="L99">                        items.add(new SelectItem(keyValue[0].trim(), keyValue[1].trim()));</span>
+                    }
+                }
+            }
+        }
+<span class="nc" id="L104">        BeanComparator c = new BeanComparator(&quot;value&quot;);</span>
+<span class="nc" id="L105">        Collections.sort(items, c);</span>
+<span class="nc" id="L106">        SelectItem[] array = new SelectItem[items.size()];</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">        for (int i = 0; i &lt; items.size(); i++) {</span>
+<span class="nc" id="L108">            array[i] = items.get(i);</span>
+        }
+<span class="nc" id="L110">        return array;</span>
+    }
+
+    @Override
+    public Element getJDOMElement() {
+<span class="nc" id="L115">        Element rootElement = this.createRootElement(&quot;attribute&quot;);</span>
+<span class="nc bnc" id="L116" title="All 2 branches missed.">        if (StringUtils.isNotEmpty(this.getMapKey())) {</span>
+<span class="nc" id="L117">            Element keyElement = new Element(&quot;key&quot;);</span>
+<span class="nc" id="L118">            keyElement.setText(this.getMapKey().trim());</span>
+<span class="nc" id="L119">            rootElement.addContent(keyElement);</span>
+<span class="nc" id="L120">            Element valueElement = new Element(&quot;value&quot;);</span>
+<span class="nc bnc" id="L121" title="All 2 branches missed.">            if (StringUtils.isNotEmpty(this.getMapValue())) {</span>
+<span class="nc" id="L122">                valueElement.setText(this.getMapValue().trim());</span>
+            }
+<span class="nc" id="L124">            rootElement.addContent(valueElement);</span>
+        }
+<span class="nc" id="L126">        return rootElement;</span>
+    }
+
+    public String getMapKey() {
+<span class="nc" id="L130">        return super.getText();</span>
+    }
+
+    public String getMapValue() {
+<span class="nc" id="L134">        String key = this.getMapKey();</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">        if (StringUtils.isEmpty(key)) {</span>
+<span class="nc" id="L136">            return key;</span>
+        }
+<span class="nc bnc" id="L138" title="All 2 branches missed.">        if (null == this.getMapItems()) {</span>
+<span class="nc" id="L139">            return &quot;&quot;;</span>
+        }
+<span class="nc bnc" id="L141" title="All 2 branches missed.">        for (int i = 0; i &lt; this.getMapItems().length; i++) {</span>
+<span class="nc" id="L142">            SelectItem item = this.getMapItems()[i];</span>
+<span class="nc bnc" id="L143" title="All 4 branches missed.">            if (null != item &amp;&amp; key.equals(item.getKey())) {</span>
+<span class="nc" id="L144">                return item.getValue();</span>
+            }
+        }
+<span class="nc" id="L147">        return &quot;&quot;;</span>
+    }
+
+    @Override
+    protected AbstractJAXBAttribute getJAXBAttributeInstance() {
+<span class="nc" id="L152">        return new JAXBEnumeratorMapAttribute();</span>
+    }
+
+    @Override
+    public AbstractJAXBAttribute getJAXBAttribute(String langCode) {
+<span class="nc" id="L157">        JAXBEnumeratorMapAttribute jaxbAttribute = (JAXBEnumeratorMapAttribute) super.createJAXBAttribute(langCode);</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">        if (null == jaxbAttribute) {</span>
+<span class="nc" id="L159">            return null;</span>
+        }
+<span class="nc" id="L161">        JAXBEnumeratorMapValue value = new JAXBEnumeratorMapValue();</span>
+<span class="nc" id="L162">        value.setKey(this.getMapKey());</span>
+<span class="nc" id="L163">        value.setValue(this.getMapValue());</span>
+<span class="nc" id="L164">        jaxbAttribute.setMapValue(value);</span>
+<span class="nc" id="L165">        return jaxbAttribute;</span>
+    }
+
+    @Override
+    public void valueFrom(AbstractJAXBAttribute jaxbAttribute, String langCode) {
+<span class="nc bnc" id="L170" title="All 2 branches missed.">        if (null == jaxbAttribute) {</span>
+<span class="nc" id="L171">            return;</span>
+        }
+<span class="nc" id="L173">        JAXBEnumeratorMapValue value = ((JAXBEnumeratorMapAttribute) jaxbAttribute).getMapValue();</span>
+<span class="nc bnc" id="L174" title="All 2 branches missed.">        if (null != value) {</span>
+<span class="nc" id="L175">            this.setText(value.getKey());</span>
+        }
+<span class="nc" id="L177">    }</span>
+
+    public SelectItem[] getMapItems() {
+<span class="nc" id="L180">        return _mapItems;</span>
+    }
+
+    public void setMapItems(SelectItem[] mapItems) {
+<span class="nc" id="L184">        this._mapItems = mapItems;</span>
+<span class="nc" id="L185">    }</span>
+
+    @Override
+    public boolean isSearchableOptionSupported() {
+<span class="nc" id="L189">        return true;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

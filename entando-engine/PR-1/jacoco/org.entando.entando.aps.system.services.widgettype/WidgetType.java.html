@@ -1,0 +1,396 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WidgetType.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.system.services.widgettype</a> &gt; <span class="el_source">WidgetType.java</span></div><h1>WidgetType.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package org.entando.entando.aps.system.services.widgettype;
+
+import com.agiletec.aps.util.ApsProperties;
+import java.io.File;
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+import javax.servlet.ServletContext;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
+
+/**
+ * Rappresenta un tipo di oggetto visuale che può essere inserito in una pagina, in uno dei frames specificati dal modello di pagina. A
+ * questa rappresentazione corrisponde una jsp che implementa effettivamente l'oggetto visuale.
+ *
+ * @author M.Diana - E.Santoboni
+ */
+<span class="nc" id="L33">public class WidgetType implements Serializable {</span>
+
+    public static final String WIDGET_LOCATION = &quot;aps/jsp/widgets/&quot;;
+    /**
+     * Il codice del tipo di widget.
+     */
+    private String _code;
+    private ApsProperties _titles;
+    /**
+     * La lista dei parametri previsti per il tipo di widget.
+     */
+    private List&lt;WidgetTypeParameter&gt; _parameters;
+    /**
+     * Il nome della action specifica che gestisce questo tipo di widget. null se non vi è nessun action specifica.
+     */
+    private String _action;
+    /**
+     * The code of the plugin owner of widget type.
+     */
+    private String _pluginCode;
+    private String _parentTypeCode;
+    private WidgetType _parentType;
+    private ApsProperties _config;
+    private boolean _locked;
+    private String _mainGroup;
+    private String configUi;
+    private String bundleId;
+
+    public static String getJspPath(String code, String pluginCode) {
+<span class="nc" id="L62">        StringBuilder jspPath = new StringBuilder(&quot;/WEB-INF/&quot;);</span>
+<span class="nc bnc" id="L63" title="All 4 branches missed.">        boolean isWidgetPlugin = (null != pluginCode &amp;&amp; pluginCode.trim().length() &gt; 0);</span>
+<span class="nc bnc" id="L64" title="All 2 branches missed.">        if (isWidgetPlugin) {</span>
+<span class="nc" id="L65">            jspPath.append(&quot;plugins/&quot;).append(pluginCode.trim()).append(&quot;/&quot;);</span>
+        }
+<span class="nc" id="L67">        jspPath.append(WIDGET_LOCATION).append(code).append(&quot;.jsp&quot;);</span>
+<span class="nc" id="L68">        return jspPath.toString();</span>
+    }
+
+    public static boolean existsJsp(ServletContext srvCtx, String code, String pluginCode) throws IOException {
+<span class="nc" id="L72">        String jspPath = getJspPath(code, pluginCode);</span>
+<span class="nc" id="L73">        String folderPath = srvCtx.getRealPath(&quot;/&quot;);</span>
+<span class="nc" id="L74">        boolean existsJsp = (new File(folderPath + jspPath)).exists();</span>
+<span class="nc bnc" id="L75" title="All 2 branches missed.">        if (existsJsp) {</span>
+<span class="nc" id="L76">            return true;</span>
+        }
+<span class="nc" id="L78">        PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();</span>
+<span class="nc" id="L79">        Resource[] resources = resolver.getResources(&quot;file:**&quot; + jspPath);</span>
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        for (int i = 0; i &lt; resources.length; i++) {</span>
+<span class="nc" id="L81">            Resource resource = resources[i];</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">            if (resource.exists()) {</span>
+<span class="nc" id="L83">                return true;</span>
+            }
+        }
+<span class="nc" id="L86">        return false;</span>
+    }
+
+    @Override
+    public WidgetType clone() {
+<span class="nc" id="L91">        WidgetType clone = new WidgetType();</span>
+<span class="nc" id="L92">        clone.setAction(this.getAction());</span>
+<span class="nc" id="L93">        clone.setCode(this.getCode());</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">        if (null != this.getConfig()) {</span>
+<span class="nc" id="L95">            clone.setConfig(this.getConfig().clone());</span>
+        }
+<span class="nc" id="L97">        clone.setLocked(this.isLocked());</span>
+<span class="nc" id="L98">        clone.setParentType(this.getParentType());</span>
+<span class="nc" id="L99">        clone.setParentTypeCode(this.getParentTypeCode());</span>
+<span class="nc" id="L100">        clone.setPluginCode(this.getPluginCode());</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        if (null != this.getTitles()) {</span>
+<span class="nc" id="L102">            clone.setTitles(this.getTitles().clone());</span>
+        }
+<span class="nc bnc" id="L104" title="All 2 branches missed.">        if (null != this.getTypeParameters()) {</span>
+<span class="nc" id="L105">            List&lt;WidgetTypeParameter&gt; params = new ArrayList&lt;WidgetTypeParameter&gt;();</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">            for (int i = 0; i &lt; this.getTypeParameters().size(); i++) {</span>
+<span class="nc" id="L107">                params.add(this.getTypeParameters().get(i).clone());</span>
+            }
+<span class="nc" id="L109">            clone.setTypeParameters(params);</span>
+        }
+<span class="nc" id="L111">        clone.setMainGroup(this.getMainGroup());</span>
+<span class="nc" id="L112">        return clone;</span>
+    }
+
+    /**
+     * Restituisce il codice del tipo di widget.
+     *
+     * @return Il codice del tipo di widget
+     */
+    public String getCode() {
+<span class="nc" id="L121">        return _code;</span>
+    }
+
+    /**
+     * Imposta il codice del tipo di widget.
+     *
+     * @param code Il codice del tipo di widget
+     */
+    public void setCode(String code) {
+<span class="nc" id="L130">        this._code = code;</span>
+<span class="nc" id="L131">    }</span>
+
+    public ApsProperties getTitles() {
+<span class="nc" id="L134">        return _titles;</span>
+    }
+
+    public void setTitles(ApsProperties titles) {
+<span class="nc" id="L138">        this._titles = titles;</span>
+<span class="nc" id="L139">    }</span>
+
+    /**
+     * Restituisce la lista dei parametri previsti per il tipo di widget.
+     *
+     * @return La lista di parametri in oggetti del tipo WidgetTypeParameter.
+     */
+    public List&lt;WidgetTypeParameter&gt; getTypeParameters() {
+<span class="nc" id="L147">        return _parameters;</span>
+    }
+
+    /**
+     * Imposta la lista dei parametri previsti per il tipo di widget. La lista deve essere composta da oggetti del tipo
+     * WidgetTypeParameter.
+     *
+     * @param typeParameters The parameters to set.
+     */
+    public void setTypeParameters(List&lt;WidgetTypeParameter&gt; typeParameters) {
+<span class="nc" id="L157">        this._parameters = typeParameters;</span>
+<span class="nc" id="L158">    }</span>
+
+    public boolean hasParameter(String paramName) {
+<span class="nc bnc" id="L161" title="All 2 branches missed.">        if (null == this.getTypeParameters()) {</span>
+<span class="nc" id="L162">            return false;</span>
+        }
+<span class="nc" id="L164">        boolean startWith = false;</span>
+<span class="nc" id="L165">        boolean endWith = false;</span>
+<span class="nc bnc" id="L166" title="All 2 branches missed.">        if (paramName.endsWith(&quot;%&quot;)) {</span>
+<span class="nc" id="L167">            paramName = paramName.substring(0, paramName.length() - 1);</span>
+<span class="nc" id="L168">            startWith = true;</span>
+        }
+<span class="nc bnc" id="L170" title="All 2 branches missed.">        if (paramName.startsWith(&quot;%&quot;)) {</span>
+<span class="nc" id="L171">            paramName = paramName.substring(1);</span>
+<span class="nc" id="L172">            endWith = true;</span>
+        }
+<span class="nc bnc" id="L174" title="All 2 branches missed.">        for (int i = 0; i &lt; this.getTypeParameters().size(); i++) {</span>
+<span class="nc" id="L175">            WidgetTypeParameter param = this.getTypeParameters().get(i);</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">            String name = (null != param) ? param.getName() : null;</span>
+<span class="nc bnc" id="L177" title="All 2 branches missed.">            if (null == name) {</span>
+<span class="nc" id="L178">                continue;</span>
+            }
+<span class="nc bnc" id="L180" title="All 6 branches missed.">            if (startWith &amp;&amp; endWith &amp;&amp; name.contains(paramName)) {</span>
+<span class="nc" id="L181">                return true;</span>
+<span class="nc bnc" id="L182" title="All 4 branches missed.">            } else if (startWith &amp;&amp; name.startsWith(paramName)) {</span>
+<span class="nc" id="L183">                return true;</span>
+<span class="nc bnc" id="L184" title="All 4 branches missed.">            } else if (endWith &amp;&amp; name.endsWith(paramName)) {</span>
+<span class="nc" id="L185">                return true;</span>
+<span class="nc bnc" id="L186" title="All 2 branches missed.">            } else if (paramName.equals(name)) {</span>
+<span class="nc" id="L187">                return true;</span>
+            }
+        }
+<span class="nc" id="L190">        return false;</span>
+    }
+
+    /**
+     * Restituisce il nome della action specifica che gestisce questo tipo di widget.
+     *
+     * @return Il nome della action specifica, null se non vi è nessun action specifica.
+     */
+    public String getAction() {
+<span class="nc" id="L199">        return _action;</span>
+    }
+
+    /**
+     * Setta il nome della action specifica che gestisce questo tipo di widget.
+     *
+     * @param action Il nome della action specifica.
+     */
+    public void setAction(String action) {
+<span class="nc" id="L208">        this._action = action;</span>
+<span class="nc" id="L209">    }</span>
+
+    /**
+     * Return the code of the plugin owner of widget type. The field is null if the showlet type belong to Entando Core.
+     *
+     * @return The plugin code.
+     */
+    public String getPluginCode() {
+<span class="nc" id="L217">        return _pluginCode;</span>
+    }
+
+    /**
+     * Set the code of the plugin owner of widget type.
+     *
+     * @param pluginCode The plugin code.
+     */
+    public void setPluginCode(String pluginCode) {
+<span class="nc" id="L226">        this._pluginCode = pluginCode;</span>
+<span class="nc" id="L227">    }</span>
+
+    public String getParentTypeCode() {
+<span class="nc" id="L230">        return _parentTypeCode;</span>
+    }
+
+    protected void setParentTypeCode(String parentTypeCode) {
+<span class="nc" id="L234">        this._parentTypeCode = parentTypeCode;</span>
+<span class="nc" id="L235">    }</span>
+
+    public WidgetType getParentType() {
+<span class="nc" id="L238">        return _parentType;</span>
+    }
+
+    public void setParentType(WidgetType parentType) {
+<span class="nc" id="L242">        this._parentType = parentType;</span>
+<span class="nc bnc" id="L243" title="All 2 branches missed.">        if (null != parentType) {</span>
+<span class="nc" id="L244">            this.setParentTypeCode(parentType.getCode());</span>
+        }
+<span class="nc" id="L246">    }</span>
+
+    public ApsProperties getConfig() {
+<span class="nc" id="L249">        return _config;</span>
+    }
+
+    public void setConfig(ApsProperties config) {
+<span class="nc" id="L253">        this._config = config;</span>
+<span class="nc" id="L254">    }</span>
+
+    public boolean isLogic() {
+<span class="nc bnc" id="L257" title="All 2 branches missed.">        return (null != this.getParentType());</span>
+    }
+
+    public boolean isUserType() {
+<span class="nc bnc" id="L261" title="All 8 branches missed.">        return (this.isLogic() &amp;&amp; !this.isLocked() || (!this.isLogic() &amp;&amp; !this.isLocked()));</span>
+    }
+
+    public boolean isLocked() {
+<span class="nc" id="L265">        return _locked;</span>
+    }
+
+    public void setLocked(boolean locked) {
+<span class="nc" id="L269">        this._locked = locked;</span>
+<span class="nc" id="L270">    }</span>
+
+    public String getMainGroup() {
+<span class="nc" id="L273">        return _mainGroup;</span>
+    }
+
+    public void setMainGroup(String mainGroup) {
+<span class="nc" id="L277">        this._mainGroup = mainGroup;</span>
+<span class="nc" id="L278">    }</span>
+
+    public String getConfigUi() {
+<span class="nc" id="L281">        return configUi;</span>
+    }
+
+    public void setConfigUi(String configUi) {
+<span class="nc" id="L285">        this.configUi = configUi;</span>
+<span class="nc" id="L286">    }</span>
+
+    public String getBundleId() {
+<span class="nc" id="L289">        return bundleId;</span>
+    }
+
+    public void setBundleId(String bundleId) {
+<span class="nc" id="L293">        this.bundleId = bundleId;</span>
+<span class="nc" id="L294">    }</span>
+
+    public String getJspPath() {
+<span class="nc bnc" id="L297" title="All 2 branches missed.">        WidgetType widgetType = (this.isLogic()) ? this.getParentType() : this;</span>
+<span class="nc" id="L298">        return getJspPath(widgetType.getCode(), widgetType.getPluginCode());</span>
+    }
+
+    @Override
+    public int hashCode() {
+<span class="nc" id="L303">        final int prime = 31;</span>
+<span class="nc" id="L304">        int result = 1;</span>
+<span class="nc bnc" id="L305" title="All 2 branches missed.">        result = prime * result + ((_action == null) ? 0 : _action.hashCode());</span>
+<span class="nc bnc" id="L306" title="All 2 branches missed.">        result = prime * result + ((_code == null) ? 0 : _code.hashCode());</span>
+<span class="nc bnc" id="L307" title="All 2 branches missed.">        result = prime * result + ((_config == null) ? 0 : _config.hashCode());</span>
+<span class="nc bnc" id="L308" title="All 2 branches missed.">        result = prime * result + (_locked ? 1231 : 1237);</span>
+<span class="nc bnc" id="L309" title="All 2 branches missed.">        result = prime * result + ((_mainGroup == null) ? 0 : _mainGroup.hashCode());</span>
+<span class="nc bnc" id="L310" title="All 2 branches missed.">        result = prime * result + ((_parameters == null) ? 0 : _parameters.hashCode());</span>
+<span class="nc bnc" id="L311" title="All 2 branches missed.">        result = prime * result + ((_parentType == null) ? 0 : _parentType.hashCode());</span>
+<span class="nc bnc" id="L312" title="All 2 branches missed.">        result = prime * result + ((_parentTypeCode == null) ? 0 : _parentTypeCode.hashCode());</span>
+<span class="nc bnc" id="L313" title="All 2 branches missed.">        result = prime * result + ((_pluginCode == null) ? 0 : _pluginCode.hashCode());</span>
+<span class="nc bnc" id="L314" title="All 2 branches missed.">        result = prime * result + ((_titles == null) ? 0 : _titles.hashCode());</span>
+<span class="nc" id="L315">        return result;</span>
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+<span class="nc bnc" id="L320" title="All 2 branches missed.">        if (this == obj) {</span>
+<span class="nc" id="L321">            return true;</span>
+        }
+<span class="nc bnc" id="L323" title="All 2 branches missed.">        if (obj == null) {</span>
+<span class="nc" id="L324">            return false;</span>
+        }
+<span class="nc bnc" id="L326" title="All 2 branches missed.">        if (getClass() != obj.getClass()) {</span>
+<span class="nc" id="L327">            return false;</span>
+        }
+<span class="nc" id="L329">        WidgetType other = (WidgetType) obj;</span>
+<span class="nc bnc" id="L330" title="All 2 branches missed.">        if (_action == null) {</span>
+<span class="nc bnc" id="L331" title="All 2 branches missed.">            if (other._action != null) {</span>
+<span class="nc" id="L332">                return false;</span>
+            }
+<span class="nc bnc" id="L334" title="All 2 branches missed.">        } else if (!_action.equals(other._action)) {</span>
+<span class="nc" id="L335">            return false;</span>
+        }
+<span class="nc bnc" id="L337" title="All 2 branches missed.">        if (_code == null) {</span>
+<span class="nc bnc" id="L338" title="All 2 branches missed.">            if (other._code != null) {</span>
+<span class="nc" id="L339">                return false;</span>
+            }
+<span class="nc bnc" id="L341" title="All 2 branches missed.">        } else if (!_code.equals(other._code)) {</span>
+<span class="nc" id="L342">            return false;</span>
+        }
+<span class="nc bnc" id="L344" title="All 2 branches missed.">        if (_config == null) {</span>
+<span class="nc bnc" id="L345" title="All 2 branches missed.">            if (other._config != null) {</span>
+<span class="nc" id="L346">                return false;</span>
+            }
+<span class="nc bnc" id="L348" title="All 2 branches missed.">        } else if (!_config.equals(other._config)) {</span>
+<span class="nc" id="L349">            return false;</span>
+        }
+<span class="nc bnc" id="L351" title="All 2 branches missed.">        if (_locked != other._locked) {</span>
+<span class="nc" id="L352">            return false;</span>
+        }
+<span class="nc bnc" id="L354" title="All 2 branches missed.">        if (_mainGroup == null) {</span>
+<span class="nc bnc" id="L355" title="All 2 branches missed.">            if (other._mainGroup != null) {</span>
+<span class="nc" id="L356">                return false;</span>
+            }
+<span class="nc bnc" id="L358" title="All 2 branches missed.">        } else if (!_mainGroup.equals(other._mainGroup)) {</span>
+<span class="nc" id="L359">            return false;</span>
+        }
+<span class="nc bnc" id="L361" title="All 2 branches missed.">        if (_parameters == null) {</span>
+<span class="nc bnc" id="L362" title="All 2 branches missed.">            if (other._parameters != null) {</span>
+<span class="nc" id="L363">                return false;</span>
+            }
+<span class="nc bnc" id="L365" title="All 2 branches missed.">        } else if (!_parameters.equals(other._parameters)) {</span>
+<span class="nc" id="L366">            return false;</span>
+        }
+<span class="nc bnc" id="L368" title="All 2 branches missed.">        if (_parentType == null) {</span>
+<span class="nc bnc" id="L369" title="All 2 branches missed.">            if (other._parentType != null) {</span>
+<span class="nc" id="L370">                return false;</span>
+            }
+<span class="nc bnc" id="L372" title="All 2 branches missed.">        } else if (!_parentType.equals(other._parentType)) {</span>
+<span class="nc" id="L373">            return false;</span>
+        }
+<span class="nc bnc" id="L375" title="All 2 branches missed.">        if (_parentTypeCode == null) {</span>
+<span class="nc bnc" id="L376" title="All 2 branches missed.">            if (other._parentTypeCode != null) {</span>
+<span class="nc" id="L377">                return false;</span>
+            }
+<span class="nc bnc" id="L379" title="All 2 branches missed.">        } else if (!_parentTypeCode.equals(other._parentTypeCode)) {</span>
+<span class="nc" id="L380">            return false;</span>
+        }
+<span class="nc bnc" id="L382" title="All 2 branches missed.">        if (_pluginCode == null) {</span>
+<span class="nc bnc" id="L383" title="All 2 branches missed.">            if (other._pluginCode != null) {</span>
+<span class="nc" id="L384">                return false;</span>
+            }
+<span class="nc bnc" id="L386" title="All 2 branches missed.">        } else if (!_pluginCode.equals(other._pluginCode)) {</span>
+<span class="nc" id="L387">            return false;</span>
+        }
+<span class="nc bnc" id="L389" title="All 2 branches missed.">        if (_titles == null) {</span>
+<span class="nc bnc" id="L390" title="All 2 branches missed.">            return other._titles == null;</span>
+        } else {
+<span class="nc" id="L392">            return _titles.equals(other._titles);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

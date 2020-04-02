@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>HypertextAttribute.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.common.entity.model.attribute</a> &gt; <span class="el_source">HypertextAttribute.java</span></div><h1>HypertextAttribute.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package com.agiletec.aps.system.common.entity.model.attribute;
+
+import com.agiletec.aps.util.HtmlHandler;
+import java.util.Iterator;
+import org.apache.commons.lang.StringEscapeUtils;
+import org.apache.commons.lang.StringUtils;
+import org.jdom.CDATA;
+import org.jdom.Element;
+
+/**
+ * This class represents a 'Hypertext' Attribute.
+ *
+ * @author W.Ambu
+ */
+<span class="nc" id="L29">public class HypertextAttribute extends TextAttribute {</span>
+
+    @Override
+    public boolean needToConvertSpecialCharacter() {
+<span class="nc" id="L33">        return false;</span>
+    }
+
+    /**
+     * Return the field to index after having eventually removed the HTML tags.
+     *
+     * @return The text field to index
+     */
+    @Override
+    public String getIndexeableFieldValue() {
+<span class="nc" id="L43">        HtmlHandler htmlhandler = new HtmlHandler();</span>
+<span class="nc" id="L44">        String parsedText = htmlhandler.getParsedText(super.getText());</span>
+<span class="nc" id="L45">        return StringEscapeUtils.unescapeHtml(parsedText);</span>
+    }
+
+    /**
+     * Return the requested number of characters of the text associated to this attribute, in the current language purged by the HTML tags,
+     * if any.
+     *
+     * @param n The number of characters to return
+     * @return The string of text with the desired length.
+     * @deprecated It might return less characters than requested. Use the getHeadEscaped instead
+     */
+    public String getHead(int n) {
+<span class="nc" id="L57">        HtmlHandler htmlhandler = new HtmlHandler();</span>
+<span class="nc" id="L58">        String parsedText = htmlhandler.getParsedText(super.getText());</span>
+<span class="nc" id="L59">        String head = parsedText;</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">        if (n &lt; parsedText.length()) {</span>
+<span class="nc bnc" id="L61" title="All 6 branches missed.">            while ((Character.isLetterOrDigit(parsedText.charAt(n)) || (parsedText.charAt(n) == ';')) &amp;&amp; (n &lt; parsedText.length())) {</span>
+<span class="nc" id="L62">                n++;</span>
+            }
+<span class="nc" id="L64">            head = parsedText.substring(0, n);</span>
+        }
+<span class="nc" id="L66">        return head;</span>
+    }
+
+    /**
+     * Return the requested number of characters rounded on word boundary of the text associated to this attribute, in the current language,
+     * stripping HTML tags, if any.
+     *
+     * @param n The minimum number of characters to return
+     * @return The string of text with the desired length.
+     */
+    public String getEscapedHead(int n) {
+<span class="nc" id="L77">        String parsedText = super.getText().replaceAll(&quot;&lt;[^&lt;&gt;]+&gt;&quot;, &quot;&quot;).trim();</span>
+<span class="nc" id="L78">        String head = parsedText;</span>
+
+<span class="nc bnc" id="L80" title="All 2 branches missed.">        if (n &lt; parsedText.length()) {</span>
+<span class="nc bnc" id="L81" title="All 6 branches missed.">            while ((Character.isLetterOrDigit(parsedText.charAt(n)) || (parsedText.charAt(n) == ';')) &amp;&amp; (n &lt; parsedText.length())) {</span>
+<span class="nc" id="L82">                n++;</span>
+            }
+<span class="nc" id="L84">            head = parsedText.substring(0, n);</span>
+        }
+<span class="nc" id="L86">        return head;</span>
+    }
+
+    @Override
+    public Element getJDOMElement() {
+<span class="nc" id="L91">        Element attributeElement = this.createRootElement(&quot;attribute&quot;);</span>
+<span class="nc" id="L92">        Iterator&lt;String&gt; langIter = this.getTextMap().keySet().iterator();</span>
+<span class="nc bnc" id="L93" title="All 2 branches missed.">        while (langIter.hasNext()) {</span>
+<span class="nc" id="L94">            String currentLangCode = langIter.next();</span>
+<span class="nc" id="L95">            String hypertext = this.getTextMap().get(currentLangCode);</span>
+<span class="nc bnc" id="L96" title="All 4 branches missed.">            if (null != hypertext &amp;&amp; hypertext.trim().length() &gt; 0) {</span>
+<span class="nc" id="L97">                Element hypertextElement = new Element(&quot;hypertext&quot;);</span>
+<span class="nc" id="L98">                hypertextElement.setAttribute(&quot;lang&quot;, currentLangCode);</span>
+<span class="nc" id="L99">                CDATA cdata = new CDATA(hypertext);</span>
+<span class="nc" id="L100">                hypertextElement.addContent(cdata);</span>
+<span class="nc" id="L101">                attributeElement.addContent(hypertextElement);</span>
+            }
+<span class="nc" id="L103">        }</span>
+<span class="nc" id="L104">        return attributeElement;</span>
+    }
+
+    @Override
+    public boolean isSearchableOptionSupported() {
+<span class="nc" id="L109">        return false;</span>
+    }
+
+    @Override
+    protected JAXBHypertextAttribute getJAXBAttributeInstance() {
+<span class="nc" id="L114">        return new JAXBHypertextAttribute();</span>
+    }
+
+    @Override
+    public JAXBHypertextAttribute getJAXBAttribute(String langCode) {
+<span class="nc" id="L119">        JAXBHypertextAttribute jaxbHypertexAttribute = (JAXBHypertextAttribute) super.createJAXBAttribute(langCode);</span>
+<span class="nc bnc" id="L120" title="All 2 branches missed.">        if (null == jaxbHypertexAttribute) {</span>
+<span class="nc" id="L121">            return null;</span>
+        }
+<span class="nc" id="L123">        String text = this.getTextForLang(langCode);</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">        if (StringUtils.isNotEmpty(text)) {</span>
+<span class="nc" id="L125">            jaxbHypertexAttribute.setHtmlValue(text);</span>
+        }
+<span class="nc" id="L127">        return jaxbHypertexAttribute;</span>
+    }
+
+    @Override
+    public void valueFrom(AbstractJAXBAttribute jaxbAttribute, String langCode) {
+<span class="nc" id="L132">        JAXBHypertextAttribute jaxbHypertextAttribute = (JAXBHypertextAttribute) jaxbAttribute;</span>
+<span class="nc" id="L133">        String value = jaxbHypertextAttribute.getHtmlValue();</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">        if (null != value) {</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">            String langToSet = (null != langCode) ? langCode : this.getDefaultLangCode();</span>
+<span class="nc" id="L136">            this.getTextMap().put(langToSet, value);</span>
+        }
+<span class="nc" id="L138">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
