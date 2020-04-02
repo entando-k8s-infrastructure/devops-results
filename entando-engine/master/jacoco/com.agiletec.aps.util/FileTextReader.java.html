@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FileTextReader.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.util</a> &gt; <span class="el_source">FileTextReader.java</span></div><h1>FileTextReader.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package com.agiletec.aps.util;
+
+import com.agiletec.aps.system.exception.ApsSystemException;
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Utility class for reading the contents of files.
+ *
+ * @author E.Santoboni
+ */
+<span class="nc" id="L37">public class FileTextReader {</span>
+
+<span class="nc" id="L39">    private static final Logger logger = LoggerFactory.getLogger(FileTextReader.class);</span>
+
+    public static String getText(InputStream is) throws ApsSystemException, IOException {
+<span class="nc" id="L42">        return getText(is, null);</span>
+    }
+
+    public static String getText(InputStream is, String charset) throws ApsSystemException, IOException {
+<span class="nc" id="L46">        Reader reader = null;</span>
+<span class="nc" id="L47">        BufferedReader br = null;</span>
+        try {
+<span class="nc bnc" id="L49" title="All 2 branches missed.">            reader = (null != charset) ? new InputStreamReader(is, charset) : new InputStreamReader(is);</span>
+<span class="nc" id="L50">            br = new BufferedReader(reader);</span>
+<span class="nc" id="L51">            return getText(br);</span>
+<span class="nc" id="L52">        } catch (Throwable t) {</span>
+<span class="nc" id="L53">            throw new ApsSystemException(&quot;Error reading text&quot;, t);</span>
+        } finally {
+<span class="nc bnc" id="L55" title="All 2 branches missed.">            if (null != br) {</span>
+<span class="nc" id="L56">                br.close();</span>
+            }
+<span class="nc bnc" id="L58" title="All 2 branches missed.">            if (null != reader) {</span>
+<span class="nc" id="L59">                reader.close();</span>
+            }
+        }
+    }
+
+    public static String getText(String filename) throws ApsSystemException, IOException {
+<span class="nc" id="L65">        Reader reader = null;</span>
+<span class="nc" id="L66">        BufferedReader br = null;</span>
+        try {
+<span class="nc" id="L68">            reader = new FileReader(filename);</span>
+<span class="nc" id="L69">            br = new BufferedReader(reader);</span>
+<span class="nc" id="L70">            return getText(br);</span>
+<span class="nc" id="L71">        } catch (FileNotFoundException t) {</span>
+<span class="nc" id="L72">            throw new ApsSystemException(&quot;Error reading text&quot;, t);</span>
+        } finally {
+<span class="nc bnc" id="L74" title="All 2 branches missed.">            if (null != br) {</span>
+<span class="nc" id="L75">                br.close();</span>
+            }
+<span class="nc bnc" id="L77" title="All 2 branches missed.">            if (null != reader) {</span>
+<span class="nc" id="L78">                reader.close();</span>
+            }
+        }
+    }
+
+    private static String getText(BufferedReader br) throws IOException {
+<span class="nc" id="L84">        String lineSep = System.getProperty(&quot;line.separator&quot;);</span>
+<span class="nc" id="L85">        String nextLine = &quot;&quot;;</span>
+<span class="nc" id="L86">        StringBuilder sb = new StringBuilder();</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">        while ((nextLine = br.readLine()) != null) {</span>
+<span class="nc" id="L88">            sb.append(nextLine);</span>
+<span class="nc" id="L89">            sb.append(lineSep);</span>
+        }
+<span class="nc" id="L91">        return sb.toString();</span>
+    }
+
+    public static File createTempFile(String filename, InputStream is) throws IOException {
+<span class="nc" id="L95">        String tempDir = System.getProperty(&quot;java.io.tmpdir&quot;);</span>
+<span class="nc" id="L96">        String filePath = tempDir + File.separator + filename;</span>
+<span class="nc" id="L97">        FileOutputStream outStream = null;</span>
+        try {
+<span class="nc" id="L99">            byte[] buffer = new byte[1024];</span>
+<span class="nc" id="L100">            int length = -1;</span>
+<span class="nc" id="L101">            outStream = new FileOutputStream(filePath);</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">            while ((length = is.read(buffer)) != -1) {</span>
+<span class="nc" id="L103">                outStream.write(buffer, 0, length);</span>
+<span class="nc" id="L104">                outStream.flush();</span>
+            }
+<span class="nc" id="L106">        } catch (IOException t) {</span>
+<span class="nc" id="L107">            logger.error(&quot;Error on saving temporary file&quot;, t);</span>
+<span class="nc" id="L108">            throw t;</span>
+        } finally {
+<span class="nc bnc" id="L110" title="All 2 branches missed.">            if (null != outStream) {</span>
+<span class="nc" id="L111">                outStream.close();</span>
+            }
+<span class="nc bnc" id="L113" title="All 2 branches missed.">            if (null != is) {</span>
+<span class="nc" id="L114">                is.close();</span>
+            }
+        }
+<span class="nc" id="L117">        return new File(filePath);</span>
+    }
+
+    public static byte[] fileToByteArray(File file) throws IOException {
+<span class="nc" id="L121">        FileInputStream fis = null;</span>
+<span class="nc" id="L122">        ByteArrayOutputStream bos = new ByteArrayOutputStream();</span>
+        try {
+<span class="nc" id="L124">            fis = new FileInputStream(file);</span>
+<span class="nc" id="L125">            byte[] buf = new byte[1024];</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">            for (int readNum; (readNum = fis.read(buf)) != -1; ) {</span>
+<span class="nc" id="L127">                bos.write(buf, 0, readNum);</span>
+            }
+<span class="nc" id="L129">        } catch (IOException ex) {</span>
+<span class="nc" id="L130">            logger.error(&quot;Error creating byte array&quot;, ex);</span>
+<span class="nc" id="L131">            throw ex;</span>
+        } finally {
+<span class="nc bnc" id="L133" title="All 2 branches missed.">            if (null != fis) {</span>
+<span class="nc" id="L134">                fis.close();</span>
+            }
+        }
+<span class="nc" id="L137">        return bos.toByteArray();</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

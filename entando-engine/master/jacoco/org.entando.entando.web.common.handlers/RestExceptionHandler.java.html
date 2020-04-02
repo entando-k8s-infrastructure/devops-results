@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RestExceptionHandler.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.web.common.handlers</a> &gt; <span class="el_source">RestExceptionHandler.java</span></div><h1>RestExceptionHandler.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package org.entando.entando.web.common.handlers;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import org.apache.commons.lang3.StringUtils;
+import org.entando.entando.aps.system.exception.ResourceNotFoundException;
+import org.entando.entando.web.common.RestErrorCodes;
+import org.entando.entando.web.common.exceptions.EntandoAuthorizationException;
+import org.entando.entando.web.common.exceptions.EntandoTokenException;
+import org.entando.entando.web.common.exceptions.ResourcePermissionsException;
+import org.entando.entando.web.common.exceptions.ValidationConflictException;
+import org.entando.entando.web.common.exceptions.ValidationGenericException;
+import org.entando.entando.web.common.exceptions.ValidationUpdateSelfException;
+import org.entando.entando.web.common.model.ErrorRestResponse;
+import org.entando.entando.web.common.model.RestError;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.context.support.DefaultMessageSourceResolvable;
+import org.springframework.http.HttpStatus;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ResponseStatus;
+
+@ControllerAdvice
+<span class="nc" id="L48">public class RestExceptionHandler {</span>
+
+<span class="nc" id="L50">    private static final Logger logger = LoggerFactory.getLogger(RestExceptionHandler.class);</span>
+
+    @Autowired
+    private MessageSource messageSource;
+
+    public MessageSource getMessageSource() {
+<span class="nc" id="L56">        return messageSource;</span>
+    }
+
+    public void setMessageSource(MessageSource messageSource) {
+<span class="nc" id="L60">        this.messageSource = messageSource;</span>
+<span class="nc" id="L61">    }</span>
+
+    @ExceptionHandler(value = RuntimeException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ResponseBody
+    public ErrorRestResponse processRuntimeExceptionException(RuntimeException ex) {
+<span class="nc" id="L67">        logger.warn(&quot;Processing unhandled exception&quot;, ex);</span>
+<span class="nc" id="L68">        RestError error = new RestError(RestErrorCodes.INTERNAL_ERROR,</span>
+<span class="nc" id="L69">                this.resolveLocalizedErrorMessage(&quot;GENERIC_ERROR&quot;, new Object[]{ex.getMessage()}));</span>
+<span class="nc" id="L70">        return new ErrorRestResponse(error);</span>
+    }
+
+    @ExceptionHandler(value = EntandoAuthorizationException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ResponseBody
+    public ErrorRestResponse processEntandoAuthorizationException(EntandoAuthorizationException ex) {
+<span class="nc" id="L77">        logger.debug(&quot;Handling {} error&quot;, ex.getClass().getSimpleName());</span>
+<span class="nc" id="L78">        RestError error = new RestError(RestErrorCodes.UNAUTHORIZED,</span>
+<span class="nc" id="L79">                this.resolveLocalizedErrorMessage(&quot;UNAUTHORIZED&quot;, new Object[]{ex.getUsername(), ex.getRequestURI(), ex.getMethod()}));</span>
+<span class="nc" id="L80">        return new ErrorRestResponse(error);</span>
+    }
+
+    @ExceptionHandler(value = EntandoTokenException.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ResponseBody
+    public ErrorRestResponse processEntandoTokenException(EntandoAuthorizationException ex) {
+<span class="nc" id="L87">        logger.debug(&quot;Handling {} error&quot;, ex.getClass().getSimpleName());</span>
+<span class="nc" id="L88">        RestError error = new RestError(RestErrorCodes.UNAUTHORIZED,</span>
+<span class="nc" id="L89">                this.resolveLocalizedErrorMessage(&quot;UNAUTHORIZED&quot;, new Object[]{ex.getUsername(), ex.getRequestURI(), ex.getMethod()}));</span>
+<span class="nc" id="L90">        return new ErrorRestResponse(error);</span>
+    }
+
+    @ExceptionHandler(value = ResourcePermissionsException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ResponseBody
+    public ErrorRestResponse processEntandoTokenException(ResourcePermissionsException ex) {
+<span class="nc" id="L97">        logger.debug(&quot;Handling {} error&quot;, ex.getClass().getSimpleName());</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">        if (null != ex.getBindingResult()) {</span>
+<span class="nc" id="L99">            BindingResult result = ex.getBindingResult();</span>
+<span class="nc" id="L100">            return processAllErrors(result);</span>
+        } else {
+<span class="nc" id="L102">            RestError error = new RestError(RestErrorCodes.UNAUTHORIZED,</span>
+<span class="nc" id="L103">                    this.resolveLocalizedErrorMessage(&quot;UNAUTHORIZED_ON_RESOURCE&quot;, new Object[]{ex.getUsername(), ex.getResource()}));</span>
+<span class="nc" id="L104">            return new ErrorRestResponse(error);</span>
+        }
+    }
+
+    @ExceptionHandler(value = ResourceNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ResponseBody
+    public ErrorRestResponse processRestRourceNotFoundEx(ResourceNotFoundException ex) {
+<span class="nc" id="L112">        logger.debug(&quot;Handling {} error&quot;, ex.getClass().getSimpleName());</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">        if (null != ex.getBindingResult()) {</span>
+<span class="nc" id="L114">            BindingResult result = ex.getBindingResult();</span>
+<span class="nc" id="L115">            return processAllErrors(result);</span>
+        } else {
+<span class="nc" id="L117">            RestError error = new RestError(ex.getErrorCode(),</span>
+<span class="nc" id="L118">                    this.resolveLocalizedErrorMessage(&quot;NOT_FOUND&quot;, new Object[]{ex.getObjectName(), ex.getObjectCode()}));</span>
+<span class="nc" id="L119">            return new ErrorRestResponse(error);</span>
+        }
+    }
+
+    @ExceptionHandler(value = ValidationConflictException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    @ResponseBody
+    public ErrorRestResponse processValidationError(ValidationConflictException ex) {
+<span class="nc" id="L127">        logger.debug(&quot;Handling {} error&quot;, ex.getClass().getSimpleName());</span>
+<span class="nc" id="L128">        BindingResult result = ex.getBindingResult();</span>
+<span class="nc" id="L129">        return processAllErrors(result);</span>
+    }
+
+    @ExceptionHandler(value = ValidationGenericException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    public ErrorRestResponse processValidationError(ValidationGenericException ex) {
+<span class="nc" id="L136">        logger.debug(&quot;Handling {} error&quot;, ex.getClass().getSimpleName());</span>
+<span class="nc" id="L137">        BindingResult result = ex.getBindingResult();</span>
+<span class="nc" id="L138">        return processAllErrors(result);</span>
+    }
+
+    @ExceptionHandler(value = ValidationUpdateSelfException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    @ResponseBody
+    public ErrorRestResponse processValidationError(ValidationUpdateSelfException ex) {
+<span class="nc" id="L145">        logger.debug(&quot;Handling {} error&quot;, ex.getClass().getSimpleName());</span>
+<span class="nc" id="L146">        BindingResult result = ex.getBindingResult();</span>
+<span class="nc" id="L147">        return processAllErrors(result);</span>
+    }
+
+    @ExceptionHandler(value = MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ResponseBody
+    public ErrorRestResponse processValidationError(MethodArgumentNotValidException ex) {
+<span class="nc" id="L154">        logger.debug(&quot;Handling {} error&quot;, ex.getClass().getSimpleName());</span>
+<span class="nc" id="L155">        BindingResult result = ex.getBindingResult();</span>
+<span class="nc" id="L156">        return processAllErrors(result);</span>
+    }
+
+    private ErrorRestResponse processAllErrors(BindingResult result) {
+<span class="nc" id="L160">        return processAllErrors(result.getFieldErrors(), result.getGlobalErrors());</span>
+    }
+
+    private ErrorRestResponse processAllErrors(List&lt;FieldError&gt; fieldErrors, List&lt;ObjectError&gt; objectErrors) {
+<span class="nc" id="L164">        ErrorRestResponse dto = new ErrorRestResponse();</span>
+<span class="nc" id="L165">        processFieldErrors(dto, fieldErrors);</span>
+<span class="nc" id="L166">        processGlobalErrors(dto, objectErrors);</span>
+<span class="nc" id="L167">        return dto;</span>
+    }
+
+    private ErrorRestResponse processFieldErrors(ErrorRestResponse dto, List&lt;FieldError&gt; fieldErrors) {
+<span class="nc bnc" id="L171" title="All 2 branches missed.">        if (null != fieldErrors) {</span>
+<span class="nc" id="L172">            List&lt;RestError&gt; errors = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L173" title="All 2 branches missed.">            for (FieldError fieldError : fieldErrors) {</span>
+<span class="nc" id="L174">                String localizedErrorMessage = resolveLocalizedErrorMessage(fieldError);</span>
+<span class="nc" id="L175">                errors.add(new RestError(fieldError.getCode(), localizedErrorMessage));</span>
+<span class="nc" id="L176">            }</span>
+<span class="nc" id="L177">            dto.addErrors(errors);</span>
+        }
+<span class="nc" id="L179">        return dto;</span>
+    }
+
+    private ErrorRestResponse processGlobalErrors(ErrorRestResponse dto, List&lt;ObjectError&gt; globalErrors) {
+<span class="nc bnc" id="L183" title="All 2 branches missed.">        if (null != globalErrors) {</span>
+<span class="nc" id="L184">            List&lt;RestError&gt; errors = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L185" title="All 2 branches missed.">            for (ObjectError globalError : globalErrors) {</span>
+<span class="nc" id="L186">                String localizedErrorMessage = resolveLocalizedErrorMessage(globalError);</span>
+<span class="nc" id="L187">                errors.add(new RestError(globalError.getCode(), localizedErrorMessage));</span>
+<span class="nc" id="L188">            }</span>
+<span class="nc" id="L189">            dto.addErrors(errors);</span>
+        }
+<span class="nc" id="L191">        return dto;</span>
+    }
+
+    /**
+     * prova ad utilizzare il default message, altrimenti va sul default
+     */
+    private String resolveLocalizedErrorMessage(DefaultMessageSourceResolvable fieldError) {
+<span class="nc" id="L198">        Locale currentLocale = LocaleContextHolder.getLocale();</span>
+<span class="nc bnc" id="L199" title="All 2 branches missed.">        String msgCode = StringUtils.isNotBlank(fieldError.getDefaultMessage()) ? fieldError.getDefaultMessage() : fieldError.getCode();</span>
+<span class="nc" id="L200">        String localizedErrorMessage = getMessageSource().getMessage(msgCode, fieldError.getArguments(), currentLocale);</span>
+<span class="nc" id="L201">        return localizedErrorMessage;</span>
+    }
+
+    private String resolveLocalizedErrorMessage(String code, Object[] args) {
+<span class="nc" id="L205">        Locale currentLocale = LocaleContextHolder.getLocale();</span>
+<span class="nc" id="L206">        String localizedErrorMessage = getMessageSource().getMessage(code, args, currentLocale);</span>
+<span class="nc" id="L207">        return localizedErrorMessage;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>I18nDAO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.services.i18n</a> &gt; <span class="el_source">I18nDAO.java</span></div><h1>I18nDAO.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package com.agiletec.aps.system.services.i18n;
+
+import com.agiletec.aps.system.common.AbstractDAO;
+import com.agiletec.aps.system.exception.ApsSystemException;
+import com.agiletec.aps.util.ApsProperties;
+import java.sql.BatchUpdateException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Data Access Object per gli oggetti label (I18n).
+ *
+ * @author S.Didaci- E.Santoboni
+ */
+<span class="nc" id="L37">public class I18nDAO extends AbstractDAO implements II18nDAO {</span>
+
+<span class="nc" id="L39">    private static final Logger _logger = LoggerFactory.getLogger(I18nDAO.class);</span>
+    private static final String LOAD_ALL_LABELS =
+            &quot;SELECT keycode, langcode, stringvalue FROM localstrings&quot;;
+    private static final String ADD_LABEL =
+            &quot;INSERT INTO localstrings (keycode, langcode, stringvalue) VALUES ( ? , ? , ? )&quot;;
+    private static final String DELETE_LABEL =
+            &quot;DELETE FROM localstrings WHERE keycode = ? &quot;;
+
+    /**
+     * Carica la mappa che contiene tutte le label in tutte le lingue.
+     *
+     * @return La mappa contenente tutte le label.
+     */
+    public Map&lt;String, ApsProperties&gt; loadLabelGroups() {
+<span class="nc" id="L53">        Connection conn = null;</span>
+<span class="nc" id="L54">        Statement stat = null;</span>
+<span class="nc" id="L55">        ResultSet res = null;</span>
+<span class="nc" id="L56">        Map&lt;String, ApsProperties&gt; labels = null;</span>
+        try {
+<span class="nc" id="L58">            conn = this.getConnection();</span>
+<span class="nc" id="L59">            stat = conn.createStatement();</span>
+<span class="nc" id="L60">            res = stat.executeQuery(LOAD_ALL_LABELS);</span>
+<span class="nc" id="L61">            labels = this.createLabels(res);</span>
+<span class="nc" id="L62">        } catch (Throwable t) {</span>
+<span class="nc" id="L63">            _logger.error(&quot;Error loading labels&quot;, t);</span>
+<span class="nc" id="L64">            throw new RuntimeException(&quot;Error loading labels&quot;, t);</span>
+            //processDaoException(t, &quot;Error loading label&quot;, &quot;loadLabelMap&quot;);
+        } finally {
+<span class="nc" id="L67">            closeDaoResources(res, stat, conn);</span>
+        }
+<span class="nc" id="L69">        return labels;</span>
+    }
+
+    public void updateLabelGroup(String key, ApsProperties labels) {
+<span class="nc" id="L73">        Connection conn = null;</span>
+        try {
+<span class="nc" id="L75">            conn = this.getConnection();</span>
+<span class="nc" id="L76">            conn.setAutoCommit(false);</span>
+<span class="nc" id="L77">            this.deleteLabelGroup(key, conn);</span>
+<span class="nc" id="L78">            this.addLabelGroup(key, labels, conn);</span>
+<span class="nc" id="L79">            conn.commit();</span>
+<span class="nc" id="L80">        } catch (Throwable t) {</span>
+<span class="nc" id="L81">            this.executeRollback(conn);</span>
+<span class="nc" id="L82">            _logger.error(&quot;Error while updating a label '{}'&quot;, key, t);</span>
+<span class="nc" id="L83">            throw new RuntimeException(&quot;Error while updating a label&quot;, t);</span>
+            //processDaoException(t, &quot;Error while updating a label&quot;, &quot;updateLabel&quot;);
+        } finally {
+<span class="nc" id="L86">            this.closeConnection(conn);</span>
+        }
+<span class="nc" id="L88">    }</span>
+
+    public void addLabelGroup(String key, ApsProperties labels) {
+<span class="nc" id="L91">        Connection conn = null;</span>
+        try {
+<span class="nc" id="L93">            conn = this.getConnection();</span>
+<span class="nc" id="L94">            conn.setAutoCommit(false);</span>
+<span class="nc" id="L95">            this.addLabelGroup(key, labels, conn);</span>
+<span class="nc" id="L96">            conn.commit();</span>
+<span class="nc" id="L97">        } catch (Throwable t) {</span>
+<span class="nc" id="L98">            this.executeRollback(conn);</span>
+<span class="nc" id="L99">            _logger.error(&quot;Error while adding a label '{}'&quot;, key, t);</span>
+<span class="nc" id="L100">            throw new RuntimeException(&quot;Error while adding a label&quot;, t);</span>
+            //processDaoException(t, &quot;Error while adding a label&quot;, &quot;addLabelGroup&quot;);
+        } finally {
+<span class="nc" id="L103">            this.closeConnection(conn);</span>
+        }
+<span class="nc" id="L105">    }</span>
+
+    private void addLabelGroup(String key, ApsProperties labels, Connection conn) throws ApsSystemException {
+<span class="nc" id="L108">        PreparedStatement stat = null;</span>
+        try {
+<span class="nc" id="L110">            stat = conn.prepareStatement(ADD_LABEL);</span>
+<span class="nc" id="L111">            Iterator&lt;Object&gt; labelKeysIter = labels.keySet().iterator();</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">            while (labelKeysIter.hasNext()) {</span>
+<span class="nc" id="L113">                String labelLangCode = (String) labelKeysIter.next();</span>
+<span class="nc" id="L114">                String label = labels.getProperty(labelLangCode);</span>
+<span class="nc" id="L115">                stat.setString(1, key);</span>
+<span class="nc" id="L116">                stat.setString(2, labelLangCode);</span>
+<span class="nc" id="L117">                stat.setString(3, label);</span>
+<span class="nc" id="L118">                stat.addBatch();</span>
+<span class="nc" id="L119">                stat.clearParameters();</span>
+<span class="nc" id="L120">            }</span>
+<span class="nc" id="L121">            stat.executeBatch();</span>
+<span class="nc" id="L122">        } catch (BatchUpdateException e) {</span>
+<span class="nc" id="L123">            _logger.error(&quot;Error adding a new label record&quot;, e.getNextException());</span>
+<span class="nc" id="L124">            throw new RuntimeException(&quot;Error adding a new label record&quot;, e.getNextException());</span>
+            //processDaoException(e.getNextException(), &quot;Error adding a new label record&quot;, &quot;addLabel&quot;);
+<span class="nc" id="L126">        } catch (Throwable t) {</span>
+<span class="nc" id="L127">            _logger.error(&quot;Error while adding a new label&quot;, t);</span>
+<span class="nc" id="L128">            throw new RuntimeException(&quot;Error while adding a new label&quot;, t);</span>
+            //processDaoException(t, &quot;Error while adding a new label&quot;, &quot;addLabel&quot;);
+        } finally {
+<span class="nc" id="L131">            closeDaoResources(null, stat);</span>
+        }
+<span class="nc" id="L133">    }</span>
+
+    public void deleteLabelGroup(String key) {
+<span class="nc" id="L136">        Connection conn = null;</span>
+        try {
+<span class="nc" id="L138">            conn = this.getConnection();</span>
+<span class="nc" id="L139">            conn.setAutoCommit(false);</span>
+<span class="nc" id="L140">            this.deleteLabelGroup(key, conn);</span>
+<span class="nc" id="L141">            conn.commit();</span>
+<span class="nc" id="L142">        } catch (Throwable t) {</span>
+<span class="nc" id="L143">            this.executeRollback(conn);</span>
+<span class="nc" id="L144">            _logger.error(&quot;Error deleting labels by key '{}'&quot;, key, t);</span>
+<span class="nc" id="L145">            throw new RuntimeException(&quot;Error deleting labels by key &quot; + key, t);</span>
+            //processDaoException(t, &quot;Erro while deleting multiple labels&quot;, &quot;deleteLabelGroup&quot;);
+        } finally {
+<span class="nc" id="L148">            this.closeConnection(conn);</span>
+        }
+<span class="nc" id="L150">    }</span>
+
+    private void deleteLabelGroup(String key, Connection conn) throws ApsSystemException {
+<span class="nc" id="L153">        PreparedStatement stat = null;</span>
+        try {
+<span class="nc" id="L155">            stat = conn.prepareStatement(DELETE_LABEL);</span>
+<span class="nc" id="L156">            stat.setString(1, key);</span>
+<span class="nc" id="L157">            stat.executeUpdate();</span>
+<span class="nc" id="L158">        } catch (Throwable t) {</span>
+<span class="nc" id="L159">            _logger.error(&quot;Error deleting labels by key '{}'&quot;, key, t);</span>
+<span class="nc" id="L160">            throw new RuntimeException(&quot;Error deleting labels by key &quot; + key, t);</span>
+            //processDaoException(t, &quot;Error while deleting a label group&quot;, &quot;deleteLabel&quot;);
+        } finally {
+<span class="nc" id="L163">            closeDaoResources(null, stat);</span>
+        }
+<span class="nc" id="L165">    }</span>
+
+    /**
+     * Metodo di servizio: legge tutte le label.
+     *
+     * @param res Il resultset ottenuto dall'estrazione delle labels.
+     */
+    private Map&lt;String, ApsProperties&gt; createLabels(ResultSet res)
+            throws SQLException, ApsSystemException {
+        //1  l.key,  2 l.langcode, 3  l.value&quot;
+<span class="nc" id="L175">        Map&lt;String, ApsProperties&gt; labels = new HashMap&lt;String, ApsProperties&gt;();</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">        while (res.next()) {</span>
+<span class="nc" id="L177">            String key = res.getString(1);</span>
+<span class="nc" id="L178">            ApsProperties labelsProp = labels.get(key);</span>
+<span class="nc bnc" id="L179" title="All 2 branches missed.">            if (labelsProp == null) {</span>
+<span class="nc" id="L180">                labelsProp = new ApsProperties();</span>
+<span class="nc" id="L181">                labels.put(key, labelsProp);</span>
+            }
+<span class="nc" id="L183">            String langCode = res.getString(2);</span>
+<span class="nc" id="L184">            String value = res.getString(3);</span>
+<span class="nc" id="L185">            labelsProp.put(langCode, value);</span>
+<span class="nc" id="L186">        }</span>
+<span class="nc" id="L187">        return labels;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

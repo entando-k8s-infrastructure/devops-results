@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OAuth2TokenDAO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.system.services.oauth2</a> &gt; <span class="el_source">OAuth2TokenDAO.java</span></div><h1>OAuth2TokenDAO.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package org.entando.entando.aps.system.services.oauth2;
+
+import com.agiletec.aps.system.common.AbstractSearcherDAO;
+import com.agiletec.aps.system.common.FieldSearchFilter;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Timestamp;
+import java.sql.Types;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.entando.entando.aps.system.services.oauth2.model.OAuth2AccessTokenImpl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.common.DefaultOAuth2RefreshToken;
+import org.springframework.security.oauth2.common.OAuth2AccessToken;
+import org.springframework.security.oauth2.common.OAuth2RefreshToken;
+import org.springframework.security.oauth2.common.util.OAuth2Utils;
+import org.springframework.security.oauth2.provider.OAuth2Authentication;
+import org.springframework.security.oauth2.provider.OAuth2Request;
+
+<span class="nc" id="L44">public class OAuth2TokenDAO extends AbstractSearcherDAO implements IOAuth2TokenDAO {</span>
+
+<span class="nc" id="L46">    private static final Logger logger = LoggerFactory.getLogger(OAuth2TokenDAO.class);</span>
+
+    private static final String ERROR_REMOVE_ACCESS_TOKEN = &quot;Error while remove access token&quot;;
+
+    private static final String INSERT_TOKEN = &quot;INSERT INTO api_oauth_tokens (accesstoken, clientid, expiresin, refreshtoken, granttype, &quot;
+            + &quot;localuser)  VALUES (? , ? , ? , ? , ?, ?)&quot;;
+
+    private static final String DELETE_EXPIRED_TOKENS = &quot;DELETE FROM api_oauth_tokens WHERE expiresin &lt; ?&quot;;
+
+    private static final String SELECT_TOKEN_PREFIX = &quot;SELECT * FROM api_oauth_tokens &quot;;
+
+    private static final String SELECT_TOKEN = SELECT_TOKEN_PREFIX + &quot;WHERE accesstoken = ? &quot;;
+
+    private static final String SELECT_TOKEN_BY_REFRESH = SELECT_TOKEN_PREFIX + &quot;WHERE refreshtoken = ? &quot;;
+
+    private static final String DELETE_TOKEN_PREFIX = &quot;DELETE FROM api_oauth_tokens &quot;;
+
+    private static final String DELETE_TOKEN = DELETE_TOKEN_PREFIX + &quot;WHERE accesstoken = ? &quot;;
+
+    private static final String DELETE_TOKEN_BY_REFRESH = DELETE_TOKEN_PREFIX + &quot;WHERE refreshtoken = ? &quot;;
+
+    @Override
+    protected String getTableFieldName(String metadataFieldKey) {
+<span class="nc" id="L69">        return metadataFieldKey;</span>
+    }
+
+    @Override
+    protected String getMasterTableName() {
+<span class="nc" id="L74">        return &quot;api_oauth_tokens&quot;;</span>
+    }
+
+    @Override
+    protected String getMasterTableIdFieldName() {
+<span class="nc" id="L79">        return &quot;accesstoken&quot;;</span>
+    }
+
+    @Override
+    public List&lt;OAuth2AccessToken&gt; findTokensByClientIdAndUserName(String clientId, String username) {
+<span class="nc bnc" id="L84" title="All 4 branches missed.">        if (StringUtils.isBlank(clientId) &amp;&amp; StringUtils.isBlank(username)) {</span>
+<span class="nc" id="L85">            throw new RuntimeException(&quot;clientId and username cannot both be null&quot;);</span>
+        }
+<span class="nc" id="L87">        FieldSearchFilter expirationFilter = new FieldSearchFilter(&quot;expiresin&quot;);</span>
+<span class="nc" id="L88">        expirationFilter.setOrder(FieldSearchFilter.Order.ASC);</span>
+<span class="nc" id="L89">        FieldSearchFilter[] filters = {expirationFilter};</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">        if (!StringUtils.isBlank(clientId)) {</span>
+<span class="nc" id="L91">            FieldSearchFilter clientIdFilter = new FieldSearchFilter(&quot;clientid&quot;, clientId, true);</span>
+<span class="nc" id="L92">            filters = ArrayUtils.add(filters, clientIdFilter);</span>
+        }
+<span class="nc bnc" id="L94" title="All 2 branches missed.">        if (!StringUtils.isBlank(username)) {</span>
+<span class="nc" id="L95">            FieldSearchFilter usernameFilter = new FieldSearchFilter(&quot;localuser&quot;, username, true);</span>
+<span class="nc" id="L96">            filters = ArrayUtils.add(filters, usernameFilter);</span>
+        }
+<span class="nc" id="L98">        List&lt;OAuth2AccessToken&gt; accessTokens = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L99">        List&lt;String&gt; tokens = super.searchId(filters);</span>
+<span class="nc bnc" id="L100" title="All 2 branches missed.">        if (tokens.isEmpty()) {</span>
+<span class="nc" id="L101">            return accessTokens;</span>
+        }
+<span class="nc" id="L103">        Connection conn = null;</span>
+        try {
+<span class="nc" id="L105">            conn = this.getConnection();</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">            for (String token : tokens) {</span>
+<span class="nc" id="L107">                OAuth2AccessToken accessToken = this.getAccessToken(token, conn);</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">                if (!accessToken.isExpired()) {</span>
+<span class="nc" id="L109">                    accessTokens.add(accessToken);</span>
+                }
+<span class="nc" id="L111">            }</span>
+<span class="nc" id="L112">        } catch (Exception t) {</span>
+<span class="nc" id="L113">            logger.error(&quot;Error while loading tokens&quot;, t);</span>
+<span class="nc" id="L114">            throw new RuntimeException(&quot;Error while loading tokens&quot;, t);</span>
+        } finally {
+<span class="nc" id="L116">            this.closeConnection(conn);</span>
+        }
+<span class="nc" id="L118">        return accessTokens;</span>
+    }
+
+    protected OAuth2AccessToken getAccessToken(final String token, Connection conn) {
+<span class="nc" id="L122">        OAuth2AccessTokenImpl accessToken = null;</span>
+<span class="nc" id="L123">        PreparedStatement stat = null;</span>
+<span class="nc" id="L124">        ResultSet res = null;</span>
+        try {
+<span class="nc" id="L126">            stat = conn.prepareStatement(SELECT_TOKEN);</span>
+<span class="nc" id="L127">            stat.setString(1, token);</span>
+<span class="nc" id="L128">            res = stat.executeQuery();</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">            if (res.next()) {</span>
+<span class="nc" id="L130">                accessToken = new OAuth2AccessTokenImpl(token);</span>
+<span class="nc" id="L131">                accessToken.setRefreshToken(new DefaultOAuth2RefreshToken(res.getString(&quot;refreshtoken&quot;)));</span>
+<span class="nc" id="L132">                accessToken.setClientId(res.getString(&quot;clientid&quot;));</span>
+<span class="nc" id="L133">                accessToken.setGrantType(res.getString(&quot;granttype&quot;));</span>
+<span class="nc" id="L134">                accessToken.setLocalUser(res.getString(&quot;localuser&quot;));</span>
+<span class="nc" id="L135">                Timestamp timestamp = res.getTimestamp(&quot;expiresin&quot;);</span>
+<span class="nc" id="L136">                Date expiration = new Date(timestamp.getTime());</span>
+<span class="nc" id="L137">                accessToken.setExpiration(expiration);</span>
+            }
+<span class="nc" id="L139">        } catch (Throwable t) {</span>
+<span class="nc" id="L140">            logger.error(&quot;Error loading token {}&quot;, token, t);</span>
+<span class="nc" id="L141">            throw new RuntimeException(&quot;Error loading token &quot; + token, t);</span>
+        } finally {
+<span class="nc" id="L143">            closeDaoResources(res, stat);</span>
+        }
+<span class="nc" id="L145">        return accessToken;</span>
+    }
+
+    @Override
+    public List&lt;OAuth2AccessToken&gt; findTokensByUserName(String username) {
+<span class="nc" id="L150">        return this.findTokensByClientIdAndUserName(null, username);</span>
+    }
+
+    @Override
+    public List&lt;OAuth2AccessToken&gt; findTokensByClientId(String clientId) {
+<span class="nc" id="L155">        return this.findTokensByClientIdAndUserName(clientId, null);</span>
+    }
+
+    @Override
+    public void storeAccessToken(OAuth2AccessToken accessToken, OAuth2Authentication authentication) {
+<span class="nc" id="L160">        Connection conn = null;</span>
+<span class="nc" id="L161">        PreparedStatement stat = null;</span>
+        try {
+<span class="nc" id="L163">            conn = this.getConnection();</span>
+<span class="nc" id="L164">            String tokenValue = accessToken.getValue();</span>
+<span class="nc bnc" id="L165" title="All 2 branches missed.">            if (null != this.getAccessToken(tokenValue, conn)) {</span>
+<span class="nc" id="L166">                logger.debug(&quot;storeAccessToken: Stored Token already exists&quot;);</span>
+<span class="nc" id="L167">                return;</span>
+            }
+<span class="nc" id="L169">            conn.setAutoCommit(false);</span>
+<span class="nc" id="L170">            stat = conn.prepareStatement(INSERT_TOKEN);</span>
+<span class="nc" id="L171">            stat.setString(1, accessToken.getValue());</span>
+<span class="nc bnc" id="L172" title="All 2 branches missed.">            if (accessToken instanceof OAuth2AccessTokenImpl) {</span>
+<span class="nc" id="L173">                stat.setString(2, ((OAuth2AccessTokenImpl) accessToken).getClientId());</span>
+<span class="nc bnc" id="L174" title="All 2 branches missed.">            } else if (null != authentication.getOAuth2Request()) {</span>
+<span class="nc" id="L175">                stat.setString(2, authentication.getOAuth2Request().getClientId());</span>
+            } else {
+<span class="nc" id="L177">                stat.setNull(2, Types.VARCHAR);</span>
+            }
+<span class="nc" id="L179">            stat.setTimestamp(3, new Timestamp(accessToken.getExpiration().getTime()));</span>
+<span class="nc" id="L180">            stat.setString(4, accessToken.getRefreshToken().getValue());</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">            if (accessToken instanceof OAuth2AccessTokenImpl) {</span>
+<span class="nc" id="L182">                stat.setString(5, ((OAuth2AccessTokenImpl) accessToken).getGrantType());</span>
+<span class="nc" id="L183">                stat.setString(6, ((OAuth2AccessTokenImpl) accessToken).getLocalUser());</span>
+            } else {
+<span class="nc bnc" id="L185" title="All 2 branches missed.">                if (null != authentication.getOAuth2Request()) {</span>
+<span class="nc" id="L186">                    stat.setString(5, authentication.getOAuth2Request().getGrantType());</span>
+                } else {
+<span class="nc" id="L188">                    stat.setNull(5, Types.VARCHAR);</span>
+                }
+<span class="nc bnc" id="L190" title="All 2 branches missed.">                if (authentication.getPrincipal() instanceof UserDetails) {</span>
+<span class="nc" id="L191">                    stat.setString(6, ((UserDetails) authentication.getPrincipal()).getUsername());</span>
+                } else {
+<span class="nc" id="L193">                    stat.setString(6, authentication.getPrincipal().toString());</span>
+                }
+            }
+<span class="nc" id="L196">            stat.executeUpdate();</span>
+<span class="nc" id="L197">            conn.commit();</span>
+<span class="nc" id="L198">        } catch (Exception t) {</span>
+<span class="nc" id="L199">            this.executeRollback(conn);</span>
+<span class="nc" id="L200">            logger.error(&quot;Error while adding an access token&quot;, t);</span>
+<span class="nc" id="L201">            throw new RuntimeException(&quot;Error while adding an access token&quot;, t);</span>
+        } finally {
+<span class="nc" id="L203">            closeDaoResources(null, stat, conn);</span>
+        }
+<span class="nc" id="L205">    }</span>
+
+    @Override
+    public OAuth2AccessToken readAccessToken(final String accessToken) {
+<span class="nc" id="L209">        Connection conn = null;</span>
+<span class="nc" id="L210">        OAuth2AccessToken token = null;</span>
+        try {
+<span class="nc" id="L212">            conn = this.getConnection();</span>
+<span class="nc" id="L213">            token = this.getAccessToken(accessToken, conn);</span>
+<span class="nc" id="L214">        } catch (Exception t) {</span>
+<span class="nc" id="L215">            logger.error(&quot;Error while loading token {}&quot;, accessToken, t);</span>
+<span class="nc" id="L216">            throw new RuntimeException(&quot;Error while loading token &quot; + accessToken, t);</span>
+        } finally {
+<span class="nc" id="L218">            this.closeConnection(conn);</span>
+        }
+<span class="nc" id="L220">        return token;</span>
+    }
+
+    @Override
+    public void removeAccessToken(final String accessToken) {
+<span class="nc" id="L225">        super.executeQueryWithoutResultset(DELETE_TOKEN, accessToken);</span>
+<span class="nc" id="L226">    }</span>
+
+    @Override
+    public void removeAccessTokenUsingRefreshToken(String refreshToken) {
+<span class="nc" id="L230">        super.executeQueryWithoutResultset(DELETE_TOKEN_BY_REFRESH, refreshToken);</span>
+<span class="nc" id="L231">    }</span>
+
+    @Override
+    public void deleteExpiredToken(int expirationTime) {
+<span class="nc" id="L235">        Connection conn = null;</span>
+<span class="nc" id="L236">        PreparedStatement stat = null;</span>
+        try {
+<span class="nc" id="L238">            conn = this.getConnection();</span>
+<span class="nc" id="L239">            conn.setAutoCommit(false);</span>
+<span class="nc" id="L240">            Calendar calendar = Calendar.getInstance();</span>
+<span class="nc" id="L241">            calendar.add(Calendar.SECOND, -expirationTime);</span>
+<span class="nc" id="L242">            stat = conn.prepareStatement(DELETE_EXPIRED_TOKENS);</span>
+<span class="nc" id="L243">            stat.setTimestamp(1, new Timestamp(calendar.getTimeInMillis()));</span>
+<span class="nc" id="L244">            stat.executeUpdate();</span>
+<span class="nc" id="L245">            conn.commit();</span>
+<span class="nc" id="L246">        } catch (Exception t) {</span>
+<span class="nc" id="L247">            this.executeRollback(conn);</span>
+<span class="nc" id="L248">            logger.error(ERROR_REMOVE_ACCESS_TOKEN, t);</span>
+<span class="nc" id="L249">            throw new RuntimeException(ERROR_REMOVE_ACCESS_TOKEN, t);</span>
+        } finally {
+<span class="nc" id="L251">            closeDaoResources(null, stat, conn);</span>
+        }
+<span class="nc" id="L253">    }</span>
+
+    @Override
+    public OAuth2RefreshToken readRefreshToken(String tokenValue) {
+<span class="nc" id="L257">        FieldSearchFilter filter = new FieldSearchFilter(&quot;refreshtoken&quot;, tokenValue, true);</span>
+<span class="nc" id="L258">        FieldSearchFilter[] filters = {filter};</span>
+<span class="nc" id="L259">        List&lt;String&gt; accessTokens = super.searchId(filters);</span>
+<span class="nc bnc" id="L260" title="All 4 branches missed.">        if (null != accessTokens &amp;&amp; accessTokens.size() &gt; 0) {</span>
+<span class="nc" id="L261">            return new DefaultOAuth2RefreshToken(tokenValue);</span>
+        }
+<span class="nc" id="L263">        return null;</span>
+    }
+
+    @Override
+    public OAuth2Authentication readAuthenticationForRefreshToken(OAuth2RefreshToken refreshToken) {
+<span class="nc" id="L268">        OAuth2Authentication authentication = null;</span>
+<span class="nc" id="L269">        Connection conn = null;</span>
+<span class="nc" id="L270">        PreparedStatement stat = null;</span>
+<span class="nc" id="L271">        ResultSet res = null;</span>
+        try {
+<span class="nc" id="L273">            conn = this.getConnection();</span>
+<span class="nc" id="L274">            stat = conn.prepareStatement(SELECT_TOKEN_BY_REFRESH);</span>
+<span class="nc" id="L275">            stat.setString(1, refreshToken.getValue());</span>
+<span class="nc" id="L276">            res = stat.executeQuery();</span>
+<span class="nc bnc" id="L277" title="All 2 branches missed.">            if (res.next()) {</span>
+<span class="nc" id="L278">                String username = res.getString(&quot;localuser&quot;);</span>
+<span class="nc" id="L279">                UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(username, &quot;&quot;);</span>
+<span class="nc" id="L280">                String clientid = res.getString(&quot;clientid&quot;);</span>
+<span class="nc" id="L281">                Map&lt;String, String&gt; requestParameters = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L282">                requestParameters.put(OAuth2Utils.GRANT_TYPE, res.getString(&quot;granttype&quot;));</span>
+<span class="nc" id="L283">                OAuth2Request oAuth2Request = new OAuth2Request(requestParameters, clientid, null, true, null, null, null, null, null);</span>
+<span class="nc" id="L284">                authentication = new OAuth2Authentication(oAuth2Request, auth);</span>
+            }
+<span class="nc" id="L286">        } catch (Exception t) {</span>
+<span class="nc" id="L287">            logger.error(&quot;Error while reading tokens&quot;, t);</span>
+<span class="nc" id="L288">            throw new RuntimeException(&quot;Error while reading tokens&quot;, t);</span>
+        } finally {
+<span class="nc" id="L290">            this.closeDaoResources(res, stat, conn);</span>
+        }
+<span class="nc" id="L292">        return authentication;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

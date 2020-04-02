@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApiMethod.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.system.services.api.model</a> &gt; <span class="el_source">ApiMethod.java</span></div><h1>ApiMethod.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package org.entando.entando.aps.system.services.api.model;
+
+import com.agiletec.aps.system.exception.ApsSystemException;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+import org.entando.entando.aps.system.services.api.ApiResourcesDefDOM;
+import org.jdom.Element;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * @author E.Santoboni
+ */
+public class ApiMethod implements Serializable {
+
+<span class="nc" id="L31">    private static final Logger _logger = LoggerFactory.getLogger(ApiMethod.class);</span>
+    private String _resourceName;
+    private HttpMethod _httpMethod;
+    private String _namespace;
+    private Boolean _defaultStatus;
+    private Boolean _status;
+    private Boolean _defaultHidden;
+    private Boolean _hidden;
+    private Boolean _defaultRequiredAuth;
+    private String _defaultRequiredPermission;
+    private Boolean _requiredAuth;
+    private String _requiredPermission;
+    private Class _expectedType;
+    private String _source;
+    private String _pluginCode;
+    private String _description;
+    private boolean _canSpawnOthers;
+    private String _springBean;
+    private String _springBeanMethod;
+    private String _responseClassName;
+    private List&lt;ApiMethodParameter&gt; _parameters;
+    private ApiMethodRelatedWidget _relatedWidget;
+
+<span class="nc" id="L54">    protected ApiMethod() {</span>
+<span class="nc" id="L55">    }</span>
+
+<span class="nc" id="L57">    public ApiMethod(Element element) {</span>
+<span class="nc" id="L58">        this.setResourceName(element.getAttributeValue(ApiResourcesDefDOM.RESOURCE_ATTRIBUTE_NAME));</span>
+<span class="nc" id="L59">        this.setNamespace(element.getAttributeValue(ApiResourcesDefDOM.RESOURCE_ATTRIBUTE_NAMESPACE));</span>
+<span class="nc" id="L60">        Element sourceElement = element.getChild(ApiResourcesDefDOM.SOURCE_ELEMENT_NAME);</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">        if (null != sourceElement) {</span>
+<span class="nc" id="L62">            this.setSource(sourceElement.getText());</span>
+<span class="nc" id="L63">            this.setPluginCode(sourceElement.getAttributeValue(ApiResourcesDefDOM.PLUGIN_CODE_ATTRIBUTE_NAME));</span>
+        }
+<span class="nc" id="L65">        this.buildMethod(element);</span>
+<span class="nc" id="L66">    }</span>
+
+    public ApiMethod(String resourceName, String namespace,
+<span class="nc" id="L69">            String source, String pluginCode, Element element) {</span>
+<span class="nc" id="L70">        this.setResourceName(resourceName);</span>
+<span class="nc" id="L71">        this.setNamespace(namespace);</span>
+<span class="nc" id="L72">        this.setSource(source);</span>
+<span class="nc" id="L73">        this.setPluginCode(pluginCode);</span>
+<span class="nc" id="L74">        this.buildMethod(element);</span>
+<span class="nc" id="L75">    }</span>
+
+    private void buildMethod(Element element) {
+        try {
+<span class="nc" id="L79">            this.setDefaultRequiredAuth(Boolean.parseBoolean(element.getAttributeValue(&quot;requiredAuth&quot;)));</span>
+<span class="nc" id="L80">            this.setRequiredAuth(this.getDefaultRequiredAuth());</span>
+<span class="nc" id="L81">            this.setDefaultRequiredPermission(element.getAttributeValue(&quot;requiredPermission&quot;));</span>
+<span class="nc" id="L82">            this.setRequiredPermission(this.getDefaultRequiredPermission());</span>
+<span class="nc" id="L83">            String httpMethod = element.getAttributeValue(&quot;httpMethod&quot;);</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">            if (null != httpMethod) {</span>
+<span class="nc" id="L85">                this.setHttpMethod(Enum.valueOf(ApiMethod.HttpMethod.class, httpMethod.toUpperCase()));</span>
+            } else {
+<span class="nc" id="L87">                this.setHttpMethod(HttpMethod.GET);</span>
+            }
+<span class="nc" id="L89">            this.setDefaultStatus(Boolean.parseBoolean(element.getAttributeValue(ApiResourcesDefDOM.ACTIVE_ATTRIBUTE_NAME)));</span>
+<span class="nc" id="L90">            this.setStatus(this.getDefaultStatus());</span>
+<span class="nc" id="L91">            this.setDefaultHidden(Boolean.parseBoolean(element.getAttributeValue(ApiResourcesDefDOM.HIDDEN_ATTRIBUTE_NAME)));</span>
+<span class="nc" id="L92">            this.setHidden(this.getDefaultHidden());</span>
+<span class="nc" id="L93">            this.setCanSpawnOthers(Boolean.parseBoolean(element.getAttributeValue(ApiResourcesDefDOM.CAN_SPAWN_OTHER_ATTRIBUTE_NAME)));</span>
+<span class="nc" id="L94">            this.setDescription(element.getChildText(ApiResourcesDefDOM.METHOD_DESCRIPTION_ELEMENT_NAME));</span>
+<span class="nc" id="L95">            Element springBeanElement = element.getChild(ApiResourcesDefDOM.SPRING_BEAN_ELEMENT_NAME);</span>
+<span class="nc" id="L96">            this.setSpringBean(springBeanElement.getAttributeValue(ApiResourcesDefDOM.SPRING_BEAN_NAME_ATTRIBUTE_NAME));</span>
+<span class="nc" id="L97">            this.setSpringBeanMethod(springBeanElement.getAttributeValue(ApiResourcesDefDOM.SPRING_BEAN_METHOD_ATTRIBUTE_NAME));</span>
+<span class="nc" id="L98">            this.setResponseClassName(element.getChildText(ApiResourcesDefDOM.RESPONSE_CLASS_ELEMENT_NAME));</span>
+<span class="nc" id="L99">            Element parametersElement = element.getChild(ApiResourcesDefDOM.PARAMETERS_ELEMENT_NAME);</span>
+<span class="nc bnc" id="L100" title="All 2 branches missed.">            if (null != parametersElement) {</span>
+<span class="nc" id="L101">                List&lt;Element&gt; parametersElements = parametersElement.getChildren(ApiResourcesDefDOM.PARAMETER_ELEMENT_NAME);</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">                for (int i = 0; i &lt; parametersElements.size(); i++) {</span>
+<span class="nc" id="L103">                    Element parameterElement = parametersElements.get(i);</span>
+<span class="nc" id="L104">                    ApiMethodParameter parameter = new ApiMethodParameter(parameterElement);</span>
+<span class="nc bnc" id="L105" title="All 2 branches missed.">                    if (null == this.getParameters()) {</span>
+<span class="nc" id="L106">                        this.setParameters(new ArrayList&lt;ApiMethodParameter&gt;());</span>
+                    }
+<span class="nc" id="L108">                    this.getParameters().add(parameter);</span>
+                }
+            }
+<span class="nc" id="L111">            Element relatedWidgetElement = element.getChild(ApiResourcesDefDOM.RELATED_WIDGET_ELEMENT_NAME);</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">            if (null != relatedWidgetElement) {</span>
+<span class="nc" id="L113">                this.setRelatedWidget(new ApiMethodRelatedWidget(relatedWidgetElement));</span>
+            }
+<span class="nc bnc" id="L115" title="All 4 branches missed.">            if (this.getHttpMethod().equals(HttpMethod.POST) || this.getHttpMethod().equals(HttpMethod.PUT)) {</span>
+<span class="nc" id="L116">                Element expectedTypeElement = element.getChild(&quot;expectedType&quot;);</span>
+<span class="nc bnc" id="L117" title="All 2 branches missed.">                String className = (null != expectedTypeElement) ? expectedTypeElement.getText() : null;</span>
+<span class="nc bnc" id="L118" title="All 4 branches missed.">                if (null == className || className.trim().length() == 0) {</span>
+<span class="nc" id="L119">                    throw new ApsSystemException(&quot;Expected Class required for Http Methods POST and PUT&quot;);</span>
+                }
+<span class="nc" id="L121">                Class beanClass = Class.forName(className);</span>
+<span class="nc" id="L122">                this.setExpectedType(beanClass);</span>
+            }
+<span class="nc" id="L124">        } catch (Throwable t) {</span>
+<span class="nc" id="L125">            _logger.error(&quot;Error building api method '{}'&quot;, this.getResourceName(), t);</span>
+<span class="nc" id="L126">            throw new RuntimeException(&quot;Error building api method&quot;, t);</span>
+<span class="nc" id="L127">        }</span>
+<span class="nc" id="L128">    }</span>
+
+    @Override
+    public ApiMethod clone() {
+<span class="nc" id="L132">        ApiMethod clone = new ApiMethod();</span>
+<span class="nc" id="L133">        clone.setResourceName(this.getResourceName());</span>
+<span class="nc" id="L134">        clone.setNamespace(this.getNamespace());</span>
+<span class="nc" id="L135">        clone.setDefaultStatus(this.getDefaultStatus());</span>
+<span class="nc" id="L136">        clone.setStatus(this.getStatus());</span>
+<span class="nc" id="L137">        clone.setDefaultHidden(this.getDefaultHidden());</span>
+<span class="nc" id="L138">        clone.setHidden(this.getHidden());</span>
+<span class="nc" id="L139">        clone.setDescription(this.getDescription());</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">        if (null != this.getParameters()) {</span>
+<span class="nc" id="L141">            List&lt;ApiMethodParameter&gt; clonedParameters = new ArrayList&lt;ApiMethodParameter&gt;();</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">            for (int i = 0; i &lt; this.getParameters().size(); i++) {</span>
+<span class="nc" id="L143">                ApiMethodParameter clonedParameter = this.getParameters().get(i).clone();</span>
+<span class="nc" id="L144">                clonedParameters.add(clonedParameter);</span>
+            }
+<span class="nc" id="L146">            clone.setParameters(clonedParameters);</span>
+        }
+<span class="nc" id="L148">        clone.setPluginCode(this.getPluginCode());</span>
+<span class="nc" id="L149">        clone.setResponseClassName(this.getResponseClassName());</span>
+<span class="nc" id="L150">        clone.setSource(this.getSource());</span>
+<span class="nc" id="L151">        clone.setSpringBean(this.getSpringBean());</span>
+<span class="nc" id="L152">        clone.setSpringBeanMethod(this.getSpringBeanMethod());</span>
+<span class="nc" id="L153">        clone.setCanSpawnOthers(this.isCanSpawnOthers());</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">        if (null != this.getRelatedWidget()) {</span>
+<span class="nc" id="L155">            clone.setRelatedWidget(this.getRelatedWidget().clone());</span>
+        }
+<span class="nc" id="L157">        clone.setHttpMethod(this.getHttpMethod());</span>
+<span class="nc" id="L158">        clone.setDefaultRequiredAuth(this.getDefaultRequiredAuth());</span>
+<span class="nc" id="L159">        clone.setDefaultRequiredPermission(this.getDefaultRequiredPermission());</span>
+<span class="nc" id="L160">        clone.setRequiredAuth(this.getRequiredAuth());</span>
+<span class="nc" id="L161">        clone.setRequiredPermission(this.getRequiredPermission());</span>
+<span class="nc" id="L162">        clone.setDefaultRequiredAuth(this.getDefaultRequiredAuth());</span>
+<span class="nc" id="L163">        clone.setDefaultRequiredPermission(this.getDefaultRequiredPermission());</span>
+<span class="nc bnc" id="L164" title="All 2 branches missed.">        if (null != this.getExpectedType()) {</span>
+            try {
+<span class="nc" id="L166">                clone.setExpectedType(Class.forName(this.getExpectedType().getName()));</span>
+<span class="nc" id="L167">            } catch (Throwable t) {</span>
+                //nothing to catch
+<span class="nc" id="L169">            }</span>
+        }
+<span class="nc" id="L171">        return clone;</span>
+    }
+
+    public void resetConfiguration() {
+<span class="nc" id="L175">        this.setRequiredAuth(this.getDefaultRequiredAuth());</span>
+<span class="nc" id="L176">        this.setRequiredPermission(this.getDefaultRequiredPermission());</span>
+<span class="nc" id="L177">        this.setStatus(this.getDefaultStatus());</span>
+<span class="nc" id="L178">        this.setHidden(this.getDefaultHidden());</span>
+<span class="nc" id="L179">    }</span>
+
+    public String getResourceName() {
+<span class="nc" id="L182">        return _resourceName;</span>
+    }
+
+    protected void setResourceName(String resourceName) {
+<span class="nc" id="L186">        this._resourceName = resourceName;</span>
+<span class="nc" id="L187">    }</span>
+
+    public HttpMethod getHttpMethod() {
+<span class="nc" id="L190">        return _httpMethod;</span>
+    }
+
+    protected void setHttpMethod(HttpMethod httpMethod) {
+<span class="nc" id="L194">        this._httpMethod = httpMethod;</span>
+<span class="nc" id="L195">    }</span>
+
+    public String getNamespace() {
+<span class="nc" id="L198">        return _namespace;</span>
+    }
+
+    protected void setNamespace(String namespace) {
+<span class="nc" id="L202">        this._namespace = namespace;</span>
+<span class="nc" id="L203">    }</span>
+
+    public Boolean getStatus() {
+<span class="nc" id="L206">        return _status;</span>
+    }
+
+    public void setStatus(Boolean status) {
+<span class="nc" id="L210">        this._status = status;</span>
+<span class="nc" id="L211">    }</span>
+
+    public Boolean getDefaultStatus() {
+<span class="nc bnc" id="L214" title="All 2 branches missed.">        if (null == this._defaultStatus) {</span>
+<span class="nc" id="L215">            return false;</span>
+        }
+<span class="nc" id="L217">        return _defaultStatus;</span>
+    }
+
+    protected void setDefaultStatus(Boolean defaultStatus) {
+<span class="nc" id="L221">        this._defaultStatus = defaultStatus;</span>
+<span class="nc" id="L222">    }</span>
+
+    public Boolean getHidden() {
+<span class="nc" id="L225">        return _hidden;</span>
+    }
+
+    public void setHidden(Boolean hidden) {
+<span class="nc" id="L229">        this._hidden = hidden;</span>
+<span class="nc" id="L230">    }</span>
+
+    public Boolean getDefaultHidden() {
+<span class="nc bnc" id="L233" title="All 2 branches missed.">        if (null == this._defaultHidden) {</span>
+<span class="nc" id="L234">            return false;</span>
+        }
+<span class="nc" id="L236">        return _defaultHidden;</span>
+    }
+
+    public void setDefaultHidden(Boolean defaultHidden) {
+<span class="nc" id="L240">        this._defaultHidden = defaultHidden;</span>
+<span class="nc" id="L241">    }</span>
+
+    public Class getExpectedType() {
+<span class="nc" id="L244">        return _expectedType;</span>
+    }
+
+    protected void setExpectedType(Class expectedType) {
+<span class="nc" id="L248">        this._expectedType = expectedType;</span>
+<span class="nc" id="L249">    }</span>
+
+    public Boolean getDefaultRequiredAuth() {
+<span class="nc bnc" id="L252" title="All 2 branches missed.">        if (null == this._defaultRequiredAuth) {</span>
+<span class="nc" id="L253">            return false;</span>
+        }
+<span class="nc" id="L255">        return _defaultRequiredAuth;</span>
+    }
+
+    protected void setDefaultRequiredAuth(Boolean defaultRequiredAuth) {
+<span class="nc" id="L259">        this._defaultRequiredAuth = defaultRequiredAuth;</span>
+<span class="nc" id="L260">    }</span>
+
+    public String getDefaultRequiredPermission() {
+<span class="nc" id="L263">        return _defaultRequiredPermission;</span>
+    }
+
+    protected void setDefaultRequiredPermission(String defaultRequiredPermission) {
+<span class="nc" id="L267">        this._defaultRequiredPermission = defaultRequiredPermission;</span>
+<span class="nc" id="L268">    }</span>
+
+    public Boolean getRequiredAuth() {
+<span class="nc bnc" id="L271" title="All 2 branches missed.">        if (null == this._requiredAuth) {</span>
+<span class="nc" id="L272">            return false;</span>
+        }
+<span class="nc" id="L274">        return _requiredAuth;</span>
+    }
+
+    public void setRequiredAuth(Boolean requiredAuth) {
+<span class="nc" id="L278">        this._requiredAuth = requiredAuth;</span>
+<span class="nc" id="L279">    }</span>
+
+    public String getRequiredPermission() {
+<span class="nc" id="L282">        return _requiredPermission;</span>
+    }
+
+    public void setRequiredPermission(String requiredPermission) {
+<span class="nc" id="L286">        this._requiredPermission = requiredPermission;</span>
+<span class="nc" id="L287">    }</span>
+
+    public String getSource() {
+<span class="nc" id="L290">        return _source;</span>
+    }
+
+    public void setSource(String source) {
+<span class="nc" id="L294">        this._source = source;</span>
+<span class="nc" id="L295">    }</span>
+
+    public String getPluginCode() {
+<span class="nc" id="L298">        return _pluginCode;</span>
+    }
+
+    public void setPluginCode(String pluginCode) {
+<span class="nc" id="L302">        this._pluginCode = pluginCode;</span>
+<span class="nc" id="L303">    }</span>
+
+    @Deprecated
+    public String getMethodName() {
+<span class="nc" id="L307">        return this.getResourceName();</span>
+    }
+
+    @Deprecated
+    protected void setMethodName(String methodName) {
+<span class="nc" id="L312">        this.setResourceName(methodName);</span>
+<span class="nc" id="L313">    }</span>
+
+    public String getDescription() {
+<span class="nc" id="L316">        return _description;</span>
+    }
+
+    protected void setDescription(String description) {
+<span class="nc" id="L320">        this._description = description;</span>
+<span class="nc" id="L321">    }</span>
+
+    public boolean isActive() {
+<span class="nc bnc" id="L324" title="All 2 branches missed.">        if (null == this.getStatus()) {</span>
+<span class="nc" id="L325">            return false;</span>
+        }
+<span class="nc" id="L327">        return this.getStatus();</span>
+    }
+
+    public boolean isCanSpawnOthers() {
+<span class="nc" id="L331">        return _canSpawnOthers;</span>
+    }
+
+    protected void setCanSpawnOthers(boolean canSpawnOthers) {
+<span class="nc" id="L335">        this._canSpawnOthers = canSpawnOthers;</span>
+<span class="nc" id="L336">    }</span>
+
+    public String getSpringBean() {
+<span class="nc" id="L339">        return _springBean;</span>
+    }
+
+    protected void setSpringBean(String springBean) {
+<span class="nc" id="L343">        this._springBean = springBean;</span>
+<span class="nc" id="L344">    }</span>
+
+    public String getSpringBeanMethod() {
+<span class="nc" id="L347">        return _springBeanMethod;</span>
+    }
+
+    protected void setSpringBeanMethod(String springBeanMethod) {
+<span class="nc" id="L351">        this._springBeanMethod = springBeanMethod;</span>
+<span class="nc" id="L352">    }</span>
+
+    public String getResponseClassName() {
+<span class="nc" id="L355">        return _responseClassName;</span>
+    }
+
+    protected void setResponseClassName(String responseClassName) {
+<span class="nc" id="L359">        this._responseClassName = responseClassName;</span>
+<span class="nc" id="L360">    }</span>
+
+    public List&lt;ApiMethodParameter&gt; getParameters() {
+<span class="nc" id="L363">        return _parameters;</span>
+    }
+
+    protected void setParameters(List&lt;ApiMethodParameter&gt; parameters) {
+<span class="nc" id="L367">        this._parameters = parameters;</span>
+<span class="nc" id="L368">    }</span>
+
+    public ApiMethodParameter getParameter(String key) {
+<span class="nc bnc" id="L371" title="All 6 branches missed.">        if (null == key || key.trim().length() == 0 || this._parameters == null) {</span>
+<span class="nc" id="L372">            return null;</span>
+        }
+<span class="nc bnc" id="L374" title="All 2 branches missed.">        for (int i = 0; i &lt; this._parameters.size(); i++) {</span>
+<span class="nc" id="L375">            ApiMethodParameter parameter = this._parameters.get(i);</span>
+<span class="nc bnc" id="L376" title="All 2 branches missed.">            if (parameter.getKey().equals(key)) {</span>
+<span class="nc" id="L377">                return parameter;</span>
+            }
+        }
+<span class="nc" id="L380">        return null;</span>
+    }
+
+    @Deprecated
+    public ApiMethodRelatedWidget getRelatedShowlet() {
+<span class="nc" id="L385">        return this.getRelatedWidget();</span>
+    }
+
+    @Deprecated
+    protected void setRelatedShowlet(ApiMethodRelatedWidget relatedShowlet) {
+<span class="nc" id="L390">        this.setRelatedWidget(relatedShowlet);</span>
+<span class="nc" id="L391">    }</span>
+
+    public ApiMethodRelatedWidget getRelatedWidget() {
+<span class="nc" id="L394">        return _relatedWidget;</span>
+    }
+
+    public void setRelatedWidget(ApiMethodRelatedWidget relatedWidget) {
+<span class="nc" id="L398">        this._relatedWidget = relatedWidget;</span>
+<span class="nc" id="L399">    }</span>
+
+<span class="nc" id="L401">    public enum HttpMethod {</span>
+<span class="nc" id="L402">        GET, POST, PUT, DELETE</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

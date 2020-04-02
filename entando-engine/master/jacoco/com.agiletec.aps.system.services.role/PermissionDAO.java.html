@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PermissionDAO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.services.role</a> &gt; <span class="el_source">PermissionDAO.java</span></div><h1>PermissionDAO.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package com.agiletec.aps.system.services.role;
+
+import com.agiletec.aps.system.common.AbstractDAO;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.HashMap;
+import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Data Access Object per i permessi (Permission).
+ *
+ * @author M.Diana
+ */
+<span class="nc" id="L33">public class PermissionDAO extends AbstractDAO implements IPermissionDAO {</span>
+
+<span class="nc" id="L35">    private static final Logger _logger = LoggerFactory.getLogger(PermissionDAO.class);</span>
+    private static final String ALL_PERMISSIONS =
+            &quot;SELECT permissionname, descr FROM authpermissions ORDER BY permissionname&quot;;
+    private static final String ADD_PERMISSION =
+            &quot;INSERT INTO authpermissions (permissionname, descr) VALUES ( ?, ? )&quot;;
+    private static final String UPDATE_PERMISSIONS =
+            &quot;UPDATE authpermissions SET descr = ? WHERE permissionname = ? &quot;;
+    private static final String DELETE_PERMISSION =
+            &quot;DELETE FROM authpermissions WHERE permissionname = ? &quot;;
+
+    /**
+     * Carica la mappa (indicizzata in base al nome) dei permessi di autorizzazione presenti nel db.
+     *
+     * @return La mappa dei permessi di autorizzazione.
+     */
+    public Map&lt;String, Permission&gt; loadPermissions() {
+<span class="nc" id="L51">        Connection conn = null;</span>
+<span class="nc" id="L52">        Statement stat = null;</span>
+<span class="nc" id="L53">        ResultSet res = null;</span>
+<span class="nc" id="L54">        Map&lt;String, Permission&gt; permissions = new HashMap&lt;String, Permission&gt;();</span>
+<span class="nc" id="L55">        Permission permission = null;</span>
+        try {
+<span class="nc" id="L57">            conn = this.getConnection();</span>
+<span class="nc" id="L58">            stat = conn.createStatement();</span>
+<span class="nc" id="L59">            res = stat.executeQuery(ALL_PERMISSIONS);</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">            while (res.next()) {</span>
+<span class="nc" id="L61">                permission = this.createPermissionFromRecord(res);</span>
+<span class="nc" id="L62">                permissions.put(permission.getName(), permission);</span>
+            }
+<span class="nc" id="L64">        } catch (Throwable t) {</span>
+<span class="nc" id="L65">            _logger.error(&quot;Error loading permissions&quot;, t);</span>
+<span class="nc" id="L66">            throw new RuntimeException(&quot;Error loading permissions&quot;, t);</span>
+            //processDaoException(t, &quot;Error loading permissions&quot;, &quot;loadPermissions&quot;);
+        } finally {
+<span class="nc" id="L69">            closeDaoResources(res, stat, conn);</span>
+        }
+<span class="nc" id="L71">        return permissions;</span>
+    }
+
+    /**
+     * Aggiunge un permesso di autorizzazione al db.
+     *
+     * @param permission Oggetto Permission rappresentante il permesso da aggiungere.
+     */
+    public void addPermission(Permission permission) {
+<span class="nc" id="L80">        Connection conn = null;</span>
+<span class="nc" id="L81">        PreparedStatement stat = null;</span>
+        try {
+<span class="nc" id="L83">            conn = this.getConnection();</span>
+<span class="nc" id="L84">            conn.setAutoCommit(false);</span>
+<span class="nc" id="L85">            stat = conn.prepareStatement(ADD_PERMISSION);</span>
+<span class="nc" id="L86">            stat.setString(1, permission.getName());</span>
+<span class="nc" id="L87">            stat.setString(2, permission.getDescription());</span>
+<span class="nc" id="L88">            stat.executeUpdate();</span>
+<span class="nc" id="L89">            conn.commit();</span>
+<span class="nc" id="L90">        } catch (Throwable t) {</span>
+<span class="nc" id="L91">            this.executeRollback(conn);</span>
+<span class="nc" id="L92">            _logger.error(&quot;Error while adding a permission&quot;, t);</span>
+<span class="nc" id="L93">            throw new RuntimeException(&quot;Error while adding a permission&quot;, t);</span>
+            //processDaoException(t, &quot;Error while adding a permission&quot;, &quot;addPermission&quot;);
+        } finally {
+<span class="nc" id="L96">            closeDaoResources(null, stat, conn);</span>
+        }
+<span class="nc" id="L98">    }</span>
+
+    /**
+     * Aggiorna un permesso nel db.
+     *
+     * @param permission Oggetto Permission rappresentante il permesso da aggionare.
+     */
+    public void updatePermission(Permission permission) {
+<span class="nc" id="L106">        Connection conn = null;</span>
+<span class="nc" id="L107">        PreparedStatement stat = null;</span>
+        try {
+<span class="nc" id="L109">            conn = this.getConnection();</span>
+<span class="nc" id="L110">            conn.setAutoCommit(false);</span>
+<span class="nc" id="L111">            stat = conn.prepareStatement(UPDATE_PERMISSIONS);</span>
+<span class="nc" id="L112">            stat.setString(1, permission.getDescription());</span>
+<span class="nc" id="L113">            stat.setString(2, permission.getName());</span>
+<span class="nc" id="L114">            stat.executeUpdate();</span>
+<span class="nc" id="L115">            conn.commit();</span>
+<span class="nc" id="L116">        } catch (Throwable t) {</span>
+<span class="nc" id="L117">            this.executeRollback(conn);</span>
+<span class="nc" id="L118">            _logger.error(&quot;Error while updating a permission&quot;, t);</span>
+<span class="nc" id="L119">            throw new RuntimeException(&quot;Error while updating a permission&quot;, t);</span>
+            //processDaoException(t, &quot;Error while updating a permission&quot;, &quot;updatePermission&quot;);
+        } finally {
+<span class="nc" id="L122">            closeDaoResources(null, stat, conn);</span>
+        }
+<span class="nc" id="L124">    }</span>
+
+    /**
+     * Cancella un permesso di autorizzazione dal db.
+     *
+     * @param permission Oggetto Permission rappresentante il permesso da eliminare.
+     */
+    public void deletePermission(Permission permission) {
+<span class="nc" id="L132">        this.deletePermission(permission.getName());</span>
+<span class="nc" id="L133">    }</span>
+
+    /**
+     * Cancella un permesso di autorizzazione dal db.
+     *
+     * @param permissionName Oggetto Permission rappresentante il permesso da eliminare.
+     */
+    public void deletePermission(String permissionName) {
+<span class="nc" id="L141">        Connection conn = null;</span>
+<span class="nc" id="L142">        PreparedStatement stat = null;</span>
+        try {
+<span class="nc" id="L144">            conn = this.getConnection();</span>
+<span class="nc" id="L145">            conn.setAutoCommit(false);</span>
+<span class="nc" id="L146">            stat = conn.prepareStatement(DELETE_PERMISSION);</span>
+<span class="nc" id="L147">            stat.setString(1, permissionName);</span>
+<span class="nc" id="L148">            stat.executeUpdate();</span>
+<span class="nc" id="L149">            conn.commit();</span>
+<span class="nc" id="L150">        } catch (Throwable t) {</span>
+<span class="nc" id="L151">            this.executeRollback(conn);</span>
+<span class="nc" id="L152">            _logger.error(&quot;Error while deleting a permission&quot;, t);</span>
+<span class="nc" id="L153">            throw new RuntimeException(&quot;Error while deleting a permission&quot;, t);</span>
+            //processDaoException(t, &quot;Error while deleting a permission&quot;, &quot;deletePermission&quot;);
+        } finally {
+<span class="nc" id="L156">            closeDaoResources(null, stat, conn);</span>
+        }
+<span class="nc" id="L158">    }</span>
+
+    /**
+     * Crea un permesso leggendo i valori dal record corrente del ResultSet passato. Attenzione: la query di origine del ResultSet deve
+     * avere nella select list i campi esattamente in questo numero e ordine: 1=permissionname, 2=descr,
+     *
+     * @param res Il ResultSet da cui leggere i valori
+     * @return L'oggetto permesso popolato.
+     */
+    private Permission createPermissionFromRecord(ResultSet res) throws SQLException {
+<span class="nc" id="L168">        Permission permission = new Permission();</span>
+<span class="nc" id="L169">        permission.setName(res.getString(1));</span>
+<span class="nc" id="L170">        permission.setDescription(res.getString(2));</span>
+<span class="nc" id="L171">        return permission;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
