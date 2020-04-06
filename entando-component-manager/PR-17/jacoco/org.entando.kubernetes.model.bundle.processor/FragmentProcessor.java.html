@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>FragmentProcessor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.model.bundle.processor</a> &gt; <span class="el_source">FragmentProcessor.java</span></div><h1>FragmentProcessor.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.model.bundle.processor;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.entando.kubernetes.model.bundle.BundleReader;
+import org.entando.kubernetes.model.bundle.descriptor.ComponentDescriptor;
+import org.entando.kubernetes.model.bundle.descriptor.FragmentDescriptor;
+import org.entando.kubernetes.model.bundle.installable.Installable;
+import org.entando.kubernetes.model.digitalexchange.ComponentType;
+import org.entando.kubernetes.model.digitalexchange.DigitalExchangeJob;
+import org.entando.kubernetes.model.digitalexchange.DigitalExchangeJobComponent;
+import org.entando.kubernetes.service.digitalexchange.entandocore.EntandoCoreService;
+import org.springframework.stereotype.Service;
+
+<span class="fc" id="L20">@Slf4j</span>
+@Service
+@RequiredArgsConstructor
+public class FragmentProcessor implements ComponentProcessor {
+
+    private final EntandoCoreService engineService;
+
+    @Override
+    public List&lt;Installable&gt; process(DigitalExchangeJob job, BundleReader npr, ComponentDescriptor descriptor)
+            throws IOException {
+<span class="fc" id="L30">        Optional&lt;List&lt;String&gt;&gt; optionalFragments = Optional.ofNullable(descriptor.getComponents().getFragments());</span>
+<span class="fc" id="L31">        List&lt;Installable&gt; installableList = new ArrayList&lt;&gt;();</span>
+
+<span class="pc bpc" id="L33" title="1 of 2 branches missed.">        if (optionalFragments.isPresent()) {</span>
+<span class="fc bfc" id="L34" title="All 2 branches covered.">            for (String fileName : optionalFragments.get()) {</span>
+<span class="fc" id="L35">                FragmentDescriptor frDesc = npr.readDescriptorFile(fileName, FragmentDescriptor.class);</span>
+<span class="fc bfc" id="L36" title="All 2 branches covered.">                if (frDesc.getGuiCodePath() != null) {</span>
+<span class="fc" id="L37">                    String gcp = getRelativePath(fileName, frDesc.getGuiCodePath());</span>
+<span class="fc" id="L38">                    frDesc.setGuiCode(npr.readFileAsString(gcp));</span>
+                }
+<span class="fc" id="L40">                installableList.add(new FragmentInstallable(frDesc));</span>
+<span class="fc" id="L41">            }</span>
+        }
+<span class="fc" id="L43">        return installableList;</span>
+    }
+
+    @Override
+    public boolean shouldProcess(ComponentType componentType) {
+<span class="fc" id="L48">        return componentType.equals(ComponentType.GUI_FRAGMENT);</span>
+    }
+
+    @Override
+    public void uninstall(DigitalExchangeJobComponent component) {
+<span class="fc" id="L53">        log.info(&quot;Removing Fragment {}&quot;, component.getName());</span>
+<span class="fc" id="L54">        engineService.deleteFragment(component.getName());</span>
+<span class="fc" id="L55">    }</span>
+
+    public class FragmentInstallable extends Installable&lt;FragmentDescriptor&gt; {
+
+<span class="fc" id="L59">        private FragmentInstallable(FragmentDescriptor fragmentDescriptor) {</span>
+<span class="fc" id="L60">            super(fragmentDescriptor);</span>
+<span class="fc" id="L61">        }</span>
+
+        @Override
+        public CompletableFuture install() {
+<span class="fc" id="L65">            return CompletableFuture.runAsync(() -&gt; {</span>
+<span class="fc" id="L66">                log.info(&quot;Registering Fragment {}&quot;, representation.getCode());</span>
+<span class="fc" id="L67">                engineService.registerFragment(representation);</span>
+<span class="fc" id="L68">            });</span>
+        }
+
+        @Override
+        public ComponentType getComponentType() {
+<span class="fc" id="L73">            return ComponentType.GUI_FRAGMENT;</span>
+        }
+
+        @Override
+        public String getName() {
+<span class="fc" id="L78">            return representation.getCode();</span>
+        }
+
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
