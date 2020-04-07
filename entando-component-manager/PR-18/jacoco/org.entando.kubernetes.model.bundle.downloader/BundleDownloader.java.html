@@ -5,96 +5,98 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Comparator;
+import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.entando.kubernetes.model.debundle.EntandoDeBundle;
 import org.entando.kubernetes.model.debundle.EntandoDeBundleTag;
 
-<span class="fc" id="L12">@Slf4j</span>
+<span class="fc" id="L13">@Slf4j</span>
 public abstract class BundleDownloader {
 
     protected Path targetPath;
 
-<span class="nc" id="L17">    public static enum Type {</span>
-<span class="nc" id="L18">        NPM,</span>
-<span class="nc" id="L19">        GIT</span>
+<span class="nc" id="L18">    public enum Type {</span>
+<span class="nc" id="L19">        NPM,</span>
+<span class="nc" id="L20">        GIT</span>
     }
 
-<span class="fc" id="L22">    public BundleDownloader() {</span>
+<span class="fc" id="L23">    public BundleDownloader() {</span>
 
-<span class="fc" id="L24">    }</span>
+<span class="fc" id="L25">    }</span>
 
     public Path saveBundleLocally(EntandoDeBundle bundle, EntandoDeBundleTag tag) {
-<span class="fc" id="L27">        log.info(&quot;Downloading bundle &quot; + bundle.getMetadata().getName() + &quot;@&quot; + tag.getVersion() + &quot; locally&quot;);</span>
+<span class="fc" id="L28">        log.info(&quot;Downloading bundle &quot; + bundle.getMetadata().getName() + &quot;@&quot; + tag.getVersion() + &quot; locally&quot;);</span>
         try {
-<span class="fc" id="L29">            createTargetDirectory();</span>
-<span class="fc" id="L30">            saveBundleStrategy(tag, targetPath);</span>
-<span class="fc" id="L31">            log.info(&quot;Bundle downloaded locally at path &quot; + targetPath.toAbsolutePath());</span>
-<span class="nc" id="L32">        } catch (BundleDownloaderException | IOException e) {</span>
-<span class="nc" id="L33">            log.error(&quot;An error occurred while during download operation&quot;, e);</span>
-<span class="nc" id="L34">            throw new BundleDownloaderException(e);</span>
-<span class="fc" id="L35">        }</span>
-<span class="fc" id="L36">        return this.targetPath;</span>
+<span class="fc" id="L30">            createTargetDirectory();</span>
+<span class="fc" id="L31">            saveBundleStrategy(tag, targetPath);</span>
+<span class="fc" id="L32">            log.info(&quot;Bundle downloaded locally at path &quot; + targetPath.toAbsolutePath());</span>
+<span class="fc" id="L33">        } catch (BundleDownloaderException | IOException e) {</span>
+<span class="fc" id="L34">            log.error(&quot;An error occurred while during download operation&quot;, e);</span>
+<span class="fc" id="L35">            throw new BundleDownloaderException(e);</span>
+<span class="fc" id="L36">        }</span>
+<span class="fc" id="L37">        return this.targetPath;</span>
     }
 
-    abstract protected Path saveBundleStrategy(EntandoDeBundleTag tag, Path targetPath);
+    protected abstract Path saveBundleStrategy(EntandoDeBundleTag tag, Path targetPath);
 
     public Path getTargetPath() {
-<span class="nc" id="L42">        return this.targetPath;</span>
+<span class="nc" id="L43">        return this.targetPath;</span>
     }
 
     public Path createTargetDirectory() throws IOException {
-<span class="fc" id="L46">        targetPath = Files.createTempDirectory(null);</span>
-<span class="fc" id="L47">        return targetPath;</span>
+<span class="fc" id="L47">        targetPath = Files.createTempDirectory(null);</span>
+<span class="fc" id="L48">        return targetPath;</span>
     }
 
     public void cleanTargetDirectory() {
-        try {
-<span class="nc bnc" id="L52" title="All 4 branches missed.">            if (targetPath != null &amp;&amp; targetPath.toFile().exists()) {</span>
-<span class="nc" id="L53">                Files.walk(targetPath)</span>
-<span class="nc" id="L54">                        .sorted(Comparator.reverseOrder())</span>
-<span class="nc" id="L55">                        .map(Path::toFile)</span>
-<span class="nc" id="L56">                        .forEach(File::delete);</span>
-            }
-<span class="nc" id="L58">        } catch (IOException e) {</span>
-<span class="nc" id="L59">            throw new BundleDownloaderException(&quot;An error occurred while cleaning up environment post bundle install&quot;, e);</span>
-<span class="nc" id="L60">        }</span>
-<span class="nc" id="L61">    }</span>
+<span class="pc bpc" id="L52" title="1 of 4 branches missed.">        if (targetPath != null &amp;&amp; targetPath.toFile().exists()) {</span>
+<span class="fc" id="L53">            try (Stream&lt;Path&gt; localFiles = Files.walk(targetPath)) {</span>
+<span class="fc" id="L54">                localFiles</span>
+<span class="fc" id="L55">                        .sorted(Comparator.reverseOrder())</span>
+<span class="fc" id="L56">                        .map(Path::toFile)</span>
+<span class="fc" id="L57">                        .forEach(File::delete);</span>
+<span class="nc" id="L58">            } catch (IOException e) {</span>
+<span class="nc" id="L59">                throw new BundleDownloaderException(</span>
+                        &quot;An error occurred while cleaning up environment post bundle install&quot;, e);
+<span class="fc" id="L61">            }</span>
+        }
+<span class="fc" id="L63">    }</span>
 
     public static class BundleDownloaderException extends RuntimeException {
 
         public BundleDownloaderException() {
-<span class="nc" id="L66">            super();</span>
-<span class="nc" id="L67">        }</span>
+<span class="nc" id="L68">            super();</span>
+<span class="nc" id="L69">        }</span>
 
         public BundleDownloaderException(String message) {
-<span class="nc" id="L70">            super(message);</span>
-<span class="nc" id="L71">        }</span>
+<span class="fc" id="L72">            super(message);</span>
+<span class="fc" id="L73">        }</span>
 
         public BundleDownloaderException(String message, Throwable cause) {
-<span class="nc" id="L74">            super(message, cause);</span>
-<span class="nc" id="L75">        }</span>
+<span class="nc" id="L76">            super(message, cause);</span>
+<span class="nc" id="L77">        }</span>
 
         public BundleDownloaderException(Throwable cause) {
-<span class="nc" id="L78">            super(cause);</span>
-<span class="nc" id="L79">        }</span>
+<span class="fc" id="L80">            super(cause);</span>
+<span class="fc" id="L81">        }</span>
 
         protected BundleDownloaderException(String message, Throwable cause, boolean enableSuppression,
                 boolean writableStackTrace) {
-<span class="nc" id="L83">            super(message, cause, enableSuppression, writableStackTrace);</span>
-<span class="nc" id="L84">        }</span>
+<span class="nc" id="L85">            super(message, cause, enableSuppression, writableStackTrace);</span>
+<span class="nc" id="L86">        }</span>
     }
 
     public static BundleDownloader getForType(String type) {
-<span class="nc bnc" id="L88" title="All 2 branches missed.">        if (type == null) {</span>
-<span class="nc" id="L89">            return new GitBundleDownloader();</span>
+<span class="pc bpc" id="L90" title="1 of 2 branches missed.">        if (type == null) {</span>
+<span class="nc" id="L91">            return new GitBundleDownloader();</span>
         }
 
-<span class="nc bnc" id="L92" title="All 2 branches missed.">        switch (type.toLowerCase()) {</span>
+<span class="fc bfc" id="L94" title="All 2 branches covered.">        switch (type.toLowerCase()) {</span>
             case &quot;npm&quot;:
-<span class="nc" id="L94">                return new NpmBundleDownloader();</span>
+<span class="fc" id="L96">                return new NpmBundleDownloader();</span>
             case &quot;git&quot;:
             default:
-<span class="nc" id="L97">                return new GitBundleDownloader();</span>
+<span class="fc" id="L99">                return new GitBundleDownloader();</span>
         }
     }
 }
