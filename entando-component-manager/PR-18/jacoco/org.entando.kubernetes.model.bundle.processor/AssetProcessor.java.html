@@ -3,9 +3,11 @@
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.entando.kubernetes.model.bundle.BundleProperty;
@@ -19,6 +21,7 @@ import org.entando.kubernetes.model.digitalexchange.DigitalExchangeJobComponent;
 import org.entando.kubernetes.service.digitalexchange.entandocore.EntandoCoreService;
 import org.entando.kubernetes.service.digitalexchange.job.DigitalExchangeUninstallService;
 import org.springframework.stereotype.Service;
+import org.springframework.util.comparator.Comparators;
 
 /**
  * Processor to handle Static files to be stored by Entando.
@@ -28,7 +31,7 @@ import org.springframework.stereotype.Service;
  *
  * @author Sergio Marcelino
  */
-<span class="fc" id="L31">@Slf4j</span>
+<span class="fc" id="L34">@Slf4j</span>
 @Service
 @RequiredArgsConstructor
 public class AssetProcessor implements ComponentProcessor {
@@ -39,31 +42,31 @@ public class AssetProcessor implements ComponentProcessor {
     public List&lt;Installable&gt; process(final DigitalExchangeJob job, final BundleReader npr,
                                                final ComponentDescriptor descriptor) throws IOException {
 
-<span class="fc" id="L42">        final List&lt;Installable&gt; installables = new LinkedList&lt;&gt;();</span>
+<span class="fc" id="L45">        final List&lt;Installable&gt; installables = new LinkedList&lt;&gt;();</span>
 
-<span class="pc bpc" id="L44" title="1 of 2 branches missed.">        if (npr.containsResourceFolder()) {</span>
-<span class="fc" id="L45">            final String componentFolder = &quot;/&quot; + job.getComponentId();</span>
-<span class="fc" id="L46">            installables.add(new DirectoryInstallable(componentFolder));</span>
+<span class="pc bpc" id="L47" title="1 of 2 branches missed.">        if (npr.containsResourceFolder()) {</span>
+<span class="fc" id="L48">            final String componentFolder = &quot;/&quot; + job.getComponentId();</span>
+<span class="fc" id="L49">            installables.add(new DirectoryInstallable(componentFolder));</span>
 
-<span class="fc" id="L48">            final List&lt;String&gt; resourceFolders = npr.getResourceFolders();</span>
-<span class="fc bfc" id="L49" title="All 2 branches covered.">            for (final String resourceFolder : resourceFolders) {</span>
-<span class="fc" id="L50">                Path fileFolder = Paths.get(BundleProperty.RESOURCES_FOLDER_PATH.getValue()).relativize(Paths.get(resourceFolder));</span>
-<span class="fc" id="L51">                String folder = Paths.get(componentFolder).resolve(fileFolder).toString();</span>
-<span class="fc" id="L52">                installables.add(new DirectoryInstallable(folder));</span>
-<span class="fc" id="L53">            }</span>
+<span class="fc" id="L51">            List&lt;String&gt; resourceFolders = npr.getResourceFolders().stream().sorted().collect(Collectors.toList());</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">            for (final String resourceFolder : resourceFolders) {</span>
+<span class="fc" id="L53">                Path fileFolder = Paths.get(BundleProperty.RESOURCES_FOLDER_PATH.getValue()).relativize(Paths.get(resourceFolder));</span>
+<span class="fc" id="L54">                String folder = Paths.get(componentFolder).resolve(fileFolder).toString();</span>
+<span class="fc" id="L55">                installables.add(new DirectoryInstallable(folder));</span>
+<span class="fc" id="L56">            }</span>
 
-<span class="fc" id="L55">            final List&lt;String&gt; resourceFiles = npr.getResourceFiles();</span>
-<span class="fc bfc" id="L56" title="All 2 branches covered.">            for (final String resourceFile : resourceFiles) {</span>
-<span class="fc" id="L57">                final FileDescriptor fileDescriptor = npr.getResourceFileAsDescriptor(resourceFile);</span>
+<span class="fc" id="L58">            List&lt;String&gt; resourceFiles = npr.getResourceFiles().stream().sorted().collect(Collectors.toList());</span>
+<span class="fc bfc" id="L59" title="All 2 branches covered.">            for (final String resourceFile : resourceFiles) {</span>
+<span class="fc" id="L60">                final FileDescriptor fileDescriptor = npr.getResourceFileAsDescriptor(resourceFile);</span>
 
-<span class="fc" id="L59">                Path fileFolder = Paths.get(BundleProperty.RESOURCES_FOLDER_PATH.getValue()).relativize(Paths.get(fileDescriptor.getFolder()));</span>
-<span class="fc" id="L60">                String folder = Paths.get(componentFolder).resolve(fileFolder).toString();</span>
-<span class="fc" id="L61">                fileDescriptor.setFolder(folder);</span>
-<span class="fc" id="L62">                installables.add(new AssetInstallable(fileDescriptor));</span>
-<span class="fc" id="L63">            }</span>
+<span class="fc" id="L62">                Path fileFolder = Paths.get(BundleProperty.RESOURCES_FOLDER_PATH.getValue()).relativize(Paths.get(fileDescriptor.getFolder()));</span>
+<span class="fc" id="L63">                String folder = Paths.get(componentFolder).resolve(fileFolder).toString();</span>
+<span class="fc" id="L64">                fileDescriptor.setFolder(folder);</span>
+<span class="fc" id="L65">                installables.add(new AssetInstallable(fileDescriptor));</span>
+<span class="fc" id="L66">            }</span>
         }
 
-<span class="fc" id="L66">        return installables;</span>
+<span class="fc" id="L69">        return installables;</span>
     }
 
     /**
@@ -73,62 +76,62 @@ public class AssetProcessor implements ComponentProcessor {
      */
     @Override
     public boolean shouldProcess(final ComponentType componentType) {
-<span class="fc" id="L76">        return false;</span>
+<span class="fc" id="L79">        return false;</span>
     }
 
     @Override
     public void uninstall(final DigitalExchangeJobComponent component) {
         // Not necessary
-<span class="nc" id="L82">    }</span>
+<span class="nc" id="L85">    }</span>
 
     public class AssetInstallable extends Installable&lt;FileDescriptor&gt; {
 
-<span class="fc" id="L86">        private AssetInstallable(final FileDescriptor fileDescriptor) {</span>
-<span class="fc" id="L87">            super(fileDescriptor);</span>
-<span class="fc" id="L88">        }</span>
+<span class="fc" id="L89">        private AssetInstallable(final FileDescriptor fileDescriptor) {</span>
+<span class="fc" id="L90">            super(fileDescriptor);</span>
+<span class="fc" id="L91">        }</span>
 
         @Override
         public CompletableFuture install() {
-<span class="fc" id="L92">            return CompletableFuture.runAsync(() -&gt; {</span>
-<span class="fc" id="L93">                log.info(&quot;Uploading file {}&quot;, representation.getFilename());</span>
-<span class="fc" id="L94">                engineService.uploadFile(representation);</span>
-<span class="fc" id="L95">            });</span>
+<span class="fc" id="L95">            return CompletableFuture.runAsync(() -&gt; {</span>
+<span class="fc" id="L96">                log.info(&quot;Uploading file {}&quot;, representation.getFilename());</span>
+<span class="fc" id="L97">                engineService.uploadFile(representation);</span>
+<span class="fc" id="L98">            });</span>
         }
 
         @Override
         public ComponentType getComponentType() {
-<span class="fc" id="L100">            return ComponentType.RESOURCE;</span>
+<span class="fc" id="L103">            return ComponentType.RESOURCE;</span>
         }
 
         @Override
         public String getName() {
-<span class="fc" id="L105">            return representation.getFolder() + &quot;/&quot; + representation.getFilename();</span>
+<span class="fc" id="L108">            return representation.getFolder() + &quot;/&quot; + representation.getFilename();</span>
         }
 
     }
 
     public class DirectoryInstallable extends Installable&lt;String&gt; {
 
-<span class="fc" id="L112">        private DirectoryInstallable(final String directory) {</span>
-<span class="fc" id="L113">            super(directory);</span>
-<span class="fc" id="L114">        }</span>
+<span class="fc" id="L115">        private DirectoryInstallable(final String directory) {</span>
+<span class="fc" id="L116">            super(directory);</span>
+<span class="fc" id="L117">        }</span>
 
         @Override
         public CompletableFuture install() {
-<span class="fc" id="L118">            return CompletableFuture.runAsync(() -&gt; {</span>
-<span class="fc" id="L119">                log.info(&quot;Creating directory {}&quot;, representation);</span>
-<span class="fc" id="L120">                engineService.createFolder(representation);</span>
-<span class="fc" id="L121">            });</span>
+<span class="fc" id="L121">            return CompletableFuture.runAsync(() -&gt; {</span>
+<span class="fc" id="L122">                log.info(&quot;Creating directory {}&quot;, representation);</span>
+<span class="fc" id="L123">                engineService.createFolder(representation);</span>
+<span class="fc" id="L124">            });</span>
         }
 
         @Override
         public ComponentType getComponentType() {
-<span class="fc" id="L126">            return ComponentType.RESOURCE;</span>
+<span class="fc" id="L129">            return ComponentType.RESOURCE;</span>
         }
 
         @Override
         public String getName() {
-<span class="fc" id="L131">            return representation;</span>
+<span class="fc" id="L134">            return representation;</span>
         }
 
     }
