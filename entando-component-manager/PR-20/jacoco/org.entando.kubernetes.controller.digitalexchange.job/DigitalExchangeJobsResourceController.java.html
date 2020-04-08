@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DigitalExchangeJobsResourceController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.controller.digitalexchange.job</a> &gt; <span class="el_source">DigitalExchangeJobsResourceController.java</span></div><h1>DigitalExchangeJobsResourceController.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.controller.digitalexchange.job;
+
+import java.util.List;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
+import org.entando.kubernetes.model.digitalexchange.DigitalExchangeJob;
+import org.entando.kubernetes.model.digitalexchange.JobStatus;
+import org.entando.kubernetes.model.digitalexchange.JobType;
+import org.entando.kubernetes.model.web.response.PagedMetadata;
+import org.entando.kubernetes.model.web.response.PagedRestResponse;
+import org.entando.kubernetes.model.web.response.SimpleRestResponse;
+import org.entando.kubernetes.service.digitalexchange.job.DigitalExchangeJobService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RestController;
+import org.zalando.problem.Problem;
+import org.zalando.problem.Status;
+import org.zalando.problem.ThrowableProblem;
+
+@RestController
+@RequiredArgsConstructor
+public class DigitalExchangeJobsResourceController implements DigitalExchangeJobsResource {
+
+    private final @NonNull DigitalExchangeJobService jobService;
+
+    @Override
+    public ResponseEntity&lt;PagedRestResponse&lt;DigitalExchangeJob&gt;&gt; getAllJobs() {
+<span class="fc" id="L28">        List&lt;DigitalExchangeJob&gt; allJobs = jobService.getAllJobs();</span>
+<span class="fc" id="L29">        PagedMetadata&lt;DigitalExchangeJob&gt; pagedMetadata = new PagedMetadata&lt;&gt;();</span>
+<span class="fc" id="L30">        pagedMetadata.setBody(allJobs);</span>
+<span class="fc" id="L31">        PagedRestResponse&lt;DigitalExchangeJob&gt; response = new PagedRestResponse(pagedMetadata);</span>
+<span class="fc" id="L32">        return ResponseEntity.ok(response);</span>
+    }
+
+    @Override
+    public SimpleRestResponse&lt;DigitalExchangeJob&gt; getJob(String jobId) {
+<span class="fc" id="L37">        DigitalExchangeJob job = jobService.getById(jobId).orElseThrow(() -&gt;</span>
+<span class="fc" id="L38">                getNotFoundJobProblem(jobId));</span>
+<span class="fc" id="L39">        return new SimpleRestResponse(job);</span>
+    }
+
+    @Override
+    public ResponseEntity&lt;PagedRestResponse&lt;DigitalExchangeJob&gt;&gt; getComponentJobs(@PathVariable(&quot;component&quot;) String componentId) {
+<span class="fc" id="L44">            List&lt;DigitalExchangeJob&gt; componentJobs = jobService.getAllJobs(componentId);</span>
+<span class="fc" id="L45">            PagedMetadata&lt;DigitalExchangeJob&gt; pagedMetadata = new PagedMetadata&lt;&gt;();</span>
+<span class="fc" id="L46">            pagedMetadata.setBody(componentJobs);</span>
+<span class="fc" id="L47">            PagedRestResponse&lt;DigitalExchangeJob&gt; response = new PagedRestResponse(pagedMetadata);</span>
+<span class="fc" id="L48">            return ResponseEntity.ok(response);</span>
+    }
+
+    @Override
+    public SimpleRestResponse&lt;DigitalExchangeJob&gt; getLastComponentJobOfType(String componentId, JobType type) {
+<span class="fc" id="L53">        DigitalExchangeJob lastJobOfType = jobService.getComponentLastJobOfType(componentId, type)</span>
+<span class="fc" id="L54">                .orElseThrow(this::getGenericNotFoundJobProblem);</span>
+<span class="fc" id="L55">        return new SimpleRestResponse&lt;&gt;(lastJobOfType);</span>
+    }
+
+    @Override
+    public SimpleRestResponse&lt;DigitalExchangeJob&gt; getLastComponentJobWithStatus(String componentId, JobStatus type) {
+<span class="fc" id="L60">        DigitalExchangeJob lastJobOfType = jobService.getComponentLastJobWithStatus(componentId, type)</span>
+<span class="fc" id="L61">                .orElseThrow(this::getGenericNotFoundJobProblem);</span>
+<span class="fc" id="L62">        return new SimpleRestResponse&lt;&gt;(lastJobOfType);</span>
+    }
+
+    private ThrowableProblem getNotFoundJobProblem(String jobId) {
+<span class="fc" id="L66">        return Problem.valueOf(Status.NOT_FOUND, &quot;A job with id &quot; + jobId + &quot; could not be found&quot;);</span>
+    }
+
+    private ThrowableProblem getGenericNotFoundJobProblem() {
+<span class="nc" id="L70">        return Problem.valueOf(Status.NOT_FOUND );</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
