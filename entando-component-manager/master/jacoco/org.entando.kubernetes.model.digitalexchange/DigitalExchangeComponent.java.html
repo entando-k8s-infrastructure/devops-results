@@ -16,45 +16,96 @@ package org.entando.kubernetes.model.digitalexchange;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.util.Date;
 import java.util.Map;
+import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.Lob;
+import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import lombok.Data;
+import org.entando.kubernetes.model.debundle.EntandoDeBundle;
+import org.entando.kubernetes.model.debundle.EntandoDeBundleDetails;
 import org.entando.kubernetes.model.web.SystemConstants;
 import org.springframework.validation.annotation.Validated;
 
-<span class="pc bnc" id="L25" title="All 100 branches missed.">@Data</span>
+@Data
 @Validated
+@Entity
+@Table(name = &quot;digital_exchange_installed_components&quot;)
 public class DigitalExchangeComponent {
 
+
+    @Id
     @NotNull
-    @Size(min = 1, max = 30)
-<span class="fc" id="L31">    private String id;</span>
+    @Size(min = 1, max = 255)
+    @Column(name=&quot;id&quot;, unique = true, nullable = false)
+    private String id;
 
     @NotNull
     @Size(min = 1, max = 30)
-<span class="fc" id="L35">    private String name;</span>
+    @Column(name=&quot;name&quot;, nullable = false)
+    private String name;
 
     @NotNull
     @Size(min = 1, max = 30)
-<span class="fc" id="L39">    private String type;</span>
+    @Column(name=&quot;type&quot;)
+    private String type;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = SystemConstants.API_DATE_FORMAT)
-<span class="fc" id="L42">    private Date lastUpdate;</span>
+    @Column(name=&quot;last_update&quot;)
+    private Date lastUpdate;
 
-<span class="fc" id="L44">    private String version;</span>
-<span class="fc" id="L45">    private String description;</span>
-<span class="fc" id="L46">    private String image;</span>
-<span class="fc" id="L47">    private double rating;</span>
-<span class="fc" id="L48">    private boolean installed;</span>
-<span class="fc" id="L49">    private String digitalExchangeName;</span>
+    @Column(name=&quot;version&quot;, nullable = false)
+    private String version;
+
+    @Column(name=&quot;description&quot;)
+    private String description;
+
+    @Lob
+    @Column(name=&quot;image&quot; )
+    @Convert(converter = ImageConverter.class)
+    private String image;
+
+    @Column(name=&quot;rating&quot;)
+    private double rating;
+
+    @Column(name=&quot;installed&quot;)
+    private boolean installed;
+
+    @Column(name=&quot;digital_exchange_name&quot;, nullable = false)
+    private String digitalExchangeName;
 
     // NOTE: the id can be removed when we will return the installation link
     // following the HATEOAS principle
-<span class="fc" id="L53">    private String digitalExchangeId;</span>
 
-<span class="fc" id="L55">    private String signature;</span>
+    @Column(name=&quot;digital_exchange_id&quot;, nullable = false)
+    private String digitalExchangeId;
 
-<span class="fc" id="L57">    private Map&lt;String, String&gt; metadata;</span>
+    @Column(name=&quot;signature&quot;)
+    private String signature;
 
+    @Convert(converter = HashMapConverter.class)
+    @Column(name=&quot;metadata&quot;)
+    private Map&lt;String, String&gt; metadata;
+
+    public static DigitalExchangeComponent newFrom(EntandoDeBundle bundle) {
+<span class="fc" id="L94">        DigitalExchangeComponent dec = new DigitalExchangeComponent();</span>
+<span class="fc" id="L95">        String bundleId = bundle.getMetadata().getName();</span>
+<span class="fc" id="L96">        EntandoDeBundleDetails bd = bundle.getSpec().getDetails();</span>
+<span class="fc" id="L97">        dec.setId(bundleId);</span>
+<span class="fc" id="L98">        dec.setName(bundle.getSpec().getDetails().getName());</span>
+<span class="fc" id="L99">        dec.setDescription(bd.getDescription());</span>
+<span class="fc" id="L100">        dec.setDigitalExchangeId(bundle.getMetadata().getNamespace());</span>
+<span class="fc" id="L101">        dec.setDigitalExchangeName(bundle.getMetadata().getNamespace());</span>
+<span class="fc" id="L102">        dec.setRating(5);</span>
+<span class="fc" id="L103">        dec.setType(&quot;Bundle&quot;);</span>
+<span class="fc" id="L104">        dec.setLastUpdate(new Date());</span>
+<span class="fc" id="L105">        dec.setSignature(&quot;&quot;);</span>
+<span class="fc" id="L106">        dec.setVersion(bd.getDistTags().get(&quot;latest&quot;).toString());</span>
+<span class="fc" id="L107">        dec.setImage(bd.getThumbnail());</span>
+<span class="fc" id="L108">        return dec;</span>
+    }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
