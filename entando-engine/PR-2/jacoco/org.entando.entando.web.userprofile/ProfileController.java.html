@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ProfileController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.web.userprofile</a> &gt; <span class="el_source">ProfileController.java</span></div><h1>ProfileController.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package org.entando.entando.web.userprofile;
+
+import com.agiletec.aps.system.exception.ApsSystemException;
+import com.agiletec.aps.system.services.role.Permission;
+import com.agiletec.aps.system.services.user.IUserManager;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import javax.validation.Valid;
+import org.entando.entando.aps.system.exception.ResourceNotFoundException;
+import org.entando.entando.aps.system.exception.RestServerError;
+import org.entando.entando.aps.system.services.entity.model.EntityDto;
+import org.entando.entando.aps.system.services.userprofile.IUserProfileManager;
+import org.entando.entando.aps.system.services.userprofile.IUserProfileService;
+import org.entando.entando.aps.system.services.userprofile.model.IUserProfile;
+import org.entando.entando.web.common.annotation.RestAccessControl;
+import org.entando.entando.web.common.exceptions.ValidationGenericException;
+import org.entando.entando.web.common.model.SimpleRestResponse;
+import org.entando.entando.web.entity.validator.EntityValidator;
+import org.entando.entando.web.userprofile.validator.ProfileValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * @author E.Santoboni
+ */
+@RestController
+<span class="fc" id="L50">public class ProfileController {</span>
+
+<span class="fc" id="L52">    private final Logger logger = LoggerFactory.getLogger(this.getClass());</span>
+
+    @Autowired
+    private IUserProfileService userProfileService;
+
+    @Autowired
+    private ProfileValidator profileValidator;
+
+    @Autowired
+    private IUserManager userManager;
+
+    @Autowired
+    private IUserProfileManager userProfileManager;
+
+    protected IUserProfileService getUserProfileService() {
+<span class="fc" id="L67">        return userProfileService;</span>
+    }
+
+    public void setUserProfileService(IUserProfileService userProfileService) {
+<span class="nc" id="L71">        this.userProfileService = userProfileService;</span>
+<span class="nc" id="L72">    }</span>
+
+    public ProfileValidator getProfileValidator() {
+<span class="fc" id="L75">        return profileValidator;</span>
+    }
+
+    public void setProfileValidator(ProfileValidator profileValidator) {
+<span class="nc" id="L79">        this.profileValidator = profileValidator;</span>
+<span class="nc" id="L80">    }</span>
+
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @RequestMapping(value = &quot;/userProfiles/{username}&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;SimpleRestResponse&lt;EntityDto&gt;&gt; getUserProfile(@PathVariable String username) throws JsonProcessingException {
+<span class="fc" id="L85">        logger.debug(&quot;Requested profile -&gt; {}&quot;, username);</span>
+        EntityDto dto;
+<span class="fc bfc" id="L87" title="All 2 branches covered.">        if (!this.getProfileValidator().existProfile(username)) {</span>
+<span class="fc bfc" id="L88" title="All 2 branches covered.">            if (userExists(username)) {</span>
+                // if the user exists but the profile doesn't, creates an empty profile
+<span class="fc" id="L90">                IUserProfile userProfile = createNewEmptyUserProfile(username);</span>
+<span class="fc" id="L91">                dto = new EntityDto(userProfile);</span>
+<span class="fc" id="L92">            } else {</span>
+<span class="fc" id="L93">                throw new ResourceNotFoundException(EntityValidator.ERRCODE_ENTITY_DOES_NOT_EXIST, &quot;Profile&quot;, username);</span>
+            }
+        } else {
+<span class="fc" id="L96">            dto = this.getUserProfileService().getUserProfile(username);</span>
+        }
+<span class="fc" id="L98">        logger.debug(&quot;Main Response -&gt; {}&quot;, dto);</span>
+<span class="fc" id="L99">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(dto), HttpStatus.OK);</span>
+    }
+
+    private boolean userExists(String username) {
+        try {
+<span class="fc bfc" id="L104" title="All 2 branches covered.">            return userManager.getUser(username) != null;</span>
+<span class="nc" id="L105">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L106">            logger.error(&quot;Error in checking user existence {}&quot;, username, e);</span>
+<span class="nc" id="L107">            throw new RestServerError(&quot;Error in loading user&quot;, e);</span>
+        }
+    }
+
+    private IUserProfile createNewEmptyUserProfile(String username) {
+        try {
+<span class="fc" id="L113">            IUserProfile userProfile = userProfileManager.getDefaultProfileType();</span>
+<span class="fc" id="L114">            userProfileManager.addProfile(username, userProfile);</span>
+<span class="fc" id="L115">            return userProfile;</span>
+<span class="nc" id="L116">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L117">            logger.error(&quot;Error in creating empty user profile {}&quot;, username, e);</span>
+<span class="nc" id="L118">            throw new RestServerError(&quot;Error in loading user&quot;, e);</span>
+        }
+    }
+
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @RequestMapping(value = &quot;/userProfiles&quot;, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;SimpleRestResponse&lt;EntityDto&gt;&gt; addUserProfile(@Valid @RequestBody EntityDto bodyRequest,
+            BindingResult bindingResult) {
+<span class="fc" id="L126">        logger.debug(&quot;Add new user profile -&gt; {}&quot;, bodyRequest);</span>
+<span class="pc bpc" id="L127" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L128">            throw new ValidationGenericException(bindingResult);</span>
+        }
+<span class="fc" id="L130">        this.getProfileValidator().validate(bodyRequest, bindingResult);</span>
+<span class="pc bpc" id="L131" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L132">            throw new ValidationGenericException(bindingResult);</span>
+        }
+<span class="fc" id="L134">        EntityDto response = this.getUserProfileService().addUserProfile(bodyRequest, bindingResult);</span>
+<span class="fc bfc" id="L135" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L136">            throw new ValidationGenericException(bindingResult);</span>
+        }
+<span class="fc" id="L138">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(response), HttpStatus.OK);</span>
+    }
+
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @RequestMapping(value = &quot;/userProfiles/{username}&quot;, method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;SimpleRestResponse&lt;EntityDto&gt;&gt; updateUserProfile(@PathVariable String username,
+            @Valid @RequestBody EntityDto bodyRequest, BindingResult bindingResult) {
+<span class="fc" id="L145">        logger.debug(&quot;Update user profile -&gt; {}&quot;, bodyRequest);</span>
+<span class="pc bpc" id="L146" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L147">            throw new ValidationGenericException(bindingResult);</span>
+        }
+<span class="fc" id="L149">        this.getProfileValidator().validateBodyName(username, bodyRequest, bindingResult);</span>
+<span class="fc" id="L150">        EntityDto response = this.getUserProfileService().updateUserProfile(bodyRequest, bindingResult);</span>
+<span class="pc bpc" id="L151" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L152">            throw new ValidationGenericException(bindingResult);</span>
+        }
+<span class="fc" id="L154">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(response), HttpStatus.OK);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

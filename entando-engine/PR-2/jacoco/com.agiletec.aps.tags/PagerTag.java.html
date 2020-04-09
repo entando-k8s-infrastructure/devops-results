@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PagerTag.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.tags</a> &gt; <span class="el_source">PagerTag.java</span></div><h1>PagerTag.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package com.agiletec.aps.tags;
+
+import com.agiletec.aps.tags.util.IPagerVO;
+import com.agiletec.aps.tags.util.PagerTagHelper;
+import freemarker.template.SimpleSequence;
+import java.util.Collection;
+import javax.servlet.ServletRequest;
+import javax.servlet.jsp.JspException;
+import javax.servlet.jsp.tagext.TagSupport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Pager tag. Please note that the advanced mode of the tag is used when the list to iterate over is huge. The &quot;offset&quot; attribute lets you
+ * to control how the list is iterated by specifying the numeric value of each forward or backward step.
+ *
+ * @author E.Santoboni
+ */
+<span class="nc" id="L33">public class PagerTag extends TagSupport {</span>
+
+<span class="nc" id="L35">    private static final Logger _logger = LoggerFactory.getLogger(PagerTag.class);</span>
+    private String _listName;
+    private String _objectName;
+    private String _pagerId;
+    private boolean _pagerIdFromFrame;
+    private int _max;
+    private int _offset;
+    private boolean _advanced;
+
+    @Override
+    public int doStartTag() throws JspException {
+<span class="nc" id="L46">        ServletRequest request = this.pageContext.getRequest();</span>
+        try {
+<span class="nc" id="L48">            Object object = this.pageContext.getAttribute(this.getListName());</span>
+            Collection collection =
+<span class="nc bnc" id="L50" title="All 4 branches missed.">                    (null != object &amp;&amp; object instanceof SimpleSequence) ? ((SimpleSequence) object).toList() : (Collection) object;</span>
+<span class="nc bnc" id="L51" title="All 2 branches missed.">            if (collection == null) {</span>
+<span class="nc" id="L52">                _logger.error(&quot;There is no list in the request&quot;);</span>
+            } else {
+<span class="nc" id="L54">                PagerTagHelper helper = new PagerTagHelper();</span>
+<span class="nc" id="L55">                IPagerVO pagerVo = helper.getPagerVO(collection, this.getPagerId(),</span>
+<span class="nc" id="L56">                        this.isPagerIdFromFrame(), this.getMax(), this.isAdvanced(), this.getOffset(), request);</span>
+<span class="nc" id="L57">                this.pageContext.setAttribute(this.getObjectName(), pagerVo);</span>
+            }
+<span class="nc" id="L59">        } catch (Throwable t) {</span>
+<span class="nc" id="L60">            _logger.error(&quot;Error detected during tag initialization&quot;, t);</span>
+            //ApsSystemUtils.logThrowable(e, this, &quot;doStartTag&quot;);
+<span class="nc" id="L62">            throw new JspException(&quot;Error detected during tag initialization&quot;, t);</span>
+<span class="nc" id="L63">        }</span>
+<span class="nc" id="L64">        return EVAL_BODY_INCLUDE;</span>
+    }
+
+    @Override
+    public int doEndTag() throws JspException {
+<span class="nc" id="L69">        this.release();</span>
+<span class="nc" id="L70">        return super.doEndTag();</span>
+    }
+
+    @Override
+    public void release() {
+<span class="nc" id="L75">        this._listName = null;</span>
+<span class="nc" id="L76">        this._objectName = null;</span>
+<span class="nc" id="L77">        this._pagerId = null;</span>
+<span class="nc" id="L78">        this._max = 0;</span>
+<span class="nc" id="L79">        this._pagerIdFromFrame = false;</span>
+<span class="nc" id="L80">        this._advanced = false;</span>
+<span class="nc" id="L81">        this._offset = 0;</span>
+<span class="nc" id="L82">    }</span>
+
+    public String getListName() {
+<span class="nc" id="L85">        return _listName;</span>
+    }
+
+    public void setListName(String listName) {
+<span class="nc" id="L89">        this._listName = listName;</span>
+<span class="nc" id="L90">    }</span>
+
+    public int getMax() {
+<span class="nc" id="L93">        return _max;</span>
+    }
+
+    public void setMax(int max) {
+<span class="nc" id="L97">        this._max = max;</span>
+<span class="nc" id="L98">    }</span>
+
+    public String getObjectName() {
+<span class="nc" id="L101">        return _objectName;</span>
+    }
+
+    public void setObjectName(String objectName) {
+<span class="nc" id="L105">        this._objectName = objectName;</span>
+<span class="nc" id="L106">    }</span>
+
+    public String getPagerId() {
+<span class="nc" id="L109">        return _pagerId;</span>
+    }
+
+    public void setPagerId(String pagerId) {
+<span class="nc" id="L113">        this._pagerId = pagerId;</span>
+<span class="nc" id="L114">    }</span>
+
+    public boolean isPagerIdFromFrame() {
+<span class="nc" id="L117">        return _pagerIdFromFrame;</span>
+    }
+
+    public void setPagerIdFromFrame(boolean pagerIdFromFrame) {
+<span class="nc" id="L121">        this._pagerIdFromFrame = pagerIdFromFrame;</span>
+<span class="nc" id="L122">    }</span>
+
+    public boolean isAdvanced() {
+<span class="nc" id="L125">        return _advanced;</span>
+    }
+
+    public void setAdvanced(boolean advanced) {
+<span class="nc" id="L129">        this._advanced = advanced;</span>
+<span class="nc" id="L130">    }</span>
+
+    public int getOffset() {
+<span class="nc" id="L133">        return _offset;</span>
+    }
+
+    public void setOffset(int offset) {
+<span class="nc" id="L137">        this._offset = offset;</span>
+<span class="nc" id="L138">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

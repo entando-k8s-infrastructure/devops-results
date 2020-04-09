@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SearcherDAO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.system.services.dataobjectsearchengine</a> &gt; <span class="el_source">SearcherDAO.java</span></div><h1>SearcherDAO.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package org.entando.entando.aps.system.services.dataobjectsearchengine;
+
+import com.agiletec.aps.system.common.tree.ITreeNode;
+import com.agiletec.aps.system.exception.ApsSystemException;
+import com.agiletec.aps.system.services.category.ICategoryManager;
+import com.agiletec.aps.system.services.group.Group;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.apache.lucene.document.DateTools;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.index.DirectoryReader;
+import org.apache.lucene.index.IndexNotFoundException;
+import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.Term;
+import org.apache.lucene.search.BooleanClause;
+import org.apache.lucene.search.BooleanQuery;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.MatchAllDocsQuery;
+import org.apache.lucene.search.PhraseQuery;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.TermRangeQuery;
+import org.apache.lucene.search.TopDocs;
+import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.store.SimpleFSDirectory;
+import org.apache.lucene.util.BytesRef;
+import org.entando.entando.aps.system.services.searchengine.FacetedContentsResult;
+import org.entando.entando.aps.system.services.searchengine.SearchEngineFilter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Data Access Object dedita alle operazioni di ricerca ad uso del motore di ricerca interno.
+ *
+ * @author E.Santoboni
+ */
+<span class="fc" id="L62">public class SearcherDAO implements ISearcherDAO {</span>
+
+<span class="fc" id="L64">    private static final Logger logger = LoggerFactory.getLogger(SearcherDAO.class);</span>
+
+    private ICategoryManager categoryManager;
+
+    private File indexDir;
+
+    /**
+     * Inizializzazione del searcher.
+     *
+     * @param dir La cartella locale contenitore dei dati persistenti.
+     * @throws ApsSystemException In caso di errore
+     */
+    @Override
+    public void init(File dir) throws ApsSystemException {
+<span class="fc" id="L78">        this.indexDir = dir;</span>
+<span class="fc" id="L79">    }</span>
+
+    private IndexSearcher getSearcher() throws IOException {
+<span class="fc" id="L82">        FSDirectory directory = new SimpleFSDirectory(indexDir.toPath());</span>
+<span class="fc" id="L83">        IndexReader reader = DirectoryReader.open(directory);</span>
+<span class="fc" id="L84">        IndexSearcher searcher = new IndexSearcher(reader);</span>
+<span class="fc" id="L85">        return searcher;</span>
+    }
+
+    private void releaseResources(IndexSearcher searcher) throws ApsSystemException {
+        try {
+<span class="pc bpc" id="L90" title="1 of 2 branches missed.">            if (searcher != null) {</span>
+<span class="fc" id="L91">                searcher.getIndexReader().close();</span>
+            }
+<span class="nc" id="L93">        } catch (IOException e) {</span>
+<span class="nc" id="L94">            throw new ApsSystemException(&quot;Error closing searcher&quot;, e);</span>
+<span class="fc" id="L95">        }</span>
+<span class="fc" id="L96">    }</span>
+
+    @Override
+    public FacetedContentsResult searchFacetedContents(SearchEngineFilter[] filters,
+            Collection&lt;ITreeNode&gt; categories, Collection&lt;String&gt; allowedGroups) throws ApsSystemException {
+<span class="fc" id="L101">        return searchContents(filters, categories, allowedGroups, true);</span>
+    }
+
+    /**
+     * Ricerca una lista di identificativi di dataobject in base ai filtri immessi.
+     *
+     * @param filters i filtri da applicare alla ricerca.
+     * @param categories Le categorie da applicare alla ricerca.
+     * @param allowedGroups I gruppi autorizzati alla visualizzazione. Nel caso che la collezione sia nulla o vuota, la ricerca sarà
+     * effettuata su contenuti referenziati con il gruppo &quot;Ad accesso libero&quot;. Nel caso che nella collezione sia presente il gruppo degli
+     * &quot;Amministratori&quot;, la ricerca produrrà un'insieme di identificativi di contenuto non filtrati per gruppo.
+     * @return La lista di identificativi dataobject.
+     */
+    @Override
+    public List&lt;String&gt; searchContentsId(SearchEngineFilter[] filters,
+            Collection&lt;ITreeNode&gt; categories, Collection&lt;String&gt; allowedGroups) throws ApsSystemException {
+<span class="fc" id="L117">        return this.searchContents(filters, categories, allowedGroups, false).getContentsId();</span>
+    }
+
+    protected FacetedContentsResult searchContents(SearchEngineFilter[] filters,
+            Collection&lt;ITreeNode&gt; categories, Collection&lt;String&gt; allowedGroups, boolean faceted) throws ApsSystemException {
+<span class="fc" id="L122">        FacetedContentsResult result = new FacetedContentsResult();</span>
+<span class="fc" id="L123">        List&lt;String&gt; contentsId = new ArrayList&lt;String&gt;();</span>
+<span class="fc" id="L124">        IndexSearcher searcher = null;</span>
+        try {
+<span class="fc" id="L126">            searcher = this.getSearcher();</span>
+<span class="fc" id="L127">            Query query = null;</span>
+<span class="fc bfc" id="L128" title="All 6 branches covered.">            if ((null == filters || filters.length == 0)</span>
+<span class="pc bpc" id="L129" title="2 of 4 branches missed.">                    &amp;&amp; (null == categories || categories.isEmpty())</span>
+<span class="fc bfc" id="L130" title="All 2 branches covered.">                    &amp;&amp; (allowedGroups != null &amp;&amp; allowedGroups.contains(Group.ADMINS_GROUP_NAME))) {</span>
+<span class="fc" id="L131">                query = new MatchAllDocsQuery();</span>
+            } else {
+<span class="fc" id="L133">                query = this.createQuery(filters, categories, allowedGroups);</span>
+            }
+<span class="fc" id="L135">            TopDocs topDocs = searcher.search(query, 1000);</span>
+<span class="fc" id="L136">            ScoreDoc[] scoreDocs = topDocs.scoreDocs;</span>
+<span class="fc" id="L137">            Map&lt;String, Integer&gt; occurrences = new HashMap&lt;String, Integer&gt;();</span>
+<span class="fc bfc" id="L138" title="All 2 branches covered.">            if (scoreDocs.length &gt; 0) {</span>
+<span class="fc bfc" id="L139" title="All 2 branches covered.">                for (int index = 0; index &lt; scoreDocs.length; index++) {</span>
+<span class="fc" id="L140">                    Document doc = searcher.doc(scoreDocs[index].doc);</span>
+<span class="fc" id="L141">                    contentsId.add(doc.get(IIndexerDAO.DATAOBJECT_ID_FIELD_NAME));</span>
+<span class="fc bfc" id="L142" title="All 2 branches covered.">                    if (faceted) {</span>
+<span class="fc" id="L143">                        Set&lt;String&gt; codes = new HashSet&lt;String&gt;();</span>
+<span class="fc" id="L144">                        String[] categoryPaths = doc.getValues(IIndexerDAO.DATAOBJECT_CATEGORY_FIELD_NAME);</span>
+<span class="fc bfc" id="L145" title="All 2 branches covered.">                        for (int i = 0; i &lt; categoryPaths.length; i++) {</span>
+<span class="fc" id="L146">                            String categoryPath = categoryPaths[i];</span>
+<span class="fc" id="L147">                            String[] paths = categoryPath.split(IIndexerDAO.DATAOBJECT_CATEGORY_SEPARATOR);</span>
+<span class="fc" id="L148">                            codes.addAll(Arrays.asList(paths));</span>
+                        }
+<span class="fc" id="L150">                        Iterator&lt;String&gt; iter = codes.iterator();</span>
+<span class="fc bfc" id="L151" title="All 2 branches covered.">                        while (iter.hasNext()) {</span>
+<span class="fc" id="L152">                            String code = iter.next();</span>
+<span class="fc" id="L153">                            Integer value = occurrences.get(code);</span>
+<span class="fc bfc" id="L154" title="All 2 branches covered.">                            if (null == value) {</span>
+<span class="fc" id="L155">                                value = 0;</span>
+                            }
+<span class="fc" id="L157">                            occurrences.put(code, (value + 1));</span>
+<span class="fc" id="L158">                        }</span>
+                    }
+                }
+            }
+<span class="fc" id="L162">            result.setOccurrences(occurrences);</span>
+<span class="fc" id="L163">            result.setContentsId(contentsId);</span>
+<span class="nc" id="L164">        } catch (IndexNotFoundException inf) {</span>
+<span class="nc" id="L165">            logger.error(&quot;no index was found in the Directory&quot;, inf);</span>
+<span class="nc" id="L166">        } catch (Throwable t) {</span>
+<span class="nc" id="L167">            logger.error(&quot;Error extracting documents&quot;, t);</span>
+<span class="nc" id="L168">            throw new ApsSystemException(&quot;Error extracting documents&quot;, t);</span>
+        } finally {
+<span class="fc" id="L170">            this.releaseResources(searcher);</span>
+        }
+<span class="fc" id="L172">        return result;</span>
+    }
+
+    protected Query createQuery(SearchEngineFilter[] filters,
+            Collection&lt;ITreeNode&gt; categories, Collection&lt;String&gt; allowedGroups) {
+<span class="fc" id="L177">        BooleanQuery.Builder mainQuery = new BooleanQuery.Builder();</span>
+<span class="fc bfc" id="L178" title="All 4 branches covered.">        if (filters != null &amp;&amp; filters.length &gt; 0) {</span>
+<span class="fc bfc" id="L179" title="All 2 branches covered.">            for (int i = 0; i &lt; filters.length; i++) {</span>
+<span class="fc" id="L180">                SearchEngineFilter filter = filters[i];</span>
+<span class="fc" id="L181">                Query fieldQuery = this.createQuery(filter);</span>
+<span class="fc" id="L182">                mainQuery.add(fieldQuery, BooleanClause.Occur.MUST);</span>
+            }
+        }
+<span class="fc bfc" id="L185" title="All 2 branches covered.">        if (allowedGroups == null) {</span>
+<span class="fc" id="L186">            allowedGroups = new HashSet&lt;String&gt;();</span>
+        }
+<span class="fc bfc" id="L188" title="All 2 branches covered.">        if (!allowedGroups.contains(Group.ADMINS_GROUP_NAME)) {</span>
+<span class="fc bfc" id="L189" title="All 2 branches covered.">            if (!allowedGroups.contains(Group.FREE_GROUP_NAME)) {</span>
+<span class="fc" id="L190">                allowedGroups.add(Group.FREE_GROUP_NAME);</span>
+            }
+<span class="fc" id="L192">            BooleanQuery.Builder groupsQuery = new BooleanQuery.Builder();</span>
+<span class="fc" id="L193">            Iterator&lt;String&gt; iterGroups = allowedGroups.iterator();</span>
+<span class="fc bfc" id="L194" title="All 2 branches covered.">            while (iterGroups.hasNext()) {</span>
+<span class="fc" id="L195">                String group = iterGroups.next();</span>
+<span class="fc" id="L196">                TermQuery groupQuery = new TermQuery(new Term(IIndexerDAO.DATAOBJECT_GROUP_FIELD_NAME, group));</span>
+<span class="fc" id="L197">                groupsQuery.add(groupQuery, BooleanClause.Occur.SHOULD);</span>
+<span class="fc" id="L198">            }</span>
+<span class="fc" id="L199">            mainQuery.add(groupsQuery.build(), BooleanClause.Occur.MUST);</span>
+        }
+<span class="pc bpc" id="L201" title="1 of 4 branches missed.">        if (null != categories &amp;&amp; !categories.isEmpty()) {</span>
+<span class="fc" id="L202">            BooleanQuery.Builder categoriesQuery = new BooleanQuery.Builder();</span>
+<span class="fc" id="L203">            Iterator&lt;ITreeNode&gt; cateIter = categories.iterator();</span>
+<span class="fc bfc" id="L204" title="All 2 branches covered.">            while (cateIter.hasNext()) {</span>
+<span class="fc" id="L205">                ITreeNode category = cateIter.next();</span>
+<span class="fc" id="L206">                String path = category.getPath(IIndexerDAO.DATAOBJECT_CATEGORY_SEPARATOR, false, this.getCategoryManager());</span>
+<span class="fc" id="L207">                TermQuery categoryQuery = new TermQuery(new Term(IIndexerDAO.DATAOBJECT_CATEGORY_FIELD_NAME, path));</span>
+<span class="fc" id="L208">                categoriesQuery.add(categoryQuery, BooleanClause.Occur.MUST);</span>
+<span class="fc" id="L209">            }</span>
+<span class="fc" id="L210">            mainQuery.add(categoriesQuery.build(), BooleanClause.Occur.MUST);</span>
+        }
+<span class="fc" id="L212">        return mainQuery.build();</span>
+    }
+
+    private Query createQuery(SearchEngineFilter filter) {
+<span class="fc" id="L216">        BooleanQuery.Builder fieldQuery = new BooleanQuery.Builder();</span>
+<span class="fc" id="L217">        String key = filter.getKey();</span>
+<span class="fc" id="L218">        Object value = filter.getValue();</span>
+<span class="pc bpc" id="L219" title="1 of 2 branches missed.">        if (null != value) {</span>
+<span class="pc bpc" id="L220" title="1 of 2 branches missed.">            if (value instanceof String) {</span>
+<span class="fc" id="L221">                SearchEngineFilter.TextSearchOption option = filter.getTextSearchOption();</span>
+<span class="pc bpc" id="L222" title="1 of 2 branches missed.">                if (null == option) {</span>
+<span class="nc" id="L223">                    option = SearchEngineFilter.TextSearchOption.AT_LEAST_ONE_WORD;</span>
+                }
+<span class="fc" id="L225">                String stringValue = value.toString();</span>
+<span class="fc" id="L226">                String[] values = stringValue.split(&quot;\\s+&quot;);</span>
+<span class="fc bfc" id="L227" title="All 2 branches covered.">                if (!option.equals(SearchEngineFilter.TextSearchOption.EXACT)) {</span>
+<span class="fc" id="L228">                    BooleanClause.Occur bc = BooleanClause.Occur.SHOULD;</span>
+<span class="fc bfc" id="L229" title="All 2 branches covered.">                    if (option.equals(SearchEngineFilter.TextSearchOption.ALL_WORDS)) {</span>
+<span class="fc" id="L230">                        bc = BooleanClause.Occur.MUST;</span>
+<span class="pc bpc" id="L231" title="1 of 2 branches missed.">                    } else if (option.equals(SearchEngineFilter.TextSearchOption.ANY_WORD)) {</span>
+<span class="nc" id="L232">                        bc = BooleanClause.Occur.MUST_NOT;</span>
+                    }
+<span class="fc bfc" id="L234" title="All 2 branches covered.">                    for (int i = 0; i &lt; values.length; i++) {</span>
+<span class="fc" id="L235">                        TermQuery term = new TermQuery(new Term(key, values[i].toLowerCase()));</span>
+                        //NOTE: search lower case....
+<span class="fc" id="L237">                        fieldQuery.add(term, bc);</span>
+                    }
+<span class="fc" id="L239">                } else {</span>
+<span class="fc" id="L240">                    PhraseQuery.Builder phraseQuery = new PhraseQuery.Builder();</span>
+<span class="fc bfc" id="L241" title="All 2 branches covered.">                    for (int i = 0; i &lt; values.length; i++) {</span>
+                        //NOTE: search lower case....
+<span class="fc" id="L243">                        phraseQuery.add(new Term(key, values[i].toLowerCase()));</span>
+                    }
+<span class="fc" id="L245">                    return phraseQuery.build();</span>
+                }
+<span class="pc bnc" id="L247" title="All 2 branches missed.">            } else if (value instanceof Date) {</span>
+<span class="nc" id="L248">                String toString = DateTools.timeToString(((Date) value).getTime(), DateTools.Resolution.MINUTE);</span>
+<span class="nc" id="L249">                TermQuery term = new TermQuery(new Term(filter.getKey(), toString));</span>
+<span class="nc" id="L250">                fieldQuery.add(term, BooleanClause.Occur.MUST);</span>
+<span class="nc bnc" id="L251" title="All 2 branches missed.">            } else if (value instanceof Number) {</span>
+<span class="nc" id="L252">                TermQuery term = new TermQuery(new Term(filter.getKey(), value.toString()));</span>
+<span class="nc" id="L253">                fieldQuery.add(term, BooleanClause.Occur.MUST);</span>
+<span class="nc" id="L254">            }</span>
+<span class="nc bnc" id="L255" title="All 4 branches missed.">        } else if (filter.getStart() instanceof Number || filter.getEnd() instanceof Number) {</span>
+            //.............................. TODO
+        } else {
+<span class="nc" id="L258">            String start = null;</span>
+<span class="nc" id="L259">            String end = null;</span>
+<span class="nc bnc" id="L260" title="All 4 branches missed.">            if (filter.getStart() instanceof Date || filter.getEnd() instanceof Date) {</span>
+<span class="nc bnc" id="L261" title="All 2 branches missed.">                if (null != filter.getStart()) {</span>
+<span class="nc" id="L262">                    start = DateTools.timeToString(((Date) filter.getStart()).getTime(), DateTools.Resolution.MINUTE);</span>
+                }
+<span class="nc bnc" id="L264" title="All 2 branches missed.">                if (null != filter.getEnd()) {</span>
+<span class="nc" id="L265">                    end = DateTools.timeToString(((Date) filter.getEnd()).getTime(), DateTools.Resolution.MINUTE);</span>
+                }
+            } else {
+<span class="nc bnc" id="L268" title="All 2 branches missed.">                start = (null != filter.getStart()) ? filter.getStart().toString().toLowerCase() : null;</span>
+<span class="nc bnc" id="L269" title="All 2 branches missed.">                end = (null != filter.getEnd()) ? filter.getEnd().toString().toLowerCase() : null;</span>
+            }
+<span class="nc bnc" id="L271" title="All 2 branches missed.">            BytesRef byteStart = (null != start) ? new BytesRef(start.getBytes()) : null;</span>
+<span class="nc bnc" id="L272" title="All 2 branches missed.">            BytesRef byteEnd = (null != end) ? new BytesRef(end.getBytes()) : null;</span>
+<span class="nc" id="L273">            TermRangeQuery range = new TermRangeQuery(filter.getKey(), byteStart, byteEnd, true, true);</span>
+<span class="nc" id="L274">            fieldQuery.add(range, BooleanClause.Occur.MUST);</span>
+        }
+<span class="fc" id="L276">        return fieldQuery.build();</span>
+    }
+
+    @Override
+    public void close() {
+        // nothing to do
+<span class="nc" id="L282">    }</span>
+
+    public ICategoryManager getCategoryManager() {
+<span class="fc" id="L285">        return categoryManager;</span>
+    }
+
+    public void setCategoryManager(ICategoryManager categoryManager) {
+<span class="fc" id="L289">        this.categoryManager = categoryManager;</span>
+<span class="fc" id="L290">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

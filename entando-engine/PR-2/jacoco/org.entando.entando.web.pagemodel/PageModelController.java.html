@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PageModelController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.web.pagemodel</a> &gt; <span class="el_source">PageModelController.java</span></div><h1>PageModelController.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package org.entando.entando.web.pagemodel;
+
+import com.agiletec.aps.system.services.role.Permission;
+import com.google.common.collect.ImmutableMap;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+import java.util.Map;
+import javax.validation.Valid;
+import org.entando.entando.aps.system.services.pagemodel.IPageModelService;
+import org.entando.entando.aps.system.services.pagemodel.model.PageModelDto;
+import org.entando.entando.web.common.annotation.RestAccessControl;
+import org.entando.entando.web.common.exceptions.ValidationGenericException;
+import org.entando.entando.web.common.model.PagedMetadata;
+import org.entando.entando.web.common.model.PagedRestResponse;
+import org.entando.entando.web.common.model.RestListRequest;
+import org.entando.entando.web.common.model.SimpleRestResponse;
+import org.entando.entando.web.pagemodel.model.PageModelRequest;
+import org.entando.entando.web.pagemodel.validator.PageModelValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@Api(tags = {&quot;page-models&quot;})
+@RestController
+@RequestMapping(value = &quot;/pageModels&quot;, produces = MediaType.APPLICATION_JSON_VALUE)
+public class PageModelController {
+
+<span class="fc" id="L56">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+
+    private final IPageModelService pageModelService;
+    private final PageModelValidator pageModelValidator;
+
+    @Autowired
+<span class="fc" id="L62">    public PageModelController(IPageModelService pageModelService, PageModelValidator pageModelValidator) {</span>
+<span class="fc" id="L63">        this.pageModelService = pageModelService;</span>
+<span class="fc" id="L64">        this.pageModelValidator = pageModelValidator;</span>
+<span class="fc" id="L65">    }</span>
+
+    @ApiOperation(&quot;Retrieve multiple page models&quot;)
+    @ApiResponses({
+            @ApiResponse(code = 200, message = &quot;OK&quot;),
+            @ApiResponse(code = 400, message = &quot;Bad Request&quot;)
+    })
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @GetMapping
+    public ResponseEntity&lt;PagedRestResponse&lt;PageModelDto&gt;&gt; getPageModels(
+            RestListRequest requestList, @RequestParam Map&lt;String, String&gt; requestParams) {
+<span class="fc" id="L76">        logger.trace(&quot;loading page models&quot;);</span>
+
+<span class="fc" id="L78">        pageModelValidator.validateRestListRequest(requestList, PageModelDto.class);</span>
+<span class="fc" id="L79">        PagedMetadata&lt;PageModelDto&gt; result = pageModelService.getPageModels(requestList, requestParams);</span>
+
+<span class="fc" id="L81">        pageModelValidator.validateRestListResult(requestList, result);</span>
+
+<span class="fc" id="L83">        return ResponseEntity.ok(new PagedRestResponse&lt;&gt;(result));</span>
+    }
+
+    @ApiOperation(&quot;Retrieve page model by code&quot;)
+    @ApiResponses({
+            @ApiResponse(code = 200, message = &quot;OK&quot;),
+            @ApiResponse(code = 404, message = &quot;NotFound&quot;)
+    })
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @GetMapping(value = &quot;/{code}&quot;)
+    public ResponseEntity&lt;SimpleRestResponse&lt;PageModelDto&gt;&gt; getPageModel(@PathVariable String code) {
+<span class="fc" id="L94">        PageModelDto pageModelDto = pageModelService.getPageModel(code);</span>
+<span class="fc" id="L95">        return ResponseEntity.ok(new SimpleRestResponse&lt;&gt;(pageModelDto));</span>
+    }
+
+    @ApiOperation(&quot;Retrieve page model references&quot;)
+    @ApiResponses({
+            @ApiResponse(code = 200, message = &quot;OK&quot;)
+    })
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @GetMapping(value = &quot;/{code}/references/{manager}&quot;)
+    public ResponseEntity&lt;PagedRestResponse&lt;?&gt;&gt; getPageModelReferences(
+            @PathVariable String code, @PathVariable String manager, RestListRequest requestList) {
+
+<span class="fc" id="L107">        PagedMetadata&lt;?&gt; result = pageModelService.getPageModelReferences(code, manager, requestList);</span>
+<span class="fc" id="L108">        return ResponseEntity.ok(new PagedRestResponse&lt;&gt;(result));</span>
+    }
+
+    @ApiOperation(&quot;Update page model&quot;)
+    @ApiResponses({
+            @ApiResponse(code = 200, message = &quot;OK&quot;),
+            @ApiResponse(code = 400, message = &quot;Bad Request&quot;)
+    })
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @PutMapping(value = &quot;/{code}&quot;, name = &quot;roleGroup&quot;)
+    public ResponseEntity&lt;SimpleRestResponse&lt;PageModelDto&gt;&gt; updatePageModel(@PathVariable String code,
+            @Valid @RequestBody PageModelRequest pageModelRequest, BindingResult bindingResult) {
+
+<span class="nc" id="L121">        validateWithBodyName(code, pageModelRequest, bindingResult);</span>
+
+<span class="nc" id="L123">        PageModelDto pageModel = pageModelService.updatePageModel(pageModelRequest);</span>
+<span class="nc" id="L124">        return ResponseEntity.ok(new SimpleRestResponse&lt;&gt;(pageModel));</span>
+    }
+
+    private void validateWithBodyName(String code, PageModelRequest pageModelRequest, BindingResult bindingResult) {
+
+<span class="nc bnc" id="L129" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L130">            throw new ValidationGenericException(bindingResult);</span>
+        }
+<span class="nc" id="L132">        pageModelValidator.validateBodyName(code, pageModelRequest, bindingResult);</span>
+<span class="nc bnc" id="L133" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L134">            throw new ValidationGenericException(bindingResult);</span>
+        }
+<span class="nc" id="L136">    }</span>
+
+    @ApiOperation(&quot;Add page model&quot;)
+    @ApiResponses({
+            @ApiResponse(code = 200, message = &quot;OK&quot;),
+            @ApiResponse(code = 400, message = &quot;Bad Request&quot;),
+            @ApiResponse(code = 409, message = &quot;Conflict&quot;)
+    })
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @PostMapping
+    public ResponseEntity&lt;SimpleRestResponse&lt;PageModelDto&gt;&gt; addPageModel(
+            @Valid @RequestBody PageModelRequest pagemodelRequest, BindingResult bindingResult) {
+
+<span class="fc" id="L149">        validatePageModelRequest(pagemodelRequest, bindingResult);</span>
+
+<span class="fc" id="L151">        PageModelDto dto = pageModelService.addPageModel(pagemodelRequest);</span>
+<span class="fc" id="L152">        return ResponseEntity.ok(new SimpleRestResponse&lt;&gt;(dto));</span>
+    }
+
+    private void validatePageModelRequest(@RequestBody @Valid PageModelRequest pagemodelRequest, BindingResult bindingResult) {
+<span class="fc bfc" id="L156" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L157">            throw new ValidationGenericException(bindingResult);</span>
+        }
+<span class="fc" id="L159">        pageModelValidator.validate(pagemodelRequest, bindingResult);</span>
+<span class="fc bfc" id="L160" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L161">            throw new ValidationGenericException(bindingResult);</span>
+        }
+<span class="fc" id="L163">    }</span>
+
+    @ApiOperation(&quot;Delete page model&quot;)
+    @ApiResponses({
+            @ApiResponse(code = 200, message = &quot;OK&quot;)
+    })
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @DeleteMapping(value = &quot;/{code}&quot;)
+    public ResponseEntity&lt;SimpleRestResponse&lt;Map&gt;&gt; deletePageModel(@PathVariable String code) {
+<span class="fc" id="L172">        logger.debug(&quot;deleting {}&quot;, code);</span>
+<span class="fc" id="L173">        pageModelService.removePageModel(code);</span>
+<span class="fc" id="L174">        Map&lt;String, String&gt; result = ImmutableMap.of(&quot;code&quot;, code);</span>
+<span class="fc" id="L175">        return ResponseEntity.ok(new SimpleRestResponse&lt;&gt;(result));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

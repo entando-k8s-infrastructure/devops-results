@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BaseAttributeValidationRules.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.common.entity.model.attribute.util</a> &gt; <span class="el_source">BaseAttributeValidationRules.java</span></div><h1>BaseAttributeValidationRules.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package com.agiletec.aps.system.common.entity.model.attribute.util;
+
+import com.agiletec.aps.system.common.entity.model.AttributeFieldError;
+import com.agiletec.aps.system.common.entity.model.AttributeTracer;
+import com.agiletec.aps.system.common.entity.model.FieldError;
+import com.agiletec.aps.system.common.entity.model.attribute.AttributeInterface;
+import com.agiletec.aps.system.services.lang.ILangManager;
+import java.util.ArrayList;
+import java.util.List;
+import org.jdom.Element;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * @author E.Santoboni
+ */
+<span class="fc" id="L31">public class BaseAttributeValidationRules implements IAttributeValidationRules {</span>
+
+<span class="fc" id="L33">    private static final Logger _logger = LoggerFactory.getLogger(BaseAttributeValidationRules.class);</span>
+    private boolean _required;
+    private OgnlValidationRule _ognlValidationRule;
+
+    @Override
+    public IAttributeValidationRules clone() {
+<span class="fc" id="L39">        BaseAttributeValidationRules clone = null;</span>
+        try {
+<span class="fc" id="L41">            Class validationConditionClass = Class.forName(this.getClass().getName());</span>
+<span class="fc" id="L42">            clone = (BaseAttributeValidationRules) validationConditionClass.newInstance();</span>
+<span class="fc" id="L43">            clone.setRequired(this.isRequired());</span>
+<span class="fc bfc" id="L44" title="All 2 branches covered.">            if (null != this.getOgnlValidationRule()) {</span>
+<span class="fc" id="L45">                clone.setOgnlValidationRule(this.getOgnlValidationRule().clone());</span>
+            }
+<span class="nc" id="L47">        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {</span>
+<span class="nc" id="L48">            _logger.error(&quot;Error detected while cloning the ValidationRules&quot;, e);</span>
+<span class="nc" id="L49">            throw new RuntimeException(&quot;Error detected while cloning the ValidationRules class '&quot; + this.getClass().getName() + &quot;' &quot;);</span>
+<span class="fc" id="L50">        }</span>
+<span class="fc" id="L51">        return clone;</span>
+    }
+
+    @Override
+    public Element getJDOMConfigElement() {
+<span class="fc" id="L56">        Element configElement = null;</span>
+        try {
+<span class="pc bpc" id="L58" title="1 of 2 branches missed.">            if (this.isEmpty()) {</span>
+<span class="nc" id="L59">                return null;</span>
+            }
+<span class="fc" id="L61">            configElement = new Element(VALIDATIONS_ELEMENT_NAME);</span>
+<span class="fc" id="L62">            this.fillJDOMConfigElement(configElement);</span>
+<span class="nc" id="L63">        } catch (Throwable t) {</span>
+<span class="nc" id="L64">            _logger.error(&quot;Error detected while creating jdom element&quot;, t);</span>
+<span class="nc" id="L65">            throw new RuntimeException(&quot;Error detected while creating jdom element&quot;, t);</span>
+<span class="fc" id="L66">        }</span>
+<span class="fc" id="L67">        return configElement;</span>
+    }
+
+    protected void fillJDOMConfigElement(Element configElement) {
+<span class="fc bfc" id="L71" title="All 2 branches covered.">        if (this.isRequired()) {</span>
+<span class="fc" id="L72">            Element element = new Element(&quot;required&quot;);</span>
+<span class="fc" id="L73">            element.setText(&quot;true&quot;);</span>
+<span class="fc" id="L74">            configElement.addContent(element);</span>
+        }
+<span class="fc bfc" id="L76" title="All 2 branches covered.">        if (null != this.getOgnlValidationRule()) {</span>
+<span class="fc" id="L77">            Element exprElement = this.getOgnlValidationRule().getConfigElement();</span>
+<span class="pc bpc" id="L78" title="1 of 2 branches missed.">            if (null != exprElement) {</span>
+<span class="fc" id="L79">                configElement.addContent(exprElement);</span>
+            }
+        }
+<span class="fc" id="L82">    }</span>
+
+    @Override
+    public void setConfig(Element attributeElement) {
+<span class="fc" id="L86">        Element validationElement = attributeElement.getChild(VALIDATIONS_ELEMENT_NAME);</span>
+<span class="fc bfc" id="L87" title="All 2 branches covered.">        if (null != validationElement) {</span>
+<span class="fc" id="L88">            this.extractValidationRules(validationElement);</span>
+        }
+<span class="fc" id="L90">    }</span>
+
+    protected void extractValidationRules(Element validationElement) {
+<span class="fc" id="L93">        String required = this.extractValue(validationElement, &quot;required&quot;);</span>
+<span class="pc bpc" id="L94" title="1 of 4 branches missed.">        this.setRequired(null != required &amp;&amp; required.equalsIgnoreCase(&quot;true&quot;));</span>
+<span class="fc" id="L95">        Element expressionElement = validationElement.getChild(&quot;expression&quot;);</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">        if (null != expressionElement) {</span>
+<span class="fc" id="L97">            OgnlValidationRule validationRule = new OgnlValidationRule(expressionElement);</span>
+<span class="fc" id="L98">            this.setOgnlValidationRule(validationRule);</span>
+        }
+<span class="fc" id="L100">    }</span>
+
+    protected String extractValue(Element validationElements, String qName) {
+<span class="fc" id="L103">        Element element = validationElements.getChild(qName);</span>
+<span class="fc bfc" id="L104" title="All 2 branches covered.">        if (null != element) {</span>
+<span class="fc" id="L105">            return element.getText();</span>
+        }
+<span class="fc" id="L107">        return null;</span>
+    }
+
+    @Override
+    public boolean isEmpty() {
+<span class="fc bfc" id="L112" title="All 4 branches covered.">        return (!this.isRequired() &amp;&amp; null == this.getOgnlValidationRule());</span>
+    }
+
+    @Override
+    public List&lt;AttributeFieldError&gt; validate(AttributeInterface attribute, AttributeTracer tracer, ILangManager langManager) {
+<span class="fc" id="L117">        List&lt;AttributeFieldError&gt; errors = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L118" title="All 2 branches covered.">        if (this.isEmpty()) {</span>
+<span class="fc" id="L119">            return errors;</span>
+        }
+        try {
+<span class="fc bfc" id="L122" title="All 4 branches covered.">            if (this.isRequired() &amp;&amp; attribute.getStatus().equals(AttributeInterface.Status.EMPTY)) {</span>
+<span class="fc" id="L123">                AttributeTracer tracerClone = tracer.clone();</span>
+<span class="fc" id="L124">                tracerClone.setLang(langManager.getDefaultLang());</span>
+<span class="fc" id="L125">                errors.add(new AttributeFieldError(attribute, FieldError.MANDATORY, tracerClone));</span>
+            }
+<span class="fc" id="L127">            OgnlValidationRule ognlValidationRule = this.getOgnlValidationRule();</span>
+<span class="fc bfc" id="L128" title="All 2 branches covered.">            if (null != ognlValidationRule) {</span>
+<span class="fc" id="L129">                AttributeFieldError error = ognlValidationRule.validate(attribute, tracer, langManager);</span>
+<span class="pc bpc" id="L130" title="1 of 2 branches missed.">                if (null != error) {</span>
+<span class="nc" id="L131">                    errors.add(error);</span>
+                }
+            }
+<span class="nc" id="L134">        } catch (Throwable t) {</span>
+<span class="nc" id="L135">            _logger.error(&quot;Error validating Attribute '{}'&quot;, attribute.getName(), t);</span>
+<span class="nc" id="L136">            throw new RuntimeException(&quot;Error validating Attribute '&quot; + attribute.getName() + &quot;'&quot;, t);</span>
+<span class="fc" id="L137">        }</span>
+<span class="fc" id="L138">        return errors;</span>
+    }
+
+    @Override
+    public boolean isRequired() {
+<span class="fc" id="L143">        return this._required;</span>
+    }
+
+    @Override
+    public void setRequired(boolean required) {
+<span class="fc" id="L148">        this._required = required;</span>
+<span class="fc" id="L149">    }</span>
+
+    @Override
+    public OgnlValidationRule getOgnlValidationRule() {
+<span class="fc" id="L153">        return _ognlValidationRule;</span>
+    }
+
+    @Override
+    public void setOgnlValidationRule(OgnlValidationRule ognlValidationRule) {
+<span class="fc" id="L158">        this._ognlValidationRule = ognlValidationRule;</span>
+<span class="fc" id="L159">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

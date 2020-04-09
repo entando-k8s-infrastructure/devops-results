@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TreeNode.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.common.tree</a> &gt; <span class="el_source">TreeNode.java</span></div><h1>TreeNode.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package com.agiletec.aps.system.common.tree;
+
+import com.agiletec.aps.util.ApsProperties;
+import java.io.Serializable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * A node of a tree. The node is the basic information a tree and contains all the minimum information necessary for its definition.
+ *
+ * @author E.Santoboni
+ */
+<span class="fc" id="L27">public class TreeNode implements ITreeNode, Serializable {</span>
+
+<span class="fc" id="L29">    private static final Logger logger = LoggerFactory.getLogger(TreeNode.class);</span>
+
+    private String _code;
+
+    private String parentCode;
+
+    private String _group;
+
+<span class="fc" id="L37">    private String[] _childrenCodes = new String[0];</span>
+
+<span class="fc" id="L39">    private int _position = -1;</span>
+
+<span class="fc" id="L41">    private ApsProperties _titles = new ApsProperties();</span>
+
+    @Override
+    public ITreeNode clone() {
+<span class="fc" id="L45">        TreeNode clone = null;</span>
+        try {
+<span class="fc" id="L47">            Class treeNodeClass = Class.forName(this.getClass().getName());</span>
+<span class="fc" id="L48">            clone = (TreeNode) treeNodeClass.newInstance();</span>
+<span class="fc" id="L49">            clone.setChildrenCodes(this.getChildrenCodes());</span>
+<span class="fc" id="L50">            clone.setCode(this.getCode());</span>
+<span class="fc" id="L51">            clone.setGroup(this.getGroup());</span>
+<span class="fc" id="L52">            clone.setParentCode(this.getParentCode());</span>
+<span class="fc" id="L53">            clone.setPosition(this.getPosition());</span>
+<span class="fc" id="L54">            clone.setTitles(this.getTitles().clone());</span>
+<span class="nc" id="L55">        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException t) {</span>
+<span class="nc" id="L56">            String message = &quot;Error detected while creating tree node&quot;;</span>
+<span class="nc" id="L57">            logger.error(message, t);</span>
+<span class="nc" id="L58">            throw new RuntimeException(message, t);</span>
+<span class="fc" id="L59">        }</span>
+<span class="fc" id="L60">        return clone;</span>
+    }
+
+    @Override
+    public String getCode() {
+<span class="fc" id="L65">        return _code;</span>
+    }
+
+    public void setCode(String code) {
+<span class="fc" id="L69">        this._code = code;</span>
+<span class="fc" id="L70">    }</span>
+
+    @Override
+    public boolean isRoot() {
+<span class="fc bfc" id="L74" title="All 4 branches covered.">        return (null == this.getParentCode() || this.getCode().equals(this.getParentCode()));</span>
+    }
+
+    @Override
+    public String getParentCode() {
+<span class="fc" id="L79">        return parentCode;</span>
+    }
+
+    @Override
+    public void setParentCode(String parentCode) {
+<span class="fc" id="L84">        this.parentCode = parentCode;</span>
+<span class="fc" id="L85">    }</span>
+
+    /**
+     * Return the group code this node belongs to
+     *
+     * @return the authorization group
+     */
+    @Override
+    public String getGroup() {
+<span class="fc" id="L94">        return _group;</span>
+    }
+
+    /**
+     * Set the group code of this node
+     *
+     * @param group The group to assign this node to
+     */
+    public void setGroup(String group) {
+<span class="fc" id="L103">        this._group = group;</span>
+<span class="fc" id="L104">    }</span>
+
+    @Override
+    public String[] getChildrenCodes() {
+<span class="fc" id="L108">        return _childrenCodes;</span>
+    }
+
+    public void setChildrenCodes(String[] childrenCodes) {
+<span class="fc" id="L112">        this._childrenCodes = childrenCodes;</span>
+<span class="fc" id="L113">    }</span>
+
+    /**
+     * Adds a node to nodes in a lower level. The new node is inserted in the final position.
+     *
+     * @param treeNode The node to add.
+     */
+    public void addChildCode(String treeNode) {
+<span class="fc" id="L121">        int len = this._childrenCodes.length;</span>
+<span class="fc" id="L122">        String[] newChildren = new String[len + 1];</span>
+<span class="fc bfc" id="L123" title="All 2 branches covered.">        for (int i = 0; i &lt; len; i++) {</span>
+<span class="fc" id="L124">            newChildren[i] = this._childrenCodes[i];</span>
+        }
+<span class="fc" id="L126">        newChildren[len] = treeNode;</span>
+<span class="fc" id="L127">        this._childrenCodes = newChildren;</span>
+<span class="fc" id="L128">    }</span>
+
+    @Override
+    public int getPosition() {
+<span class="fc" id="L132">        return _position;</span>
+    }
+
+    @Override
+    public void setPosition(int position) {
+<span class="fc" id="L137">        this._position = position;</span>
+<span class="fc" id="L138">    }</span>
+
+    @Override
+    public ApsProperties getTitles() {
+<span class="fc" id="L142">        return _titles;</span>
+    }
+
+    /**
+     * Set the titles of the node.
+     *
+     * @param titles A set of properties with the titles, where the keys are the codes of language.
+     */
+    public void setTitles(ApsProperties titles) {
+<span class="fc" id="L151">        this._titles = titles;</span>
+<span class="fc" id="L152">    }</span>
+
+    @Override
+    public void setTitle(String langCode, String title) {
+<span class="nc" id="L156">        this.getTitles().setProperty(langCode, title);</span>
+<span class="nc" id="L157">    }</span>
+
+    @Override
+    public String getTitle(String langCode) {
+<span class="fc" id="L161">        return this.getTitles().getProperty(langCode);</span>
+    }
+
+    @Override
+    public String getFullTitle(String langCode, ITreeNodeManager treeNodeManager) {
+<span class="fc" id="L166">        return this.getFullTitle(langCode, &quot; / &quot;, treeNodeManager);</span>
+    }
+
+    @Override
+    public String getFullTitle(String langCode, String separator, ITreeNodeManager treeNodeManager) {
+<span class="fc" id="L171">        return this.getFullTitle(langCode, separator, false, treeNodeManager);</span>
+    }
+
+    @Override
+    public String getShortFullTitle(String langCode, ITreeNodeManager treeNodeManager) {
+<span class="nc" id="L176">        return this.getShortFullTitle(langCode, &quot; / &quot;, treeNodeManager);</span>
+    }
+
+    @Override
+    public String getShortFullTitle(String langCode, String separator, ITreeNodeManager treeNodeManager) {
+<span class="nc" id="L181">        return this.getFullTitle(langCode, separator, true, treeNodeManager);</span>
+    }
+
+    /**
+     * Create a full title of the code of the current page.The full title (breadcrumb) consists of the set of page titles (from the
+     * characters &quot;..&quot; if shortTitle = true) starting from the root up to the current page, and it is created by moving backwards in the
+     * page structure starting from the node current.
+     *
+     * @param langCode The language code to extract the title of each node
+     * @param separator The separator between the nodes
+     * @param shortTitle defines whether to return the full title in the form &quot;short&quot; (each title of the relative replaced with &quot;..&quot;)
+     * @return The required full title.
+     */
+    protected String getFullTitle(String langCode, String separator, boolean shortTitle, ITreeNodeManager treeNodeManager) {
+<span class="fc" id="L195">        String title = this.getTitles().getProperty(langCode);</span>
+<span class="pc bpc" id="L196" title="1 of 2 branches missed.">        if (null == title) {</span>
+<span class="nc" id="L197">            title = this.getCode();</span>
+        }
+<span class="fc bfc" id="L199" title="All 2 branches covered.">        if (this.isRoot()) {</span>
+<span class="fc" id="L200">            return title;</span>
+        }
+<span class="fc" id="L202">        ITreeNode parent = this.getParent(this, treeNodeManager);</span>
+<span class="pc bpc" id="L203" title="2 of 4 branches missed.">        while (parent != null &amp;&amp; parent.getParentCode() != null) {</span>
+<span class="fc" id="L204">            String parentTitle = &quot;..&quot;;</span>
+<span class="pc bpc" id="L205" title="1 of 2 branches missed.">            if (!shortTitle) {</span>
+<span class="fc" id="L206">                parentTitle = parent.getTitles().getProperty(langCode);</span>
+<span class="fc bfc" id="L207" title="All 2 branches covered.">                if (null == parentTitle) {</span>
+<span class="fc" id="L208">                    parentTitle = parent.getCode();</span>
+                }
+            }
+<span class="fc" id="L211">            title = parentTitle + separator + title;</span>
+<span class="fc bfc" id="L212" title="All 2 branches covered.">            if (parent.isRoot()) {</span>
+<span class="fc" id="L213">                return title;</span>
+            }
+<span class="fc" id="L215">            parent = this.getParent(parent, treeNodeManager);</span>
+<span class="fc" id="L216">        }</span>
+<span class="nc" id="L217">        return title;</span>
+    }
+
+    /**
+     * Returns the path of the single node. The path is composed by node codes (separated by &quot;/&quot;) starting from the root up to the current
+     * node
+     *
+     * @return the path of the single node.
+     */
+    @Override
+    public String getPath(ITreeNodeManager treeNodeManager) {
+<span class="fc" id="L228">        return this.getPath(&quot;/&quot;, true, treeNodeManager);</span>
+    }
+
+    /**
+     * Returns the path of the single node. The path is composed by node codes (separated by the given separator) starting from the root up
+     * to the current node
+     *
+     * @param separator The separator to use to divide the node codes
+     * @param addRoot if true, the path starts with the code of the root node
+     * @return the required path.
+     */
+    @Override
+    public String getPath(String separator, boolean addRoot, ITreeNodeManager treeNodeManager) {
+<span class="fc" id="L241">        String[] pathArray = this.getPathArray(addRoot, treeNodeManager);</span>
+<span class="fc" id="L242">        return String.join(separator, pathArray);</span>
+    }
+
+    /**
+     * Returns the path of the single node.The separator between the node will be '/' and the path contains the root node.
+     *
+     * @return the path of the single node.
+     */
+    @Override
+    public String[] getPathArray(ITreeNodeManager treeNodeManager) {
+<span class="nc" id="L252">        return this.getPathArray(true, treeNodeManager);</span>
+    }
+
+    /**
+     * Returns the path array of the current node.The array in composed by node codes from the root up to the current node
+     *
+     * @param addRoot if true, the array starts with the code of the root node
+     * @return the required path array of the single node.
+     */
+    @Override
+    public String[] getPathArray(boolean addRoot, ITreeNodeManager treeNodeManager) {
+<span class="fc" id="L263">        String[] pathArray = new String[0];</span>
+<span class="pc bpc" id="L264" title="1 of 4 branches missed.">        if (this.isRoot() &amp;&amp; !addRoot) {</span>
+<span class="nc" id="L265">            return pathArray;</span>
+        }
+<span class="fc" id="L267">        pathArray = this.addSubPath(pathArray, this.getCode());</span>
+<span class="fc bfc" id="L268" title="All 2 branches covered.">        if (this.isRoot()) {</span>
+<span class="fc" id="L269">            return pathArray;</span>
+        }
+<span class="fc" id="L271">        ITreeNode parent = this.getParent(this, treeNodeManager);</span>
+<span class="pc bpc" id="L272" title="1 of 2 branches missed.">        while (parent != null) {</span>
+<span class="fc bfc" id="L273" title="All 4 branches covered.">            if (parent.isRoot() &amp;&amp; !addRoot) {</span>
+<span class="fc" id="L274">                return pathArray;</span>
+            }
+<span class="fc" id="L276">            pathArray = this.addSubPath(pathArray, parent.getCode());</span>
+<span class="fc bfc" id="L277" title="All 2 branches covered.">            if (parent.isRoot()) {</span>
+<span class="fc" id="L278">                return pathArray;</span>
+            }
+<span class="fc" id="L280">            parent = this.getParent(parent, treeNodeManager);</span>
+        }
+<span class="nc" id="L282">        return pathArray;</span>
+    }
+
+    private String[] addSubPath(String[] pathArray, String subPath) {
+<span class="fc" id="L286">        int len = pathArray.length;</span>
+<span class="fc" id="L287">        String[] newPath = new String[len + 1];</span>
+<span class="fc" id="L288">        newPath[0] = subPath;</span>
+<span class="fc bfc" id="L289" title="All 2 branches covered.">        for (int i = 0; i &lt; len; i++) {</span>
+<span class="fc" id="L290">            newPath[i + 1] = pathArray[i];</span>
+        }
+<span class="fc" id="L292">        return newPath;</span>
+    }
+
+    @Override
+    public boolean isChildOf(String nodeCode, ITreeNodeManager treeNodeManager) {
+<span class="fc" id="L297">        return this.isChildOf(this, nodeCode, treeNodeManager);</span>
+    }
+
+    protected boolean isChildOf(ITreeNode node, String nodeCode, ITreeNodeManager treeNodeManager) {
+<span class="fc bfc" id="L301" title="All 2 branches covered.">        if (node.getCode().equals(nodeCode)) {</span>
+<span class="fc" id="L302">            return true;</span>
+        } else {
+<span class="fc" id="L304">            ITreeNode parent = this.getParent(node, treeNodeManager);</span>
+<span class="pc bpc" id="L305" title="1 of 4 branches missed.">            if (parent != null &amp;&amp; !parent.getCode().equals(node.getCode())) {</span>
+<span class="fc" id="L306">                return this.isChildOf(parent, nodeCode, treeNodeManager);</span>
+            } else {
+<span class="fc" id="L308">                return false;</span>
+            }
+        }
+    }
+
+    protected ITreeNode getParent(ITreeNode node, ITreeNodeManager treeNodeManager) {
+<span class="fc" id="L314">        return treeNodeManager.getNode(node.getParentCode());</span>
+    }
+
+    @Override
+    public String toString() {
+<span class="nc" id="L319">        return &quot;Node: &quot; + this.getCode();</span>
+    }
+
+    @Override
+    public String getManagerBeanCode() {
+<span class="nc" id="L324">        return null;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

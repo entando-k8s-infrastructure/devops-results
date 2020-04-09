@@ -1,0 +1,229 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PageModelDAO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.services.pagemodel</a> &gt; <span class="el_source">PageModelDAO.java</span></div><h1>PageModelDAO.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package com.agiletec.aps.system.services.pagemodel;
+
+import com.agiletec.aps.system.common.AbstractSearcherDAO;
+import com.agiletec.aps.system.common.FieldSearchFilter;
+import com.agiletec.aps.system.exception.ApsSystemException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
+import org.entando.entando.aps.system.services.widgettype.IWidgetTypeManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Data Access Object for page model objects
+ *
+ * @author M.Diana - E.Santoboni
+ */
+<span class="fc" id="L37">public class PageModelDAO extends AbstractSearcherDAO implements IPageModelDAO {</span>
+
+<span class="fc" id="L39">    private static final Logger logger = LoggerFactory.getLogger(PageModelDAO.class);</span>
+    private static final String ADD_PAGEMODEL =
+            &quot;INSERT INTO pagemodels (code, descr, frames, plugincode, templategui) VALUES ( ? , ? , ? , ? , ? )&quot;;
+    private static final String UPDATE_PAGEMODEL =
+            &quot;UPDATE pagemodels SET descr = ? , frames = ? , plugincode = ? , templategui = ? WHERE code = ?&quot;;
+    private static final String DELETE_PAGEMODEL =
+            &quot;DELETE FROM pagemodels WHERE code = ?&quot;;
+    private static final String ALL_PAGEMODEL =
+            &quot;SELECT code, descr, frames, plugincode, templategui FROM pagemodels&quot;;
+    private IWidgetTypeManager _widgetTypeManager;
+
+    @Override
+    public int count(FieldSearchFilter[] filters) {
+<span class="fc" id="L52">        Integer count = null;</span>
+        try {
+<span class="fc" id="L54">            count = super.countId(filters);</span>
+<span class="nc" id="L55">        } catch (Throwable t) {</span>
+<span class="nc" id="L56">            logger.error(&quot;error in count pagemodels&quot;, t);</span>
+<span class="nc" id="L57">            throw new RuntimeException(&quot;error in count pagemodels&quot;, t);</span>
+<span class="fc" id="L58">        }</span>
+<span class="fc" id="L59">        return count;</span>
+    }
+
+    @Override
+    public List&lt;String&gt; search(FieldSearchFilter[] filters) {
+<span class="fc" id="L64">        List&lt;String&gt; entityIdList = null;</span>
+        try {
+<span class="fc" id="L66">            entityIdList = super.searchId(filters);</span>
+<span class="nc" id="L67">        } catch (Throwable t) {</span>
+<span class="nc" id="L68">            logger.error(&quot;error in search pagemodels&quot;, t);</span>
+<span class="nc" id="L69">            throw new RuntimeException(&quot;error in search pagemodels&quot;, t);</span>
+<span class="fc" id="L70">        }</span>
+<span class="fc" id="L71">        return entityIdList;</span>
+    }
+
+    /**
+     * Carica e restituisce la mappa dei modelli di pagina.
+     *
+     * @return La mappa dei modelli.
+     */
+    @Override
+    public Map&lt;String, PageModel&gt; loadModels() {
+<span class="fc" id="L81">        Connection conn = null;</span>
+<span class="fc" id="L82">        Statement stat = null;</span>
+<span class="fc" id="L83">        ResultSet res = null;</span>
+<span class="fc" id="L84">        Map&lt;String, PageModel&gt; models = new HashMap&lt;String, PageModel&gt;();</span>
+        try {
+<span class="fc" id="L86">            conn = this.getConnection();</span>
+<span class="fc" id="L87">            stat = conn.createStatement();</span>
+<span class="fc" id="L88">            res = stat.executeQuery(ALL_PAGEMODEL);</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">            while (res.next()) {</span>
+<span class="fc" id="L90">                PageModel pageModel = this.getPageModelFromResultSet(res);</span>
+<span class="fc" id="L91">                models.put(pageModel.getCode(), pageModel);</span>
+<span class="fc" id="L92">            }</span>
+<span class="nc" id="L93">        } catch (Throwable t) {</span>
+<span class="nc" id="L94">            logger.error(&quot;Error loading the page models&quot;, t);</span>
+<span class="nc" id="L95">            throw new RuntimeException(&quot;Error loading the page models&quot;, t);</span>
+        } finally {
+<span class="fc" id="L97">            closeDaoResources(res, stat, conn);</span>
+        }
+<span class="fc" id="L99">        return models;</span>
+    }
+
+    /**
+     * Build and return a page model by a resultset.
+     *
+     * @param res The resultset to read.
+     * @return The built page model.
+     * @throws ApsSystemException In case of error.
+     */
+    protected PageModel getPageModelFromResultSet(ResultSet res) throws ApsSystemException {
+<span class="fc" id="L110">        PageModel pageModel = new PageModel();</span>
+<span class="fc" id="L111">        String code = null;</span>
+        try {
+<span class="fc" id="L113">            code = res.getString(1);</span>
+<span class="fc" id="L114">            pageModel.setCode(code);</span>
+<span class="fc" id="L115">            pageModel.setDescription(res.getString(2));</span>
+<span class="fc" id="L116">            String xmlFrames = res.getString(3);</span>
+<span class="pc bpc" id="L117" title="2 of 4 branches missed.">            if (null != xmlFrames &amp;&amp; xmlFrames.length() &gt; 0) {</span>
+<span class="fc" id="L118">                PageModelDOM pageModelDOM = new PageModelDOM(xmlFrames, this.getWidgetTypeManager());</span>
+<span class="fc" id="L119">                pageModel.setMainFrame(pageModelDOM.getMainFrame());</span>
+<span class="fc" id="L120">                pageModel.setConfiguration(pageModelDOM.getConfiguration());</span>
+            }
+<span class="fc" id="L122">            pageModel.setPluginCode(res.getString(4));</span>
+<span class="fc" id="L123">            pageModel.setTemplate(res.getString(5));</span>
+<span class="nc" id="L124">        } catch (Throwable t) {</span>
+<span class="nc" id="L125">            logger.error(&quot;Error building the page model code '{}'&quot;, code, t);</span>
+<span class="nc" id="L126">            throw new RuntimeException(&quot;Error building the page model code '&quot; + code + &quot;'&quot;, t);</span>
+<span class="fc" id="L127">        }</span>
+<span class="fc" id="L128">        return pageModel;</span>
+    }
+
+    @Override
+    public void addModel(PageModel model) {
+<span class="fc" id="L133">        Connection conn = null;</span>
+<span class="fc" id="L134">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L136">            conn = this.getConnection();</span>
+<span class="fc" id="L137">            conn.setAutoCommit(false);</span>
+<span class="fc" id="L138">            stat = conn.prepareStatement(ADD_PAGEMODEL);</span>
+<span class="fc" id="L139">            stat.setString(1, model.getCode());</span>
+<span class="fc" id="L140">            stat.setString(2, model.getDescription());</span>
+<span class="fc" id="L141">            PageModelDOM dom = new PageModelDOM(model);</span>
+<span class="fc" id="L142">            stat.setString(3, dom.getXMLDocument());</span>
+<span class="pc bpc" id="L143" title="1 of 2 branches missed.">            String pluginCode = (StringUtils.isBlank(model.getPluginCode())) ? null : model.getPluginCode();</span>
+<span class="fc" id="L144">            stat.setString(4, pluginCode);</span>
+<span class="fc bfc" id="L145" title="All 2 branches covered.">            String template = (StringUtils.isBlank(model.getTemplate())) ? null : model.getTemplate();</span>
+<span class="fc" id="L146">            stat.setString(5, template);</span>
+<span class="fc" id="L147">            stat.executeUpdate();</span>
+<span class="fc" id="L148">            conn.commit();</span>
+<span class="nc" id="L149">        } catch (Throwable t) {</span>
+<span class="nc" id="L150">            this.executeRollback(conn);</span>
+<span class="nc" id="L151">            logger.error(&quot;Error while adding a model&quot;, t);</span>
+<span class="nc" id="L152">            throw new RuntimeException(&quot;Error while adding a model&quot;, t);</span>
+        } finally {
+<span class="fc" id="L154">            this.closeDaoResources(null, stat, conn);</span>
+        }
+<span class="fc" id="L156">    }</span>
+
+    @Override
+    public void updateModel(PageModel model) {
+<span class="fc" id="L160">        Connection conn = null;</span>
+<span class="fc" id="L161">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L163">            conn = this.getConnection();</span>
+<span class="fc" id="L164">            conn.setAutoCommit(false);</span>
+<span class="fc" id="L165">            stat = conn.prepareStatement(UPDATE_PAGEMODEL);</span>
+<span class="fc" id="L166">            stat.setString(1, model.getDescription());</span>
+<span class="fc" id="L167">            PageModelDOM dom = new PageModelDOM(model);</span>
+<span class="fc" id="L168">            stat.setString(2, dom.getXMLDocument());</span>
+<span class="pc bpc" id="L169" title="1 of 2 branches missed.">            String pluginCode = (StringUtils.isBlank(model.getPluginCode())) ? null : model.getPluginCode();</span>
+<span class="fc" id="L170">            stat.setString(3, pluginCode);</span>
+<span class="pc bpc" id="L171" title="1 of 2 branches missed.">            String template = (StringUtils.isBlank(model.getTemplate())) ? null : model.getTemplate();</span>
+<span class="fc" id="L172">            stat.setString(4, template);</span>
+<span class="fc" id="L173">            stat.setString(5, model.getCode());</span>
+<span class="fc" id="L174">            stat.executeUpdate();</span>
+<span class="fc" id="L175">            conn.commit();</span>
+<span class="nc" id="L176">        } catch (Throwable t) {</span>
+<span class="nc" id="L177">            this.executeRollback(conn);</span>
+<span class="nc" id="L178">            logger.error(&quot;Error while updating a model&quot;, t);</span>
+<span class="nc" id="L179">            throw new RuntimeException(&quot;Error while updating a model&quot;, t);</span>
+        } finally {
+<span class="fc" id="L181">            this.closeDaoResources(null, stat, conn);</span>
+        }
+<span class="fc" id="L183">    }</span>
+
+    @Override
+    public void deleteModel(String code) {
+<span class="fc" id="L187">        Connection conn = null;</span>
+<span class="fc" id="L188">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L190">            conn = this.getConnection();</span>
+<span class="fc" id="L191">            conn.setAutoCommit(false);</span>
+<span class="fc" id="L192">            stat = conn.prepareStatement(DELETE_PAGEMODEL);</span>
+<span class="fc" id="L193">            stat.setString(1, code);</span>
+<span class="fc" id="L194">            stat.executeUpdate();</span>
+<span class="fc" id="L195">            conn.commit();</span>
+<span class="nc" id="L196">        } catch (Throwable t) {</span>
+<span class="nc" id="L197">            this.executeRollback(conn);</span>
+<span class="nc" id="L198">            logger.error(&quot;Error while deleting a model&quot;, t);</span>
+<span class="nc" id="L199">            throw new RuntimeException(&quot;Error while deleting a model&quot;, t);</span>
+        } finally {
+<span class="fc" id="L201">            this.closeDaoResources(null, stat, conn);</span>
+        }
+<span class="fc" id="L203">    }</span>
+
+    @Override
+    protected String getTableFieldName(String metadataFieldKey) {
+<span class="fc" id="L207">        return metadataFieldKey;</span>
+    }
+
+    @Override
+    protected String getMasterTableName() {
+<span class="fc" id="L212">        return &quot; pagemodels&quot;;</span>
+    }
+
+    @Override
+    protected String getMasterTableIdFieldName() {
+<span class="fc" id="L217">        return &quot;code&quot;;</span>
+    }
+
+    protected IWidgetTypeManager getWidgetTypeManager() {
+<span class="fc" id="L221">        return _widgetTypeManager;</span>
+    }
+
+    public void setWidgetTypeManager(IWidgetTypeManager widgetTypeManager) {
+<span class="fc" id="L225">        this._widgetTypeManager = widgetTypeManager;</span>
+<span class="fc" id="L226">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AttributeTracer.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.common.entity.model</a> &gt; <span class="el_source">AttributeTracer.java</span></div><h1>AttributeTracer.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package com.agiletec.aps.system.common.entity.model;
+
+import com.agiletec.aps.system.common.entity.model.attribute.AttributeInterface;
+import com.agiletec.aps.system.services.lang.Lang;
+
+/**
+ * This class implements the 'tracer' for the Entando Attributes. This class is used, with the singles attributes, to trace the position
+ * inside any 'complex' attributes. This class is involved during the update and validation process of the Attribute and, furthermore, it
+ * guarantees the correct construction of the form in the content edit interface.
+ *
+ * @author E.Santoboni
+ */
+<span class="fc" id="L27">public class AttributeTracer {</span>
+
+    private Lang _lang;
+<span class="fc" id="L30">    private boolean _monoListElement = false;</span>
+<span class="fc" id="L31">    private boolean _listElement = false;</span>
+<span class="fc" id="L32">    private Lang _listLang = null;</span>
+<span class="fc" id="L33">    private int _listIndex = -1;</span>
+<span class="fc" id="L34">    private boolean _compositeElement = false;</span>
+<span class="fc" id="L35">    private AttributeInterface _parentAttribute = null;</span>
+
+    @Override
+    public AttributeTracer clone() {
+<span class="fc" id="L39">        AttributeTracer clone = null;</span>
+        try {
+<span class="fc" id="L41">            Class attributeClass = Class.forName(this.getClass().getName());</span>
+<span class="fc" id="L42">            clone = (AttributeTracer) attributeClass.newInstance();</span>
+<span class="fc" id="L43">            clone.setMonoListElement(this._monoListElement);</span>
+<span class="fc" id="L44">            clone.setListElement(this._listElement);</span>
+<span class="fc" id="L45">            clone.setListLang(this._listLang);</span>
+<span class="fc" id="L46">            clone.setListIndex(this._listIndex);</span>
+<span class="fc" id="L47">            clone.setCompositeElement(this._compositeElement);</span>
+<span class="fc" id="L48">            clone.setParentAttribute(this._parentAttribute);</span>
+<span class="fc" id="L49">            clone.setLang(this._lang);</span>
+<span class="nc" id="L50">        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {</span>
+<span class="nc" id="L51">            throw new RuntimeException(&quot;Error cloning Attribute tracer&quot;, e);</span>
+<span class="fc" id="L52">        }</span>
+<span class="fc" id="L53">        return clone;</span>
+    }
+
+    public AttributeTracer getMonoListElementTracer(int index) {
+<span class="nc" id="L57">        AttributeTracer tracer = this.clone();</span>
+<span class="nc" id="L58">        tracer.setMonoListElement(true);</span>
+<span class="nc" id="L59">        tracer.setListIndex(index);</span>
+<span class="nc" id="L60">        return tracer;</span>
+    }
+
+    public AttributeTracer getListElementTracer(Lang lang, int index) {
+<span class="nc" id="L64">        AttributeTracer tracer = this.clone();</span>
+<span class="nc" id="L65">        tracer.setListElement(true);</span>
+<span class="nc" id="L66">        tracer.setListLang(lang);</span>
+<span class="nc" id="L67">        tracer.setListIndex(index);</span>
+<span class="nc" id="L68">        return tracer;</span>
+    }
+
+    public AttributeTracer getCompositeTracer(AttributeInterface parentAttribute) {
+<span class="nc" id="L72">        AttributeTracer tracer = this.clone();</span>
+<span class="nc" id="L73">        tracer.setCompositeElement(true);</span>
+<span class="nc" id="L74">        tracer.setParentAttribute(parentAttribute);</span>
+<span class="nc" id="L75">        return tracer;</span>
+    }
+
+    /**
+     * Return the name of the field related to the given attribute. The name is built considering the position of the attribute itself
+     * tracked by the tracer.
+     *
+     * @param attribute The attribute whose name must be returned.
+     * @return the name of the field associated to the attribute.
+     */
+    public String getFormFieldName(AttributeInterface attribute) {
+<span class="fc" id="L86">        StringBuilder formFieldName = new StringBuilder();</span>
+<span class="fc" id="L87">        StringBuilder formFieldPrefix = new StringBuilder();</span>
+<span class="fc" id="L88">        String langModule = &quot;&quot;;</span>
+<span class="fc bfc" id="L89" title="All 4 branches covered.">        if (null != this.getLang() &amp;&amp; attribute.isMultilingual()) {</span>
+<span class="fc" id="L90">            langModule = this.getLang().getCode() + &quot;_&quot;;</span>
+        }
+<span class="fc bfc" id="L92" title="All 2 branches covered.">        if (this.isMonoListElement()) {</span>
+<span class="fc" id="L93">            formFieldPrefix.append(&quot;Monolist:&quot;);</span>
+<span class="pc bpc" id="L94" title="1 of 2 branches missed.">            if (this.isCompositeElement()) {</span>
+<span class="nc" id="L95">                formFieldPrefix.append(&quot;Composite:&quot;);</span>
+<span class="nc" id="L96">                formFieldName.append(langModule).append(this.getParentAttribute().getName())</span>
+<span class="nc" id="L97">                        .append(&quot;_&quot;).append(attribute.getName()).append(&quot;_&quot;).append(this.getListIndex());</span>
+            } else {
+<span class="fc" id="L99">                formFieldName.append(langModule).append(attribute.getName())</span>
+<span class="fc" id="L100">                        .append(&quot;_&quot;).append(this.getListIndex());</span>
+            }
+<span class="fc" id="L102">            formFieldPrefix.append(attribute.getType()).append(&quot;:&quot;);</span>
+<span class="pc bpc" id="L103" title="1 of 2 branches missed.">        } else if (this.isCompositeElement()) {</span>
+<span class="nc" id="L104">            formFieldPrefix.append(&quot;Composite:&quot;).append(attribute.getType()).append(&quot;:&quot;);</span>
+<span class="nc" id="L105">            formFieldName.append(langModule).append(this.getParentAttribute().getName())</span>
+<span class="nc" id="L106">                    .append(&quot;_&quot;).append(attribute.getName());</span>
+<span class="pc bpc" id="L107" title="1 of 2 branches missed.">        } else if (this.isListElement()) {</span>
+<span class="nc" id="L108">            formFieldPrefix.append(&quot;List:&quot;).append(attribute.getType()).append(&quot;:&quot;);</span>
+<span class="nc" id="L109">            formFieldName.append(this.getListLang().getCode())</span>
+<span class="nc" id="L110">                    .append(&quot;_&quot;).append(attribute.getName()).append(&quot;_&quot;).append(this.getListIndex());</span>
+        } else {
+<span class="fc" id="L112">            formFieldPrefix.append(attribute.getType()).append(&quot;:&quot;);</span>
+<span class="fc" id="L113">            formFieldName.append(langModule).append(attribute.getName());</span>
+        }
+<span class="fc" id="L115">        return formFieldPrefix.toString() + formFieldName.toString();</span>
+    }
+
+    public String getMonolistElementFieldName(AttributeInterface attribute) {
+<span class="nc bnc" id="L119" title="All 2 branches missed.">        if (!this.isMonoListElement()) {</span>
+<span class="nc" id="L120">            return null;</span>
+        }
+<span class="nc" id="L122">        StringBuilder fieldName = new StringBuilder();</span>
+<span class="nc" id="L123">        fieldName.append(&quot;Monolist:&quot;).append(attribute.getType()).append(&quot;:&quot;);</span>
+<span class="nc" id="L124">        fieldName.append(attribute.getName()).append(&quot;_&quot;).append(this.getListIndex());</span>
+<span class="nc" id="L125">        return fieldName.toString();</span>
+    }
+
+    public String getPositionMessage(AttributeInterface attribute) {
+<span class="nc" id="L129">        StringBuilder buffer = new StringBuilder(&quot;Attribute &quot;);</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">        if (this.isMonoListElement()) {</span>
+<span class="nc bnc" id="L131" title="All 2 branches missed.">            if (this.isCompositeElement()) {</span>
+<span class="nc" id="L132">                buffer.append(this.getParentAttribute().getName())</span>
+<span class="nc" id="L133">                        .append(&quot; - element &quot;).append((this.getListIndex() + 1))</span>
+<span class="nc" id="L134">                        .append(&quot; - Included Attribute &quot;).append(attribute.getName());</span>
+            } else {
+<span class="nc" id="L136">                buffer.append(attribute.getName()).append(&quot; - element &quot;)</span>
+<span class="nc" id="L137">                        .append((this.getListIndex() + 1));</span>
+            }
+<span class="nc bnc" id="L139" title="All 2 branches missed.">        } else if (this.isCompositeElement()) {</span>
+<span class="nc" id="L140">            buffer.append(this.getParentAttribute().getName())</span>
+<span class="nc" id="L141">                    .append(&quot; - Included Attribute &quot;).append(attribute.getName());</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">        } else if (this.isListElement()) {</span>
+<span class="nc" id="L143">            buffer.append(attribute.getName())</span>
+<span class="nc" id="L144">                    .append(&quot; - lang &quot;).append(this.getListLang().getDescr())</span>
+<span class="nc" id="L145">                    .append(&quot; - element &quot;).append((this.getListIndex() + 1));</span>
+        } else {
+<span class="nc" id="L147">            buffer.append(attribute.getName());</span>
+        }
+<span class="nc" id="L149">        return buffer.toString();</span>
+    }
+
+    public Lang getLang() {
+<span class="fc" id="L153">        return _lang;</span>
+    }
+
+    public void setLang(Lang lang) {
+<span class="fc" id="L157">        this._lang = lang;</span>
+<span class="fc" id="L158">    }</span>
+
+    public boolean isCompositeElement() {
+<span class="fc" id="L161">        return _compositeElement;</span>
+    }
+
+    public void setCompositeElement(boolean compositeElement) {
+<span class="fc" id="L165">        this._compositeElement = compositeElement;</span>
+<span class="fc" id="L166">    }</span>
+
+    public AttributeInterface getParentAttribute() {
+<span class="fc" id="L169">        return _parentAttribute;</span>
+    }
+
+    public void setParentAttribute(AttributeInterface parentAttribute) {
+<span class="fc" id="L173">        this._parentAttribute = parentAttribute;</span>
+<span class="fc" id="L174">    }</span>
+
+    /**
+     * Determine whether the attribute belongs to an element of a 'monolist' Attribute or not.
+     *
+     * @return true if the attribute belongs to a 'Monolist' Attribute, false otherwise.
+     */
+    public boolean isMonoListElement() {
+<span class="fc" id="L182">        return _monoListElement;</span>
+    }
+
+    /**
+     * Set the membership of the attribute to a 'Monolist' Attribute.
+     *
+     * @param monoListElement true if the element belongs to a 'Monolist' Attribute, false otherwise.
+     */
+    public void setMonoListElement(boolean monoListElement) {
+<span class="fc" id="L191">        this._monoListElement = monoListElement;</span>
+<span class="fc" id="L192">    }</span>
+
+    /**
+     * Determine whether the attribute belongs to a 'Multi-Language List' Attribute element
+     *
+     * @return true if the element belongs to a 'Multi-Language List' Attribute, false otherwise.
+     */
+    public boolean isListElement() {
+<span class="fc" id="L200">        return _listElement;</span>
+    }
+
+    /**
+     * Set the membership of the attribute to a 'Multi-Language List' Attribute element.
+     *
+     * @param listElement set true if the attribute belongs to a 'Multi-Language List' Attribute element, false otherwise.
+     */
+    public void setListElement(boolean listElement) {
+<span class="fc" id="L209">        this._listElement = listElement;</span>
+<span class="fc" id="L210">    }</span>
+
+    /**
+     * Return the language of the list when the current attribute is an element of a 'Multi-language List' attribute.
+     *
+     * @return The language of the list.
+     */
+    public Lang getListLang() {
+<span class="nc" id="L218">        return _listLang;</span>
+    }
+
+    /**
+     * Set the language of the list when the current attribute is an element belonging to a multi-language list attribute.
+     *
+     * @param lang The language of the list.
+     */
+    public void setListLang(Lang lang) {
+<span class="fc" id="L227">        this._listLang = lang;</span>
+<span class="fc" id="L228">    }</span>
+
+    /**
+     * Return the index of the position of the attribute within a multi-language list or a monolist.
+     *
+     * @return The index of the position of the attribute inside a list
+     */
+    public int getListIndex() {
+<span class="fc" id="L236">        return _listIndex;</span>
+    }
+
+    /**
+     * Setta l'indice relativo alla posizione dell'attributo elemento all'interno di una lista multilingua o di una monolista.
+     *
+     * @param listIndex Set the index of the position of the attribute.
+     */
+    public void setListIndex(int listIndex) {
+<span class="fc" id="L245">        this._listIndex = listIndex;</span>
+<span class="fc" id="L246">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConfigItemDAO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.services.baseconfig</a> &gt; <span class="el_source">ConfigItemDAO.java</span></div><h1>ConfigItemDAO.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package com.agiletec.aps.system.services.baseconfig;
+
+import com.agiletec.aps.system.common.AbstractDAO;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.HashMap;
+import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Data Access Object delegate alla gestione delle le voci di configurazione. Opera sulla tabella &quot;system&quot;.
+ *
+ * @author W.Ambu - E.Santoboni
+ */
+<span class="fc" id="L31">public class ConfigItemDAO extends AbstractDAO implements IConfigItemDAO {</span>
+
+<span class="fc" id="L33">    private static final Logger _logger = LoggerFactory.getLogger(ConfigItemDAO.class);</span>
+    private static final String UPDATE_ITEM =
+            &quot;UPDATE sysconfig SET config = ? WHERE item = ? AND version = ?&quot;;
+    private static final String VERSION_ITEMS =
+            &quot;SELECT item, config FROM sysconfig WHERE version = ?&quot;;
+    private static final String VERSION_ITEM =
+            &quot;SELECT config FROM sysconfig WHERE version = ? AND item = ?&quot;;
+
+    /**
+     * Carica e restituisce un Map con tutte le voci di configurazione di una versione di configurazione.
+     *
+     * @param version La versione di configurazione.
+     * @return Il Map con le voci di configurazione
+     */
+    public Map&lt;String, String&gt; loadVersionItems(String version) {
+<span class="fc" id="L48">        Connection conn = null;</span>
+<span class="fc" id="L49">        PreparedStatement stat = null;</span>
+<span class="fc" id="L50">        ResultSet res = null;</span>
+<span class="fc" id="L51">        Map&lt;String, String&gt; itemMap = new HashMap&lt;String, String&gt;();</span>
+        try {
+<span class="fc" id="L53">            conn = this.getConnection();</span>
+<span class="fc" id="L54">            stat = conn.prepareStatement(VERSION_ITEMS);</span>
+<span class="fc" id="L55">            stat.setString(1, version);</span>
+<span class="fc" id="L56">            res = stat.executeQuery();</span>
+<span class="fc bfc" id="L57" title="All 2 branches covered.">            while (res.next()) {</span>
+<span class="fc" id="L58">                String name = res.getString(1);</span>
+<span class="fc" id="L59">                String value = res.getString(2);</span>
+<span class="fc" id="L60">                itemMap.put(name, value);</span>
+<span class="fc" id="L61">            }</span>
+<span class="nc" id="L62">        } catch (Throwable t) {</span>
+<span class="nc" id="L63">            _logger.error(&quot;Error while loading configuration item - version '{}'&quot;, version, t);</span>
+<span class="nc" id="L64">            throw new RuntimeException(&quot;Error while loading configuration item - version &quot; + version, t);</span>
+            //processDaoException(e, &quot;Error while loading configuration item - version &quot;   + version, &quot;loadVersionItems&quot;);
+        } finally {
+<span class="fc" id="L67">            closeDaoResources(res, stat, conn);</span>
+        }
+<span class="fc" id="L69">        return itemMap;</span>
+    }
+
+    /**
+     * Carica e restituisce una voce di configurazione di una versione di configurazione. Questo metodo NON deve essere utilizzato
+     * normalmente, ma solo nelle fasi di inizializzazione del sistema, quando il SysContext non è ancora disponibile.
+     *
+     * @param version La versione di configurazione
+     * @param itemName Il nome della voce di configurazione.
+     * @return La voce di configurazione richiesta
+     */
+    public String loadVersionItem(String version, String itemName) {
+<span class="fc" id="L81">        Connection conn = null;</span>
+<span class="fc" id="L82">        PreparedStatement stat = null;</span>
+<span class="fc" id="L83">        ResultSet res = null;</span>
+<span class="fc" id="L84">        String value = null;</span>
+        try {
+<span class="fc" id="L86">            conn = this.getConnection();</span>
+<span class="fc" id="L87">            stat = conn.prepareStatement(VERSION_ITEM);</span>
+<span class="fc" id="L88">            stat.setString(1, version);</span>
+<span class="fc" id="L89">            stat.setString(2, itemName);</span>
+<span class="fc" id="L90">            res = stat.executeQuery();</span>
+<span class="fc" id="L91">            res.next();</span>
+<span class="fc" id="L92">            value = res.getString(1);</span>
+<span class="nc" id="L93">        } catch (Throwable t) {</span>
+<span class="nc" id="L94">            _logger.error(&quot;Error while loading the configuration item - version: '{}' item: '{}'&quot;, version, itemName, t);</span>
+        } finally {
+<span class="fc" id="L96">            closeDaoResources(res, stat, conn);</span>
+        }
+<span class="fc" id="L98">        return value;</span>
+    }
+
+    /**
+     * Aggiorna un'item di configurazione nel db.
+     *
+     * @param itemName Il nome dell'item da aggiornare.
+     * @param config La nuova configurazione.
+     * @param version La versione da aggiornare.
+     */
+    public void updateConfigItem(String itemName, String config, String version) {
+<span class="fc" id="L109">        Connection conn = null;</span>
+<span class="fc" id="L110">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L112">            conn = this.getConnection();</span>
+<span class="fc" id="L113">            conn.setAutoCommit(false);</span>
+<span class="fc" id="L114">            stat = conn.prepareStatement(UPDATE_ITEM);</span>
+<span class="fc" id="L115">            stat.setString(1, config);</span>
+<span class="fc" id="L116">            stat.setString(2, itemName);</span>
+<span class="fc" id="L117">            stat.setString(3, version);</span>
+<span class="fc" id="L118">            stat.executeUpdate();</span>
+<span class="fc" id="L119">            conn.commit();</span>
+<span class="nc" id="L120">        } catch (Throwable t) {</span>
+<span class="nc" id="L121">            this.executeRollback(conn);</span>
+<span class="nc" id="L122">            _logger.error(&quot;Error while updating configuration item '{}'&quot;, itemName, t);</span>
+<span class="nc" id="L123">            throw new RuntimeException(&quot;Error while updating oconfiguration item&quot;, t);</span>
+            //processDaoException(t, &quot;Error while updating oconfiguration item&quot;,  &quot;updateConfigItem&quot;);
+        } finally {
+<span class="fc" id="L126">            closeDaoResources(null, stat, conn);</span>
+        }
+<span class="fc" id="L128">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ActionLogRecordDto.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.system.services.actionlog.model</a> &gt; <span class="el_source">ActionLogRecordDto.java</span></div><h1>ActionLogRecordDto.java</h1><pre class="source lang-java linenums">package org.entando.entando.aps.system.services.actionlog.model;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
+import org.entando.entando.aps.system.services.activitystream.model.ActivityStreamComment;
+import org.entando.entando.aps.system.services.activitystream.model.ActivityStreamLikeInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.BeanUtils;
+
+public class ActionLogRecordDto {
+
+<span class="pc" id="L24">    private final Logger logger = LoggerFactory.getLogger(this.getClass());</span>
+
+    private int id;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = &quot;yyyy-MM-dd HH:mm:ss&quot;)
+    private Date createdAt;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = &quot;yyyy-MM-dd HH:mm:ss&quot;)
+    private Date updatedAt;
+    private String username;
+    private String namespace;
+    private String actionName;
+<span class="pc" id="L35">    private Map&lt;String, String&gt; parameters = new HashMap&lt;&gt;();</span>
+<span class="pc" id="L36">    private List&lt;LikeInfo&gt; likes = new ArrayList&lt;&gt;();</span>
+<span class="pc" id="L37">    private List&lt;CommentInfo&gt; comments = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L39">    public ActionLogRecordDto() {</span>
+<span class="nc" id="L40">    }</span>
+
+<span class="fc" id="L42">    public ActionLogRecordDto(ActionLogRecord src) {</span>
+<span class="fc" id="L43">        this.setActionName(src.getActionName());</span>
+<span class="fc" id="L44">        this.setCreatedAt(src.getActionDate());</span>
+<span class="fc" id="L45">        this.setId(src.getId());</span>
+<span class="fc" id="L46">        this.setNamespace(src.getNamespace());</span>
+<span class="fc bfc" id="L47" title="All 2 branches covered.">        if (!StringUtils.isEmpty(src.getParameters())) {</span>
+<span class="fc" id="L48">            List&lt;String&gt; lines = this.readLines(src.getParameters());</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">            for (String line : lines) {</span>
+<span class="fc" id="L50">                String[] sections = line.split(&quot;=&quot;);</span>
+<span class="pc bpc" id="L51" title="1 of 2 branches missed.">                if (sections.length == 2) {</span>
+<span class="fc" id="L52">                    this.getParameters().put(sections[0], sections[1]);</span>
+                }
+<span class="fc" id="L54">            }</span>
+        }
+<span class="fc" id="L56">        this.setUpdatedAt(src.getUpdateDate());</span>
+<span class="fc" id="L57">        this.setUsername(src.getUsername());</span>
+<span class="fc" id="L58">    }</span>
+
+    public ActionLogRecordDto(ActionLogRecord src, List&lt;ActivityStreamLikeInfo&gt; actionLikeRecords,
+            List&lt;ActivityStreamComment&gt; actionCommentRecords) {
+<span class="fc" id="L62">        this(src);</span>
+<span class="pc bpc" id="L63" title="1 of 2 branches missed.">        if (null != actionLikeRecords) {</span>
+<span class="fc" id="L64">            actionLikeRecords.stream().forEach(i -&gt; likes.add(new LikeInfo(i)));</span>
+        }
+<span class="pc bpc" id="L66" title="1 of 2 branches missed.">        if (null != actionCommentRecords) {</span>
+<span class="fc" id="L67">            actionCommentRecords.stream().forEach(i -&gt; comments.add(new CommentInfo(i)));</span>
+        }
+<span class="fc" id="L69">    }</span>
+
+    public static String getEntityFieldName(String dtoFieldName) {
+<span class="pc bpc" id="L72" title="2 of 3 branches missed.">        switch (dtoFieldName) {</span>
+            case &quot;createdAt&quot;:
+<span class="fc" id="L74">                return &quot;actiondate&quot;;</span>
+            case &quot;updatedAt&quot;:
+<span class="nc" id="L76">                return &quot;updatedate&quot;;</span>
+            default:
+<span class="nc" id="L78">                return dtoFieldName;</span>
+        }
+    }
+
+    private List&lt;String&gt; readLines(String text) {
+<span class="fc" id="L83">        InputStream is = null;</span>
+<span class="fc" id="L84">        List&lt;String&gt; lines = new ArrayList&lt;&gt;();</span>
+        try {
+<span class="fc" id="L86">            is = new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8));</span>
+<span class="fc" id="L87">            BufferedReader br = new BufferedReader(new InputStreamReader(is));</span>
+            String strLine;
+<span class="fc bfc" id="L89" title="All 2 branches covered.">            while ((strLine = br.readLine()) != null) {</span>
+<span class="fc" id="L90">                lines.add(strLine);</span>
+            }
+<span class="nc" id="L92">        } catch (Throwable t) {</span>
+<span class="nc" id="L93">            logger.error(&quot;Error reading lines&quot;, t);</span>
+<span class="nc" id="L94">            throw new RuntimeException(&quot;Error reading lines&quot;, t);</span>
+        } finally {
+<span class="pc bpc" id="L96" title="1 of 2 branches missed.">            if (null != is) {</span>
+                try {
+<span class="fc" id="L98">                    is.close();</span>
+<span class="nc" id="L99">                } catch (IOException ex) {</span>
+<span class="nc" id="L100">                    throw new RuntimeException(&quot;Error cloasing stream&quot;, ex);</span>
+<span class="fc" id="L101">                }</span>
+            }
+        }
+<span class="fc" id="L104">        return lines;</span>
+    }
+
+    public int getId() {
+<span class="fc" id="L108">        return id;</span>
+    }
+
+    public void setId(int id) {
+<span class="fc" id="L112">        this.id = id;</span>
+<span class="fc" id="L113">    }</span>
+
+    public Date getCreatedAt() {
+<span class="fc" id="L116">        return createdAt;</span>
+    }
+
+    public void setCreatedAt(Date createdAt) {
+<span class="fc" id="L120">        this.createdAt = createdAt;</span>
+<span class="fc" id="L121">    }</span>
+
+    public Date getUpdatedAt() {
+<span class="fc" id="L124">        return updatedAt;</span>
+    }
+
+    public void setUpdatedAt(Date updatedAt) {
+<span class="fc" id="L128">        this.updatedAt = updatedAt;</span>
+<span class="fc" id="L129">    }</span>
+
+    public String getUsername() {
+<span class="fc" id="L132">        return username;</span>
+    }
+
+    public void setUsername(String username) {
+<span class="fc" id="L136">        this.username = username;</span>
+<span class="fc" id="L137">    }</span>
+
+    public String getNamespace() {
+<span class="fc" id="L140">        return namespace;</span>
+    }
+
+    public void setNamespace(String namespace) {
+<span class="fc" id="L144">        this.namespace = namespace;</span>
+<span class="fc" id="L145">    }</span>
+
+    public String getActionName() {
+<span class="fc" id="L148">        return actionName;</span>
+    }
+
+    public void setActionName(String actionName) {
+<span class="fc" id="L152">        this.actionName = actionName;</span>
+<span class="fc" id="L153">    }</span>
+
+    public Map&lt;String, String&gt; getParameters() {
+<span class="fc" id="L156">        return parameters;</span>
+    }
+
+    public void setParameters(Map&lt;String, String&gt; parameters) {
+<span class="nc" id="L160">        this.parameters = parameters;</span>
+<span class="nc" id="L161">    }</span>
+
+    public List&lt;LikeInfo&gt; getLikes() {
+<span class="fc" id="L164">        return likes;</span>
+    }
+
+    public void setLikes(List&lt;LikeInfo&gt; likes) {
+<span class="nc" id="L168">        this.likes = likes;</span>
+<span class="nc" id="L169">    }</span>
+
+    public List&lt;CommentInfo&gt; getComments() {
+<span class="fc" id="L172">        return comments;</span>
+    }
+
+    public void setComments(List&lt;CommentInfo&gt; comments) {
+<span class="nc" id="L176">        this.comments = comments;</span>
+<span class="nc" id="L177">    }</span>
+
+    protected class LikeInfo {
+
+        private String username;
+        private String displayName;
+
+<span class="fc" id="L184">        public LikeInfo() {</span>
+<span class="fc" id="L185">        }</span>
+
+<span class="fc" id="L187">        public LikeInfo(ActivityStreamLikeInfo src) {</span>
+<span class="fc" id="L188">            BeanUtils.copyProperties(src, this);</span>
+<span class="fc" id="L189">        }</span>
+
+        public String getUsername() {
+<span class="fc" id="L192">            return username;</span>
+        }
+
+        public void setUsername(String username) {
+<span class="fc" id="L196">            this.username = username;</span>
+<span class="fc" id="L197">        }</span>
+
+        public String getDisplayName() {
+<span class="fc" id="L200">            return displayName;</span>
+        }
+
+        public void setDisplayName(String displayName) {
+<span class="fc" id="L204">            this.displayName = displayName;</span>
+<span class="fc" id="L205">        }</span>
+    }
+
+    protected class CommentInfo extends LikeInfo {
+
+        private int id;
+        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = &quot;yyyy-MM-dd HH:mm:ss&quot;)
+        private Date commentDate;
+        private String commentText;
+
+<span class="nc" id="L215">        public CommentInfo() {</span>
+
+<span class="nc" id="L217">        }</span>
+
+<span class="fc" id="L219">        public CommentInfo(ActivityStreamComment src) {</span>
+<span class="fc" id="L220">            BeanUtils.copyProperties(src, this);</span>
+<span class="fc" id="L221">        }</span>
+
+        public int getId() {
+<span class="fc" id="L224">            return id;</span>
+        }
+
+        public void setId(int id) {
+<span class="fc" id="L228">            this.id = id;</span>
+<span class="fc" id="L229">        }</span>
+
+        public Date getCommentDate() {
+<span class="fc" id="L232">            return commentDate;</span>
+        }
+
+        public void setCommentDate(Date commentDate) {
+<span class="fc" id="L236">            this.commentDate = commentDate;</span>
+<span class="fc" id="L237">        }</span>
+
+        public String getCommentText() {
+<span class="fc" id="L240">            return commentText;</span>
+        }
+
+        public void setCommentText(String commentText) {
+<span class="fc" id="L244">            this.commentText = commentText;</span>
+<span class="fc" id="L245">        }</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

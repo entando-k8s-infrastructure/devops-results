@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PageModelManager.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.services.pagemodel</a> &gt; <span class="el_source">PageModelManager.java</span></div><h1>PageModelManager.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package com.agiletec.aps.system.services.pagemodel;
+
+import com.agiletec.aps.system.common.AbstractService;
+import com.agiletec.aps.system.common.FieldSearchFilter;
+import com.agiletec.aps.system.common.model.dao.SearcherDaoPaginatedResult;
+import com.agiletec.aps.system.exception.ApsSystemException;
+import com.agiletec.aps.system.services.pagemodel.cache.IPageModelManagerCacheWrapper;
+import com.agiletec.aps.system.services.pagemodel.events.PageModelChangedEvent;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.apache.commons.lang.StringUtils;
+import org.entando.entando.aps.system.services.guifragment.GuiFragmentUtilizer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * The manager of the page models.
+ */
+<span class="fc" id="L36">public class PageModelManager extends AbstractService implements IPageModelManager, GuiFragmentUtilizer {</span>
+
+<span class="fc" id="L38">    private static final Logger logger = LoggerFactory.getLogger(PageModelManager.class);</span>
+    private IPageModelDAO pageModelDao;
+    private IPageModelManagerCacheWrapper cacheWrapper;
+
+    @Override
+    public void init() throws Exception {
+<span class="fc" id="L44">        this.getCacheWrapper().initCache(this.getPageModelDAO());</span>
+<span class="fc" id="L45">        logger.debug(&quot;{} ready. initialized&quot;, this.getClass().getName());</span>
+<span class="fc" id="L46">    }</span>
+
+    /**
+     * Restituisce il modello di pagina con il codice dato
+     *
+     * @param name Il nome del modelo di pagina
+     * @return Il modello di pagina richiesto
+     */
+    @Override
+    public PageModel getPageModel(String name) {
+<span class="fc" id="L56">        return this.getCacheWrapper().getPageModel(name);</span>
+    }
+
+    /**
+     * Restituisce la Collection completa di modelli.
+     *
+     * @return la collection completa dei modelli disponibili in oggetti PageModel.
+     */
+    @Override
+    public Collection&lt;PageModel&gt; getPageModels() {
+<span class="fc" id="L66">        return this.getCacheWrapper().getPageModels();</span>
+    }
+
+    @Override
+    public void addPageModel(PageModel pageModel) throws ApsSystemException {
+<span class="pc bpc" id="L71" title="1 of 2 branches missed.">        if (null == pageModel) {</span>
+<span class="nc" id="L72">            logger.debug(&quot;Null page model can be add&quot;);</span>
+<span class="nc" id="L73">            return;</span>
+        }
+        try {
+<span class="fc" id="L76">            this.getPageModelDAO().addModel(pageModel);</span>
+<span class="fc" id="L77">            this.getCacheWrapper().addPageModel(pageModel);</span>
+<span class="fc" id="L78">            this.notifyPageModelChangedEvent(pageModel, PageModelChangedEvent.INSERT_OPERATION_CODE);</span>
+<span class="nc" id="L79">        } catch (Throwable t) {</span>
+<span class="nc" id="L80">            logger.error(&quot;Error adding page models&quot;, t);</span>
+<span class="nc" id="L81">            throw new ApsSystemException(&quot;Error adding page models&quot;, t);</span>
+<span class="fc" id="L82">        }</span>
+<span class="fc" id="L83">    }</span>
+
+    @Override
+    public void updatePageModel(PageModel pageModel) throws ApsSystemException {
+<span class="pc bpc" id="L87" title="1 of 2 branches missed.">        if (null == pageModel) {</span>
+<span class="nc" id="L88">            logger.debug(&quot;Null page model can be update&quot;);</span>
+<span class="nc" id="L89">            return;</span>
+        }
+        try {
+<span class="fc" id="L92">            PageModel pageModelToUpdate = this.getCacheWrapper().getPageModel(pageModel.getCode());</span>
+<span class="pc bpc" id="L93" title="1 of 2 branches missed.">            if (null == pageModelToUpdate) {</span>
+<span class="nc" id="L94">                logger.debug(&quot;Page model {} does not exist&quot;, pageModel.getCode());</span>
+<span class="nc" id="L95">                return;</span>
+            }
+<span class="fc" id="L97">            this.getPageModelDAO().updateModel(pageModel);</span>
+            //pageModelToUpdate.setDefaultWidget(pageModel.getDefaultWidget());
+<span class="fc" id="L99">            pageModelToUpdate.setDescription(pageModel.getDescription());</span>
+            //pageModelToUpdate.setFrames(pageModel.getFrames());
+<span class="fc" id="L101">            pageModelToUpdate.setConfiguration(pageModel.getConfiguration());</span>
+<span class="fc" id="L102">            pageModelToUpdate.setMainFrame(pageModel.getMainFrame());</span>
+<span class="fc" id="L103">            pageModelToUpdate.setPluginCode(pageModel.getPluginCode());</span>
+<span class="fc" id="L104">            pageModelToUpdate.setTemplate(pageModel.getTemplate());</span>
+<span class="fc" id="L105">            this.getCacheWrapper().updatePageModel(pageModelToUpdate);</span>
+<span class="fc" id="L106">            this.notifyPageModelChangedEvent(pageModelToUpdate, PageModelChangedEvent.UPDATE_OPERATION_CODE);</span>
+<span class="nc" id="L107">        } catch (Throwable t) {</span>
+<span class="nc" id="L108">            logger.error(&quot;Error updating page model {}&quot;, pageModel.getCode(), t);</span>
+<span class="nc" id="L109">            throw new ApsSystemException(&quot;Error updating page model &quot; + pageModel.getCode(), t);</span>
+<span class="fc" id="L110">        }</span>
+<span class="fc" id="L111">    }</span>
+
+    @Override
+    public void deletePageModel(String code) throws ApsSystemException {
+        try {
+<span class="fc" id="L116">            PageModel model = this.getPageModel(code);</span>
+<span class="fc" id="L117">            this.getPageModelDAO().deleteModel(code);</span>
+<span class="fc" id="L118">            this.getCacheWrapper().deletePageModel(code);</span>
+<span class="fc" id="L119">            this.notifyPageModelChangedEvent(model, PageModelChangedEvent.REMOVE_OPERATION_CODE);</span>
+<span class="nc" id="L120">        } catch (Throwable t) {</span>
+<span class="nc" id="L121">            logger.error(&quot;Error deleting page models&quot;, t);</span>
+<span class="nc" id="L122">            throw new ApsSystemException(&quot;Error deleting page models&quot;, t);</span>
+<span class="fc" id="L123">        }</span>
+<span class="fc" id="L124">    }</span>
+
+    private void notifyPageModelChangedEvent(PageModel pageModel, int operationCode) {
+<span class="fc" id="L127">        PageModelChangedEvent event = new PageModelChangedEvent();</span>
+<span class="fc" id="L128">        event.setPageModel(pageModel);</span>
+<span class="fc" id="L129">        event.setOperationCode(operationCode);</span>
+<span class="fc" id="L130">        this.notifyEvent(event);</span>
+<span class="fc" id="L131">    }</span>
+
+    @Override
+    public List getGuiFragmentUtilizers(String guiFragmentCode) throws ApsSystemException {
+<span class="fc" id="L135">        List&lt;PageModel&gt; utilizers = new ArrayList&lt;&gt;();</span>
+        try {
+<span class="fc bfc" id="L137" title="All 2 branches covered.">            for (PageModel pModel : this.getPageModels()) {</span>
+<span class="fc" id="L138">                String template = pModel.getTemplate();</span>
+<span class="fc bfc" id="L139" title="All 2 branches covered.">                if (StringUtils.isNotBlank(template)) {</span>
+<span class="fc" id="L140">                    Pattern pattern = Pattern.compile(&quot;&lt;@wp\\.fragment.*code=\&quot;&quot; + guiFragmentCode + &quot;\&quot;.*/&gt;&quot;, Pattern.MULTILINE);</span>
+<span class="fc" id="L141">                    Matcher matcher = pattern.matcher(template);</span>
+<span class="fc bfc" id="L142" title="All 2 branches covered.">                    if (matcher.find()) {</span>
+<span class="fc" id="L143">                        utilizers.add(pModel);</span>
+                    }
+                }
+<span class="fc" id="L146">            }</span>
+<span class="nc" id="L147">        } catch (Throwable t) {</span>
+<span class="nc" id="L148">            logger.error(&quot;Error extracting utilizers&quot;, t);</span>
+<span class="nc" id="L149">            throw new ApsSystemException(&quot;Error extracting utilizers&quot;, t);</span>
+<span class="fc" id="L150">        }</span>
+<span class="fc" id="L151">        return utilizers;</span>
+    }
+
+    protected IPageModelManagerCacheWrapper getCacheWrapper() {
+<span class="fc" id="L155">        return cacheWrapper;</span>
+    }
+
+    public void setCacheWrapper(IPageModelManagerCacheWrapper cacheWrapper) {
+<span class="fc" id="L159">        this.cacheWrapper = cacheWrapper;</span>
+<span class="fc" id="L160">    }</span>
+
+    protected IPageModelDAO getPageModelDAO() {
+<span class="fc" id="L163">        return pageModelDao;</span>
+    }
+
+    public void setPageModelDAO(IPageModelDAO pageModelDAO) {
+<span class="fc" id="L167">        this.pageModelDao = pageModelDAO;</span>
+<span class="fc" id="L168">    }</span>
+
+    @Override
+    public SearcherDaoPaginatedResult&lt;PageModel&gt; searchPageModels(List&lt;FieldSearchFilter&gt; filtersList) throws ApsSystemException {
+<span class="fc" id="L172">        SearcherDaoPaginatedResult&lt;PageModel&gt; pagedResult = null;</span>
+        try {
+<span class="fc" id="L174">            FieldSearchFilter[] filters = null;</span>
+<span class="fc bfc" id="L175" title="All 2 branches covered.">            if (null != filtersList) {</span>
+<span class="fc" id="L176">                filters = filtersList.toArray(new FieldSearchFilter[0]);</span>
+            }
+<span class="fc" id="L178">            List&lt;PageModel&gt; pageModels = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L179">            int count = this.getPageModelDAO().count(filters);</span>
+
+<span class="fc" id="L181">            List&lt;String&gt; pageModelCodes = this.getPageModelDAO().search(filters);</span>
+<span class="fc bfc" id="L182" title="All 2 branches covered.">            for (String code : pageModelCodes) {</span>
+<span class="fc" id="L183">                pageModels.add(this.getPageModel(code));</span>
+<span class="fc" id="L184">            }</span>
+<span class="fc" id="L185">            pagedResult = new SearcherDaoPaginatedResult&lt;&gt;(count, pageModels);</span>
+<span class="nc" id="L186">        } catch (Throwable t) {</span>
+<span class="nc" id="L187">            logger.error(&quot;Error searching groups&quot;, t);</span>
+<span class="nc" id="L188">            throw new ApsSystemException(&quot;Error searching groups&quot;, t);</span>
+<span class="fc" id="L189">        }</span>
+<span class="fc" id="L190">        return pagedResult;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

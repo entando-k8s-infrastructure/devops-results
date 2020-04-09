@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractListAttribute.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.common.entity.model.attribute</a> &gt; <span class="el_source">AbstractListAttribute.java</span></div><h1>AbstractListAttribute.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package com.agiletec.aps.system.common.entity.model.attribute;
+
+import com.agiletec.aps.system.common.searchengine.IndexableAttributeInterface;
+import com.agiletec.aps.system.exception.ApsSystemException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import org.jdom.Element;
+
+/**
+ * Base abstract class for the complex attributes of type List and Monolist.
+ *
+ * @author E.Santoboni
+ */
+<span class="fc" id="L29">public abstract class AbstractListAttribute extends AbstractComplexAttribute</span>
+        implements ListAttributeInterface {
+
+    private AttributeInterface _nestedType;
+
+    @Override
+    public Object getAttributePrototype() {
+<span class="fc" id="L36">        ListAttributeInterface clone = (ListAttributeInterface) super.getAttributePrototype();</span>
+<span class="fc" id="L37">        clone.setNestedAttributeType(this.getNestedAttributeType());</span>
+<span class="fc" id="L38">        return clone;</span>
+    }
+
+    @Override
+    public void setComplexAttributeConfig(Element attributeElement, Map&lt;String, AttributeInterface&gt; attrTypes) throws ApsSystemException {
+<span class="fc" id="L43">        Element nestedTypeRootElement = attributeElement.getChild(&quot;nestedtype&quot;);</span>
+<span class="pc bpc" id="L44" title="1 of 2 branches missed.">        if (null == nestedTypeRootElement) {</span>
+<span class="nc" id="L45">            this.setOldComplexAttributeConfig(attributeElement, attrTypes);</span>
+<span class="nc" id="L46">            return;</span>
+        }
+<span class="fc" id="L48">        List&lt;Element&gt; nestedTypeAttributeElements = nestedTypeRootElement.getChildren();</span>
+<span class="pc bpc" id="L49" title="2 of 4 branches missed.">        if (nestedTypeAttributeElements == null || nestedTypeAttributeElements.size() != 1) {</span>
+<span class="nc" id="L50">            throw new ApsSystemException(</span>
+<span class="nc" id="L51">                    &quot;Wrong list attribute element detected: Wrong number of nested type in attribute list &quot; + this.getName());</span>
+        }
+<span class="fc" id="L53">        Element nestedTypeAttributeElement = nestedTypeAttributeElements.get(0);</span>
+<span class="fc" id="L54">        String nestedTypeCode = this.extractXmlAttribute(nestedTypeAttributeElement, &quot;attributetype&quot;, true);</span>
+<span class="fc" id="L55">        AttributeInterface nestedType = attrTypes.get(nestedTypeCode);</span>
+<span class="pc bpc" id="L56" title="1 of 2 branches missed.">        if (nestedType == null) {</span>
+<span class="nc" id="L57">            throw new ApsSystemException(&quot;Wrong list attribute element detected: &quot;</span>
+<span class="nc" id="L58">                    + nestedType + &quot;, in attribute list &quot; + this.getName());</span>
+        }
+<span class="fc" id="L60">        nestedType = (AttributeInterface) nestedType.getAttributePrototype();</span>
+<span class="fc" id="L61">        nestedType.setAttributeConfig(nestedTypeAttributeElement);</span>
+<span class="fc bfc" id="L62" title="All 2 branches covered.">        if (!nestedType.isSimple()) {</span>
+<span class="fc" id="L63">            ((AbstractComplexAttribute) nestedType).setComplexAttributeConfig(nestedTypeAttributeElement, attrTypes);</span>
+        }
+<span class="fc" id="L65">        nestedType.setName(super.getName());</span>
+<span class="fc" id="L66">        this.setNestedAttributeType(nestedType);</span>
+<span class="fc" id="L67">    }</span>
+
+    @Deprecated(/**
+     * INSERTED to guaranted compatibility with previsous version of
+     * jAPS 2.0.12
+    */
+    )
+    private void setOldComplexAttributeConfig(Element attributeElement, Map&lt;String, AttributeInterface&gt; attrTypes)
+            throws ApsSystemException {
+<span class="nc" id="L76">        String nestedTypeCode = this.extractXmlAttribute(attributeElement, &quot;nestedtype&quot;, true);</span>
+<span class="nc" id="L77">        AttributeInterface nestedType = attrTypes.get(nestedTypeCode);</span>
+<span class="nc bnc" id="L78" title="All 2 branches missed.">        if (nestedType == null) {</span>
+<span class="nc" id="L79">            throw new ApsSystemException(&quot;Wrong list attribute element detected: &quot;</span>
+<span class="nc" id="L80">                    + nestedType + &quot;, in attribute list &quot; + this.getName());</span>
+        }
+<span class="nc" id="L82">        nestedType = (AttributeInterface) nestedType.getAttributePrototype();</span>
+<span class="nc" id="L83">        nestedType.setAttributeConfig(attributeElement);</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">        if (!nestedType.isSimple()) {</span>
+<span class="nc" id="L85">            ((AbstractComplexAttribute) nestedType).setComplexAttributeConfig(attributeElement, attrTypes);</span>
+        }
+<span class="nc" id="L87">        this.setNestedAttributeType(nestedType);</span>
+<span class="nc" id="L88">    }</span>
+
+    @Override
+    public Element getJDOMConfigElement() {
+<span class="fc" id="L92">        Element configElement = super.getJDOMConfigElement();</span>
+<span class="fc" id="L93">        Element nestedTypeRootElement = new Element(&quot;nestedtype&quot;);</span>
+<span class="fc" id="L94">        configElement.addContent(nestedTypeRootElement);</span>
+<span class="fc" id="L95">        Element nestedTypeElement = this.getNestedAttributeType().getJDOMConfigElement();</span>
+<span class="fc" id="L96">        nestedTypeRootElement.addContent(nestedTypeElement);</span>
+<span class="fc" id="L97">        return configElement;</span>
+    }
+
+    @Override
+    protected String getTypeConfigElementName() {
+<span class="fc" id="L102">        return &quot;list&quot;;</span>
+    }
+
+    /**
+     * Return the attribute to utilize as prototype for the creation of the elements to add to the list of attributes.
+     *
+     * @return The prototype attribute.
+     */
+    public AttributeInterface getNestedAttributeType() {
+<span class="fc" id="L111">        return this._nestedType;</span>
+    }
+
+    /**
+     * Set up the attribute to utilize as prototype for the creation of the elements to add to the list of attributes.
+     *
+     * @param attribute The prototype attribute.
+     */
+    @Override
+    public void setNestedAttributeType(AttributeInterface attribute) {
+<span class="fc" id="L121">        this._nestedType = attribute;</span>
+<span class="fc" id="L122">    }</span>
+
+    /**
+     * Return the string which identifies the type of the attributes which will be held in this class.
+     *
+     * @return The code of the Attribute Type.
+     */
+    @Override
+    public String getNestedAttributeTypeCode() {
+<span class="fc" id="L131">        return this.getNestedAttributeType().getType();</span>
+    }
+
+    /**
+     * This method overrides the method of the abstract class it derives from, because this kind of attribute can never be &quot;indexable&quot; and
+     * so it always returns the constant 'INDEXING_TYPE_NONE', belonging to 'AttributeInterface', which declares it not searchable.
+     * Declaring a complex attribute indexable will result in its constituting elements to be considered as such.
+     *
+     * @see com.agiletec.aps.system.common.entity.model.attribute.AttributeInterface#getIndexingType()
+     */
+    @Override
+    public String getIndexingType() {
+<span class="fc" id="L143">        return IndexableAttributeInterface.INDEXING_TYPE_NONE;</span>
+    }
+
+    /**
+     * This method overrides the method of the abstract class it derives from, because this kind of attribute can never be &quot;searchable&quot; and
+     * so it always return a 'false' value.
+     *
+     * @return Return always false.
+     * @see com.agiletec.aps.system.common.entity.model.attribute.AttributeInterface#isSearchable()
+     */
+    @Override
+    public boolean isSearchable() {
+<span class="fc" id="L155">        return false;</span>
+    }
+
+    @Override
+    protected AbstractJAXBAttribute getJAXBAttributeInstance() {
+<span class="fc" id="L160">        return new JAXBListAttribute();</span>
+    }
+
+    protected List&lt;AbstractJAXBAttribute&gt; extractJAXBListAttributes(List&lt;AttributeInterface&gt; attributes, String langCode) {
+<span class="fc" id="L164">        List&lt;AbstractJAXBAttribute&gt; jaxbAttributes = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L165" title="All 2 branches covered.">        for (int i = 0; i &lt; attributes.size(); i++) {</span>
+<span class="fc" id="L166">            AttributeInterface attribute = attributes.get(i);</span>
+<span class="fc" id="L167">            jaxbAttributes.add(attribute.getJAXBAttribute(langCode));</span>
+        }
+<span class="fc" id="L169">        return jaxbAttributes;</span>
+    }
+
+    @Override
+    public JAXBListAttributeType getJAXBAttributeType() {
+<span class="nc" id="L174">        JAXBListAttributeType jaxbAttribute = (JAXBListAttributeType) super.getJAXBAttributeType();</span>
+<span class="nc" id="L175">        AttributeInterface nestedType = this.getNestedAttributeType();</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">        if (null != nestedType) {</span>
+<span class="nc" id="L177">            jaxbAttribute.setNestedType(nestedType.getJAXBAttributeType());</span>
+        }
+<span class="nc" id="L179">        return jaxbAttribute;</span>
+    }
+
+    @Override
+    protected DefaultJAXBAttributeType getJAXBAttributeTypeInstance() {
+<span class="nc" id="L184">        return new JAXBListAttributeType();</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

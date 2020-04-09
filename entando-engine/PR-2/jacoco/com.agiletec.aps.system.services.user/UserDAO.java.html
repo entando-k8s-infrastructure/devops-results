@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserDAO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.services.user</a> &gt; <span class="el_source">UserDAO.java</span></div><h1>UserDAO.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package com.agiletec.aps.system.services.user;
+
+import com.agiletec.aps.system.common.AbstractDAO;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Types;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+/**
+ * Data Access Object per gli oggetti Utente.
+ *
+ * @author M.Diana - E.Santoboni
+ */
+<span class="fc" id="L35">public class UserDAO extends AbstractDAO implements IUserDAO {</span>
+
+<span class="fc" id="L37">    private static final Logger logger = LoggerFactory.getLogger(UserDAO.class);</span>
+    private static final String PREFIX_LOAD_USERNAMES
+            = &quot;SELECT authusers.username FROM authusers &quot;;
+    private static final String PREFIX_LOAD_USERS
+            = &quot;SELECT authusers.username, authusers.passwd, authusers.registrationdate, &quot;
+            + &quot;authusers.lastaccess, authusers.lastpasswordchange, authusers.active FROM authusers &quot;;
+    private static final String LOAD_USERNAMES
+            = PREFIX_LOAD_USERNAMES + &quot;ORDER BY authusers.username&quot;;
+    private static final String LOAD_USERS
+            = PREFIX_LOAD_USERS + &quot;ORDER BY authusers.username&quot;;
+    private static final String SEARCH_USERNAMES_BY_TEXT
+            = PREFIX_LOAD_USERNAMES + &quot; WHERE authusers.username LIKE ? ORDER BY authusers.username&quot;;
+    private static final String SEARCH_USERS_BY_TEXT
+            = PREFIX_LOAD_USERS + &quot; WHERE authusers.username LIKE ? ORDER BY authusers.username&quot;;
+    private static final String LOAD_USER_FROM_USERNAME
+            = PREFIX_LOAD_USERS + &quot;WHERE authusers.username = ? &quot;;
+    private static final String DELETE_USER
+            = &quot;DELETE FROM authusers WHERE username = ? &quot;;
+    private static final String ADD_USER
+            = &quot;INSERT INTO authusers (username, passwd, registrationdate, active) VALUES ( ? , ? , ? , ? )&quot;;
+    private static final String CHANGE_PASSWORD
+            = &quot;UPDATE authusers SET passwd = ? , lastpasswordchange = ? WHERE username = ? &quot;;
+    private static final String UPDATE_USER
+            = &quot;UPDATE authusers SET lastaccess = ? , lastpasswordchange = ? , active = ? WHERE username = ? &quot;;
+    private static final String UPDATE_LAST_ACCESS
+            = &quot;UPDATE authusers SET lastaccess = ? WHERE username = ? &quot;;
+    private PasswordEncoder passwordEncoder;
+
+    @Override
+    public List&lt;String&gt; loadUsernames() {
+<span class="nc" id="L67">        return this.searchUsernames(null);</span>
+    }
+
+    @Override
+    public List&lt;String&gt; searchUsernames(String text) {
+<span class="pc bpc" id="L72" title="3 of 4 branches missed.">        if (null != text &amp;&amp; text.trim().length() == 0) {</span>
+<span class="nc" id="L73">            text = null;</span>
+        }
+<span class="fc" id="L75">        Connection conn = null;</span>
+<span class="fc" id="L76">        List&lt;String&gt; usernames = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L77">        PreparedStatement stat = null;</span>
+<span class="fc" id="L78">        ResultSet res = null;</span>
+        try {
+<span class="fc" id="L80">            conn = this.getConnection();</span>
+<span class="pc bpc" id="L81" title="1 of 2 branches missed.">            if (text == null) {</span>
+<span class="fc" id="L82">                stat = conn.prepareStatement(LOAD_USERNAMES);</span>
+            } else {
+<span class="nc" id="L84">                stat = conn.prepareStatement(SEARCH_USERNAMES_BY_TEXT);</span>
+<span class="nc" id="L85">                stat.setString(1, &quot;%&quot; + text + &quot;%&quot;);</span>
+            }
+<span class="fc" id="L87">            res = stat.executeQuery();</span>
+<span class="fc bfc" id="L88" title="All 2 branches covered.">            while (res.next()) {</span>
+<span class="fc" id="L89">                usernames.add(res.getString(1));</span>
+            }
+<span class="nc" id="L91">        } catch (Throwable t) {</span>
+<span class="nc" id="L92">            logger.error(&quot;Error loading the usernames list&quot;, t);</span>
+<span class="nc" id="L93">            throw new RuntimeException(&quot;Error loading the usernames list&quot;, t);</span>
+        } finally {
+<span class="fc" id="L95">            closeDaoResources(res, stat, conn);</span>
+        }
+<span class="fc" id="L97">        return usernames;</span>
+    }
+
+    @Override
+    public List&lt;UserDetails&gt; loadUsers() {
+<span class="fc" id="L102">        return this.searchUsers(null);</span>
+    }
+
+    @Override
+    public List&lt;UserDetails&gt; searchUsers(String text) {
+<span class="pc bpc" id="L107" title="3 of 4 branches missed.">        if (null != text &amp;&amp; text.trim().length() == 0) {</span>
+<span class="nc" id="L108">            text = null;</span>
+        }
+<span class="fc" id="L110">        Connection conn = null;</span>
+<span class="fc" id="L111">        List&lt;UserDetails&gt; users = null;</span>
+<span class="fc" id="L112">        PreparedStatement stat = null;</span>
+<span class="fc" id="L113">        ResultSet res = null;</span>
+        try {
+<span class="fc" id="L115">            conn = this.getConnection();</span>
+<span class="pc bpc" id="L116" title="1 of 2 branches missed.">            if (text == null) {</span>
+<span class="fc" id="L117">                stat = conn.prepareStatement(LOAD_USERS);</span>
+            } else {
+<span class="nc" id="L119">                stat = conn.prepareStatement(SEARCH_USERS_BY_TEXT);</span>
+<span class="nc" id="L120">                stat.setString(1, &quot;%&quot; + text + &quot;%&quot;);</span>
+            }
+<span class="fc" id="L122">            res = stat.executeQuery();</span>
+<span class="fc" id="L123">            users = this.loadUsers(res);</span>
+<span class="nc" id="L124">        } catch (Throwable t) {</span>
+<span class="nc" id="L125">            logger.error(&quot;Error while searching users  by '{}' &quot;, text, t);</span>
+<span class="nc" id="L126">            throw new RuntimeException(&quot;Error while searching users&quot;, t);</span>
+        } finally {
+<span class="fc" id="L128">            closeDaoResources(res, stat, conn);</span>
+        }
+<span class="fc" id="L130">        return users;</span>
+    }
+
+    protected List&lt;UserDetails&gt; loadUsers(ResultSet result) throws SQLException {
+<span class="fc" id="L134">        List&lt;UserDetails&gt; users = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L135" title="All 2 branches covered.">        while (result.next()) {</span>
+<span class="fc" id="L136">            String userName = result.getString(1);</span>
+<span class="fc" id="L137">            User user = new User();</span>
+<span class="fc" id="L138">            user.setUsername(userName);</span>
+<span class="fc" id="L139">            user.setPassword(result.getString(2));</span>
+<span class="fc" id="L140">            user.setCreationDate(result.getDate(3));</span>
+<span class="fc" id="L141">            user.setLastAccess(result.getDate(4));</span>
+<span class="fc" id="L142">            user.setLastPasswordChange(result.getDate(5));</span>
+<span class="fc" id="L143">            int activeId = result.getInt(6);</span>
+<span class="pc bpc" id="L144" title="1 of 2 branches missed.">            user.setDisabled(activeId != 1);</span>
+<span class="fc" id="L145">            users.add(user);</span>
+<span class="fc" id="L146">        }</span>
+<span class="fc" id="L147">        return users;</span>
+    }
+
+    /**
+     * Carica un'utente corrispondente alla userName e password immessa. null se non vi è nessun utente corrispondente.
+     *
+     * @param username Nome utente dell'utente cercato
+     * @param password password dell'utente cercato
+     * @return L'oggetto utente corrispondente ai parametri richiesti, oppure null se non vi è nessun utente corrispondente.
+     */
+    @Override
+    public UserDetails loadUser(String username, String password) {
+        try {
+<span class="fc" id="L160">            UserDetails user = this.loadUser(username);</span>
+<span class="fc bfc" id="L161" title="All 4 branches covered.">            if (user != null &amp;&amp; passwordEncoder.matches(password, user.getPassword())) {</span>
+<span class="fc" id="L162">                return user;</span>
+            }
+<span class="nc" id="L164">        } catch (Throwable t) {</span>
+<span class="nc" id="L165">            logger.error(&quot;Error while loading the user {} &quot;, username, t);</span>
+<span class="nc" id="L166">            throw new RuntimeException(&quot;Error while loading the user &quot; + username, t);</span>
+<span class="fc" id="L167">        }</span>
+<span class="fc" id="L168">        return null;</span>
+    }
+
+    /**
+     * Carica un'utente corrispondente alla userName immessa. null se non vi è nessun utente corrispondente.
+     *
+     * @param username Nome utente dell'utente cercato.
+     * @return L'oggetto utente corrispondente ai parametri richiesti, oppure null se non vi è nessun utente corrispondente.
+     */
+    @Override
+    public UserDetails loadUser(String username) {
+<span class="fc" id="L179">        Connection conn = null;</span>
+<span class="fc" id="L180">        User user = null;</span>
+<span class="fc" id="L181">        PreparedStatement stat = null;</span>
+<span class="fc" id="L182">        ResultSet res = null;</span>
+        try {
+<span class="fc" id="L184">            conn = this.getConnection();</span>
+<span class="fc" id="L185">            stat = conn.prepareStatement(LOAD_USER_FROM_USERNAME);</span>
+<span class="fc" id="L186">            stat.setString(1, username);</span>
+<span class="fc" id="L187">            res = stat.executeQuery();</span>
+<span class="fc" id="L188">            user = this.createUserFromRecord(res);</span>
+<span class="nc" id="L189">        } catch (Throwable t) {</span>
+<span class="nc" id="L190">            logger.error(&quot;Error while loading the user {}&quot;, username, t);</span>
+<span class="nc" id="L191">            throw new RuntimeException(&quot;Error while loading the user &quot; + username, t);</span>
+        } finally {
+<span class="fc" id="L193">            closeDaoResources(res, stat, conn);</span>
+        }
+<span class="fc" id="L195">        return user;</span>
+    }
+
+    /**
+     * Cancella l'utente.
+     *
+     * @param user L'oggetto di tipo User relativo all'utente da cancellare.
+     */
+    @Override
+    public void deleteUser(UserDetails user) {
+<span class="fc" id="L205">        this.deleteUser(user.getUsername());</span>
+<span class="fc" id="L206">    }</span>
+
+    /**
+     * Cancella l'utente corrispondente alla userName immessa.
+     *
+     * @param username Il nome identificatore dell'utente.
+     */
+    @Override
+    public void deleteUser(String username) {
+<span class="fc" id="L215">        Connection conn = null;</span>
+<span class="fc" id="L216">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L218">            conn = this.getConnection();</span>
+<span class="fc" id="L219">            conn.setAutoCommit(false);</span>
+            //this.removeUserGroups(username, conn);
+            //this.removeUserRoles(username, conn);
+<span class="fc" id="L222">            stat = conn.prepareStatement(DELETE_USER);</span>
+<span class="fc" id="L223">            stat.setString(1, username);</span>
+<span class="fc" id="L224">            stat.executeUpdate();</span>
+<span class="fc" id="L225">            conn.commit();</span>
+<span class="nc" id="L226">        } catch (Throwable t) {</span>
+<span class="nc" id="L227">            this.executeRollback(conn);</span>
+<span class="nc" id="L228">            logger.error(&quot;Error while deleting the user {}&quot;, username, t);</span>
+<span class="nc" id="L229">            throw new RuntimeException(&quot;Error while deleting the user &quot; + username, t);</span>
+        } finally {
+<span class="fc" id="L231">            closeDaoResources(null, stat, conn);</span>
+        }
+<span class="fc" id="L233">    }</span>
+
+    /**
+     * Aggiunge un nuovo utente.
+     *
+     * @param user Oggetto di tipo User relativo all'utente da aggiungere.
+     */
+    @Override
+    public void addUser(UserDetails user) {
+<span class="fc" id="L242">        Connection conn = null;</span>
+<span class="fc" id="L243">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L245">            conn = this.getConnection();</span>
+<span class="fc" id="L246">            conn.setAutoCommit(false);</span>
+<span class="fc" id="L247">            stat = conn.prepareStatement(ADD_USER);</span>
+<span class="fc" id="L248">            stat.setString(1, user.getUsername());</span>
+<span class="fc" id="L249">            String encodedPassword = passwordEncoder.encode(user.getPassword());</span>
+<span class="fc" id="L250">            stat.setString(2, encodedPassword);</span>
+<span class="fc" id="L251">            stat.setDate(3, new java.sql.Date(new java.util.Date().getTime()));</span>
+<span class="pc bpc" id="L252" title="1 of 2 branches missed.">            if (!user.isDisabled()) {</span>
+<span class="fc" id="L253">                stat.setInt(4, 1);</span>
+            } else {
+<span class="nc" id="L255">                stat.setInt(4, 0);</span>
+            }
+<span class="fc" id="L257">            stat.executeUpdate();</span>
+<span class="fc" id="L258">            conn.commit();</span>
+<span class="nc" id="L259">        } catch (Throwable t) {</span>
+<span class="nc" id="L260">            this.executeRollback(conn);</span>
+<span class="nc" id="L261">            logger.error(&quot;Error while adding a new user {}&quot;, user, t);</span>
+<span class="nc" id="L262">            throw new RuntimeException(&quot;Error while adding a new user&quot;, t);</span>
+        } finally {
+<span class="fc" id="L264">            closeDaoResources(null, stat, conn);</span>
+        }
+<span class="fc" id="L266">    }</span>
+
+    /**
+     * Aggiorna un utente già presente con nuovi valori (tranne la username che è fissa).
+     *
+     * @param user Oggetto di tipo User relativo all'utente da aggiornare.
+     */
+    @Override
+    public void updateUser(UserDetails user) {
+<span class="pc bpc" id="L275" title="1 of 2 branches missed.">        User entandoUser = ((user instanceof User) ? (User) user : null);</span>
+<span class="fc" id="L276">        Connection conn = null;</span>
+<span class="fc" id="L277">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L279">            conn = this.getConnection();</span>
+<span class="fc" id="L280">            conn.setAutoCommit(false);</span>
+<span class="fc" id="L281">            stat = conn.prepareStatement(UPDATE_USER);</span>
+<span class="pc bpc" id="L282" title="1 of 4 branches missed.">            if (null != entandoUser &amp;&amp; null != entandoUser.getLastAccess()) {</span>
+<span class="fc" id="L283">                stat.setDate(1, new java.sql.Date(entandoUser.getLastAccess().getTime()));</span>
+            } else {
+<span class="fc" id="L285">                stat.setNull(1, Types.DATE);</span>
+            }
+<span class="pc bpc" id="L287" title="1 of 4 branches missed.">            if (null != entandoUser &amp;&amp; null != entandoUser.getLastPasswordChange()) {</span>
+<span class="fc" id="L288">                stat.setDate(2, new java.sql.Date(entandoUser.getLastPasswordChange().getTime()));</span>
+            } else {
+<span class="fc" id="L290">                stat.setNull(2, Types.DATE);</span>
+            }
+<span class="pc bpc" id="L292" title="1 of 2 branches missed.">            if (null != entandoUser) {</span>
+<span class="pc bpc" id="L293" title="1 of 2 branches missed.">                if (!entandoUser.isDisabled()) {</span>
+<span class="fc" id="L294">                    stat.setInt(3, 1);</span>
+                } else {
+<span class="nc" id="L296">                    stat.setInt(3, 0);</span>
+                }
+            } else {
+<span class="nc" id="L299">                stat.setNull(3, Types.NUMERIC);</span>
+            }
+<span class="fc" id="L301">            stat.setString(4, user.getUsername());</span>
+<span class="fc" id="L302">            stat.executeUpdate();</span>
+<span class="fc" id="L303">            conn.commit();</span>
+<span class="nc" id="L304">        } catch (Throwable t) {</span>
+<span class="nc" id="L305">            this.executeRollback(conn);</span>
+<span class="nc" id="L306">            logger.error(&quot;Error while updating the user {}&quot;, user.getUsername(), t);</span>
+<span class="nc" id="L307">            throw new RuntimeException(&quot;Error while adding a new user&quot;, t);</span>
+        } finally {
+<span class="fc" id="L309">            closeDaoResources(null, stat, conn);</span>
+        }
+<span class="fc" id="L311">    }</span>
+
+    @Override
+    public void changePassword(String username, String password) {
+<span class="fc" id="L315">        Connection conn = null;</span>
+<span class="fc" id="L316">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L318">            conn = this.getConnection();</span>
+<span class="fc" id="L319">            conn.setAutoCommit(false);</span>
+<span class="fc" id="L320">            stat = conn.prepareStatement(CHANGE_PASSWORD);</span>
+<span class="fc" id="L321">            String encodedPassowrd = passwordEncoder.encode(password);</span>
+<span class="fc" id="L322">            stat.setString(1, encodedPassowrd);</span>
+<span class="fc" id="L323">            stat.setDate(2, new java.sql.Date(new Date().getTime()));</span>
+<span class="fc" id="L324">            stat.setString(3, username);</span>
+<span class="fc" id="L325">            stat.executeUpdate();</span>
+<span class="fc" id="L326">            conn.commit();</span>
+<span class="nc" id="L327">        } catch (Throwable t) {</span>
+<span class="nc" id="L328">            this.executeRollback(conn);</span>
+<span class="nc" id="L329">            logger.error(&quot;Error updating the password for the user {}&quot;, username, t);</span>
+<span class="nc" id="L330">            throw new RuntimeException(&quot;Error updating the password for the user &quot; + username, t);</span>
+        } finally {
+<span class="fc" id="L332">            closeDaoResources(null, stat, conn);</span>
+        }
+<span class="fc" id="L334">    }</span>
+
+    @Override
+    public void updateLastAccess(String username) {
+<span class="fc" id="L338">        Connection conn = null;</span>
+<span class="fc" id="L339">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L341">            conn = this.getConnection();</span>
+<span class="fc" id="L342">            conn.setAutoCommit(false);</span>
+<span class="fc" id="L343">            stat = conn.prepareStatement(UPDATE_LAST_ACCESS);</span>
+<span class="fc" id="L344">            stat.setDate(1, new java.sql.Date(new java.util.Date().getTime()));</span>
+<span class="fc" id="L345">            stat.setString(2, username);</span>
+<span class="fc" id="L346">            stat.executeUpdate();</span>
+<span class="fc" id="L347">            conn.commit();</span>
+<span class="nc" id="L348">        } catch (Throwable t) {</span>
+<span class="nc" id="L349">            this.executeRollback(conn);</span>
+<span class="nc" id="L350">            logger.error(&quot;Error updating the last access for the user {}&quot;, username, t);</span>
+<span class="nc" id="L351">            throw new RuntimeException(&quot;Error updating the last access for the user &quot; + username, t);</span>
+        } finally {
+<span class="fc" id="L353">            closeDaoResources(null, stat, conn);</span>
+        }
+<span class="fc" id="L355">    }</span>
+
+    /**
+     * Crea un utente leggendo i valori dal record corrente del ResultSet passato. Attenzione: la query di origine del ResultSet deve avere
+     * nella select list i campi esattamente in questo numero e ordine: 1=username, 2=passwd
+     *
+     * @param res Il ResultSet da cui leggere i valori
+     * @return L'oggetto user popolato.
+     */
+    protected User createUserFromRecord(ResultSet res) throws SQLException {
+<span class="fc" id="L365">        User user = null;</span>
+<span class="fc bfc" id="L366" title="All 2 branches covered.">        if (res.next()) {</span>
+<span class="fc" id="L367">            user = new User();</span>
+<span class="fc" id="L368">            user.setUsername(res.getString(1));</span>
+<span class="fc" id="L369">            user.setPassword(res.getString(2));</span>
+<span class="fc" id="L370">            user.setCreationDate(res.getDate(3));</span>
+<span class="fc" id="L371">            user.setLastAccess(res.getDate(4));</span>
+<span class="fc" id="L372">            user.setLastPasswordChange(res.getDate(5));</span>
+<span class="fc" id="L373">            int activeId = res.getInt(6);</span>
+<span class="pc bpc" id="L374" title="1 of 2 branches missed.">            user.setDisabled(activeId != 1);</span>
+        }
+<span class="fc" id="L376">        return user;</span>
+    }
+
+    @Override
+    public PasswordEncoder getPasswordEncoder() {
+<span class="nc" id="L381">        return passwordEncoder;</span>
+    }
+
+    public void setPasswordEncoder(PasswordEncoder encoder) {
+<span class="fc" id="L385">        this.passwordEncoder = encoder;</span>
+<span class="fc" id="L386">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RoleManager.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.services.role</a> &gt; <span class="el_source">RoleManager.java</span></div><h1>RoleManager.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package com.agiletec.aps.system.services.role;
+
+import com.agiletec.aps.system.common.AbstractService;
+import com.agiletec.aps.system.exception.ApsSystemException;
+import com.agiletec.aps.system.services.role.cache.IPermissionCacheWrapper;
+import com.agiletec.aps.system.services.role.cache.IRoleCacheWrapper;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Servizio di gestione dei ruoli.
+ *
+ * @author M.Diana - E.Santoboni
+ */
+<span class="fc" id="L33">public class RoleManager extends AbstractService implements IRoleManager {</span>
+
+<span class="fc" id="L35">    private static final Logger logger = LoggerFactory.getLogger(RoleManager.class);</span>
+
+    private IRoleDAO roleDao;
+    private IPermissionDAO permissionDao;
+    private IRoleCacheWrapper roleCacheWrapper;
+    private IPermissionCacheWrapper permissionCacheWrapper;
+
+    @Override
+    public void init() throws Exception {
+<span class="fc" id="L44">        this.getPermissionCacheWrapper().initCache(this.getPermissionDAO());</span>
+<span class="fc" id="L45">        this.getRoleCacheWrapper().initCache(this.getRoleDAO());</span>
+<span class="fc" id="L46">        logger.debug(&quot;{} : initialized&quot;, this.getClass().getName());</span>
+<span class="fc" id="L47">    }</span>
+
+    /**
+     * Restituisce la lista dei ruoli esistenti.
+     *
+     * @return La lista dei ruoli esistenti.
+     */
+    @Override
+    public List&lt;Role&gt; getRoles() {
+<span class="fc" id="L56">        return this.getRoleCacheWrapper().getRoles();</span>
+    }
+
+    /**
+     * Restituisce un ruolo in base al nome.
+     *
+     * @param roleName Il nome del ruolo richesto.
+     * @return Il ruolo cercato.
+     */
+    @Override
+    public Role getRole(String roleName) {
+<span class="fc" id="L67">        return this.getRoleCacheWrapper().getRole(roleName);</span>
+    }
+
+    /**
+     * Rimuove un ruolo dal db e dalla mappa dei ruoli.
+     *
+     * @param role Oggetto di tipo Role relativo al ruolo da rimuovere.
+     * @throws ApsSystemException in caso di errore nell'accesso al db.
+     */
+    @Override
+    public void removeRole(Role role) throws ApsSystemException {
+        try {
+<span class="fc" id="L79">            this.getRoleDAO().deleteRole(role);</span>
+<span class="fc" id="L80">            this.getRoleCacheWrapper().removeRole(role);</span>
+<span class="nc" id="L81">        } catch (Throwable t) {</span>
+<span class="nc" id="L82">            logger.error(&quot;Error while removing a role&quot;, t);</span>
+<span class="nc" id="L83">            throw new ApsSystemException(&quot;Error while removing a role&quot;, t);</span>
+<span class="fc" id="L84">        }</span>
+<span class="fc" id="L85">    }</span>
+
+    /**
+     * Aggiorna un ruolo sul db ed sulla mappa dei ruoli.
+     *
+     * @param role Il ruolo da aggiornare.
+     * @throws ApsSystemException in caso di errore nell'accesso al db.
+     */
+    @Override
+    public void updateRole(Role role) throws ApsSystemException {
+        try {
+<span class="fc" id="L96">            this.getRoleDAO().updateRole(role);</span>
+<span class="fc" id="L97">            this.getRoleCacheWrapper().updateRole(role);</span>
+<span class="nc" id="L98">        } catch (Throwable t) {</span>
+<span class="nc" id="L99">            logger.error(&quot;Error while updating a role&quot;, t);</span>
+<span class="nc" id="L100">            throw new ApsSystemException(&quot;Error while updating a role&quot;, t);</span>
+<span class="fc" id="L101">        }</span>
+<span class="fc" id="L102">    }</span>
+
+    /**
+     * Aggiunge un ruolo al db ed alla mappa dei ruoli.
+     *
+     * @param role Oggetto di tipo Role relativo al ruolo da aggiungere.
+     * @throws ApsSystemException in caso di errore nell'accesso al db.
+     */
+    @Override
+    public void addRole(Role role) throws ApsSystemException {
+        try {
+<span class="fc" id="L113">            this.getRoleDAO().addRole(role);</span>
+<span class="fc" id="L114">            this.getRoleCacheWrapper().addRole(role);</span>
+<span class="nc" id="L115">        } catch (Throwable t) {</span>
+<span class="nc" id="L116">            logger.error(&quot;Error while adding a role&quot;, t);</span>
+<span class="nc" id="L117">            throw new ApsSystemException(&quot;Error while adding a role&quot;, t);</span>
+<span class="fc" id="L118">        }</span>
+<span class="fc" id="L119">    }</span>
+
+    /**
+     * Restituisce la lista ordinata (secondo il nome) dei permessi di autorizzazione.
+     *
+     * @return La lista ordinata dei permessi
+     */
+    @Override
+    public List&lt;Permission&gt; getPermissions() {
+<span class="fc" id="L128">        List&lt;Permission&gt; permissions = this.getPermissionCacheWrapper().getPermissions();</span>
+<span class="fc" id="L129">        Collections.sort(permissions);</span>
+<span class="fc" id="L130">        return permissions;</span>
+    }
+
+    @Override
+    public List&lt;String&gt; getPermissionsCodes() {
+<span class="fc" id="L135">        List&lt;String&gt; permissions = this.getPermissionCacheWrapper().getPermissionsCodes();</span>
+<span class="fc" id="L136">        Collections.sort(permissions);</span>
+<span class="fc" id="L137">        return permissions;</span>
+    }
+
+    @Override
+    public Permission getPermission(String permissionName) {
+<span class="nc" id="L142">        return this.getPermissionCacheWrapper().getPermission(permissionName);</span>
+    }
+
+    /**
+     * Rimuove il permesso specificato dal db e dai ruoli.
+     *
+     * @param permissionName Il permesso da rimuovere dal ruolo.
+     * @throws ApsSystemException in caso di errore nell'accesso al db.
+     */
+    @Override
+    public void removePermission(String permissionName) throws ApsSystemException {
+        try {
+<span class="fc" id="L154">            this.getPermissionDAO().deletePermission(permissionName);</span>
+<span class="fc" id="L155">            this.getPermissionCacheWrapper().removePermission(permissionName);</span>
+<span class="fc" id="L156">            List&lt;Role&gt; roles = this.getRolesWithPermission(permissionName);</span>
+<span class="fc" id="L157">            Iterator&lt;Role&gt; roleIt = roles.iterator();</span>
+<span class="pc bpc" id="L158" title="1 of 2 branches missed.">            while (roleIt.hasNext()) {</span>
+<span class="nc" id="L159">                Role role = roleIt.next();</span>
+<span class="nc" id="L160">                role.removePermission(permissionName);</span>
+<span class="nc" id="L161">                this.getRoleCacheWrapper().updateRole(role);</span>
+<span class="nc" id="L162">            }</span>
+<span class="nc" id="L163">        } catch (Throwable t) {</span>
+<span class="nc" id="L164">            logger.error(&quot;Error while deleting permission {}&quot;, permissionName, t);</span>
+<span class="nc" id="L165">            throw new ApsSystemException(&quot;Error while deleting a permission&quot;, t);</span>
+<span class="fc" id="L166">        }</span>
+<span class="fc" id="L167">    }</span>
+
+    /**
+     * Aggiorna un permesso di autorizzazione nel db.
+     *
+     * @param permission Il permesso da aggiornare nel db.
+     * @throws ApsSystemException in caso di errore nell'accesso al db.
+     */
+    @Override
+    public void updatePermission(Permission permission) throws ApsSystemException {
+        try {
+<span class="fc" id="L178">            this.getPermissionDAO().updatePermission(permission);</span>
+<span class="fc" id="L179">            this.getPermissionCacheWrapper().updatePermission(permission);</span>
+<span class="nc" id="L180">        } catch (Throwable t) {</span>
+<span class="nc" id="L181">            logger.error(&quot;Error updating permission&quot;, t);</span>
+<span class="nc" id="L182">            throw new ApsSystemException(&quot;Error while updating perrmission&quot;, t);</span>
+<span class="fc" id="L183">        }</span>
+<span class="fc" id="L184">    }</span>
+
+    /**
+     * Aggiunge un permesso di autorizzazione nel db.
+     *
+     * @param permission Il permesso da aggiungere nel db.
+     * @throws ApsSystemException in caso di errore nell'accesso al db.
+     */
+    @Override
+    public void addPermission(Permission permission) throws ApsSystemException {
+        try {
+<span class="fc" id="L195">            this.getPermissionDAO().addPermission(permission);</span>
+<span class="fc" id="L196">            this.getPermissionCacheWrapper().addPermission(permission);</span>
+<span class="nc" id="L197">        } catch (Throwable t) {</span>
+<span class="nc" id="L198">            logger.error(&quot;Error while adding a permission&quot;, t);</span>
+<span class="nc" id="L199">            throw new ApsSystemException(&quot;Error while adding a permission&quot;, t);</span>
+<span class="fc" id="L200">        }</span>
+<span class="fc" id="L201">    }</span>
+
+    @Override
+    public List&lt;Role&gt; getRolesWithPermission(String permissionName) {
+<span class="fc" id="L205">        List&lt;Role&gt; rolesWithPerm = new ArrayList&lt;Role&gt;();</span>
+<span class="fc" id="L206">        Iterator&lt;Role&gt; iter = this.getRoles().iterator();</span>
+<span class="fc bfc" id="L207" title="All 2 branches covered.">        while (iter.hasNext()) {</span>
+<span class="fc" id="L208">            Role role = iter.next();</span>
+<span class="fc bfc" id="L209" title="All 2 branches covered.">            if (role.hasPermission(permissionName)) {</span>
+<span class="fc" id="L210">                rolesWithPerm.add(role);</span>
+            }
+<span class="fc" id="L212">        }</span>
+<span class="fc" id="L213">        return rolesWithPerm;</span>
+    }
+
+    protected IPermissionDAO getPermissionDAO() {
+<span class="fc" id="L217">        return permissionDao;</span>
+    }
+
+    public void setPermissionDAO(IPermissionDAO permissionDao) {
+<span class="fc" id="L221">        this.permissionDao = permissionDao;</span>
+<span class="fc" id="L222">    }</span>
+
+    protected IRoleDAO getRoleDAO() {
+<span class="fc" id="L225">        return roleDao;</span>
+    }
+
+    public void setRoleDAO(IRoleDAO roleDao) {
+<span class="fc" id="L229">        this.roleDao = roleDao;</span>
+<span class="fc" id="L230">    }</span>
+
+    protected IRoleCacheWrapper getRoleCacheWrapper() {
+<span class="fc" id="L233">        return roleCacheWrapper;</span>
+    }
+
+    public void setRoleCacheWrapper(IRoleCacheWrapper roleCacheWrapper) {
+<span class="fc" id="L237">        this.roleCacheWrapper = roleCacheWrapper;</span>
+<span class="fc" id="L238">    }</span>
+
+    protected IPermissionCacheWrapper getPermissionCacheWrapper() {
+<span class="fc" id="L241">        return permissionCacheWrapper;</span>
+    }
+
+    public void setPermissionCacheWrapper(IPermissionCacheWrapper permissionCacheWrapper) {
+<span class="fc" id="L245">        this.permissionCacheWrapper = permissionCacheWrapper;</span>
+<span class="fc" id="L246">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ServiceExtraConfigDOM.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.system.services.api</a> &gt; <span class="el_source">ServiceExtraConfigDOM.java</span></div><h1>ServiceExtraConfigDOM.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package org.entando.entando.aps.system.services.api;
+
+import com.agiletec.aps.system.exception.ApsSystemException;
+import java.io.StringReader;
+import java.util.List;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.input.SAXBuilder;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * @author E.Santoboni
+ */
+public class ServiceExtraConfigDOM {
+
+<span class="nc" id="L33">    private static final Logger _logger = LoggerFactory.getLogger(ServiceExtraConfigDOM.class);</span>
+    private static final String FREE_PARAMETERS_ELEMENT_NAME = &quot;freeparameters&quot;;
+    private static final String FREE_PARAMETER_ELEMENT_NAME = &quot;parameter&quot;;
+    private static final String FREE_PARAMETER_ATTRIBUTE_NAME = &quot;name&quot;;
+    private Document _doc;
+
+<span class="nc" id="L39">    protected ServiceExtraConfigDOM() throws ApsSystemException {</span>
+<span class="nc" id="L40">        this._doc = new Document();</span>
+<span class="nc" id="L41">        Element elementRoot = new Element(&quot;config&quot;);</span>
+<span class="nc" id="L42">        this._doc.setRootElement(elementRoot);</span>
+<span class="nc" id="L43">    }</span>
+
+<span class="nc" id="L45">    protected ServiceExtraConfigDOM(String xml) throws ApsSystemException {</span>
+<span class="nc bnc" id="L46" title="All 4 branches missed.">        if (null == xml || xml.trim().length() == 0) {</span>
+<span class="nc" id="L47">            return;</span>
+        }
+<span class="nc" id="L49">        this.decodeDOM(xml);</span>
+<span class="nc" id="L50">    }</span>
+
+    protected String[] extractFreeParameters() {
+<span class="nc" id="L53">        String[] freeParameters = null;</span>
+<span class="nc" id="L54">        Element freeParametersElement = this._doc.getRootElement().getChild(FREE_PARAMETERS_ELEMENT_NAME);</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">        if (null != freeParametersElement) {</span>
+<span class="nc" id="L56">            List&lt;Element&gt; freeParametersElements = freeParametersElement.getChildren(FREE_PARAMETER_ELEMENT_NAME);</span>
+<span class="nc bnc" id="L57" title="All 4 branches missed.">            if (null != freeParametersElements &amp;&amp; freeParametersElements.size() &gt; 0) {</span>
+<span class="nc" id="L58">                freeParameters = new String[freeParametersElements.size()];</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">                for (int i = 0; i &lt; freeParametersElements.size(); i++) {</span>
+<span class="nc" id="L60">                    freeParameters[i] = freeParametersElements.get(i).getAttributeValue(FREE_PARAMETER_ATTRIBUTE_NAME);</span>
+                }
+            }
+        }
+<span class="nc" id="L64">        return freeParameters;</span>
+    }
+
+    private void decodeDOM(String xml) throws ApsSystemException {
+<span class="nc" id="L68">        SAXBuilder builder = new SAXBuilder();</span>
+<span class="nc" id="L69">        builder.setValidation(false);</span>
+<span class="nc" id="L70">        StringReader reader = new StringReader(xml);</span>
+        try {
+<span class="nc" id="L72">            this._doc = builder.build(reader);</span>
+<span class="nc" id="L73">        } catch (Throwable t) {</span>
+<span class="nc" id="L74">            _logger.error(&quot;Error while parsing xml. {} &quot;, xml, t);</span>
+<span class="nc" id="L75">            throw new ApsSystemException(&quot;Error detected while parsing the XML&quot;, t);</span>
+<span class="nc" id="L76">        }</span>
+<span class="nc" id="L77">    }</span>
+
+    public String extractXml(String[] freeParameters) {
+<span class="nc" id="L80">        this.fillDocument(freeParameters);</span>
+<span class="nc" id="L81">        return this.getXMLDocument();</span>
+    }
+
+    protected void fillDocument(String[] freeParameters) {
+<span class="nc bnc" id="L85" title="All 4 branches missed.">        if (null != freeParameters &amp;&amp; freeParameters.length &gt; 0) {</span>
+<span class="nc" id="L86">            Element freeParametersElement = new Element(FREE_PARAMETERS_ELEMENT_NAME);</span>
+<span class="nc" id="L87">            this._doc.getRootElement().addContent(freeParametersElement);</span>
+<span class="nc bnc" id="L88" title="All 2 branches missed.">            for (int i = 0; i &lt; freeParameters.length; i++) {</span>
+<span class="nc" id="L89">                String paramName = freeParameters[i];</span>
+<span class="nc" id="L90">                Element freeParameterElement = new Element(FREE_PARAMETER_ELEMENT_NAME);</span>
+<span class="nc" id="L91">                freeParameterElement.setAttribute(FREE_PARAMETER_ATTRIBUTE_NAME, paramName);</span>
+<span class="nc" id="L92">                freeParametersElement.addContent(freeParameterElement);</span>
+            }
+        }
+<span class="nc" id="L95">    }</span>
+
+    protected String getXMLDocument() {
+<span class="nc" id="L98">        XMLOutputter out = new XMLOutputter();</span>
+<span class="nc" id="L99">        Format format = Format.getPrettyFormat();</span>
+<span class="nc" id="L100">        out.setFormat(format);</span>
+<span class="nc" id="L101">        return out.outputString(this._doc);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

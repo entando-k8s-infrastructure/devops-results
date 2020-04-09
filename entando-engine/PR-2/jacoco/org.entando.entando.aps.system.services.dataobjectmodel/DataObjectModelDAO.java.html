@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DataObjectModelDAO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.system.services.dataobjectmodel</a> &gt; <span class="el_source">DataObjectModelDAO.java</span></div><h1>DataObjectModelDAO.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package org.entando.entando.aps.system.services.dataobjectmodel;
+
+import com.agiletec.aps.system.common.AbstractSearcherDAO;
+import com.agiletec.aps.system.common.FieldSearchFilter;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * Data Access Object per gli oggetti datatype.
+ *
+ * @author M.Diana - C.Siddi - C.Sirigu
+ */
+<span class="fc" id="L36">public class DataObjectModelDAO extends AbstractSearcherDAO implements IDataObjectModelDAO {</span>
+
+<span class="fc" id="L38">    private static final Logger logger = LoggerFactory.getLogger(DataObjectModelDAO.class);</span>
+    private static final String DELETE_DATA_UX
+            = &quot;DELETE FROM dataobjectmodels WHERE modelid = ? &quot;;
+    private static final String ALL_DATA_UX
+            = &quot;SELECT modelid, datatype, descr, model, stylesheet FROM dataobjectmodels&quot;;
+    private static final String ADD_DATA_UX
+            = &quot;INSERT INTO dataobjectmodels (modelid, datatype, descr, model, stylesheet ) VALUES ( ? , ? , ? , ? , ? )&quot;;
+    private static final String UPDATE_DATA_UX
+            = &quot;UPDATE dataobjectmodels SET datatype = ? , descr = ? , model = ? , stylesheet = ? WHERE modelid = ? &quot;;
+
+    private static final String EXTRACT_NEXT_ID
+            = &quot;SELECT MAX(modelid) FROM dataobjectmodels &quot;;
+
+    @Override
+    protected String getTableFieldName(String metadataFieldKey) {
+<span class="fc" id="L53">        return metadataFieldKey;</span>
+    }
+
+    @Override
+    protected String getMasterTableName() {
+<span class="fc" id="L58">        return &quot;dataobjectmodels&quot;;</span>
+    }
+
+    @Override
+    protected String getMasterTableIdFieldName() {
+<span class="fc" id="L63">        return &quot;modelid&quot;;</span>
+    }
+
+    @Override
+    public int countDataObjectModels(FieldSearchFilter[] filters) {
+<span class="fc" id="L68">        return super.countId(filters);</span>
+    }
+
+    @Override
+    public List&lt;Long&gt; searchDataObjectModels(FieldSearchFilter[] filters) {
+<span class="fc" id="L73">        List&lt;String&gt; stringIds = super.searchId(filters);</span>
+<span class="fc" id="L74">        List&lt;Long&gt; ids = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L75">        stringIds.stream().forEach(i -&gt; ids.add(Long.parseLong(i)));</span>
+<span class="fc" id="L76">        return ids;</span>
+    }
+
+    @Override
+    public Map&lt;Long, DataObjectModel&gt; loadDataModels() {
+<span class="fc" id="L81">        Connection conn = null;</span>
+<span class="fc" id="L82">        Statement stat = null;</span>
+<span class="fc" id="L83">        ResultSet res = null;</span>
+<span class="fc" id="L84">        Map&lt;Long, DataObjectModel&gt; models = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L85">        String query = ALL_DATA_UX;</span>
+        try {
+<span class="fc" id="L87">            conn = this.getConnection();</span>
+<span class="fc" id="L88">            stat = conn.createStatement();</span>
+<span class="fc" id="L89">            res = stat.executeQuery(query);</span>
+<span class="fc bfc" id="L90" title="All 2 branches covered.">            while (res.next()) {</span>
+<span class="fc" id="L91">                DataObjectModel contentModel = loadContentModel(res);</span>
+                //Hash map che contiene come chiave l'id e come valore l'oggetto stesso
+<span class="fc" id="L93">                Long wrapLongId = contentModel.getId();</span>
+<span class="fc" id="L94">                models.put(wrapLongId, contentModel);</span>
+<span class="fc" id="L95">            }</span>
+<span class="nc" id="L96">        } catch (Throwable t) {</span>
+<span class="nc" id="L97">            logger.error(&quot;Error loading datatype models&quot;, t);</span>
+<span class="nc" id="L98">            throw new RuntimeException(&quot;Error loading datatype models&quot;, t);</span>
+        } finally {
+<span class="fc" id="L100">            closeDaoResources(res, stat, conn);</span>
+        }
+<span class="fc" id="L102">        return models;</span>
+    }
+
+    @Override
+    public void addDataModel(DataObjectModel model) {
+<span class="fc" id="L107">        Connection conn = null;</span>
+<span class="fc" id="L108">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L110">            conn = this.getConnection();</span>
+<span class="fc" id="L111">            conn.setAutoCommit(false);</span>
+<span class="pc bpc" id="L112" title="1 of 2 branches missed.">            if (0 == model.getId()) {</span>
+<span class="nc" id="L113">                model.setId(this.extractNextId(conn));</span>
+            }
+<span class="fc" id="L115">            stat = conn.prepareStatement(ADD_DATA_UX);</span>
+<span class="fc" id="L116">            stat.setLong(1, model.getId());</span>
+<span class="fc" id="L117">            stat.setString(2, model.getDataType());</span>
+<span class="fc" id="L118">            stat.setString(3, model.getDescription());</span>
+<span class="fc" id="L119">            stat.setString(4, model.getShape());</span>
+<span class="fc" id="L120">            stat.setString(5, model.getStylesheet());</span>
+<span class="fc" id="L121">            stat.executeUpdate();</span>
+<span class="fc" id="L122">            conn.commit();</span>
+<span class="nc" id="L123">        } catch (Throwable t) {</span>
+<span class="nc" id="L124">            this.executeRollback(conn);</span>
+<span class="nc" id="L125">            logger.error(&quot;Error adding datatype ux {}&quot;, model.getId(), t);</span>
+<span class="nc" id="L126">            throw new RuntimeException(&quot;Error adding datatype ux &quot; + model.getId(), t);</span>
+        } finally {
+<span class="fc" id="L128">            closeDaoResources(null, stat, conn);</span>
+        }
+<span class="fc" id="L130">    }</span>
+
+    @Override
+    public void deleteDataModel(DataObjectModel model) {
+<span class="fc" id="L134">        Connection conn = null;</span>
+<span class="fc" id="L135">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L137">            conn = this.getConnection();</span>
+<span class="fc" id="L138">            conn.setAutoCommit(false);</span>
+<span class="fc" id="L139">            stat = conn.prepareStatement(DELETE_DATA_UX);</span>
+<span class="fc" id="L140">            stat.setLong(1, model.getId());</span>
+<span class="fc" id="L141">            stat.executeUpdate();</span>
+<span class="fc" id="L142">            conn.commit();</span>
+<span class="nc" id="L143">        } catch (Throwable t) {</span>
+<span class="nc" id="L144">            this.executeRollback(conn);</span>
+<span class="nc" id="L145">            logger.error(&quot;Error deleting datatype model {} &quot;, model.getId(), t);</span>
+<span class="nc" id="L146">            throw new RuntimeException(&quot;Error deleting datatype model &quot; + model.getId(), t);</span>
+        } finally {
+<span class="fc" id="L148">            closeDaoResources(null, stat, conn);</span>
+        }
+<span class="fc" id="L150">    }</span>
+
+    @Override
+    public void updateDataModel(DataObjectModel model) {
+<span class="fc" id="L154">        Connection conn = null;</span>
+<span class="fc" id="L155">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L157">            conn = this.getConnection();</span>
+<span class="fc" id="L158">            conn.setAutoCommit(false);</span>
+<span class="fc" id="L159">            stat = conn.prepareStatement(UPDATE_DATA_UX);</span>
+<span class="fc" id="L160">            stat.setString(1, model.getDataType());</span>
+<span class="fc" id="L161">            stat.setString(2, model.getDescription());</span>
+<span class="fc" id="L162">            stat.setString(3, model.getShape());</span>
+<span class="fc" id="L163">            stat.setString(4, model.getStylesheet());</span>
+<span class="fc" id="L164">            stat.setLong(5, model.getId());</span>
+<span class="fc" id="L165">            stat.executeUpdate();</span>
+<span class="fc" id="L166">            conn.commit();</span>
+<span class="nc" id="L167">        } catch (Throwable t) {</span>
+<span class="nc" id="L168">            this.executeRollback(conn);</span>
+<span class="nc" id="L169">            logger.error(&quot;Error updating datatype model {} &quot;, model.getId(), t);</span>
+<span class="nc" id="L170">            throw new RuntimeException(&quot;Error updating datatype model &quot; + model.getId(), t);</span>
+        } finally {
+<span class="fc" id="L172">            closeDaoResources(null, stat, conn);</span>
+        }
+<span class="fc" id="L174">    }</span>
+
+    private DataObjectModel loadContentModel(ResultSet res) throws SQLException {
+<span class="fc" id="L177">        DataObjectModel contentModel = new DataObjectModel();</span>
+<span class="fc" id="L178">        contentModel.setId(res.getLong(1));</span>
+<span class="fc" id="L179">        contentModel.setDataType(res.getString(2));</span>
+<span class="fc" id="L180">        contentModel.setDescription(res.getString(3));</span>
+<span class="fc" id="L181">        contentModel.setShape(res.getString(4));</span>
+<span class="fc" id="L182">        contentModel.setStylesheet(res.getString(5));</span>
+<span class="fc" id="L183">        return contentModel;</span>
+    }
+
+    protected long extractNextId(Connection conn) {
+<span class="nc" id="L187">        long id = 0;</span>
+<span class="nc" id="L188">        Statement stat = null;</span>
+<span class="nc" id="L189">        ResultSet res = null;</span>
+        try {
+<span class="nc" id="L191">            stat = conn.createStatement();</span>
+<span class="nc" id="L192">            res = stat.executeQuery(EXTRACT_NEXT_ID);</span>
+<span class="nc" id="L193">            res.next();</span>
+<span class="nc" id="L194">            id = res.getLong(1) + 1; // N.B.: funziona anche per il primo record</span>
+<span class="nc" id="L195">        } catch (Throwable t) {</span>
+<span class="nc" id="L196">            logger.error(&quot;Error extracting next id&quot;, t);</span>
+<span class="nc" id="L197">            throw new RuntimeException(&quot;Error extracting next id&quot;, t);</span>
+        } finally {
+<span class="nc" id="L199">            this.closeDaoResources(res, stat);</span>
+        }
+<span class="nc" id="L201">        return id;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

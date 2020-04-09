@@ -1,0 +1,684 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DataObjectDAO.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.system.services.dataobject</a> &gt; <span class="el_source">DataObjectDAO.java</span></div><h1>DataObjectDAO.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+
+package org.entando.entando.aps.system.services.dataobject;
+
+import com.agiletec.aps.system.SystemConstants;
+import com.agiletec.aps.system.common.entity.AbstractEntityDAO;
+import com.agiletec.aps.system.common.entity.model.ApsEntityRecord;
+import com.agiletec.aps.system.common.entity.model.IApsEntity;
+import com.agiletec.aps.system.common.entity.model.attribute.AttributeInterface;
+import com.agiletec.aps.system.common.util.EntityAttributeIterator;
+import com.agiletec.aps.system.exception.ApsSystemException;
+import com.agiletec.aps.system.services.category.Category;
+import com.agiletec.aps.system.services.category.ICategoryManager;
+import com.agiletec.aps.util.DateConverter;
+import java.sql.BatchUpdateException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+import org.entando.entando.aps.system.services.dataobject.model.DataObject;
+import org.entando.entando.aps.system.services.dataobject.model.DataObjectRecordVO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * DAO class for objects of type dataobject.
+ *
+ * @author M.Diana - E.Santoboni - S.Didaci
+ */
+<span class="fc" id="L48">public class DataObjectDAO extends AbstractEntityDAO implements IDataObjectDAO {</span>
+
+<span class="fc" id="L50">    private static final Logger _logger = LoggerFactory.getLogger(DataObjectDAO.class);</span>
+    private static final String COUNT_OFFLINE_DATAOBJECTS = &quot;SELECT count(dataid) FROM dataobjects WHERE onlinexml IS NULL&quot;;
+    private static final String COUNT_DATAOBJECTS = &quot;SELECT count(dataid) FROM dataobjects &quot;
+            + &quot;WHERE onlinexml IS NOT NULL AND onlinexml = workxml&quot;;
+    private static final String COUNT_DATAOBJECTS_WITH_DIFFS = &quot;SELECT count(dataid) FROM dataobjects &quot;
+            + &quot;WHERE onlinexml IS NOT NULL AND onlinexml &lt;&gt; workxml&quot;;
+    private static final String DELETE_DATAOBJECT = &quot;DELETE FROM dataobjects WHERE dataid = ? &quot;;
+    private static final String DELETE_DATAOBJECT_REL_RECORD = &quot;DELETE FROM dataobjectrelations WHERE dataid = ? &quot;;
+    private static final String ADD_DATAOBJECT_SEARCH_RECORD =
+            &quot;INSERT INTO dataobjectsearch (dataid, attrname, textvalue, datevalue, numvalue, langcode) &quot;
+                    + &quot;VALUES ( ? , ? , ? , ? , ? , ? )&quot;;
+    private static final String DELETE_DATAOBJECT_SEARCH_RECORD = &quot;DELETE FROM dataobjectsearch WHERE dataid = ? &quot;;
+    private static final String ADD_DATAOBJECT_REL_RECORD = &quot;INSERT INTO dataobjectrelations &quot;
+            + &quot;(dataid, refcategory, refgroup) VALUES ( ? , ? , ? )&quot;;
+    private static final String LOAD_DATAOBJECTS_ID_MAIN_BLOCK = &quot;SELECT DISTINCT dataobjects.dataid FROM dataobjects &quot;;
+    private static final String LOAD_REFERENCED_DATAOBJECTS_FOR_GROUP = LOAD_DATAOBJECTS_ID_MAIN_BLOCK
+            + &quot; RIGHT JOIN dataobjectrelations ON dataobjects.dataid = dataobjectrelations.dataid WHERE dataobjectrelations.refgroup = ? &quot;
+            + &quot;ORDER BY dataobjects.dataid&quot;;
+    private static final String LOAD_REFERENCED_DATAOBJECTS_FOR_CATEGORY = LOAD_DATAOBJECTS_ID_MAIN_BLOCK
+            + &quot; RIGHT JOIN dataobjectrelations ON dataobjects.dataid = dataobjectrelations.dataid WHERE dataobjectrelations.refcategory =&quot;
+            + &quot; ? &quot;
+            + &quot;ORDER BY dataobjects.dataid&quot;;
+    private static final String LOAD_DATAOBJECTS_VO_MAIN_BLOCK =
+            &quot;SELECT dataobjects.dataid, dataobjects.datatype, dataobjects.descr, dataobjects.status, &quot;
+                    + &quot;dataobjects.workxml, dataobjects.created, dataobjects.lastmodified, dataobjects.onlinexml, dataobjects.maingroup, &quot;
+                    + &quot;dataobjects.currentversion, dataobjects.firsteditor, dataobjects.lasteditor FROM dataobjects &quot;;
+    private static final String LOAD_DATAOBJECT_VO = LOAD_DATAOBJECTS_VO_MAIN_BLOCK + &quot; WHERE dataobjects.dataid = ? &quot;;
+    private static final String ADD_DATAOBJECT = &quot;INSERT INTO dataobjects (dataid, datatype, descr, status, workxml, &quot;
+            + &quot;created, lastmodified, onlinexml, maingroup, currentversion, firsteditor, lasteditor) &quot;
+            + &quot;VALUES ( ? , ? , ? , ? , ? , ? , ? , ? , ? , ? , ?, ?)&quot;;
+    private static final String INSERT_DATAOBJECT = &quot;UPDATE dataobjects SET datatype = ? , descr = ? , status = ? , &quot;
+            + &quot;workxml = ? , lastmodified = ? , onlinexml = ? , maingroup = ? , currentversion = ? , lasteditor = ? &quot;
+            + &quot;WHERE dataid = ? &quot;;
+    private static final String INSERT_DATAOBJECT_WITHOUT_DATE = &quot;UPDATE dataobjects SET datatype = ? , descr = ? , status = ? , &quot;
+            + &quot;workxml = ? , onlinexml = ? , maingroup = ? , currentversion = ? , lasteditor = ? &quot; + &quot;WHERE dataid = ? &quot;;
+    private static final String REMOVE_DATAOBJECT = &quot;UPDATE dataobjects SET onlinexml = ? , status = ? , &quot;
+            + &quot;workxml = ? , lastmodified = ? , currentversion = ? , lasteditor = ? WHERE dataid = ? &quot;;
+    private static final String REMOVE_DATAOBJECT_WITHOUT_DATE = &quot;UPDATE dataobjects SET onlinexml = ? , status = ? , &quot;
+            + &quot;workxml = ? , currentversion = ? , lasteditor = ? WHERE dataid = ? &quot;;
+    private static final String UPDATE_DATAOBJECT = &quot;UPDATE dataobjects SET datatype = ? , descr = ? , status = ? , &quot;
+            + &quot;workxml = ? , lastmodified = ? , maingroup = ? , currentversion = ? , lasteditor = ? &quot; + &quot;WHERE dataid = ? &quot;;
+    private static final String UPDATE_DATAOBJECT_WITHOUT_DATE = &quot;UPDATE dataobjects SET datatype = ? , descr = ? , status = ? , &quot;
+            + &quot;workxml = ? , maingroup = ? , currentversion = ? , lasteditor = ? &quot; + &quot;WHERE dataid = ? &quot;;
+    private static final String LOAD_ALL_DATAOBJECTS_ID = &quot;SELECT dataid FROM dataobjects&quot;;
+    private static final String ADD_ATTRIBUTE_ROLE_RECORD =
+            &quot;INSERT INTO dataobjectattributeroles (dataid, attrname, rolename) VALUES ( ? , ? , &quot;
+                    + &quot;? )&quot;;
+    private static final String DELETE_ATTRIBUTE_ROLE_RECORD = &quot;DELETE FROM dataobjectattributeroles WHERE dataid = ? &quot;;
+    private static final String LOAD_LAST_MODIFIED = LOAD_DATAOBJECTS_VO_MAIN_BLOCK + &quot;order by dataobjects.lastmodified desc&quot;;
+    private ICategoryManager categoryManager;
+
+    @Override
+    protected String getLoadEntityRecordQuery() {
+<span class="fc" id="L103">        return LOAD_DATAOBJECT_VO;</span>
+    }
+
+    @Override
+    protected ApsEntityRecord createEntityRecord(ResultSet res) throws Throwable {
+<span class="fc" id="L108">        DataObjectRecordVO dataobjectVo = new DataObjectRecordVO();</span>
+<span class="fc" id="L109">        dataobjectVo.setId(res.getString(1));</span>
+<span class="fc" id="L110">        dataobjectVo.setTypeCode(res.getString(2));</span>
+<span class="fc" id="L111">        dataobjectVo.setDescription(res.getString(3));</span>
+<span class="fc" id="L112">        dataobjectVo.setStatus(res.getString(4));</span>
+<span class="fc" id="L113">        String xmlWork = res.getString(5);</span>
+<span class="fc" id="L114">        dataobjectVo.setCreate(DateConverter.parseDate(res.getString(6), SystemConstants.DATA_TYPE_METADATA_DATE_FORMAT));</span>
+<span class="fc" id="L115">        dataobjectVo.setModify(DateConverter.parseDate(res.getString(7), SystemConstants.DATA_TYPE_METADATA_DATE_FORMAT));</span>
+<span class="fc" id="L116">        String xmlOnLine = res.getString(8);</span>
+<span class="pc bpc" id="L117" title="1 of 4 branches missed.">        dataobjectVo.setOnLine(null != xmlOnLine &amp;&amp; xmlOnLine.length() &gt; 0);</span>
+<span class="fc" id="L118">        dataobjectVo.setSync(xmlWork.equals(xmlOnLine));</span>
+<span class="fc" id="L119">        String mainGroupCode = res.getString(9);</span>
+<span class="fc" id="L120">        dataobjectVo.setMainGroupCode(mainGroupCode);</span>
+<span class="fc" id="L121">        dataobjectVo.setXmlWork(xmlWork);</span>
+<span class="fc" id="L122">        dataobjectVo.setXmlOnLine(xmlOnLine);</span>
+<span class="fc" id="L123">        dataobjectVo.setVersion(res.getString(10));</span>
+<span class="fc" id="L124">        dataobjectVo.setFirstEditor(res.getString(11));</span>
+<span class="fc" id="L125">        dataobjectVo.setLastEditor(res.getString(12));</span>
+<span class="fc" id="L126">        return dataobjectVo;</span>
+    }
+
+    @Override
+    protected void executeAddEntity(IApsEntity entity, Connection conn) throws Throwable {
+<span class="fc" id="L131">        super.executeAddEntity(entity, conn);</span>
+<span class="fc" id="L132">        this.addDataObjectRelationsRecord((DataObject) entity, conn);</span>
+<span class="fc" id="L133">    }</span>
+
+    @Override
+    protected String getAddEntityRecordQuery() {
+<span class="fc" id="L137">        return ADD_DATAOBJECT;</span>
+    }
+
+    @Override
+    protected void buildAddEntityStatement(IApsEntity entity, PreparedStatement stat) throws Throwable {
+<span class="fc" id="L142">        DataObject dataobject = (DataObject) entity;</span>
+<span class="fc" id="L143">        stat.setString(1, dataobject.getId());</span>
+<span class="fc" id="L144">        stat.setString(2, dataobject.getTypeCode());</span>
+<span class="fc" id="L145">        stat.setString(3, dataobject.getDescription());</span>
+<span class="fc" id="L146">        stat.setString(4, dataobject.getStatus());</span>
+<span class="fc" id="L147">        stat.setString(5, dataobject.getXML());</span>
+<span class="fc" id="L148">        String currentDate = DateConverter.getFormattedDate(new Date(), SystemConstants.DATA_TYPE_METADATA_DATE_FORMAT);</span>
+<span class="fc" id="L149">        stat.setString(6, currentDate);</span>
+<span class="fc" id="L150">        stat.setString(7, currentDate);</span>
+<span class="fc" id="L151">        stat.setString(8, dataobject.getXML());</span>
+<span class="fc" id="L152">        stat.setString(9, dataobject.getMainGroup());</span>
+<span class="fc" id="L153">        stat.setString(10, dataobject.getVersion());</span>
+<span class="fc" id="L154">        stat.setString(11, dataobject.getFirstEditor());</span>
+<span class="fc" id="L155">        stat.setString(12, dataobject.getLastEditor());</span>
+<span class="fc" id="L156">    }</span>
+
+    @Override
+    public void updateDataObject(DataObject dataobject, boolean updateDate) {
+<span class="fc" id="L160">        Connection conn = null;</span>
+        try {
+<span class="fc" id="L162">            conn = this.getConnection();</span>
+<span class="fc" id="L163">            conn.setAutoCommit(false);</span>
+<span class="fc" id="L164">            this.executeUpdateData(dataobject, updateDate, conn);</span>
+<span class="fc" id="L165">            conn.commit();</span>
+<span class="nc" id="L166">        } catch (Throwable t) {</span>
+<span class="nc" id="L167">            this.executeRollback(conn);</span>
+<span class="nc" id="L168">            _logger.error(&quot;Error updating dataobject&quot;, t);</span>
+<span class="nc" id="L169">            throw new RuntimeException(&quot;Error updating dataobject&quot;, t);</span>
+        } finally {
+<span class="fc" id="L171">            this.closeConnection(conn);</span>
+        }
+<span class="fc" id="L173">    }</span>
+
+    protected void executeUpdateData(DataObject dataobject, boolean updateDate, Connection conn) throws Throwable {
+<span class="fc" id="L176">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L178">            this.deleteRecordsByEntityId(dataobject.getId(), DELETE_DATAOBJECT_REL_RECORD, conn);</span>
+<span class="fc" id="L179">            this.deleteRecordsByEntityId(dataobject.getId(), this.getRemovingSearchRecordQuery(), conn);</span>
+<span class="fc" id="L180">            this.deleteRecordsByEntityId(dataobject.getId(), this.getRemovingAttributeRoleRecordQuery(), conn);</span>
+<span class="pc bpc" id="L181" title="1 of 2 branches missed.">            if (updateDate) {</span>
+<span class="fc" id="L182">                stat = conn.prepareStatement(this.getUpdateEntityRecordQuery());</span>
+            } else {
+<span class="nc" id="L184">                stat = conn.prepareStatement(this.getUpdateEntityRecordQueryWithoutDate());</span>
+            }
+<span class="fc" id="L186">            this.buildUpdateEntityStatement(dataobject, updateDate, stat);</span>
+<span class="fc" id="L187">            stat.executeUpdate();</span>
+<span class="fc" id="L188">            this.addEntitySearchRecord(dataobject.getId(), dataobject, conn);</span>
+<span class="fc" id="L189">            this.addEntityAttributeRoleRecord(dataobject.getId(), dataobject, conn);</span>
+<span class="fc" id="L190">            this.addDataObjectRelationsRecord(dataobject, conn);</span>
+<span class="nc" id="L191">        } catch (Throwable t) {</span>
+<span class="nc" id="L192">            throw t;</span>
+        } finally {
+<span class="fc" id="L194">            this.closeDaoResources(null, stat);</span>
+        }
+<span class="fc" id="L196">    }</span>
+
+    @Override
+    protected void executeUpdateEntity(IApsEntity entity, Connection conn) throws Throwable {
+<span class="fc" id="L200">        this.deleteRecordsByEntityId(entity.getId(), DELETE_DATAOBJECT_REL_RECORD, conn);</span>
+<span class="fc" id="L201">        super.executeUpdateEntity(entity, conn);</span>
+<span class="fc" id="L202">        this.addDataObjectRelationsRecord((DataObject) entity, conn);</span>
+<span class="fc" id="L203">    }</span>
+
+    @Override
+    protected String getUpdateEntityRecordQuery() {
+<span class="fc" id="L207">        return UPDATE_DATAOBJECT;</span>
+    }
+
+    protected String getUpdateEntityRecordQueryWithoutDate() {
+<span class="nc" id="L211">        return UPDATE_DATAOBJECT_WITHOUT_DATE;</span>
+    }
+
+    @Override
+    protected void buildUpdateEntityStatement(IApsEntity entity, PreparedStatement stat) throws Throwable {
+<span class="fc" id="L216">        this.buildUpdateEntityStatement(entity, true, stat);</span>
+<span class="fc" id="L217">    }</span>
+
+    protected void buildUpdateEntityStatement(IApsEntity entity, boolean updateDate, PreparedStatement stat) throws Throwable {
+<span class="fc" id="L220">        DataObject dataobject = (DataObject) entity;</span>
+<span class="fc" id="L221">        int index = 1;</span>
+<span class="fc" id="L222">        stat.setString(index++, dataobject.getTypeCode());</span>
+<span class="fc" id="L223">        stat.setString(index++, dataobject.getDescription());</span>
+<span class="fc" id="L224">        stat.setString(index++, dataobject.getStatus());</span>
+<span class="fc" id="L225">        stat.setString(index++, dataobject.getXML());</span>
+<span class="pc bpc" id="L226" title="1 of 2 branches missed.">        if (updateDate) {</span>
+<span class="fc" id="L227">            stat.setString(index++, DateConverter.getFormattedDate(new Date(), SystemConstants.DATA_TYPE_METADATA_DATE_FORMAT));</span>
+        }
+<span class="fc" id="L229">        stat.setString(index++, dataobject.getMainGroup());</span>
+<span class="fc" id="L230">        stat.setString(index++, dataobject.getVersion());</span>
+<span class="fc" id="L231">        stat.setString(index++, dataobject.getLastEditor());</span>
+<span class="fc" id="L232">        stat.setString(index++, dataobject.getId());</span>
+<span class="fc" id="L233">    }</span>
+
+    /**
+     * This publishes a dataobject.
+     *
+     * @param dataobject the dataobject to publish.
+     */
+    @Override
+    public void insertDataObject(DataObject dataobject) {
+<span class="fc" id="L242">        Connection conn = null;</span>
+        try {
+<span class="fc" id="L244">            conn = this.getConnection();</span>
+<span class="fc" id="L245">            conn.setAutoCommit(false);</span>
+<span class="fc" id="L246">            this.executeInsertDataObject(dataobject, conn);</span>
+<span class="fc" id="L247">            conn.commit();</span>
+<span class="nc" id="L248">        } catch (Throwable t) {</span>
+<span class="nc" id="L249">            this.executeRollback(conn);</span>
+<span class="nc" id="L250">            _logger.error(&quot;Error publish dataobject {} &quot;, dataobject.getId(), t);</span>
+<span class="nc" id="L251">            throw new RuntimeException(&quot;Error publish dataobject - &quot; + dataobject.getId(), t);</span>
+        } finally {
+<span class="fc" id="L253">            this.closeConnection(conn);</span>
+        }
+<span class="fc" id="L255">    }</span>
+
+    protected void executeInsertDataObject(DataObject dataobject, Connection conn) throws Throwable {
+<span class="fc" id="L258">        this.executeInsertDataObject(dataobject, true, conn);</span>
+<span class="fc" id="L259">    }</span>
+
+    protected void executeInsertDataObject(DataObject dataobject, boolean updateDate, Connection conn) throws Throwable {
+<span class="fc" id="L262">        super.deleteRecordsByEntityId(dataobject.getId(), DELETE_DATAOBJECT_SEARCH_RECORD, conn);</span>
+<span class="fc" id="L263">        super.deleteRecordsByEntityId(dataobject.getId(), DELETE_ATTRIBUTE_ROLE_RECORD, conn);</span>
+<span class="fc" id="L264">        super.deleteEntitySearchRecord(dataobject.getId(), conn);</span>
+<span class="fc" id="L265">        super.deleteRecordsByEntityId(dataobject.getId(), DELETE_DATAOBJECT_REL_RECORD, conn);</span>
+<span class="fc" id="L266">        this.updateDataObjectRecordForInsert(dataobject, updateDate, conn);</span>
+<span class="fc" id="L267">        this.addDataObjectSearchRecord(dataobject.getId(), dataobject, conn);</span>
+<span class="fc" id="L268">        super.addEntitySearchRecord(dataobject.getId(), dataobject, conn);</span>
+<span class="fc" id="L269">        this.addDataObjectAttributeRoleRecord(dataobject.getId(), dataobject, ADD_ATTRIBUTE_ROLE_RECORD, conn);</span>
+<span class="fc" id="L270">        this.addDataObjectRelationsRecord(dataobject, conn);</span>
+<span class="fc" id="L271">    }</span>
+
+    protected void addDataObjectSearchRecord(String id, IApsEntity entity, Connection conn) throws ApsSystemException {
+<span class="fc" id="L274">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L276">            stat = conn.prepareStatement(ADD_DATAOBJECT_SEARCH_RECORD);</span>
+<span class="fc" id="L277">            this.addEntitySearchRecord(id, entity, stat);</span>
+<span class="nc" id="L278">        } catch (Throwable t) {</span>
+<span class="nc" id="L279">            _logger.error(&quot;Error on adding public dataobject search records&quot;, t);</span>
+<span class="nc" id="L280">            throw new RuntimeException(&quot;Error on adding public dataobject search records&quot;, t);</span>
+        } finally {
+<span class="fc" id="L282">            closeDaoResources(null, stat);</span>
+        }
+<span class="fc" id="L284">    }</span>
+
+    protected void updateDataObjectRecordForInsert(DataObject dataobject, Connection conn) throws ApsSystemException {
+<span class="nc" id="L287">        this.updateDataObjectRecordForInsert(dataobject, true, conn);</span>
+<span class="nc" id="L288">    }</span>
+
+    protected void updateDataObjectRecordForInsert(DataObject dataobject, boolean updateDate, Connection conn) throws ApsSystemException {
+<span class="fc" id="L291">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L293">            int index = 1;</span>
+<span class="pc bpc" id="L294" title="1 of 2 branches missed.">            if (updateDate) {</span>
+<span class="fc" id="L295">                stat = conn.prepareStatement(INSERT_DATAOBJECT);</span>
+            } else {
+<span class="nc" id="L297">                stat = conn.prepareStatement(INSERT_DATAOBJECT_WITHOUT_DATE);</span>
+            }
+<span class="fc" id="L299">            stat.setString(index++, dataobject.getTypeCode());</span>
+<span class="fc" id="L300">            stat.setString(index++, dataobject.getDescription());</span>
+<span class="fc" id="L301">            stat.setString(index++, dataobject.getStatus());</span>
+<span class="fc" id="L302">            String xml = dataobject.getXML();</span>
+<span class="fc" id="L303">            stat.setString(index++, xml);</span>
+<span class="pc bpc" id="L304" title="1 of 2 branches missed.">            if (updateDate) {</span>
+<span class="fc" id="L305">                stat.setString(index++, DateConverter.getFormattedDate(new Date(), SystemConstants.DATA_TYPE_METADATA_DATE_FORMAT));</span>
+            }
+<span class="fc" id="L307">            stat.setString(index++, xml);</span>
+<span class="fc" id="L308">            stat.setString(index++, dataobject.getMainGroup());</span>
+<span class="fc" id="L309">            stat.setString(index++, dataobject.getVersion());</span>
+<span class="fc" id="L310">            stat.setString(index++, dataobject.getLastEditor());</span>
+<span class="fc" id="L311">            stat.setString(index++, dataobject.getId());</span>
+<span class="fc" id="L312">            stat.executeUpdate();</span>
+<span class="nc" id="L313">        } catch (Throwable t) {</span>
+<span class="nc" id="L314">            _logger.error(&quot;Error updating for insert onLine dataobject {}&quot;, dataobject.getId(), t);</span>
+<span class="nc" id="L315">            throw new RuntimeException(&quot;Error updating for insert onLine dataobject &quot; + dataobject.getId(), t);</span>
+        } finally {
+<span class="fc" id="L317">            closeDaoResources(null, stat);</span>
+        }
+<span class="fc" id="L319">    }</span>
+
+    /**
+     * Updates the references of a published dataobject
+     *
+     * @param dataobject the published dataobject
+     */
+    @Override
+    public void reloadDataObjectReferences(DataObject dataobject) {
+<span class="pc bpc" id="L328" title="1 of 2 branches missed.">        if (dataobject.isOnLine()) {</span>
+<span class="fc" id="L329">            Connection conn = null;</span>
+            try {
+<span class="fc" id="L331">                conn = this.getConnection();</span>
+<span class="fc" id="L332">                conn.setAutoCommit(false);</span>
+<span class="fc" id="L333">                this.executeReloadDataObjectReferences(dataobject, conn);</span>
+<span class="fc" id="L334">                conn.commit();</span>
+<span class="nc" id="L335">            } catch (Throwable t) {</span>
+<span class="nc" id="L336">                this.executeRollback(conn);</span>
+<span class="nc" id="L337">                _logger.error(&quot;Error reloading references - Data {}&quot;, dataobject.getId(), t);</span>
+<span class="nc" id="L338">                throw new RuntimeException(&quot;Error reloading references - Data &quot; + dataobject.getId(), t);</span>
+            } finally {
+<span class="fc" id="L340">                this.closeConnection(conn);</span>
+            }
+        }
+<span class="fc" id="L343">    }</span>
+
+    protected void executeReloadDataObjectReferences(DataObject dataobject, Connection conn) throws Throwable {
+<span class="fc" id="L346">        super.deleteRecordsByEntityId(dataobject.getId(), DELETE_DATAOBJECT_SEARCH_RECORD, conn);</span>
+<span class="fc" id="L347">        super.deleteRecordsByEntityId(dataobject.getId(), DELETE_DATAOBJECT_REL_RECORD, conn);</span>
+<span class="fc" id="L348">        super.deleteRecordsByEntityId(dataobject.getId(), DELETE_ATTRIBUTE_ROLE_RECORD, conn);</span>
+<span class="fc" id="L349">        this.addDataObjectSearchRecord(dataobject.getId(), dataobject, conn);</span>
+<span class="fc" id="L350">        this.addDataObjectRelationsRecord(dataobject, conn);</span>
+<span class="fc" id="L351">        this.addDataObjectAttributeRoleRecord(dataobject.getId(), dataobject, ADD_ATTRIBUTE_ROLE_RECORD, conn);</span>
+<span class="fc" id="L352">    }</span>
+
+    /**
+     * Unpublish a dataobject, preventing it from being displayed in the portal. Obviously the dataobject itslef is not deleted.
+     *
+     * @param dataobject the dataobject to unpublish.
+     */
+    @Override
+    public void removeDataObject(DataObject dataobject) {
+<span class="fc" id="L361">        Connection conn = null;</span>
+        try {
+<span class="fc" id="L363">            conn = this.getConnection();</span>
+<span class="fc" id="L364">            conn.setAutoCommit(false);</span>
+<span class="fc" id="L365">            this.executeRemoveDataObject(dataobject, conn);</span>
+<span class="fc" id="L366">            conn.commit();</span>
+<span class="nc" id="L367">        } catch (Throwable t) {</span>
+<span class="nc" id="L368">            this.executeRollback(conn);</span>
+<span class="nc" id="L369">            _logger.error(&quot;Error removing online dataobject {}&quot;, dataobject.getId(), t);</span>
+<span class="nc" id="L370">            throw new RuntimeException(&quot;Error removing online dataobject - &quot; + dataobject.getId(), t);</span>
+        } finally {
+<span class="fc" id="L372">            this.closeConnection(conn);</span>
+        }
+<span class="fc" id="L374">    }</span>
+
+    protected void executeRemoveDataObject(DataObject dataobject, Connection conn) {
+<span class="fc" id="L377">        this.executeRemoveDataObject(dataobject, true, conn);</span>
+<span class="fc" id="L378">    }</span>
+
+    /**
+     * Unpublish a dataobject, preventing it from being displayed in the portal. Obviously the dataobject itslef is not deleted.
+     *
+     * @param dataobject the dataobject to unpublish.
+     * @param conn the connection to the DB.
+     */
+    protected void executeRemoveDataObject(DataObject dataobject, boolean updateDate, Connection conn) {
+<span class="fc" id="L387">        super.deleteRecordsByEntityId(dataobject.getId(), DELETE_DATAOBJECT_SEARCH_RECORD, conn);</span>
+<span class="fc" id="L388">        super.deleteRecordsByEntityId(dataobject.getId(), DELETE_DATAOBJECT_REL_RECORD, conn);</span>
+<span class="fc" id="L389">        super.deleteRecordsByEntityId(dataobject.getId(), DELETE_ATTRIBUTE_ROLE_RECORD, conn);</span>
+<span class="fc" id="L390">        PreparedStatement stat = null;</span>
+        try {
+<span class="pc bpc" id="L392" title="1 of 2 branches missed.">            if (updateDate) {</span>
+<span class="fc" id="L393">                stat = conn.prepareStatement(REMOVE_DATAOBJECT);</span>
+            } else {
+<span class="nc" id="L395">                stat = conn.prepareStatement(REMOVE_DATAOBJECT_WITHOUT_DATE);</span>
+            }
+<span class="fc" id="L397">            int index = 1;</span>
+<span class="fc" id="L398">            stat.setString(index++, null);</span>
+<span class="fc" id="L399">            stat.setString(index++, dataobject.getStatus());</span>
+<span class="fc" id="L400">            stat.setString(index++, dataobject.getXML());</span>
+<span class="pc bpc" id="L401" title="1 of 2 branches missed.">            if (updateDate) {</span>
+<span class="fc" id="L402">                stat.setString(index++, DateConverter.getFormattedDate(new Date(), SystemConstants.DATA_TYPE_METADATA_DATE_FORMAT));</span>
+            }
+<span class="fc" id="L404">            stat.setString(index++, dataobject.getVersion());</span>
+<span class="fc" id="L405">            stat.setString(index++, dataobject.getLastEditor());</span>
+<span class="fc" id="L406">            stat.setString(index++, dataobject.getId());</span>
+<span class="fc" id="L407">            stat.executeUpdate();</span>
+<span class="nc" id="L408">        } catch (Throwable t) {</span>
+<span class="nc" id="L409">            _logger.error(&quot;Error removing online dataobject {}&quot;, dataobject.getId(), t);</span>
+<span class="nc" id="L410">            throw new RuntimeException(&quot;Error removing online dataobject - &quot; + dataobject.getId(), t);</span>
+        } finally {
+<span class="fc" id="L412">            closeDaoResources(null, stat);</span>
+        }
+<span class="fc" id="L414">    }</span>
+
+    @Override
+    protected String getDeleteEntityRecordQuery() {
+<span class="fc" id="L418">        return DELETE_DATAOBJECT;</span>
+    }
+
+    @Override
+    protected void executeDeleteEntity(String entityId, Connection conn) throws Throwable {
+<span class="fc" id="L423">        super.deleteRecordsByEntityId(entityId, DELETE_DATAOBJECT_SEARCH_RECORD, conn);</span>
+<span class="fc" id="L424">        super.deleteRecordsByEntityId(entityId, DELETE_DATAOBJECT_REL_RECORD, conn);</span>
+<span class="fc" id="L425">        super.deleteRecordsByEntityId(entityId, DELETE_ATTRIBUTE_ROLE_RECORD, conn);</span>
+<span class="fc" id="L426">        super.executeDeleteEntity(entityId, conn);</span>
+<span class="fc" id="L427">    }</span>
+
+    private void addCategoryRelationsRecord(DataObject dataobject, boolean isPublicRelations, PreparedStatement stat)
+            throws ApsSystemException {
+<span class="fc bfc" id="L431" title="All 2 branches covered.">        if (dataobject.getCategories().size() &gt; 0) {</span>
+            try {
+<span class="fc" id="L433">                Set&lt;String&gt; codes = new HashSet&lt;String&gt;();</span>
+<span class="fc" id="L434">                Iterator&lt;Category&gt; categoryIter = dataobject.getCategories().iterator();</span>
+<span class="fc bfc" id="L435" title="All 2 branches covered.">                while (categoryIter.hasNext()) {</span>
+<span class="fc" id="L436">                    Category category = categoryIter.next();</span>
+<span class="fc" id="L437">                    this.addCategoryCode(category, codes);</span>
+<span class="fc" id="L438">                }</span>
+<span class="fc" id="L439">                Iterator&lt;String&gt; codeIter = codes.iterator();</span>
+<span class="fc bfc" id="L440" title="All 2 branches covered.">                while (codeIter.hasNext()) {</span>
+<span class="fc" id="L441">                    String code = codeIter.next();</span>
+<span class="fc" id="L442">                    int i = 1;</span>
+<span class="fc" id="L443">                    stat.setString(i++, dataobject.getId());</span>
+                    /*
+          if (isPublicRelations) {
+            stat.setString(i++, null);
+            stat.setString(i++, null);
+            stat.setBigDecimal(i++, null);
+          }
+                     */
+<span class="fc" id="L451">                    stat.setString(i++, code);</span>
+<span class="pc bpc" id="L452" title="1 of 2 branches missed.">                    if (isPublicRelations) {</span>
+<span class="fc" id="L453">                        stat.setString(i++, null);</span>
+                    }
+<span class="fc" id="L455">                    stat.addBatch();</span>
+<span class="fc" id="L456">                    stat.clearParameters();</span>
+<span class="fc" id="L457">                }</span>
+<span class="nc" id="L458">            } catch (SQLException e) {</span>
+<span class="nc" id="L459">                _logger.error(&quot;Error saving dataobject relation record for dataobject {}&quot;, dataobject.getId(), e.getNextException());</span>
+<span class="nc" id="L460">                throw new RuntimeException(&quot;Error saving dataobject relation record for dataobject &quot; + dataobject.getId(),</span>
+<span class="nc" id="L461">                        e.getNextException());</span>
+<span class="fc" id="L462">            }</span>
+        }
+<span class="fc" id="L464">    }</span>
+
+    private void addCategoryCode(Category category, Set&lt;String&gt; codes) {
+<span class="fc" id="L467">        codes.add(category.getCode());</span>
+<span class="fc" id="L468">        Category parentCategory = this.getCategoryManager().getCategory(category.getParentCode());</span>
+<span class="pc bpc" id="L469" title="1 of 4 branches missed.">        if (null != parentCategory &amp;&amp; !parentCategory.getCode().equals(parentCategory.getParentCode())) {</span>
+<span class="fc" id="L470">            this.addCategoryCode(parentCategory, codes);</span>
+        }
+<span class="fc" id="L472">    }</span>
+
+    private void addGroupRelationsRecord(DataObject dataobject, PreparedStatement stat) throws ApsSystemException {
+        try {
+<span class="fc" id="L476">            dataobject.addGroup(dataobject.getMainGroup());</span>
+<span class="fc" id="L477">            Iterator&lt;String&gt; groupIter = dataobject.getGroups().iterator();</span>
+<span class="fc bfc" id="L478" title="All 2 branches covered.">            while (groupIter.hasNext()) {</span>
+<span class="fc" id="L479">                String groupName = groupIter.next();</span>
+<span class="fc" id="L480">                stat.setString(1, dataobject.getId());</span>
+                /*
+        stat.setString(2, null);
+        stat.setString(3, null);
+        stat.setBigDecimal(4, null);
+                 */
+<span class="fc" id="L486">                stat.setString(2, null);</span>
+<span class="fc" id="L487">                stat.setString(3, groupName);</span>
+<span class="fc" id="L488">                stat.addBatch();</span>
+<span class="fc" id="L489">                stat.clearParameters();</span>
+<span class="fc" id="L490">            }</span>
+<span class="nc" id="L491">        } catch (Throwable t) {</span>
+<span class="nc" id="L492">            _logger.error(&quot;Error saving group relation record for dataobject {}&quot;, dataobject.getId(), t);</span>
+<span class="nc" id="L493">            throw new RuntimeException(&quot;Error saving group relation record for dataobject &quot; + dataobject.getId(), t);</span>
+<span class="fc" id="L494">        }</span>
+<span class="fc" id="L495">    }</span>
+
+    /**
+     * Add a record in the table 'dataobjectrelations' for every resource, page, other dataobject, role and category associated to the given
+     * dataobject).
+     *
+     * @param dataobject The current dataobject.
+     * @param conn The connection to the database.
+     * @throws ApsSystemException when connection error are detected.
+     */
+    protected void addDataObjectRelationsRecord(DataObject dataobject, Connection conn) throws ApsSystemException {
+<span class="fc" id="L506">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L508">            stat = conn.prepareStatement(ADD_DATAOBJECT_REL_RECORD);</span>
+<span class="fc" id="L509">            this.addCategoryRelationsRecord(dataobject, true, stat);</span>
+<span class="fc" id="L510">            this.addGroupRelationsRecord(dataobject, stat);</span>
+<span class="fc" id="L511">            EntityAttributeIterator attributeIter = new EntityAttributeIterator(dataobject);</span>
+<span class="fc bfc" id="L512" title="All 2 branches covered.">            while (attributeIter.hasNext()) {</span>
+<span class="fc" id="L513">                AttributeInterface currAttribute = (AttributeInterface) attributeIter.next();</span>
+<span class="fc" id="L514">            }</span>
+<span class="fc" id="L515">            stat.executeBatch();</span>
+<span class="nc" id="L516">        } catch (BatchUpdateException e) {</span>
+<span class="nc" id="L517">            _logger.error(&quot;Error saving record into dataobjectrelations {}&quot;, dataobject.getId(), e.getNextException());</span>
+<span class="nc" id="L518">            throw new RuntimeException(&quot;Error saving record into dataobjectrelations &quot; + dataobject.getId(), e.getNextException());</span>
+<span class="nc" id="L519">        } catch (Throwable t) {</span>
+<span class="nc" id="L520">            _logger.error(&quot;Error saving record into dataobjectrelations {}&quot;, dataobject.getId(), t);</span>
+<span class="nc" id="L521">            throw new RuntimeException(&quot;Error saving record into dataobjectrelations &quot; + dataobject.getId(), t);</span>
+        } finally {
+<span class="fc" id="L523">            closeDaoResources(null, stat);</span>
+        }
+<span class="fc" id="L525">    }</span>
+
+    protected void addDataObjectAttributeRoleRecord(String id, IApsEntity entity, String query, Connection conn) throws ApsSystemException {
+<span class="fc" id="L528">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L530">            stat = conn.prepareStatement(query);</span>
+<span class="fc" id="L531">            super.addEntityAttributeRoleRecord(id, entity, stat);</span>
+<span class="nc" id="L532">        } catch (Throwable t) {</span>
+<span class="nc" id="L533">            _logger.error(&quot;Error on adding dataobject attribute role records&quot;, t);</span>
+<span class="nc" id="L534">            throw new RuntimeException(&quot;Error on adding dataobject attribute role records&quot;, t);</span>
+        } finally {
+<span class="fc" id="L536">            closeDaoResources(null, stat);</span>
+        }
+<span class="fc" id="L538">    }</span>
+
+    protected List&lt;String&gt; getUtilizers(String referencedObjectCode, String query) throws Throwable {
+<span class="fc" id="L541">        Connection conn = null;</span>
+<span class="fc" id="L542">        List&lt;String&gt; dataids = new ArrayList&lt;String&gt;();</span>
+<span class="fc" id="L543">        PreparedStatement stat = null;</span>
+<span class="fc" id="L544">        ResultSet res = null;</span>
+        try {
+<span class="fc" id="L546">            conn = this.getConnection();</span>
+<span class="fc" id="L547">            stat = conn.prepareStatement(query);</span>
+<span class="fc" id="L548">            stat.setString(1, referencedObjectCode);</span>
+<span class="fc" id="L549">            res = stat.executeQuery();</span>
+<span class="fc bfc" id="L550" title="All 2 branches covered.">            while (res.next()) {</span>
+<span class="fc" id="L551">                String id = res.getString(1);</span>
+<span class="fc" id="L552">                dataids.add(id);</span>
+<span class="fc" id="L553">            }</span>
+<span class="nc" id="L554">        } catch (Throwable t) {</span>
+<span class="nc" id="L555">            throw t;</span>
+        } finally {
+<span class="fc" id="L557">            closeDaoResources(res, stat, conn);</span>
+        }
+<span class="fc" id="L559">        return dataids;</span>
+    }
+
+    @Override
+    public DataObjectsStatus loadDataObjectsStatus() {
+<span class="nc" id="L564">        Connection conn = null;</span>
+<span class="nc" id="L565">        PreparedStatement stat = null;</span>
+<span class="nc" id="L566">        ResultSet res = null;</span>
+<span class="nc" id="L567">        DataObjectsStatus status = null;</span>
+        try {
+<span class="nc" id="L569">            conn = this.getConnection();</span>
+<span class="nc" id="L570">            int online = this.loadDataObjectStatus(conn, COUNT_DATAOBJECTS);</span>
+<span class="nc" id="L571">            int offline = this.loadDataObjectStatus(conn, COUNT_OFFLINE_DATAOBJECTS);</span>
+<span class="nc" id="L572">            int withDiffs = this.loadDataObjectStatus(conn, COUNT_DATAOBJECTS_WITH_DIFFS);</span>
+<span class="nc" id="L573">            Date lastModified = this.loadDataObjectStatusLastModified(conn, LOAD_LAST_MODIFIED);</span>
+<span class="nc" id="L574">            status = new DataObjectsStatus();</span>
+<span class="nc" id="L575">            status.setDraft(offline);</span>
+<span class="nc" id="L576">            status.setOnline(online);</span>
+<span class="nc" id="L577">            status.setOnlineWithChanges(withDiffs);</span>
+<span class="nc" id="L578">            status.setLastUpdate(lastModified);</span>
+<span class="nc" id="L579">        } catch (Throwable t) {</span>
+<span class="nc" id="L580">            _logger.error(&quot;Error loading dataobjects status&quot;, t);</span>
+<span class="nc" id="L581">            throw new RuntimeException(&quot;Error loading dataobjects status&quot;, t);</span>
+        } finally {
+<span class="nc" id="L583">            closeDaoResources(res, stat, conn);</span>
+        }
+<span class="nc" id="L585">        return status;</span>
+    }
+
+    private int loadDataObjectStatus(Connection conn, String query) {
+<span class="nc" id="L589">        PreparedStatement stat = null;</span>
+<span class="nc" id="L590">        ResultSet res = null;</span>
+<span class="nc" id="L591">        int count = 0;</span>
+        try {
+<span class="nc" id="L593">            stat = conn.prepareStatement(query);</span>
+<span class="nc" id="L594">            res = stat.executeQuery();</span>
+<span class="nc bnc" id="L595" title="All 2 branches missed.">            if (res.next()) {</span>
+<span class="nc" id="L596">                count = res.getInt(1);</span>
+            }
+<span class="nc" id="L598">        } catch (Throwable t) {</span>
+<span class="nc" id="L599">            _logger.error(&quot;Error loading dataobjects status. If you are runing Entando backed by Apache Derby it's a known issue&quot;);</span>
+        } finally {
+<span class="nc" id="L601">            closeDaoResources(res, stat);</span>
+        }
+<span class="nc" id="L603">        return count;</span>
+    }
+
+    private Date loadDataObjectStatusLastModified(Connection conn, String query) {
+<span class="nc" id="L607">        PreparedStatement stat = null;</span>
+<span class="nc" id="L608">        ResultSet res = null;</span>
+<span class="nc" id="L609">        Date lastModified = null;</span>
+        try {
+<span class="nc" id="L611">            stat = conn.prepareStatement(query);</span>
+<span class="nc" id="L612">            res = stat.executeQuery();</span>
+<span class="nc bnc" id="L613" title="All 2 branches missed.">            if (res.next()) {</span>
+<span class="nc" id="L614">                String lastMod = res.getString(&quot;lastmodified&quot;);</span>
+<span class="nc" id="L615">                lastModified = DateConverter.parseDate(lastMod, &quot;yyyyMMddHHmmss&quot;);</span>
+            }
+<span class="nc" id="L617">        } catch (Throwable t) {</span>
+<span class="nc" id="L618">            _logger.error(&quot;Error loading dataobjects status last modified date&quot;, t);</span>
+<span class="nc" id="L619">            throw new RuntimeException(&quot;Error loading dataobjects status last modified date&quot;, t);</span>
+        } finally {
+<span class="nc" id="L621">            closeDaoResources(res, stat);</span>
+        }
+<span class="nc" id="L623">        return lastModified;</span>
+    }
+
+    @Override
+    protected String getAddingSearchRecordQuery() {
+<span class="fc" id="L628">        return ADD_DATAOBJECT_SEARCH_RECORD;</span>
+    }
+
+    @Override
+    protected String getRemovingSearchRecordQuery() {
+<span class="fc" id="L633">        return DELETE_DATAOBJECT_SEARCH_RECORD;</span>
+    }
+
+    @Override
+    protected String getAddingAttributeRoleRecordQuery() {
+<span class="fc" id="L638">        return ADD_ATTRIBUTE_ROLE_RECORD;</span>
+    }
+
+    @Override
+    protected String getRemovingAttributeRoleRecordQuery() {
+<span class="fc" id="L643">        return DELETE_ATTRIBUTE_ROLE_RECORD;</span>
+    }
+
+    @Override
+    protected String getExtractingAllEntityIdQuery() {
+<span class="fc" id="L648">        return LOAD_ALL_DATAOBJECTS_ID;</span>
+    }
+
+    @Override
+    public List&lt;String&gt; getGroupUtilizers(String groupName) {
+<span class="fc" id="L653">        List&lt;String&gt; dataids = null;</span>
+        try {
+<span class="fc" id="L655">            dataids = this.getUtilizers(groupName, LOAD_REFERENCED_DATAOBJECTS_FOR_GROUP);</span>
+<span class="nc" id="L656">        } catch (Throwable t) {</span>
+<span class="nc" id="L657">            _logger.error(&quot;Error loading referenced datatypes for group {}&quot;, groupName, t);</span>
+<span class="nc" id="L658">            throw new RuntimeException(&quot;Error loading referenced datatypes for group &quot; + groupName, t);</span>
+<span class="fc" id="L659">        }</span>
+<span class="fc" id="L660">        return dataids;</span>
+    }
+
+    @Override
+    public List&lt;String&gt; getCategoryUtilizers(String categoryCode) {
+<span class="fc" id="L665">        List&lt;String&gt; dataids = null;</span>
+        try {
+<span class="fc" id="L667">            dataids = this.getUtilizers(categoryCode, LOAD_REFERENCED_DATAOBJECTS_FOR_CATEGORY);</span>
+<span class="nc" id="L668">        } catch (Throwable t) {</span>
+<span class="nc" id="L669">            _logger.error(&quot;Error loading referenced datatypes for category {}&quot;, categoryCode, t);</span>
+<span class="nc" id="L670">            throw new RuntimeException(&quot;Error loading referenced datatypes for category &quot; + categoryCode, t);</span>
+<span class="fc" id="L671">        }</span>
+<span class="fc" id="L672">        return dataids;</span>
+    }
+
+    public ICategoryManager getCategoryManager() {
+<span class="fc" id="L676">        return categoryManager;</span>
+    }
+
+    public void setCategoryManager(ICategoryManager categoryManager) {
+<span class="fc" id="L680">        this.categoryManager = categoryManager;</span>
+<span class="fc" id="L681">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
