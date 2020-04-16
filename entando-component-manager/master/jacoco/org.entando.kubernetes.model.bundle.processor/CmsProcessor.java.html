@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.entando.kubernetes.model.bundle.BundleReader;
@@ -14,6 +13,8 @@ import org.entando.kubernetes.model.bundle.descriptor.ComponentDescriptor;
 import org.entando.kubernetes.model.bundle.descriptor.ComponentSpecDescriptor;
 import org.entando.kubernetes.model.bundle.descriptor.ContentModelDescriptor;
 import org.entando.kubernetes.model.bundle.descriptor.ContentTypeDescriptor;
+import org.entando.kubernetes.model.bundle.installable.ContentModelInstallable;
+import org.entando.kubernetes.model.bundle.installable.ContentTypeInstallable;
 import org.entando.kubernetes.model.bundle.installable.Installable;
 import org.entando.kubernetes.model.digitalexchange.ComponentType;
 import org.entando.kubernetes.model.digitalexchange.DigitalExchangeJob;
@@ -27,7 +28,7 @@ import org.springframework.stereotype.Service;
  *
  * @author Sergio Marcelino
  */
-<span class="fc" id="L30">@Slf4j</span>
+<span class="fc" id="L31">@Slf4j</span>
 @Service
 @RequiredArgsConstructor
 public class CmsProcessor implements ComponentProcessor {
@@ -38,99 +39,48 @@ public class CmsProcessor implements ComponentProcessor {
     public List&lt;Installable&gt; process(final DigitalExchangeJob job, final BundleReader npr,
                                                final ComponentDescriptor descriptor) throws IOException {
 
-<span class="fc" id="L41">        final Optional&lt;List&lt;String&gt;&gt; contentTypesDescriptor = ofNullable(descriptor.getComponents())</span>
-<span class="fc" id="L42">                .map(ComponentSpecDescriptor::getContentTypes);</span>
-<span class="fc" id="L43">        final Optional&lt;List&lt;String&gt;&gt; contentModelsDescriptor = ofNullable(descriptor.getComponents())</span>
-<span class="fc" id="L44">                .map(ComponentSpecDescriptor::getContentModels);</span>
-<span class="fc" id="L45">        final List&lt;Installable&gt; installables = new LinkedList&lt;&gt;();</span>
+<span class="fc" id="L42">        final Optional&lt;List&lt;String&gt;&gt; contentTypesDescriptor = ofNullable(descriptor.getComponents())</span>
+<span class="fc" id="L43">                .map(ComponentSpecDescriptor::getContentTypes);</span>
+<span class="fc" id="L44">        final Optional&lt;List&lt;String&gt;&gt; contentModelsDescriptor = ofNullable(descriptor.getComponents())</span>
+<span class="fc" id="L45">                .map(ComponentSpecDescriptor::getContentModels);</span>
+<span class="fc" id="L46">        final List&lt;Installable&gt; installables = new LinkedList&lt;&gt;();</span>
 
-<span class="pc bpc" id="L47" title="1 of 2 branches missed.">        if (contentTypesDescriptor.isPresent()) {</span>
-<span class="fc bfc" id="L48" title="All 2 branches covered.">            for (final String fileName : contentTypesDescriptor.get()) {</span>
-<span class="fc" id="L49">                final ContentTypeDescriptor contentTypeDescriptor = npr.readDescriptorFile(fileName, ContentTypeDescriptor.class);</span>
-<span class="fc" id="L50">                installables.add(new ContentTypeInstallable(contentTypeDescriptor));</span>
-<span class="fc" id="L51">            }</span>
+<span class="pc bpc" id="L48" title="1 of 2 branches missed.">        if (contentTypesDescriptor.isPresent()) {</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">            for (final String fileName : contentTypesDescriptor.get()) {</span>
+<span class="fc" id="L50">                final ContentTypeDescriptor contentTypeDescriptor = npr.readDescriptorFile(fileName, ContentTypeDescriptor.class);</span>
+<span class="fc" id="L51">                installables.add(new ContentTypeInstallable(engineService, contentTypeDescriptor));</span>
+<span class="fc" id="L52">            }</span>
         }
 
-<span class="pc bpc" id="L54" title="1 of 2 branches missed.">        if (contentModelsDescriptor.isPresent()) {</span>
-<span class="fc bfc" id="L55" title="All 2 branches covered.">            for (final String fileName : contentModelsDescriptor.get()) {</span>
-<span class="fc" id="L56">                final ContentModelDescriptor contentModelDescriptor = npr.readDescriptorFile(fileName, ContentModelDescriptor.class);</span>
-<span class="fc bfc" id="L57" title="All 2 branches covered.">                if (contentModelDescriptor.getContentShapePath() != null) {</span>
-<span class="fc" id="L58">                  String csPath = getRelativePath(fileName, contentModelDescriptor.getContentShapePath());</span>
-<span class="fc" id="L59">                  contentModelDescriptor.setContentShape(npr.readFileAsString(csPath));</span>
+<span class="pc bpc" id="L55" title="1 of 2 branches missed.">        if (contentModelsDescriptor.isPresent()) {</span>
+<span class="fc bfc" id="L56" title="All 2 branches covered.">            for (final String fileName : contentModelsDescriptor.get()) {</span>
+<span class="fc" id="L57">                final ContentModelDescriptor contentModelDescriptor = npr.readDescriptorFile(fileName, ContentModelDescriptor.class);</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">                if (contentModelDescriptor.getContentShapePath() != null) {</span>
+<span class="fc" id="L59">                  String csPath = getRelativePath(fileName, contentModelDescriptor.getContentShapePath());</span>
+<span class="fc" id="L60">                  contentModelDescriptor.setContentShape(npr.readFileAsString(csPath));</span>
                 }
-<span class="fc" id="L61">                installables.add(new ContentModelInstallable(contentModelDescriptor));</span>
-<span class="fc" id="L62">            }</span>
+<span class="fc" id="L62">                installables.add(new ContentModelInstallable(engineService, contentModelDescriptor));</span>
+<span class="fc" id="L63">            }</span>
         }
 
-<span class="fc" id="L65">        return installables;</span>
+<span class="fc" id="L66">        return installables;</span>
     }
 
     @Override
     public boolean shouldProcess(final ComponentType componentType) {
-<span class="fc bfc" id="L70" title="All 4 branches covered.">        return componentType == ComponentType.CONTENT_MODEL || componentType == ComponentType.CONTENT_TYPE;</span>
+<span class="fc bfc" id="L71" title="All 4 branches covered.">        return componentType == ComponentType.CONTENT_MODEL || componentType == ComponentType.CONTENT_TYPE;</span>
     }
 
     @Override
     public void uninstall(final DigitalExchangeJobComponent component) {
-<span class="fc bfc" id="L75" title="All 2 branches covered.">        if (component.getComponentType() == ComponentType.CONTENT_MODEL) {</span>
-<span class="fc" id="L76">            log.info(&quot;Removing Content Model {}&quot;, component.getName());</span>
-<span class="fc" id="L77">            engineService.deleteContentModel(component.getName());</span>
-<span class="pc bpc" id="L78" title="1 of 2 branches missed.">        } else if (component.getComponentType() == ComponentType.CONTENT_TYPE) {</span>
-<span class="fc" id="L79">            log.info(&quot;Removing Content Type {}&quot;, component.getName());</span>
-<span class="fc" id="L80">            engineService.deleteContentType(component.getName());</span>
+<span class="fc bfc" id="L76" title="All 2 branches covered.">        if (component.getComponentType() == ComponentType.CONTENT_MODEL) {</span>
+<span class="fc" id="L77">            log.info(&quot;Removing Content Model {}&quot;, component.getName());</span>
+<span class="fc" id="L78">            engineService.deleteContentModel(component.getName());</span>
+<span class="pc bpc" id="L79" title="1 of 2 branches missed.">        } else if (component.getComponentType() == ComponentType.CONTENT_TYPE) {</span>
+<span class="fc" id="L80">            log.info(&quot;Removing Content Type {}&quot;, component.getName());</span>
+<span class="fc" id="L81">            engineService.deleteContentType(component.getName());</span>
         }
-<span class="fc" id="L82">    }</span>
+<span class="fc" id="L83">    }</span>
 
-    public class ContentTypeInstallable extends Installable&lt;ContentTypeDescriptor&gt; {
-
-<span class="fc" id="L86">        private ContentTypeInstallable(final ContentTypeDescriptor contentTypeDescriptor) {</span>
-<span class="fc" id="L87">            super(contentTypeDescriptor);</span>
-<span class="fc" id="L88">        }</span>
-
-        @Override
-        public CompletableFuture install() {
-<span class="fc" id="L92">            return CompletableFuture.runAsync(() -&gt; {</span>
-<span class="fc" id="L93">                log.info(&quot;Registering Content Type {}&quot;, representation.getCode());</span>
-<span class="fc" id="L94">                engineService.registerContentType(representation);</span>
-<span class="fc" id="L95">            });</span>
-        }
-
-        @Override
-        public ComponentType getComponentType() {
-<span class="fc" id="L100">            return ComponentType.CONTENT_TYPE;</span>
-        }
-
-        @Override
-        public String getName() {
-<span class="fc" id="L105">            return representation.getCode();</span>
-        }
-
-    }
-
-    public class ContentModelInstallable extends Installable&lt;ContentModelDescriptor&gt; {
-
-<span class="fc" id="L112">        private ContentModelInstallable(final ContentModelDescriptor contentModelDescriptor) {</span>
-<span class="fc" id="L113">            super(contentModelDescriptor);</span>
-<span class="fc" id="L114">        }</span>
-
-        @Override
-        public CompletableFuture install() {
-<span class="fc" id="L118">            return CompletableFuture.runAsync(() -&gt; {</span>
-<span class="fc" id="L119">                log.info(&quot;Registering Content Model {}&quot;, representation.getId());</span>
-<span class="fc" id="L120">                engineService.registerContentModel(representation);</span>
-<span class="fc" id="L121">            });</span>
-        }
-
-        @Override
-        public ComponentType getComponentType() {
-<span class="fc" id="L126">            return ComponentType.CONTENT_MODEL;</span>
-        }
-
-        @Override
-        public String getName() {
-<span class="fc" id="L131">            return representation.getId();</span>
-        }
-
-    }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
