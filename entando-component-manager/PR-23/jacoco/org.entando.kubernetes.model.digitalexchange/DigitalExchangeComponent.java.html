@@ -16,6 +16,9 @@ package org.entando.kubernetes.model.digitalexchange;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.util.Date;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import java.util.stream.Collectors;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
@@ -25,6 +28,7 @@ import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import lombok.Data;
+import org.apache.commons.compress.utils.Sets;
 import org.entando.kubernetes.model.debundle.EntandoDeBundle;
 import org.entando.kubernetes.model.debundle.EntandoDeBundleDetails;
 import org.entando.kubernetes.model.web.SystemConstants;
@@ -51,7 +55,8 @@ public class DigitalExchangeComponent {
     @NotNull
     @Size(min = 1, max = 30)
     @Column(name=&quot;type&quot;)
-    private String type;
+    @Convert(converter = BundleComponentTypesConverter.class)
+    private Set&lt;String&gt; type;
 
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = SystemConstants.API_DATE_FORMAT)
     @Column(name=&quot;last_update&quot;)
@@ -91,21 +96,29 @@ public class DigitalExchangeComponent {
     private Map&lt;String, String&gt; metadata;
 
     public static DigitalExchangeComponent newFrom(EntandoDeBundle bundle) {
-<span class="fc" id="L94">        DigitalExchangeComponent dec = new DigitalExchangeComponent();</span>
-<span class="fc" id="L95">        String bundleId = bundle.getMetadata().getName();</span>
-<span class="fc" id="L96">        EntandoDeBundleDetails bd = bundle.getSpec().getDetails();</span>
-<span class="fc" id="L97">        dec.setId(bundleId);</span>
-<span class="fc" id="L98">        dec.setName(bundle.getSpec().getDetails().getName());</span>
-<span class="fc" id="L99">        dec.setDescription(bd.getDescription());</span>
-<span class="fc" id="L100">        dec.setDigitalExchangeId(bundle.getMetadata().getNamespace());</span>
-<span class="fc" id="L101">        dec.setDigitalExchangeName(bundle.getMetadata().getNamespace());</span>
-<span class="fc" id="L102">        dec.setRating(5);</span>
-<span class="fc" id="L103">        dec.setType(&quot;Bundle&quot;);</span>
-<span class="fc" id="L104">        dec.setLastUpdate(new Date());</span>
-<span class="fc" id="L105">        dec.setSignature(&quot;&quot;);</span>
-<span class="fc" id="L106">        dec.setVersion(bd.getDistTags().get(&quot;latest&quot;).toString());</span>
-<span class="fc" id="L107">        dec.setImage(bd.getThumbnail());</span>
-<span class="fc" id="L108">        return dec;</span>
+<span class="fc" id="L99">        DigitalExchangeComponent dec = new DigitalExchangeComponent();</span>
+<span class="fc" id="L100">        String bundleId = bundle.getMetadata().getName();</span>
+<span class="fc" id="L101">        EntandoDeBundleDetails bd = bundle.getSpec().getDetails();</span>
+<span class="fc" id="L102">        Set&lt;String&gt; bundleComponentTypes = Sets.newHashSet(&quot;bundle&quot;);</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">        if (bundle.getMetadata().getLabels() != null) {</span>
+<span class="fc" id="L104">            bundle.getMetadata().getLabels()</span>
+<span class="fc" id="L105">                    .entrySet().stream()</span>
+<span class="fc" id="L106">                    .filter(e -&gt; ComponentType.isValidType(e.getKey()))</span>
+<span class="fc" id="L107">                    .map(Entry::getKey)</span>
+<span class="fc" id="L108">                    .forEach(bundleComponentTypes::add);</span>
+        }
+<span class="fc" id="L110">        dec.setId(bundleId);</span>
+<span class="fc" id="L111">        dec.setName(bundle.getSpec().getDetails().getName());</span>
+<span class="fc" id="L112">        dec.setDescription(bd.getDescription());</span>
+<span class="fc" id="L113">        dec.setDigitalExchangeId(bundle.getMetadata().getNamespace());</span>
+<span class="fc" id="L114">        dec.setDigitalExchangeName(bundle.getMetadata().getNamespace());</span>
+<span class="fc" id="L115">        dec.setRating(5);</span>
+<span class="fc" id="L116">        dec.setType(bundleComponentTypes);</span>
+<span class="fc" id="L117">        dec.setLastUpdate(new Date());</span>
+<span class="fc" id="L118">        dec.setSignature(&quot;&quot;);</span>
+<span class="fc" id="L119">        dec.setVersion(bd.getDistTags().get(&quot;latest&quot;).toString());</span>
+<span class="fc" id="L120">        dec.setImage(bd.getThumbnail());</span>
+<span class="fc" id="L121">        return dec;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
