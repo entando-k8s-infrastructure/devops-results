@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DefaultPodClient.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando K8S Operator Common Library</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.client</a> &gt; <span class="el_source">DefaultPodClient.java</span></div><h1>DefaultPodClient.java</h1><pre class="source lang-java linenums">/*
+ *
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ *  This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ */
+
+package org.entando.kubernetes.client;
+
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.fabric8.kubernetes.client.Watch;
+import io.fabric8.kubernetes.client.Watcher;
+import io.fabric8.kubernetes.client.dsl.Watchable;
+import io.fabric8.kubernetes.internal.KubernetesDeserializer;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Predicate;
+import org.entando.kubernetes.controller.EntandoOperatorConfig;
+import org.entando.kubernetes.controller.PodResult;
+import org.entando.kubernetes.controller.PodResult.State;
+import org.entando.kubernetes.controller.k8sclient.PodClient;
+
+public class DefaultPodClient implements PodClient {
+
+    private final KubernetesClient client;
+<span class="fc" id="L35">    private AtomicReference&lt;PodWatcher&gt; podWatcherHolder = new AtomicReference&lt;&gt;();</span>
+
+<span class="fc" id="L37">    public DefaultPodClient(KubernetesClient client) {</span>
+<span class="fc" id="L38">        this.client = client;</span>
+        //HACK for GraalVM
+<span class="fc" id="L40">        KubernetesDeserializer.registerCustomKind(&quot;v1&quot;, &quot;Pod&quot;, Pod.class);</span>
+<span class="fc" id="L41">    }</span>
+
+    @Override
+    public AtomicReference&lt;PodWatcher&gt; getPodWatcherHolder() {
+<span class="fc" id="L45">        return podWatcherHolder;</span>
+    }
+
+    @Override
+    public Pod runToCompletion(Pod pod) {
+<span class="fc" id="L50">        Pod running = this.client.pods().inNamespace(pod.getMetadata().getNamespace()).create(pod);</span>
+<span class="pc bpc" id="L51" title="1 of 2 branches missed.">        return waitFor(running, got -&gt; PodResult.of(got).getState() == State.COMPLETED,</span>
+<span class="fc" id="L52">                EntandoOperatorConfig.getPodCompletionTimeoutSeconds());</span>
+    }
+
+    @Override
+    public Pod start(Pod pod) {
+<span class="fc" id="L57">        return this.client.pods().inNamespace(pod.getMetadata().getNamespace()).create(pod);</span>
+    }
+
+    @Override
+    public Pod waitForPod(String namespace, String labelName, String labelValue) {
+<span class="fc" id="L62">        Watchable&lt;Watch, Watcher&lt;Pod&gt;&gt; watchable = client.pods().inNamespace(namespace).withLabel(labelName, labelValue);</span>
+<span class="pc bpc" id="L63" title="2 of 4 branches missed.">        return watchPod(got -&gt; PodResult.of(got).getState() == State.READY || PodResult.of(got).getState() == State.COMPLETED,</span>
+<span class="fc" id="L64">                EntandoOperatorConfig.getPodReadinessTimeoutSeconds(),</span>
+                watchable);
+    }
+
+    @Override
+    public Pod loadPod(String namespace, String labelName, String labelValue) {
+<span class="fc" id="L70">        return client.pods().inNamespace(namespace).withLabel(labelName, labelValue).list().getItems().stream().findFirst().orElse(null);</span>
+    }
+
+    /**
+     * For some reason a local Openshift consistently resulted in timeouts on pod.waitUntilCondition(), so we had to implement our own
+     * logic. waituntilCondition also polls which is nasty.
+     */
+    private Pod waitFor(Pod pod, Predicate&lt;Pod&gt; podPredicate, long timeoutSeconds) {
+<span class="fc" id="L78">        Watchable&lt;Watch, Watcher&lt;Pod&gt;&gt; watchable = client.pods().inNamespace(pod.getMetadata().getNamespace())</span>
+<span class="fc" id="L79">                .withName(pod.getMetadata().getName());</span>
+<span class="fc" id="L80">        return watchPod(podPredicate, timeoutSeconds, watchable);</span>
+
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
