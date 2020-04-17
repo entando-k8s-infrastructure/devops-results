@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CmsProcessor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.model.bundle.processor</a> &gt; <span class="el_source">CmsProcessor.java</span></div><h1>CmsProcessor.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.model.bundle.processor;
+
+import static java.util.Optional.ofNullable;
+
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.entando.kubernetes.model.bundle.BundleReader;
+import org.entando.kubernetes.model.bundle.descriptor.ComponentDescriptor;
+import org.entando.kubernetes.model.bundle.descriptor.ComponentSpecDescriptor;
+import org.entando.kubernetes.model.bundle.descriptor.ContentModelDescriptor;
+import org.entando.kubernetes.model.bundle.descriptor.ContentTypeDescriptor;
+import org.entando.kubernetes.model.bundle.installable.ContentModelInstallable;
+import org.entando.kubernetes.model.bundle.installable.ContentTypeInstallable;
+import org.entando.kubernetes.model.bundle.installable.Installable;
+import org.entando.kubernetes.model.digitalexchange.ComponentType;
+import org.entando.kubernetes.model.digitalexchange.DigitalExchangeJob;
+import org.entando.kubernetes.model.digitalexchange.DigitalExchangeJobComponent;
+import org.entando.kubernetes.service.digitalexchange.entandocore.EntandoCoreService;
+import org.springframework.stereotype.Service;
+
+/**
+ * Processor to handle CMS Plugin stuff to be stored by Entando.
+ * Currently creating ContentTypes and ContentModels
+ *
+ * @author Sergio Marcelino
+ */
+<span class="fc" id="L31">@Slf4j</span>
+@Service
+@RequiredArgsConstructor
+public class CmsProcessor implements ComponentProcessor {
+
+    private final EntandoCoreService engineService;
+
+    @Override
+    public List&lt;Installable&gt; process(final DigitalExchangeJob job, final BundleReader npr,
+                                               final ComponentDescriptor descriptor) throws IOException {
+
+<span class="fc" id="L42">        final Optional&lt;List&lt;String&gt;&gt; contentTypesDescriptor = ofNullable(descriptor.getComponents())</span>
+<span class="fc" id="L43">                .map(ComponentSpecDescriptor::getContentTypes);</span>
+<span class="fc" id="L44">        final Optional&lt;List&lt;String&gt;&gt; contentModelsDescriptor = ofNullable(descriptor.getComponents())</span>
+<span class="fc" id="L45">                .map(ComponentSpecDescriptor::getContentModels);</span>
+<span class="fc" id="L46">        final List&lt;Installable&gt; installables = new LinkedList&lt;&gt;();</span>
+
+<span class="pc bpc" id="L48" title="1 of 2 branches missed.">        if (contentTypesDescriptor.isPresent()) {</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">            for (final String fileName : contentTypesDescriptor.get()) {</span>
+<span class="fc" id="L50">                final ContentTypeDescriptor contentTypeDescriptor = npr.readDescriptorFile(fileName, ContentTypeDescriptor.class);</span>
+<span class="fc" id="L51">                installables.add(new ContentTypeInstallable(engineService, contentTypeDescriptor));</span>
+<span class="fc" id="L52">            }</span>
+        }
+
+<span class="pc bpc" id="L55" title="1 of 2 branches missed.">        if (contentModelsDescriptor.isPresent()) {</span>
+<span class="fc bfc" id="L56" title="All 2 branches covered.">            for (final String fileName : contentModelsDescriptor.get()) {</span>
+<span class="fc" id="L57">                final ContentModelDescriptor contentModelDescriptor = npr.readDescriptorFile(fileName, ContentModelDescriptor.class);</span>
+<span class="fc bfc" id="L58" title="All 2 branches covered.">                if (contentModelDescriptor.getContentShapePath() != null) {</span>
+<span class="fc" id="L59">                  String csPath = getRelativePath(fileName, contentModelDescriptor.getContentShapePath());</span>
+<span class="fc" id="L60">                  contentModelDescriptor.setContentShape(npr.readFileAsString(csPath));</span>
+                }
+<span class="fc" id="L62">                installables.add(new ContentModelInstallable(engineService, contentModelDescriptor));</span>
+<span class="fc" id="L63">            }</span>
+        }
+
+<span class="fc" id="L66">        return installables;</span>
+    }
+
+    @Override
+    public boolean shouldProcess(final ComponentType componentType) {
+<span class="fc bfc" id="L71" title="All 4 branches covered.">        return componentType == ComponentType.CONTENT_MODEL || componentType == ComponentType.CONTENT_TYPE;</span>
+    }
+
+    @Override
+    public void uninstall(final DigitalExchangeJobComponent component) {
+<span class="fc bfc" id="L76" title="All 2 branches covered.">        if (component.getComponentType() == ComponentType.CONTENT_MODEL) {</span>
+<span class="fc" id="L77">            log.info(&quot;Removing Content Model {}&quot;, component.getName());</span>
+<span class="fc" id="L78">            engineService.deleteContentModel(component.getName());</span>
+<span class="pc bpc" id="L79" title="1 of 2 branches missed.">        } else if (component.getComponentType() == ComponentType.CONTENT_TYPE) {</span>
+<span class="fc" id="L80">            log.info(&quot;Removing Content Type {}&quot;, component.getName());</span>
+<span class="fc" id="L81">            engineService.deleteContentType(component.getName());</span>
+        }
+<span class="fc" id="L83">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
