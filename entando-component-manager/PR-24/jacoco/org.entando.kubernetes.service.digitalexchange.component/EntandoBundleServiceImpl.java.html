@@ -26,6 +26,8 @@ import org.entando.kubernetes.model.debundle.EntandoDeBundle;
 import org.entando.kubernetes.model.digitalexchange.EntandoBundle;
 import org.entando.kubernetes.model.digitalexchange.EntandoBundleComponentJob;
 import org.entando.kubernetes.model.digitalexchange.JobStatus;
+import org.entando.kubernetes.model.web.request.PagedListRequest;
+import org.entando.kubernetes.model.web.response.PagedMetadata;
 import org.entando.kubernetes.repository.EntandoBundleComponentJobRepository;
 import org.entando.kubernetes.repository.EntandoBundleJobRepository;
 import org.entando.kubernetes.repository.InstalledEntandoBundleRepository;
@@ -45,90 +47,108 @@ public class EntandoBundleServiceImpl implements EntandoBundleService {
             @Value(&quot;${entando.digital-exchanges.name:}&quot;) List&lt;String&gt; accessibleDigitalExchanges,
             EntandoBundleJobRepository jobRepository,
             EntandoBundleComponentJobRepository jobComponentRepository,
-<span class="fc" id="L48">            InstalledEntandoBundleRepository installedComponentRepo) {</span>
-<span class="fc" id="L49">        this.k8SServiceClient = k8SServiceClient;</span>
-<span class="fc" id="L50">        this.accessibleDigitalExchanges = accessibleDigitalExchanges</span>
-<span class="fc" id="L51">                .stream().filter(Strings::isNotBlank).collect(Collectors.toList());</span>
-<span class="fc" id="L52">        this.jobRepository = jobRepository;</span>
-<span class="fc" id="L53">        this.jobComponentRepository = jobComponentRepository;</span>
-<span class="fc" id="L54">        this.installedComponentRepo = installedComponentRepo;</span>
-<span class="fc" id="L55">    }</span>
-
+<span class="fc" id="L50">            InstalledEntandoBundleRepository installedComponentRepo) {</span>
+<span class="fc" id="L51">        this.k8SServiceClient = k8SServiceClient;</span>
+<span class="fc" id="L52">        this.accessibleDigitalExchanges = accessibleDigitalExchanges</span>
+<span class="fc" id="L53">                .stream().filter(Strings::isNotBlank).collect(Collectors.toList());</span>
+<span class="fc" id="L54">        this.jobRepository = jobRepository;</span>
+<span class="fc" id="L55">        this.jobComponentRepository = jobComponentRepository;</span>
+<span class="fc" id="L56">        this.installedComponentRepo = installedComponentRepo;</span>
+<span class="fc" id="L57">    }</span>
 
     @Override
-    public List&lt;EntandoBundle&gt; getComponents() {
-<span class="fc" id="L60">        List&lt;EntandoBundle&gt; allComponents = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L61">        List&lt;EntandoBundle&gt; installedComponents = installedComponentRepo.findAll();</span>
-<span class="fc" id="L62">        List&lt;EntandoBundle&gt; externalComponents = getAvailableComponentsFromDigitalExchanges();</span>
-<span class="fc bfc" id="L63" title="All 2 branches covered.">        List&lt;EntandoBundle&gt; notAlreadyInstalled = installedComponents.isEmpty() ?</span>
-                externalComponents :
-<span class="fc" id="L65">                filterNotInstalledComponents(externalComponents, installedComponents);</span>
+    public PagedMetadata&lt;EntandoBundle&gt; getComponents() {
+<span class="fc" id="L61">        return getComponents(new PagedListRequest());</span>
+    }
 
-<span class="fc" id="L67">        allComponents.addAll(installedComponents);</span>
-<span class="fc" id="L68">        allComponents.addAll(notAlreadyInstalled);</span>
-<span class="fc" id="L69">        return allComponents;</span>
+    @Override
+    public PagedMetadata&lt;EntandoBundle&gt; getComponents(PagedListRequest request) {
+<span class="fc" id="L66">        List&lt;EntandoBundle&gt; allComponents = getAllComponents();</span>
+<span class="fc" id="L67">        List&lt;EntandoBundle&gt; localFilteredList = new EntandoBundleListProcessor(request, allComponents)</span>
+<span class="fc" id="L68">                .filterAndSort().toList();</span>
+<span class="fc" id="L69">        List&lt;EntandoBundle&gt; sublist = request.getSublist(localFilteredList);</span>
+
+<span class="fc" id="L71">        PagedMetadata&lt;EntandoBundle&gt; result = new PagedMetadata&lt;&gt;();</span>
+<span class="fc" id="L72">        result.setBody(sublist);</span>
+<span class="fc" id="L73">        result.setTotalItems(localFilteredList.size());</span>
+<span class="fc" id="L74">        result.setPage(request.getPage());</span>
+<span class="fc" id="L75">        result.setPageSize(request.getPageSize());</span>
+<span class="fc" id="L76">        return result;</span>
+    }
+
+    private List&lt;EntandoBundle&gt; getAllComponents() {
+<span class="fc" id="L80">        List&lt;EntandoBundle&gt; allComponents = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L81">        List&lt;EntandoBundle&gt; installedComponents = installedComponentRepo.findAll();</span>
+<span class="fc" id="L82">        List&lt;EntandoBundle&gt; externalComponents = getAvailableComponentsFromDigitalExchanges();</span>
+<span class="fc bfc" id="L83" title="All 2 branches covered.">        List&lt;EntandoBundle&gt; notAlreadyInstalled = installedComponents.isEmpty() ?</span>
+                externalComponents :
+<span class="fc" id="L85">                filterNotInstalledComponents(externalComponents, installedComponents);</span>
+
+<span class="fc" id="L87">        allComponents.addAll(installedComponents);</span>
+<span class="fc" id="L88">        allComponents.addAll(notAlreadyInstalled);</span>
+<span class="fc" id="L89">        return allComponents;</span>
     }
 
     @Override
     public Optional&lt;EntandoBundle&gt; getInstalledComponent(String id) {
-<span class="fc" id="L74">        return installedComponentRepo.findById(id);</span>
+<span class="fc" id="L94">        return installedComponentRepo.findById(id);</span>
     }
 
     @Override
     public List&lt;EntandoBundleComponentJob&gt; getBundleInstalledComponents(String id) {
-<span class="fc" id="L79">        EntandoBundle bundle = getInstalledComponent(id)</span>
-<span class="pc" id="L80">                .orElseThrow(() -&gt; new BundleNotInstalledException(&quot;Bundle &quot; + id + &quot; is not installed in the system&quot;));</span>
-<span class="nc bnc" id="L81" title="All 4 branches missed.">        if (bundle.getJob() != null &amp;&amp; bundle.getJob().getStatus().equals(JobStatus.INSTALL_COMPLETED)) {</span>
-<span class="nc" id="L82">            return jobComponentRepository.findAllByJob(bundle.getJob());</span>
+<span class="fc" id="L99">        EntandoBundle bundle = getInstalledComponent(id)</span>
+<span class="pc" id="L100">                .orElseThrow(() -&gt; new BundleNotInstalledException(&quot;Bundle &quot; + id + &quot; is not installed in the system&quot;));</span>
+<span class="nc bnc" id="L101" title="All 4 branches missed.">        if (bundle.getJob() != null &amp;&amp; bundle.getJob().getStatus().equals(JobStatus.INSTALL_COMPLETED)) {</span>
+<span class="nc" id="L102">            return jobComponentRepository.findAllByJob(bundle.getJob());</span>
         } else {
-<span class="nc" id="L84">            throw new EntandoComponentManagerException(&quot;Bundle &quot; + id + &quot; is not installed correctly&quot;);</span>
+<span class="nc" id="L104">            throw new EntandoComponentManagerException(&quot;Bundle &quot; + id + &quot; is not installed correctly&quot;);</span>
         }
     }
 
 
     private List&lt;EntandoBundle&gt; filterNotInstalledComponents(
             List&lt;EntandoBundle&gt; externalComponents, List&lt;EntandoBundle&gt; installedComponents) {
-<span class="fc" id="L91">        Map&lt;String, String&gt; installedVersions = installedComponents.stream()</span>
-<span class="fc" id="L92">                .collect(Collectors.toMap(EntandoBundle::getId, EntandoBundle::getVersion));</span>
+<span class="fc" id="L111">        Map&lt;String, String&gt; installedVersions = installedComponents.stream()</span>
+<span class="fc" id="L112">                .collect(Collectors.toMap(EntandoBundle::getId, EntandoBundle::getVersion));</span>
 
-<span class="fc" id="L94">        List&lt;EntandoBundle&gt; notInstalledComponents = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L95" title="All 2 branches covered.">        for (EntandoBundle dec : externalComponents) {</span>
-<span class="fc" id="L96">            String k = dec.getId();</span>
-<span class="fc" id="L97">            String v = dec.getVersion();</span>
-<span class="pc bpc" id="L98" title="2 of 4 branches missed.">            if (installedVersions.containsKey(k) &amp;&amp; installedVersions.get(k).equals(v)) {</span>
-<span class="fc" id="L99">                continue;</span>
+<span class="fc" id="L114">        List&lt;EntandoBundle&gt; notInstalledComponents = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L115" title="All 2 branches covered.">        for (EntandoBundle dec : externalComponents) {</span>
+<span class="fc" id="L116">            String k = dec.getId();</span>
+<span class="fc" id="L117">            String v = dec.getVersion();</span>
+<span class="pc bpc" id="L118" title="1 of 4 branches missed.">            if (installedVersions.containsKey(k) &amp;&amp; installedVersions.get(k).equals(v)) {</span>
+<span class="fc" id="L119">                continue;</span>
             }
-<span class="nc" id="L101">            notInstalledComponents.add(dec);</span>
-<span class="nc" id="L102">        }</span>
+<span class="fc" id="L121">            notInstalledComponents.add(dec);</span>
+<span class="fc" id="L122">        }</span>
 
-<span class="fc" id="L104">        return notInstalledComponents;</span>
+<span class="fc" id="L124">        return notInstalledComponents;</span>
     }
 
     private List&lt;EntandoBundle&gt; getAvailableComponentsFromDigitalExchanges() {
         List&lt;EntandoDeBundle&gt; bundles;
-<span class="fc bfc" id="L109" title="All 2 branches covered.">        if (accessibleDigitalExchanges.isEmpty()) {</span>
-<span class="fc" id="L110">            bundles = k8SServiceClient.getBundlesInObservedNamespaces();</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">        if (accessibleDigitalExchanges.isEmpty()) {</span>
+<span class="fc" id="L130">            bundles = k8SServiceClient.getBundlesInObservedNamespaces();</span>
         } else {
-<span class="fc" id="L112">            bundles = k8SServiceClient.getBundlesInNamespaces(accessibleDigitalExchanges);</span>
+<span class="fc" id="L132">            bundles = k8SServiceClient.getBundlesInNamespaces(accessibleDigitalExchanges);</span>
         }
-<span class="fc" id="L114">        return bundles.stream().map(this::convertBundleToLegacyComponent).collect(Collectors.toList());</span>
+<span class="fc" id="L134">        return bundles.stream().map(this::convertBundleToLegacyComponent).collect(Collectors.toList());</span>
     }
 
 
     public EntandoBundle convertBundleToLegacyComponent(EntandoDeBundle bundle) {
-<span class="fc" id="L119">        EntandoBundle dec = EntandoBundle.newFrom(bundle);</span>
-<span class="fc bfc" id="L120" title="All 2 branches covered.">        if (checkIfInstalled(bundle)) {</span>
-<span class="fc" id="L121">            dec.setInstalled(true);</span>
+<span class="fc" id="L139">        EntandoBundle dec = EntandoBundle.newFrom(bundle);</span>
+<span class="fc bfc" id="L140" title="All 2 branches covered.">        if (checkIfInstalled(bundle)) {</span>
+<span class="fc" id="L141">            dec.setInstalled(true);</span>
         }
-<span class="fc" id="L123">        return dec;</span>
+<span class="fc" id="L143">        return dec;</span>
     }
 
     private boolean checkIfInstalled(EntandoDeBundle bundle) {
-<span class="fc" id="L127">        String deId = bundle.getMetadata().getNamespace();</span>
-<span class="fc" id="L128">        String componentId = bundle.getMetadata().getName();</span>
-<span class="fc" id="L129">        return jobRepository.findFirstByDigitalExchangeAndComponentIdOrderByStartedAtDesc(deId, componentId)</span>
-<span class="fc" id="L130">                .map(j -&gt; j.getStatus().equals(JobStatus.INSTALL_COMPLETED))</span>
-<span class="fc" id="L131">                .orElse(false);</span>
+<span class="fc" id="L147">        String deId = bundle.getMetadata().getNamespace();</span>
+<span class="fc" id="L148">        String componentId = bundle.getMetadata().getName();</span>
+<span class="fc" id="L149">        return jobRepository.findFirstByDigitalExchangeAndComponentIdOrderByStartedAtDesc(deId, componentId)</span>
+<span class="fc" id="L150">                .map(j -&gt; j.getStatus().equals(JobStatus.INSTALL_COMPLETED))</span>
+<span class="fc" id="L151">                .orElse(false);</span>
     }
 
 }
