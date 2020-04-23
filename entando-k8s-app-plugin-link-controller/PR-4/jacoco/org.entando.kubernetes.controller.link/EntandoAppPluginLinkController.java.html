@@ -16,7 +16,6 @@
 
 package org.entando.kubernetes.controller.link;
 
-import io.fabric8.kubernetes.api.model.ServiceStatus;
 import io.fabric8.kubernetes.api.model.extensions.HTTPIngressPath;
 import io.fabric8.kubernetes.api.model.extensions.Ingress;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -38,60 +37,59 @@ import org.entando.kubernetes.model.plugin.EntandoPlugin;
 
 public class EntandoAppPluginLinkController extends AbstractDbAwareController&lt;EntandoAppPluginLink&gt; {
 
-
     @Inject
     public EntandoAppPluginLinkController(KubernetesClient kubernetesClient) {
-<span class="nc" id="L44">        super(kubernetesClient);</span>
-<span class="nc" id="L45">    }</span>
+<span class="nc" id="L42">        super(kubernetesClient);</span>
+<span class="nc" id="L43">    }</span>
 
     public EntandoAppPluginLinkController(SimpleK8SClient&lt;?&gt; k8sClient,
             SimpleKeycloakClient keycloakClient) {
-<span class="fc" id="L49">        super(k8sClient, keycloakClient);</span>
-<span class="fc" id="L50">    }</span>
+<span class="fc" id="L47">        super(k8sClient, keycloakClient);</span>
+<span class="fc" id="L48">    }</span>
 
     public EntandoAppPluginLinkController(KubernetesClient kubernetesClient, boolean exitAutomatically) {
-<span class="nc" id="L53">        super(kubernetesClient, exitAutomatically);</span>
-<span class="nc" id="L54">    }</span>
+<span class="nc" id="L51">        super(kubernetesClient, exitAutomatically);</span>
+<span class="nc" id="L52">    }</span>
 
     public void onStartup(@Observes StartupEvent event) {
-<span class="fc" id="L57">        processCommand();</span>
-<span class="fc" id="L58">    }</span>
+<span class="fc" id="L55">        processCommand();</span>
+<span class="fc" id="L56">    }</span>
 
     @Override
     protected void cleanBeforeDeletion(EntandoAppPluginLink appPluginLink) {
-<span class="fc" id="L62">        EntandoLinkedPluginIngressing entandoLinkedPluginIngressing = prepareEntandoPluginIngressing(appPluginLink);</span>
-<span class="fc" id="L63">        Ingress ingress = entandoLinkedPluginIngressing.getEntandoAppDeploymentResult().getIngress();</span>
-<span class="fc" id="L64">        Optional&lt;IngressingPathOnPort&gt; pluginIngressPath = entandoLinkedPluginIngressing.getIngressingContainers()</span>
-<span class="fc" id="L65">                .stream().findFirst();</span>
+<span class="fc" id="L60">        EntandoLinkedPluginIngressing entandoLinkedPluginIngressing = prepareEntandoPluginIngressing(appPluginLink);</span>
+<span class="fc" id="L61">        Ingress ingress = entandoLinkedPluginIngressing.getEntandoAppDeploymentResult().getIngress();</span>
+<span class="fc" id="L62">        Optional&lt;IngressingPathOnPort&gt; pluginIngressPath = entandoLinkedPluginIngressing.getIngressingContainers()</span>
+<span class="fc" id="L63">                .stream().findFirst();</span>
 
-<span class="pc bpc" id="L67" title="1 of 2 branches missed.">        if (pluginIngressPath.isPresent()) {</span>
-<span class="fc" id="L68">            Optional&lt;HTTPIngressPath&gt; pathToRemove = ingress.getSpec().getRules().get(0)</span>
-<span class="fc" id="L69">                    .getHttp().getPaths().stream()</span>
-<span class="fc" id="L70">                    .filter(p -&gt; p.getPath().equals(pluginIngressPath.get().getWebContextPath()))</span>
-<span class="fc" id="L71">                    .findAny();</span>
-<span class="fc" id="L72">            pathToRemove.ifPresent(p -&gt; k8sClient.ingresses().removeHttpPath(ingress, p));</span>
+<span class="pc bpc" id="L65" title="1 of 2 branches missed.">        if (pluginIngressPath.isPresent()) {</span>
+<span class="fc" id="L66">            Optional&lt;HTTPIngressPath&gt; pathToRemove = ingress.getSpec().getRules().get(0)</span>
+<span class="fc" id="L67">                    .getHttp().getPaths().stream()</span>
+<span class="fc" id="L68">                    .filter(p -&gt; p.getPath().equals(pluginIngressPath.get().getWebContextPath()))</span>
+<span class="fc" id="L69">                    .findAny();</span>
+<span class="fc" id="L70">            pathToRemove.ifPresent(p -&gt; k8sClient.ingresses().removeHttpPath(ingress, p));</span>
         }
-<span class="fc" id="L74">    }</span>
+<span class="fc" id="L72">    }</span>
 
     @Override
     protected void synchronizeDeploymentState(EntandoAppPluginLink newEntandoAppPluginLink) {
-<span class="fc" id="L78">        EntandoLinkedPluginIngressing entandoLinkedPluginIngressing = prepareEntandoPluginIngressing(newEntandoAppPluginLink);</span>
-<span class="fc" id="L79">        LinkAppToPluginCommand linkAppToPluginCommand = new LinkAppToPluginCommand(newEntandoAppPluginLink,</span>
+<span class="fc" id="L76">        EntandoLinkedPluginIngressing entandoLinkedPluginIngressing = prepareEntandoPluginIngressing(newEntandoAppPluginLink);</span>
+<span class="fc" id="L77">        LinkAppToPluginCommand linkAppToPluginCommand = new LinkAppToPluginCommand(newEntandoAppPluginLink,</span>
                 entandoLinkedPluginIngressing);
-<span class="fc" id="L81">        linkAppToPluginCommand.execute(k8sClient, keycloakClient);</span>
-<span class="fc" id="L82">        k8sClient.entandoResources().updateStatus(newEntandoAppPluginLink, linkAppToPluginCommand.getStatus());</span>
-<span class="fc" id="L83">    }</span>
+<span class="fc" id="L79">        linkAppToPluginCommand.execute(k8sClient, keycloakClient);</span>
+<span class="fc" id="L80">        k8sClient.entandoResources().updateStatus(newEntandoAppPluginLink, linkAppToPluginCommand.getStatus());</span>
+<span class="fc" id="L81">    }</span>
 
     private EntandoLinkedPluginIngressing prepareEntandoPluginIngressing(EntandoAppPluginLink newEntandoAppPluginLink) {
-<span class="fc" id="L86">        EntandoAppPluginLinkSpec spec = newEntandoAppPluginLink.getSpec();</span>
-<span class="fc" id="L87">        EntandoApp entandoApp = k8sClient.entandoResources().loadEntandoApp(spec.getEntandoAppNamespace(), spec.getEntandoAppName());</span>
-<span class="fc" id="L88">        EntandoPlugin entandoPlugin = k8sClient.entandoResources()</span>
-<span class="fc" id="L89">                .loadEntandoPlugin(spec.getEntandoPluginNamespace(), spec.getEntandoPluginName());</span>
-<span class="fc" id="L90">        k8sClient.pods().waitForPod(entandoPlugin.getMetadata().getNamespace(), DeployCommand.DEPLOYMENT_LABEL_NAME,</span>
-<span class="fc" id="L91">                entandoPlugin.getMetadata().getName() + &quot;-&quot; + KubeUtils.DEFAULT_SERVER_QUALIFIER);</span>
-<span class="fc" id="L92">        ServiceDeploymentResult entandoAppDeploymentResult = k8sClient.entandoResources().loadServiceResult(entandoApp);</span>
-<span class="fc" id="L93">        ServiceDeploymentResult entandoPluginDeploymentResult = k8sClient.entandoResources().loadServiceResult(entandoPlugin);</span>
-<span class="fc" id="L94">        return new EntandoLinkedPluginIngressing(entandoApp, entandoPlugin, entandoAppDeploymentResult, entandoPluginDeploymentResult);</span>
+<span class="fc" id="L84">        EntandoAppPluginLinkSpec spec = newEntandoAppPluginLink.getSpec();</span>
+<span class="fc" id="L85">        EntandoApp entandoApp = k8sClient.entandoResources().loadEntandoApp(spec.getEntandoAppNamespace(), spec.getEntandoAppName());</span>
+<span class="fc" id="L86">        EntandoPlugin entandoPlugin = k8sClient.entandoResources()</span>
+<span class="fc" id="L87">                .loadEntandoPlugin(spec.getEntandoPluginNamespace(), spec.getEntandoPluginName());</span>
+<span class="fc" id="L88">        k8sClient.pods().waitForPod(entandoPlugin.getMetadata().getNamespace(), DeployCommand.DEPLOYMENT_LABEL_NAME,</span>
+<span class="fc" id="L89">                entandoPlugin.getMetadata().getName() + &quot;-&quot; + KubeUtils.DEFAULT_SERVER_QUALIFIER);</span>
+<span class="fc" id="L90">        ServiceDeploymentResult entandoAppDeploymentResult = k8sClient.entandoResources().loadServiceResult(entandoApp);</span>
+<span class="fc" id="L91">        ServiceDeploymentResult entandoPluginDeploymentResult = k8sClient.entandoResources().loadServiceResult(entandoPlugin);</span>
+<span class="fc" id="L92">        return new EntandoLinkedPluginIngressing(entandoApp, entandoPlugin, entandoAppDeploymentResult, entandoPluginDeploymentResult);</span>
     }
 
 }
