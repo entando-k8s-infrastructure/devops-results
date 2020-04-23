@@ -43,118 +43,123 @@ public class AuthorizationHeaderUtil {
     private final RestTemplateBuilder restTemplateBuilder;
 <span class="fc" id="L44">    private final Logger log = LoggerFactory.getLogger(AuthorizationHeaderUtil.class);</span>
 
-<span class="fc" id="L46">    public AuthorizationHeaderUtil(OAuth2AuthorizedClientService clientService, RestTemplateBuilder restTemplateBuilder) {</span>
-<span class="fc" id="L47">        this.clientService = clientService;</span>
-<span class="fc" id="L48">        this.restTemplateBuilder = restTemplateBuilder;</span>
-<span class="fc" id="L49">    }</span>
+    public AuthorizationHeaderUtil(OAuth2AuthorizedClientService clientService,
+<span class="fc" id="L47">            RestTemplateBuilder restTemplateBuilder) {</span>
+<span class="fc" id="L48">        this.clientService = clientService;</span>
+<span class="fc" id="L49">        this.restTemplateBuilder = restTemplateBuilder;</span>
+<span class="fc" id="L50">    }</span>
 
     public Optional&lt;String&gt; getAuthorizationHeader() {
-<span class="nc" id="L52">        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();</span>
-<span class="nc bnc" id="L53" title="All 2 branches missed.">        if (authentication instanceof OAuth2AuthenticationToken) {</span>
-<span class="nc" id="L54">            OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;</span>
-<span class="nc" id="L55">            String name = oauthToken.getName();</span>
-<span class="nc" id="L56">            String registrationId = oauthToken.getAuthorizedClientRegistrationId();</span>
-<span class="nc" id="L57">            OAuth2AuthorizedClient client = clientService.loadAuthorizedClient(</span>
-                registrationId,
-                name);
+<span class="nc" id="L53">        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();</span>
+<span class="nc bnc" id="L54" title="All 2 branches missed.">        if (authentication instanceof OAuth2AuthenticationToken) {</span>
+<span class="nc" id="L55">            OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;</span>
+<span class="nc" id="L56">            String name = oauthToken.getName();</span>
+<span class="nc" id="L57">            String registrationId = oauthToken.getAuthorizedClientRegistrationId();</span>
+<span class="nc" id="L58">            OAuth2AuthorizedClient client = clientService.loadAuthorizedClient(</span>
+                    registrationId,
+                    name);
 
-<span class="nc bnc" id="L61" title="All 2 branches missed.">            if (null == client) {</span>
-<span class="nc" id="L62">                throw new OAuth2AuthorizationException(new OAuth2Error(&quot;access_denied&quot;, &quot;The token is expired&quot;, null));</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">            if (null == client) {</span>
+<span class="nc" id="L63">                throw new OAuth2AuthorizationException(new OAuth2Error(&quot;access_denied&quot;, &quot;The token is expired&quot;, null));</span>
             }
-<span class="nc" id="L64">            OAuth2AccessToken accessToken = client.getAccessToken();</span>
+<span class="nc" id="L65">            OAuth2AccessToken accessToken = client.getAccessToken();</span>
 
-<span class="nc bnc" id="L66" title="All 2 branches missed.">            if (accessToken != null) {</span>
-<span class="nc" id="L67">                String tokenType = accessToken.getTokenType().getValue();</span>
-<span class="nc" id="L68">                String accessTokenValue = accessToken.getTokenValue();</span>
-<span class="nc bnc" id="L69" title="All 2 branches missed.">                if (isExpired(accessToken)) {</span>
-<span class="nc" id="L70">                    log.info(&quot;AccessToken expired, refreshing automatically&quot;);</span>
-<span class="nc" id="L71">                    accessTokenValue = refreshToken(client, oauthToken);</span>
-<span class="nc bnc" id="L72" title="All 2 branches missed.">                    if (null == accessTokenValue) {</span>
-<span class="nc" id="L73">                        SecurityContextHolder.getContext().setAuthentication(null);</span>
-<span class="nc" id="L74">                        throw new OAuth2AuthorizationException(new OAuth2Error(&quot;access_denied&quot;, &quot;The token is expired&quot;, null));</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">            if (accessToken != null) {</span>
+<span class="nc" id="L68">                String tokenType = accessToken.getTokenType().getValue();</span>
+<span class="nc" id="L69">                String accessTokenValue = accessToken.getTokenValue();</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">                if (isExpired(accessToken)) {</span>
+<span class="nc" id="L71">                    log.info(&quot;AccessToken expired, refreshing automatically&quot;);</span>
+<span class="nc" id="L72">                    accessTokenValue = refreshToken(client, oauthToken);</span>
+<span class="nc bnc" id="L73" title="All 2 branches missed.">                    if (null == accessTokenValue) {</span>
+<span class="nc" id="L74">                        SecurityContextHolder.getContext().setAuthentication(null);</span>
+<span class="nc" id="L75">                        throw new OAuth2AuthorizationException(</span>
+                                new OAuth2Error(&quot;access_denied&quot;, &quot;The token is expired&quot;, null));
                     }
                 }
-<span class="nc" id="L77">                String authorizationHeaderValue = String.format(&quot;%s %s&quot;, tokenType, accessTokenValue);</span>
-<span class="nc" id="L78">                return Optional.of(authorizationHeaderValue);</span>
+<span class="nc" id="L79">                String authorizationHeaderValue = String.format(&quot;%s %s&quot;, tokenType, accessTokenValue);</span>
+<span class="nc" id="L80">                return Optional.of(authorizationHeaderValue);</span>
             }
 
-<span class="nc bnc" id="L81" title="All 2 branches missed.">        } else if (authentication instanceof JwtAuthenticationToken) {</span>
-<span class="nc" id="L82">            JwtAuthenticationToken accessToken = (JwtAuthenticationToken) authentication;</span>
-<span class="nc" id="L83">            String tokenValue = accessToken.getToken().getTokenValue();</span>
-<span class="nc" id="L84">            String authorizationHeaderValue = String</span>
-<span class="nc" id="L85">                    .format(&quot;%s %s&quot;, OAuth2AccessToken.TokenType.BEARER.getValue(), tokenValue);</span>
-<span class="nc" id="L86">            return Optional.of(authorizationHeaderValue);</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">        } else if (authentication instanceof JwtAuthenticationToken) {</span>
+<span class="nc" id="L84">            JwtAuthenticationToken accessToken = (JwtAuthenticationToken) authentication;</span>
+<span class="nc" id="L85">            String tokenValue = accessToken.getToken().getTokenValue();</span>
+<span class="nc" id="L86">            String authorizationHeaderValue = String</span>
+<span class="nc" id="L87">                    .format(&quot;%s %s&quot;, OAuth2AccessToken.TokenType.BEARER.getValue(), tokenValue);</span>
+<span class="nc" id="L88">            return Optional.of(authorizationHeaderValue);</span>
         }
-<span class="nc" id="L88">        return Optional.empty();</span>
+<span class="nc" id="L90">        return Optional.empty();</span>
     }
 
     private String refreshToken(OAuth2AuthorizedClient client, OAuth2AuthenticationToken oauthToken) {
-<span class="nc" id="L92">        OAuth2AccessTokenResponse atr = refreshTokenClient(client);</span>
-<span class="nc bnc" id="L93" title="All 4 branches missed.">        if (atr == null || atr.getAccessToken() == null) {</span>
-<span class="nc" id="L94">            log.info(&quot;Failed to refresh token for user&quot;);</span>
-<span class="nc" id="L95">            return null;</span>
+<span class="nc" id="L94">        OAuth2AccessTokenResponse atr = refreshTokenClient(client);</span>
+<span class="nc bnc" id="L95" title="All 4 branches missed.">        if (atr == null || atr.getAccessToken() == null) {</span>
+<span class="nc" id="L96">            log.info(&quot;Failed to refresh token for user&quot;);</span>
+<span class="nc" id="L97">            return null;</span>
         }
 
-<span class="nc bnc" id="L98" title="All 2 branches missed.">        OAuth2RefreshToken refreshToken = atr.getRefreshToken() != null ? atr.getRefreshToken(): client.getRefreshToken();</span>
-<span class="nc" id="L99">        OAuth2AuthorizedClient updatedClient = new OAuth2AuthorizedClient(</span>
-<span class="nc" id="L100">            client.getClientRegistration(),</span>
-<span class="nc" id="L101">            client.getPrincipalName(),</span>
-<span class="nc" id="L102">            atr.getAccessToken(),</span>
-            refreshToken
+<span class="nc" id="L100">        OAuth2RefreshToken refreshToken =</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">                atr.getRefreshToken() != null ? atr.getRefreshToken() : client.getRefreshToken();</span>
+<span class="nc" id="L102">        OAuth2AuthorizedClient updatedClient = new OAuth2AuthorizedClient(</span>
+<span class="nc" id="L103">                client.getClientRegistration(),</span>
+<span class="nc" id="L104">                client.getPrincipalName(),</span>
+<span class="nc" id="L105">                atr.getAccessToken(),</span>
+                refreshToken
         );
 
-<span class="nc" id="L106">        clientService.saveAuthorizedClient(updatedClient, oauthToken);</span>
-<span class="nc" id="L107">        return atr.getAccessToken().getTokenValue();</span>
+<span class="nc" id="L109">        clientService.saveAuthorizedClient(updatedClient, oauthToken);</span>
+<span class="nc" id="L110">        return atr.getAccessToken().getTokenValue();</span>
     }
 
     private OAuth2AccessTokenResponse refreshTokenClient(OAuth2AuthorizedClient currentClient) {
 
-<span class="nc" id="L112">        MultiValueMap&lt;String, String&gt; formParameters = new LinkedMultiValueMap&lt;&gt;();</span>
-<span class="nc" id="L113">        formParameters.add(OAuth2ParameterNames.GRANT_TYPE, AuthorizationGrantType.REFRESH_TOKEN.getValue());</span>
-<span class="nc" id="L114">        formParameters.add(OAuth2ParameterNames.REFRESH_TOKEN, currentClient.getRefreshToken().getTokenValue());</span>
-<span class="nc" id="L115">        formParameters.add(OAuth2ParameterNames.CLIENT_ID, currentClient.getClientRegistration().getClientId());</span>
-<span class="nc" id="L116">        RequestEntity requestEntity = RequestEntity</span>
-<span class="nc" id="L117">            .post(URI.create(currentClient.getClientRegistration().getProviderDetails().getTokenUri()))</span>
-<span class="nc" id="L118">            .contentType(MediaType.APPLICATION_FORM_URLENCODED)</span>
-<span class="nc" id="L119">            .body(formParameters);</span>
+<span class="nc" id="L115">        MultiValueMap&lt;String, String&gt; formParameters = new LinkedMultiValueMap&lt;&gt;();</span>
+<span class="nc" id="L116">        formParameters.add(OAuth2ParameterNames.GRANT_TYPE, AuthorizationGrantType.REFRESH_TOKEN.getValue());</span>
+<span class="nc" id="L117">        formParameters.add(OAuth2ParameterNames.REFRESH_TOKEN, currentClient.getRefreshToken().getTokenValue());</span>
+<span class="nc" id="L118">        formParameters.add(OAuth2ParameterNames.CLIENT_ID, currentClient.getClientRegistration().getClientId());</span>
+<span class="nc" id="L119">        RequestEntity&lt;?&gt; requestEntity = RequestEntity</span>
+<span class="nc" id="L120">                .post(URI.create(currentClient.getClientRegistration().getProviderDetails().getTokenUri()))</span>
+<span class="nc" id="L121">                .contentType(MediaType.APPLICATION_FORM_URLENCODED)</span>
+<span class="nc" id="L122">                .body(formParameters);</span>
         try {
-<span class="nc" id="L121">            RestTemplate r = restTemplate(currentClient.getClientRegistration().getClientId(), currentClient.getClientRegistration().getClientSecret());</span>
-<span class="nc" id="L122">            ResponseEntity&lt;OAuthIdpTokenResponseDTO&gt; responseEntity = r.exchange(requestEntity, OAuthIdpTokenResponseDTO.class);</span>
-<span class="nc" id="L123">            return toOAuth2AccessTokenResponse(responseEntity.getBody());</span>
-<span class="nc" id="L124">        } catch (OAuth2AuthorizationException e) {</span>
-<span class="nc" id="L125">            throw new OAuth2AuthenticationException(e.getError(), &quot;Unable to refresh the token&quot;, e);</span>
+<span class="nc" id="L124">            RestTemplate r = restTemplate(currentClient.getClientRegistration().getClientId(),</span>
+<span class="nc" id="L125">                    currentClient.getClientRegistration().getClientSecret());</span>
+<span class="nc" id="L126">            ResponseEntity&lt;OAuthIdpTokenResponseDTO&gt; responseEntity = r</span>
+<span class="nc" id="L127">                    .exchange(requestEntity, OAuthIdpTokenResponseDTO.class);</span>
+<span class="nc" id="L128">            return toOAuth2AccessTokenResponse(responseEntity.getBody());</span>
+<span class="nc" id="L129">        } catch (OAuth2AuthorizationException e) {</span>
+<span class="nc" id="L130">            throw new OAuth2AuthenticationException(e.getError(), &quot;Unable to refresh the token&quot;, e);</span>
         }
     }
 
     private OAuth2AccessTokenResponse toOAuth2AccessTokenResponse(OAuthIdpTokenResponseDTO oAuthIdpResponse) {
-<span class="nc" id="L130">        Map&lt;String, Object&gt; additionalParameters = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L131">        additionalParameters.put(&quot;id_token&quot;, oAuthIdpResponse.getIdToken());</span>
-<span class="nc" id="L132">        additionalParameters.put(&quot;not-before-policy&quot;, oAuthIdpResponse.getNotBefore());</span>
-<span class="nc" id="L133">        additionalParameters.put(&quot;refresh_expires_in&quot;, oAuthIdpResponse.getRefreshExpiresIn());</span>
-<span class="nc" id="L134">        additionalParameters.put(&quot;session_state&quot;, oAuthIdpResponse.getSessionState());</span>
-<span class="nc" id="L135">        return OAuth2AccessTokenResponse.withToken(oAuthIdpResponse.getAccessToken())</span>
-<span class="nc" id="L136">            .expiresIn(oAuthIdpResponse.getExpiresIn())</span>
-<span class="nc" id="L137">            .refreshToken(oAuthIdpResponse.getRefreshToken())</span>
-<span class="nc" id="L138">            .scopes(Pattern.compile(&quot;\\s&quot;).splitAsStream(oAuthIdpResponse.getScope()).collect(Collectors.toSet()))</span>
-<span class="nc" id="L139">            .tokenType(OAuth2AccessToken.TokenType.BEARER)</span>
-<span class="nc" id="L140">            .additionalParameters(additionalParameters)</span>
-<span class="nc" id="L141">            .build();</span>
+<span class="nc" id="L135">        Map&lt;String, Object&gt; additionalParameters = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L136">        additionalParameters.put(&quot;id_token&quot;, oAuthIdpResponse.getIdToken());</span>
+<span class="nc" id="L137">        additionalParameters.put(&quot;not-before-policy&quot;, oAuthIdpResponse.getNotBefore());</span>
+<span class="nc" id="L138">        additionalParameters.put(&quot;refresh_expires_in&quot;, oAuthIdpResponse.getRefreshExpiresIn());</span>
+<span class="nc" id="L139">        additionalParameters.put(&quot;session_state&quot;, oAuthIdpResponse.getSessionState());</span>
+<span class="nc" id="L140">        return OAuth2AccessTokenResponse.withToken(oAuthIdpResponse.getAccessToken())</span>
+<span class="nc" id="L141">                .expiresIn(oAuthIdpResponse.getExpiresIn())</span>
+<span class="nc" id="L142">                .refreshToken(oAuthIdpResponse.getRefreshToken())</span>
+<span class="nc" id="L143">                .scopes(Pattern.compile(&quot;\\s&quot;).splitAsStream(oAuthIdpResponse.getScope()).collect(Collectors.toSet()))</span>
+<span class="nc" id="L144">                .tokenType(OAuth2AccessToken.TokenType.BEARER)</span>
+<span class="nc" id="L145">                .additionalParameters(additionalParameters)</span>
+<span class="nc" id="L146">                .build();</span>
     }
 
     private RestTemplate restTemplate(String clientId, String clientSecret) {
-<span class="nc" id="L145">        return restTemplateBuilder</span>
-<span class="nc" id="L146">            .additionalMessageConverters(</span>
-                new FormHttpMessageConverter(),
-                new OAuth2AccessTokenResponseHttpMessageConverter())
-<span class="nc" id="L149">            .errorHandler(new OAuth2ErrorResponseErrorHandler())</span>
-<span class="nc" id="L150">            .basicAuthentication(clientId, clientSecret)</span>
-<span class="nc" id="L151">            .build();</span>
+<span class="nc" id="L150">        return restTemplateBuilder</span>
+<span class="nc" id="L151">                .additionalMessageConverters(</span>
+                        new FormHttpMessageConverter(),
+                        new OAuth2AccessTokenResponseHttpMessageConverter())
+<span class="nc" id="L154">                .errorHandler(new OAuth2ErrorResponseErrorHandler())</span>
+<span class="nc" id="L155">                .basicAuthentication(clientId, clientSecret)</span>
+<span class="nc" id="L156">                .build();</span>
     }
 
     private boolean isExpired(OAuth2AccessToken accessToken) {
-<span class="nc" id="L155">        Instant now = Instant.now();</span>
-<span class="nc" id="L156">        Instant expiresAt = accessToken.getExpiresAt();</span>
-<span class="nc" id="L157">        return now.isAfter(expiresAt.minus(Duration.ofMinutes(1L)));</span>
+<span class="nc" id="L160">        Instant now = Instant.now();</span>
+<span class="nc" id="L161">        Instant expiresAt = accessToken.getExpiresAt();</span>
+<span class="nc" id="L162">        return now.isAfter(expiresAt.minus(Duration.ofMinutes(1L)));</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

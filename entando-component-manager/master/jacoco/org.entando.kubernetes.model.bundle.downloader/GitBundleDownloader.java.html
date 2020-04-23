@@ -1,56 +1,55 @@
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GitBundleDownloader.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.model.bundle.downloader</a> &gt; <span class="el_source">GitBundleDownloader.java</span></div><h1>GitBundleDownloader.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.model.bundle.downloader;
 
 import java.io.IOException;
-import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.http.client.utils.URIBuilder;
 import org.entando.kubernetes.model.debundle.EntandoDeBundleTag;
-import org.springframework.web.util.UriComponentsBuilder;
 
-<span class="fc" id="L12">public class GitBundleDownloader extends BundleDownloader{</span>
+<span class="fc" id="L9">public class GitBundleDownloader extends BundleDownloader {</span>
 
     @Override
     protected Path saveBundleStrategy(EntandoDeBundleTag tag, Path targetPath) {
         try {
-<span class="fc" id="L17">            validateRepoUrl(tag.getTarball());</span>
-<span class="fc" id="L18">            cloneUsingCliImplementation(tag, targetPath);</span>
-<span class="fc" id="L19">            return targetPath;</span>
-<span class="nc" id="L20">        } catch (IOException e) {</span>
+<span class="fc" id="L14">            validateRepoUrl(tag.getTarball());</span>
+<span class="fc" id="L15">            cloneUsingCliImplementation(tag, targetPath);</span>
+<span class="fc" id="L16">            return targetPath;</span>
+<span class="nc" id="L17">        } catch (IOException e) {</span>
+<span class="nc" id="L18">            throw new BundleDownloaderException(&quot;An error occurred while cloning git repo&quot;, e);</span>
+<span class="nc" id="L19">        } catch (InterruptedException e) {</span>
+<span class="nc" id="L20">            Thread.currentThread().interrupt();</span>
 <span class="nc" id="L21">            throw new BundleDownloaderException(&quot;An error occurred while cloning git repo&quot;, e);</span>
-<span class="nc" id="L22">        } catch (InterruptedException e) {</span>
-<span class="nc" id="L23">            Thread.currentThread().interrupt();</span>
-<span class="nc" id="L24">            throw new BundleDownloaderException(&quot;An error occurred while cloning git repo&quot;, e);</span>
         }
     }
 
     private void validateRepoUrl(String tarball) {
-<span class="fc bfc" id="L29" title="All 2 branches covered.">        if (!tarball.matches(&quot;^https?://.*$&quot;)) {</span>
-<span class="fc" id="L30">            throw new BundleDownloaderException(&quot;Unsupported repository &quot; + tarball + &quot;; Only HTTP(s) repositories are supported&quot;);</span>
+<span class="fc bfc" id="L26" title="All 2 branches covered.">        if (!tarball.matches(&quot;^https?://.*$&quot;)) {</span>
+<span class="fc" id="L27">            throw new BundleDownloaderException(</span>
+                    &quot;Unsupported repository &quot; + tarball + &quot;; Only HTTP(s) repositories are supported&quot;);
         }
-<span class="fc" id="L32">    }</span>
+<span class="fc" id="L30">    }</span>
 
     private void cloneUsingCliImplementation(EntandoDeBundleTag tag, Path targetPath)
             throws IOException, InterruptedException {
-<span class="fc" id="L36">        List&lt;String&gt; commands = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L37">        String gitCommand = String.format( &quot;git clone --branch %s --depth 1 %s %s&quot;,</span>
-<span class="fc" id="L38">                tag.getVersion(),</span>
-<span class="fc" id="L39">                tag.getTarball(),</span>
-<span class="fc" id="L40">                targetPath.toAbsolutePath());</span>
-<span class="fc" id="L41">        commands.add(&quot;/bin/sh&quot;);</span>
-<span class="fc" id="L42">        commands.add(&quot;-c&quot;);</span>
-<span class="fc" id="L43">        commands.add(gitCommand);</span>
+<span class="fc" id="L34">        List&lt;String&gt; commands = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L35">        String gitCommand = String.format(&quot;git clone --branch %s --depth 1 %s %s&quot;,</span>
+<span class="fc" id="L36">                tag.getVersion(),</span>
+<span class="fc" id="L37">                tag.getTarball(),</span>
+<span class="fc" id="L38">                targetPath.toAbsolutePath());</span>
+<span class="fc" id="L39">        commands.add(&quot;/bin/sh&quot;);</span>
+<span class="fc" id="L40">        commands.add(&quot;-c&quot;);</span>
+<span class="fc" id="L41">        commands.add(gitCommand);</span>
 
-<span class="fc" id="L45">        ProcessBuilder pb = new ProcessBuilder(commands);</span>
-<span class="fc" id="L46">        pb.redirectErrorStream(true);</span>
-<span class="fc" id="L47">        Process process = pb.start();</span>
+<span class="fc" id="L43">        ProcessBuilder pb = new ProcessBuilder(commands);</span>
+<span class="fc" id="L44">        pb.redirectErrorStream(true);</span>
+<span class="fc" id="L45">        Process process = pb.start();</span>
 
         //EDIT:
         // get Exit Status
-<span class="pc bpc" id="L51" title="1 of 2 branches missed.">        if ( process.waitFor() != 0)</span>
-<span class="nc" id="L52">            throw new BundleDownloaderException(&quot;An error occurred while shallow cloning the git repo&quot;);</span>
-<span class="fc" id="L53">    }</span>
+<span class="pc bpc" id="L49" title="1 of 2 branches missed.">        if (process.waitFor() != 0) {</span>
+<span class="nc" id="L50">            throw new BundleDownloaderException(&quot;An error occurred while shallow cloning the git repo&quot;);</span>
+        }
+<span class="fc" id="L52">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

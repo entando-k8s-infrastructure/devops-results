@@ -6,15 +6,15 @@ import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.entando.kubernetes.client.core.EntandoCoreClient;
 import org.entando.kubernetes.model.bundle.BundleReader;
 import org.entando.kubernetes.model.bundle.descriptor.ComponentDescriptor;
 import org.entando.kubernetes.model.bundle.descriptor.FragmentDescriptor;
 import org.entando.kubernetes.model.bundle.installable.FragmentInstallable;
 import org.entando.kubernetes.model.bundle.installable.Installable;
 import org.entando.kubernetes.model.digitalexchange.ComponentType;
-import org.entando.kubernetes.model.digitalexchange.DigitalExchangeJob;
-import org.entando.kubernetes.model.digitalexchange.DigitalExchangeJobComponent;
-import org.entando.kubernetes.service.digitalexchange.entandocore.EntandoCoreService;
+import org.entando.kubernetes.model.digitalexchange.EntandoBundleComponentJob;
+import org.entando.kubernetes.model.digitalexchange.EntandoBundleJob;
 import org.springframework.stereotype.Service;
 
 <span class="fc" id="L20">@Slf4j</span>
@@ -22,16 +22,16 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class FragmentProcessor implements ComponentProcessor {
 
-    private final EntandoCoreService engineService;
+    private final EntandoCoreClient engineService;
 
     @Override
-    public List&lt;Installable&gt; process(DigitalExchangeJob job, BundleReader npr, ComponentDescriptor descriptor)
+    public List&lt;Installable&gt; process(EntandoBundleJob job, BundleReader npr, ComponentDescriptor descriptor)
             throws IOException {
 <span class="fc" id="L30">        Optional&lt;List&lt;String&gt;&gt; optionalFragments = Optional.ofNullable(descriptor.getComponents().getFragments());</span>
 <span class="fc" id="L31">        List&lt;Installable&gt; installableList = new ArrayList&lt;&gt;();</span>
 
 <span class="pc bpc" id="L33" title="1 of 2 branches missed.">        if (optionalFragments.isPresent()) {</span>
-<span class="fc bfc" id="L34" title="All 2 branches covered.">            for (String fileName: optionalFragments.get() ) {</span>
+<span class="fc bfc" id="L34" title="All 2 branches covered.">            for (String fileName : optionalFragments.get()) {</span>
 <span class="fc" id="L35">                FragmentDescriptor frDesc = npr.readDescriptorFile(fileName, FragmentDescriptor.class);</span>
 <span class="fc bfc" id="L36" title="All 2 branches covered.">                if (frDesc.getGuiCodePath() != null) {</span>
 <span class="fc" id="L37">                    String gcp = getRelativePath(fileName, frDesc.getGuiCodePath());</span>
@@ -49,7 +49,7 @@ public class FragmentProcessor implements ComponentProcessor {
     }
 
     @Override
-    public void uninstall(DigitalExchangeJobComponent component) {
+    public void uninstall(EntandoBundleComponentJob component) {
 <span class="fc" id="L53">        log.info(&quot;Removing Fragment {}&quot;, component.getName());</span>
 <span class="fc" id="L54">        engineService.deleteFragment(component.getName());</span>
 <span class="fc" id="L55">    }</span>

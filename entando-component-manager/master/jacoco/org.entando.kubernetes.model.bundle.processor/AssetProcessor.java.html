@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.entando.kubernetes.client.core.EntandoCoreClient;
 import org.entando.kubernetes.model.bundle.BundleProperty;
 import org.entando.kubernetes.model.bundle.BundleReader;
 import org.entando.kubernetes.model.bundle.descriptor.ComponentDescriptor;
@@ -16,40 +17,39 @@ import org.entando.kubernetes.model.bundle.installable.AssetInstallable;
 import org.entando.kubernetes.model.bundle.installable.DirectoryInstallable;
 import org.entando.kubernetes.model.bundle.installable.Installable;
 import org.entando.kubernetes.model.digitalexchange.ComponentType;
-import org.entando.kubernetes.model.digitalexchange.DigitalExchangeJob;
-import org.entando.kubernetes.model.digitalexchange.DigitalExchangeJobComponent;
-import org.entando.kubernetes.service.digitalexchange.entandocore.EntandoCoreService;
-import org.entando.kubernetes.service.digitalexchange.job.DigitalExchangeUninstallService;
+import org.entando.kubernetes.model.digitalexchange.EntandoBundleComponentJob;
+import org.entando.kubernetes.model.digitalexchange.EntandoBundleJob;
+import org.entando.kubernetes.service.digitalexchange.job.EntandoBundleUninstallService;
 import org.springframework.stereotype.Service;
 
 /**
- * Processor to handle Static files to be stored by Entando.
- * Commonly used for js, images and css.
- *
+ * Processor to handle Static files to be stored by Entando. Commonly used for js, images and css.
+ * &lt;p&gt;
  * This processor will also create the folders.
  *
  * @author Sergio Marcelino
  */
-<span class="fc" id="L33">@Slf4j</span>
+<span class="fc" id="L32">@Slf4j</span>
 @Service
 @RequiredArgsConstructor
 public class AssetProcessor implements ComponentProcessor {
 
-    private final EntandoCoreService engineService;
+    private final EntandoCoreClient engineService;
 
     @Override
-    public List&lt;Installable&gt; process(final DigitalExchangeJob job, final BundleReader npr,
-                                               final ComponentDescriptor descriptor) throws IOException {
+    public List&lt;Installable&gt; process(final EntandoBundleJob job, final BundleReader npr,
+            final ComponentDescriptor descriptor) throws IOException {
 
-<span class="fc" id="L44">        final List&lt;Installable&gt; installables = new LinkedList&lt;&gt;();</span>
+<span class="fc" id="L43">        final List&lt;Installable&gt; installables = new LinkedList&lt;&gt;();</span>
 
-<span class="pc bpc" id="L46" title="1 of 2 branches missed.">        if (npr.containsResourceFolder()) {</span>
-<span class="fc" id="L47">            final String componentFolder = &quot;/&quot; + job.getComponentId();</span>
-<span class="fc" id="L48">            installables.add(new DirectoryInstallable(engineService, componentFolder));</span>
+<span class="pc bpc" id="L45" title="1 of 2 branches missed.">        if (npr.containsResourceFolder()) {</span>
+<span class="fc" id="L46">            final String componentFolder = &quot;/&quot; + job.getComponentId();</span>
+<span class="fc" id="L47">            installables.add(new DirectoryInstallable(engineService, componentFolder));</span>
 
-<span class="fc" id="L50">            List&lt;String&gt; resourceFolders = npr.getResourceFolders().stream().sorted().collect(Collectors.toList());</span>
-<span class="fc bfc" id="L51" title="All 2 branches covered.">            for (final String resourceFolder : resourceFolders) {</span>
-<span class="fc" id="L52">                Path fileFolder = Paths.get(BundleProperty.RESOURCES_FOLDER_PATH.getValue()).relativize(Paths.get(resourceFolder));</span>
+<span class="fc" id="L49">            List&lt;String&gt; resourceFolders = npr.getResourceFolders().stream().sorted().collect(Collectors.toList());</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">            for (final String resourceFolder : resourceFolders) {</span>
+<span class="fc" id="L51">                Path fileFolder = Paths.get(BundleProperty.RESOURCES_FOLDER_PATH.getValue())</span>
+<span class="fc" id="L52">                        .relativize(Paths.get(resourceFolder));</span>
 <span class="fc" id="L53">                String folder = Paths.get(componentFolder).resolve(fileFolder).toString();</span>
 <span class="fc" id="L54">                installables.add(new DirectoryInstallable(engineService, folder));</span>
 <span class="fc" id="L55">            }</span>
@@ -58,30 +58,32 @@ public class AssetProcessor implements ComponentProcessor {
 <span class="fc bfc" id="L58" title="All 2 branches covered.">            for (final String resourceFile : resourceFiles) {</span>
 <span class="fc" id="L59">                final FileDescriptor fileDescriptor = npr.getResourceFileAsDescriptor(resourceFile);</span>
 
-<span class="fc" id="L61">                Path fileFolder = Paths.get(BundleProperty.RESOURCES_FOLDER_PATH.getValue()).relativize(Paths.get(fileDescriptor.getFolder()));</span>
-<span class="fc" id="L62">                String folder = Paths.get(componentFolder).resolve(fileFolder).toString();</span>
-<span class="fc" id="L63">                fileDescriptor.setFolder(folder);</span>
-<span class="fc" id="L64">                installables.add(new AssetInstallable(engineService, fileDescriptor));</span>
-<span class="fc" id="L65">            }</span>
+<span class="fc" id="L61">                Path fileFolder = Paths.get(BundleProperty.RESOURCES_FOLDER_PATH.getValue())</span>
+<span class="fc" id="L62">                        .relativize(Paths.get(fileDescriptor.getFolder()));</span>
+<span class="fc" id="L63">                String folder = Paths.get(componentFolder).resolve(fileFolder).toString();</span>
+<span class="fc" id="L64">                fileDescriptor.setFolder(folder);</span>
+<span class="fc" id="L65">                installables.add(new AssetInstallable(engineService, fileDescriptor));</span>
+<span class="fc" id="L66">            }</span>
         }
 
-<span class="fc" id="L68">        return installables;</span>
+<span class="fc" id="L69">        return installables;</span>
     }
 
     /**
-     * This process will be hard coded in the {@link DigitalExchangeUninstallService}
+     * This process will be hard coded in the {@link EntandoBundleUninstallService}
+     *
      * @param componentType The component type being processed
      * @return always false
      */
     @Override
     public boolean shouldProcess(final ComponentType componentType) {
-<span class="fc" id="L78">        return false;</span>
+<span class="fc" id="L80">        return false;</span>
     }
 
     @Override
-    public void uninstall(final DigitalExchangeJobComponent component) {
+    public void uninstall(final EntandoBundleComponentJob component) {
         // Not necessary
-<span class="nc" id="L84">    }</span>
+<span class="nc" id="L86">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

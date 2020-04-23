@@ -22,103 +22,102 @@ import org.entando.kubernetes.model.debundle.EntandoDeBundleTag;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpInputMessage;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.client.RestTemplate;
 
-<span class="fc" id="L31">public class NpmBundleDownloader extends BundleDownloader {</span>
+<span class="fc" id="L29">public class NpmBundleDownloader extends BundleDownloader {</span>
 
     @Override
     protected Path saveBundleStrategy(EntandoDeBundleTag tag, Path targetPath) {
         try {
-<span class="fc" id="L36">            InputStream is = downloadComponentPackage(tag);</span>
-<span class="fc" id="L37">            Path tarPath = savePackageStreamLocally(is);</span>
-<span class="fc" id="L38">            unpackTar(tarPath, targetPath);</span>
-<span class="fc" id="L39">            return targetPath;</span>
-<span class="nc" id="L40">        } catch (IOException e) {</span>
-<span class="nc" id="L41">            throw new BundleDownloaderException(e);</span>
+<span class="fc" id="L34">            InputStream is = downloadComponentPackage(tag);</span>
+<span class="fc" id="L35">            Path tarPath = savePackageStreamLocally(is);</span>
+<span class="fc" id="L36">            unpackTar(tarPath, targetPath);</span>
+<span class="fc" id="L37">            return targetPath;</span>
+<span class="nc" id="L38">        } catch (IOException e) {</span>
+<span class="nc" id="L39">            throw new BundleDownloaderException(e);</span>
         }
     }
 
     private TarArchiveInputStream getGzipTarInputStream(Path p) {
         try {
-<span class="fc" id="L47">            return new TarArchiveInputStream(new GzipCompressorInputStream(newInputStream(p, READ)));</span>
-<span class="nc" id="L48">        } catch (IOException e) {</span>
-<span class="nc" id="L49">            throw new UncheckedIOException(&quot;An error occurred while reading file &quot; + p.getFileName().toString(), e);</span>
+<span class="fc" id="L45">            return new TarArchiveInputStream(new GzipCompressorInputStream(newInputStream(p, READ)));</span>
+<span class="nc" id="L46">        } catch (IOException e) {</span>
+<span class="nc" id="L47">            throw new UncheckedIOException(&quot;An error occurred while reading file &quot; + p.getFileName().toString(), e);</span>
         }
     }
 
     private Path unpackTar(Path tarPath, Path destination) throws IOException {
 
-<span class="fc" id="L55">        TarArchiveInputStream tarInputStream = getGzipTarInputStream(tarPath);</span>
+<span class="fc" id="L53">        TarArchiveInputStream tarInputStream = getGzipTarInputStream(tarPath);</span>
 
         TarArchiveEntry tae;
-<span class="fc" id="L58">        Map&lt;String, File&gt; tes = new HashMap&lt;&gt;();</span>
-<span class="fc bfc" id="L59" title="All 2 branches covered.">        while ( (tae = tarInputStream.getNextTarEntry()) != null ) {</span>
-<span class="pc bpc" id="L60" title="1 of 2 branches missed.">            if (!tarInputStream.canReadEntryData(tae)) {</span>
+<span class="fc" id="L56">        Map&lt;String, File&gt; tes = new HashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L57" title="All 2 branches covered.">        while ((tae = tarInputStream.getNextTarEntry()) != null) {</span>
+<span class="pc bpc" id="L58" title="1 of 2 branches missed.">            if (!tarInputStream.canReadEntryData(tae)) {</span>
                 // log something?
-<span class="nc" id="L62">                continue;</span>
+<span class="nc" id="L60">                continue;</span>
             }
 
-<span class="fc" id="L65">            String rebasedName = tae.getName().replaceFirst(&quot;package/&quot;, &quot;&quot;);</span>
+<span class="fc" id="L63">            String rebasedName = tae.getName().replaceFirst(&quot;package/&quot;, &quot;&quot;);</span>
 
-<span class="fc" id="L67">            Path filePath = destination.resolve(rebasedName);</span>
-<span class="fc" id="L68">            File tmpf = filePath.toFile();</span>
-<span class="fc" id="L69">            tmpf.deleteOnExit();</span>
-<span class="pc bpc" id="L70" title="1 of 2 branches missed.">            if (tae.isDirectory()) {</span>
-<span class="nc bnc" id="L71" title="All 4 branches missed.">                if (!tmpf.isDirectory() &amp;&amp; !tmpf.mkdirs()) {</span>
-<span class="nc" id="L72">                    throw new IOException(&quot;failed to create directory &quot; + tmpf);</span>
+<span class="fc" id="L65">            Path filePath = destination.resolve(rebasedName);</span>
+<span class="fc" id="L66">            File tmpf = filePath.toFile();</span>
+<span class="fc" id="L67">            tmpf.deleteOnExit();</span>
+<span class="pc bpc" id="L68" title="1 of 2 branches missed.">            if (tae.isDirectory()) {</span>
+<span class="nc bnc" id="L69" title="All 4 branches missed.">                if (!tmpf.isDirectory() &amp;&amp; !tmpf.mkdirs()) {</span>
+<span class="nc" id="L70">                    throw new IOException(&quot;failed to create directory &quot; + tmpf);</span>
                 }
             } else {
-<span class="fc" id="L75">                File parent = tmpf.getParentFile();</span>
-<span class="pc bpc" id="L76" title="1 of 4 branches missed.">                if (!parent.isDirectory() &amp;&amp; !parent.mkdirs()) {</span>
-<span class="nc" id="L77">                    throw new IOException(&quot;failed to create directory &quot; + parent);</span>
+<span class="fc" id="L73">                File parent = tmpf.getParentFile();</span>
+<span class="pc bpc" id="L74" title="1 of 4 branches missed.">                if (!parent.isDirectory() &amp;&amp; !parent.mkdirs()) {</span>
+<span class="nc" id="L75">                    throw new IOException(&quot;failed to create directory &quot; + parent);</span>
                 }
-<span class="fc" id="L79">                try (OutputStream o = Files.newOutputStream(tmpf.toPath())) {</span>
-<span class="fc" id="L80">                    IOUtils.copy(tarInputStream, o);</span>
+<span class="fc" id="L77">                try (OutputStream o = Files.newOutputStream(tmpf.toPath())) {</span>
+<span class="fc" id="L78">                    IOUtils.copy(tarInputStream, o);</span>
                 }
             }
-<span class="fc" id="L83">            tes.put(tae.getName(), tmpf);</span>
-<span class="fc" id="L84">        }</span>
-<span class="fc" id="L85">        return destination;</span>
+<span class="fc" id="L81">            tes.put(tae.getName(), tmpf);</span>
+<span class="fc" id="L82">        }</span>
+<span class="fc" id="L83">        return destination;</span>
 
     }
 
 
     private InputStream downloadComponentPackage(EntandoDeBundleTag tag) {
-<span class="fc" id="L91">        String tarballUrl = tag.getTarball();</span>
+<span class="fc" id="L89">        String tarballUrl = tag.getTarball();</span>
 
-<span class="fc" id="L93">        RestTemplate restTemplate = new RestTemplate();</span>
-<span class="fc" id="L94">        HttpHeaders headers = new HttpHeaders();</span>
-<span class="fc" id="L95">        headers.add(&quot;user-agent&quot;, &quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.99 Safari/537.36&quot;);</span>
-<span class="fc" id="L96">        headers.add(&quot;Accept&quot;, &quot;*/*&quot;);</span>
-<span class="fc" id="L97">        HttpEntity&lt;String&gt; entity = new HttpEntity&lt;&gt;(&quot;parameters&quot;, headers);</span>
+<span class="fc" id="L91">        RestTemplate restTemplate = new RestTemplate();</span>
+<span class="fc" id="L92">        HttpHeaders headers = new HttpHeaders();</span>
+<span class="fc" id="L93">        headers.add(&quot;user-agent&quot;,</span>
+                &quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.99 Safari/537.36&quot;);
+<span class="fc" id="L95">        headers.add(&quot;Accept&quot;, &quot;*/*&quot;);</span>
+<span class="fc" id="L96">        HttpEntity&lt;String&gt; entity = new HttpEntity&lt;&gt;(&quot;parameters&quot;, headers);</span>
 
-<span class="fc" id="L99">        ResponseEntity&lt;Resource&gt; responseEntity =  restTemplate.exchange(</span>
+<span class="fc" id="L98">        ResponseEntity&lt;Resource&gt; responseEntity = restTemplate.exchange(</span>
                 tarballUrl, HttpMethod.GET, entity, Resource.class);
 
-<span class="pc bpc" id="L102" title="1 of 2 branches missed.">        if (responseEntity.getBody() == null) {</span>
-<span class="nc" id="L103">            throw new BundleDownloaderException(&quot;Requested package returned an empty body&quot;);</span>
+<span class="pc bpc" id="L101" title="1 of 2 branches missed.">        if (responseEntity.getBody() == null) {</span>
+<span class="nc" id="L102">            throw new BundleDownloaderException(&quot;Requested package returned an empty body&quot;);</span>
         }
 
         try {
-<span class="fc" id="L107">            return responseEntity.getBody().getInputStream();</span>
-<span class="nc" id="L108">        } catch (IOException ex) {</span>
-<span class="nc" id="L109">            throw new UncheckedIOException(ex);</span>
+<span class="fc" id="L106">            return responseEntity.getBody().getInputStream();</span>
+<span class="nc" id="L107">        } catch (IOException ex) {</span>
+<span class="nc" id="L108">            throw new UncheckedIOException(ex);</span>
         }
 
     }
 
     private Path savePackageStreamLocally(InputStream is) {
-<span class="fc" id="L115">        Path tempPath = null;</span>
+<span class="fc" id="L114">        Path tempPath = null;</span>
         try {
-<span class="fc" id="L117">            tempPath = Files.createTempFile(null, null);</span>
-<span class="fc" id="L118">            Files.copy(is, tempPath, StandardCopyOption.REPLACE_EXISTING);</span>
-<span class="fc" id="L119">            return tempPath;</span>
-<span class="nc" id="L120">        } catch (IOException e) {</span>
-<span class="nc" id="L121">            throw new JobPackageException(tempPath,</span>
+<span class="fc" id="L116">            tempPath = Files.createTempFile(null, null);</span>
+<span class="fc" id="L117">            Files.copy(is, tempPath, StandardCopyOption.REPLACE_EXISTING);</span>
+<span class="fc" id="L118">            return tempPath;</span>
+<span class="nc" id="L119">        } catch (IOException e) {</span>
+<span class="nc" id="L120">            throw new JobPackageException(tempPath,</span>
                     &quot;An error occurred while copying the package stream locally&quot;, e);
         }
     }

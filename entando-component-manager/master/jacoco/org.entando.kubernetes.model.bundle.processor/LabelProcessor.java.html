@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.entando.kubernetes.client.core.EntandoCoreClient;
 import org.entando.kubernetes.model.bundle.BundleReader;
 import org.entando.kubernetes.model.bundle.descriptor.ComponentDescriptor;
 import org.entando.kubernetes.model.bundle.descriptor.ComponentSpecDescriptor;
@@ -15,9 +16,8 @@ import org.entando.kubernetes.model.bundle.descriptor.LabelDescriptor;
 import org.entando.kubernetes.model.bundle.installable.Installable;
 import org.entando.kubernetes.model.bundle.installable.LabelInstallable;
 import org.entando.kubernetes.model.digitalexchange.ComponentType;
-import org.entando.kubernetes.model.digitalexchange.DigitalExchangeJob;
-import org.entando.kubernetes.model.digitalexchange.DigitalExchangeJobComponent;
-import org.entando.kubernetes.service.digitalexchange.entandocore.EntandoCoreService;
+import org.entando.kubernetes.model.digitalexchange.EntandoBundleComponentJob;
+import org.entando.kubernetes.model.digitalexchange.EntandoBundleJob;
 import org.springframework.stereotype.Service;
 
 /**
@@ -30,34 +30,35 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class LabelProcessor implements ComponentProcessor {
 
-    private final EntandoCoreService engineService;
+    private final EntandoCoreClient engineService;
 
     @Override
-    public List&lt;Installable&gt; process(final DigitalExchangeJob job, final BundleReader npr,
-                                               final ComponentDescriptor descriptor) throws IOException {
+    public List&lt;Installable&gt; process(final EntandoBundleJob job, final BundleReader npr,
+            final ComponentDescriptor descriptor) throws IOException {
 
-<span class="fc" id="L39">        final Optional&lt;List&lt;LabelDescriptor&gt;&gt; labelDescriptors = ofNullable(descriptor.getComponents()).map(ComponentSpecDescriptor::getLabels);</span>
-<span class="fc" id="L40">        final List&lt;Installable&gt; installables = new LinkedList&lt;&gt;();</span>
+<span class="fc" id="L39">        final Optional&lt;List&lt;LabelDescriptor&gt;&gt; labelDescriptors = ofNullable(descriptor.getComponents())</span>
+<span class="fc" id="L40">                .map(ComponentSpecDescriptor::getLabels);</span>
+<span class="fc" id="L41">        final List&lt;Installable&gt; installables = new LinkedList&lt;&gt;();</span>
 
-<span class="pc bpc" id="L42" title="1 of 2 branches missed.">        if (labelDescriptors.isPresent()) {</span>
-<span class="fc bfc" id="L43" title="All 2 branches covered.">            for (final LabelDescriptor labelDescriptor : labelDescriptors.get()) {</span>
-<span class="fc" id="L44">                installables.add(new LabelInstallable(engineService, labelDescriptor));</span>
-<span class="fc" id="L45">            }</span>
+<span class="pc bpc" id="L43" title="1 of 2 branches missed.">        if (labelDescriptors.isPresent()) {</span>
+<span class="fc bfc" id="L44" title="All 2 branches covered.">            for (final LabelDescriptor labelDescriptor : labelDescriptors.get()) {</span>
+<span class="fc" id="L45">                installables.add(new LabelInstallable(engineService, labelDescriptor));</span>
+<span class="fc" id="L46">            }</span>
         }
 
-<span class="fc" id="L48">        return installables;</span>
+<span class="fc" id="L49">        return installables;</span>
     }
 
     @Override
     public boolean shouldProcess(final ComponentType componentType) {
-<span class="fc bfc" id="L53" title="All 2 branches covered.">        return componentType == ComponentType.LABEL;</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">        return componentType == ComponentType.LABEL;</span>
     }
 
     @Override
-    public void uninstall(final DigitalExchangeJobComponent component) {
-<span class="fc" id="L58">        log.info(&quot;Removing Label {}&quot;, component.getName());</span>
-<span class="fc" id="L59">        engineService.deleteLabel(component.getName());</span>
-<span class="fc" id="L60">    }</span>
+    public void uninstall(final EntandoBundleComponentJob component) {
+<span class="fc" id="L59">        log.info(&quot;Removing Label {}&quot;, component.getName());</span>
+<span class="fc" id="L60">        engineService.deleteLabel(component.getName());</span>
+<span class="fc" id="L61">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
