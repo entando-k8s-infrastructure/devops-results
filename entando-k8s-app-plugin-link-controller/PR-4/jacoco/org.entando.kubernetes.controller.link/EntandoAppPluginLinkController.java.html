@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EntandoAppPluginLinkController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando K8S Controller for Entando App Plugin Links</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.controller.link</a> &gt; <span class="el_source">EntandoAppPluginLinkController.java</span></div><h1>EntandoAppPluginLinkController.java</h1><pre class="source lang-java linenums">/*
+ *
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ *  This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ */
+
+package org.entando.kubernetes.controller.link;
+
+import io.fabric8.kubernetes.api.model.ServiceStatus;
+import io.fabric8.kubernetes.api.model.extensions.HTTPIngressPath;
+import io.fabric8.kubernetes.api.model.extensions.Ingress;
+import io.fabric8.kubernetes.client.KubernetesClient;
+import io.quarkus.runtime.StartupEvent;
+import java.util.Optional;
+import javax.enterprise.event.Observes;
+import javax.inject.Inject;
+import org.entando.kubernetes.controller.AbstractDbAwareController;
+import org.entando.kubernetes.controller.DeployCommand;
+import org.entando.kubernetes.controller.KubeUtils;
+import org.entando.kubernetes.controller.ServiceDeploymentResult;
+import org.entando.kubernetes.controller.SimpleKeycloakClient;
+import org.entando.kubernetes.controller.k8sclient.SimpleK8SClient;
+import org.entando.kubernetes.controller.spi.IngressingPathOnPort;
+import org.entando.kubernetes.model.app.EntandoApp;
+import org.entando.kubernetes.model.link.EntandoAppPluginLink;
+import org.entando.kubernetes.model.link.EntandoAppPluginLinkSpec;
+import org.entando.kubernetes.model.plugin.EntandoPlugin;
+
+public class EntandoAppPluginLinkController extends AbstractDbAwareController&lt;EntandoAppPluginLink&gt; {
+
+
+    @Inject
+    public EntandoAppPluginLinkController(KubernetesClient kubernetesClient) {
+<span class="nc" id="L44">        super(kubernetesClient);</span>
+<span class="nc" id="L45">    }</span>
+
+    public EntandoAppPluginLinkController(SimpleK8SClient&lt;?&gt; k8sClient,
+            SimpleKeycloakClient keycloakClient) {
+<span class="fc" id="L49">        super(k8sClient, keycloakClient);</span>
+<span class="fc" id="L50">    }</span>
+
+    public EntandoAppPluginLinkController(KubernetesClient kubernetesClient, boolean exitAutomatically) {
+<span class="nc" id="L53">        super(kubernetesClient, exitAutomatically);</span>
+<span class="nc" id="L54">    }</span>
+
+    public void onStartup(@Observes StartupEvent event) {
+<span class="fc" id="L57">        processCommand();</span>
+<span class="fc" id="L58">    }</span>
+
+    @Override
+    protected void cleanBeforeDeletion(EntandoAppPluginLink appPluginLink) {
+<span class="fc" id="L62">        EntandoLinkedPluginIngressing entandoLinkedPluginIngressing = prepareEntandoPluginIngressing(appPluginLink);</span>
+<span class="fc" id="L63">        Ingress ingress = entandoLinkedPluginIngressing.getEntandoAppDeploymentResult().getIngress();</span>
+<span class="fc" id="L64">        Optional&lt;IngressingPathOnPort&gt; pluginIngressPath = entandoLinkedPluginIngressing.getIngressingContainers()</span>
+<span class="fc" id="L65">                .stream().findFirst();</span>
+
+<span class="pc bpc" id="L67" title="1 of 2 branches missed.">        if (pluginIngressPath.isPresent()) {</span>
+<span class="fc" id="L68">            Optional&lt;HTTPIngressPath&gt; pathToRemove = ingress.getSpec().getRules().get(0)</span>
+<span class="fc" id="L69">                    .getHttp().getPaths().stream()</span>
+<span class="fc" id="L70">                    .filter(p -&gt; p.getPath().equals(pluginIngressPath.get().getWebContextPath()))</span>
+<span class="fc" id="L71">                    .findAny();</span>
+<span class="fc" id="L72">            pathToRemove.ifPresent(p -&gt; k8sClient.ingresses().removeHttpPath(ingress, p));</span>
+        }
+<span class="fc" id="L74">    }</span>
+
+    @Override
+    protected void synchronizeDeploymentState(EntandoAppPluginLink newEntandoAppPluginLink) {
+<span class="fc" id="L78">        EntandoLinkedPluginIngressing entandoLinkedPluginIngressing = prepareEntandoPluginIngressing(newEntandoAppPluginLink);</span>
+<span class="fc" id="L79">        LinkAppToPluginCommand linkAppToPluginCommand = new LinkAppToPluginCommand(newEntandoAppPluginLink,</span>
+                entandoLinkedPluginIngressing);
+<span class="fc" id="L81">        linkAppToPluginCommand.execute(k8sClient, keycloakClient);</span>
+<span class="fc" id="L82">        k8sClient.entandoResources().updateStatus(newEntandoAppPluginLink, linkAppToPluginCommand.getStatus());</span>
+<span class="fc" id="L83">    }</span>
+
+    private EntandoLinkedPluginIngressing prepareEntandoPluginIngressing(EntandoAppPluginLink newEntandoAppPluginLink) {
+<span class="fc" id="L86">        EntandoAppPluginLinkSpec spec = newEntandoAppPluginLink.getSpec();</span>
+<span class="fc" id="L87">        EntandoApp entandoApp = k8sClient.entandoResources().loadEntandoApp(spec.getEntandoAppNamespace(), spec.getEntandoAppName());</span>
+<span class="fc" id="L88">        EntandoPlugin entandoPlugin = k8sClient.entandoResources()</span>
+<span class="fc" id="L89">                .loadEntandoPlugin(spec.getEntandoPluginNamespace(), spec.getEntandoPluginName());</span>
+<span class="fc" id="L90">        k8sClient.pods().waitForPod(entandoPlugin.getMetadata().getNamespace(), DeployCommand.DEPLOYMENT_LABEL_NAME,</span>
+<span class="fc" id="L91">                entandoPlugin.getMetadata().getName() + &quot;-&quot; + KubeUtils.DEFAULT_SERVER_QUALIFIER);</span>
+<span class="fc" id="L92">        ServiceDeploymentResult entandoAppDeploymentResult = k8sClient.entandoResources().loadServiceResult(entandoApp);</span>
+<span class="fc" id="L93">        ServiceDeploymentResult entandoPluginDeploymentResult = k8sClient.entandoResources().loadServiceResult(entandoPlugin);</span>
+<span class="fc" id="L94">        return new EntandoLinkedPluginIngressing(entandoApp, entandoPlugin, entandoAppDeploymentResult, entandoPluginDeploymentResult);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
