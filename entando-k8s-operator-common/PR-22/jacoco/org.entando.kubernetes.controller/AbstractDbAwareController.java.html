@@ -135,12 +135,12 @@ public abstract class AbstractDbAwareController&lt;T extends EntandoBaseCustomRe
 <span class="fc" id="L135">    }</span>
 
     private boolean actionToProcess(Action action) {
-<span class="pc bpc" id="L138" title="2 of 6 branches missed.">        return action == Action.ADDED || action == Action.MODIFIED || action == Action.DELETED;</span>
+<span class="pc bpc" id="L138" title="3 of 4 branches missed.">        return action == Action.ADDED || action == Action.MODIFIED;</span>
     }
 
     protected void processAction(Action action, T resource) {
         try {
-<span class="pc bpc" id="L143" title="1 of 4 branches missed.">            if (action == Action.ADDED || action == Action.MODIFIED) {</span>
+<span class="pc bpc" id="L143" title="3 of 4 branches missed.">            if (action == Action.ADDED || action == Action.MODIFIED) {</span>
 <span class="fc" id="L144">                k8sClient.entandoResources().addFinalizer(resource);</span>
 <span class="fc" id="L145">                EntandoDeploymentPhase initialPhase = resource.getStatus().getEntandoDeploymentPhase();</span>
 <span class="fc" id="L146">                k8sClient.entandoResources().updatePhase(resource, EntandoDeploymentPhase.STARTED);</span>
@@ -148,41 +148,34 @@ public abstract class AbstractDbAwareController&lt;T extends EntandoBaseCustomRe
 <span class="fc" id="L148">                    synchronizeDeploymentState(resource);</span>
                 }
 <span class="fc" id="L150">                k8sClient.entandoResources().updatePhase(resource, EntandoDeploymentPhase.SUCCESSFUL);</span>
-<span class="pc bpc" id="L151" title="1 of 2 branches missed.">            } else if (action == Action.DELETED) {</span>
-<span class="fc" id="L152">                cleanBeforeDeletion(resource);</span>
-<span class="fc" id="L153">                k8sClient.entandoResources().removeFinalizer(resource);</span>
             }
-<span class="nc" id="L155">        } catch (Exception e) {</span>
-<span class="nc" id="L156">            autoExit.withCode(-1);</span>
-<span class="nc" id="L157">            logger.log(Level.SEVERE, e, () -&gt; format(&quot;Unexpected exception occurred while adding %s %s/%s&quot;,</span>
-<span class="nc" id="L158">                    resource.getKind(),</span>
-<span class="nc" id="L159">                    resource.getMetadata().getNamespace(),</span>
-<span class="nc" id="L160">                    resource.getMetadata().getName()));</span>
-<span class="nc" id="L161">            k8sClient.entandoResources().deploymentFailed(resource, e);</span>
-<span class="fc" id="L162">        }</span>
-<span class="fc" id="L163">    }</span>
-
-    protected void cleanBeforeDeletion(T newResource) {
-        // To be implemented by subclasses if required
-<span class="nc" id="L167">    }</span>
+<span class="nc" id="L152">        } catch (Exception e) {</span>
+<span class="nc" id="L153">            autoExit.withCode(-1);</span>
+<span class="nc" id="L154">            logger.log(Level.SEVERE, e, () -&gt; format(&quot;Unexpected exception occurred while adding %s %s/%s&quot;,</span>
+<span class="nc" id="L155">                    resource.getKind(),</span>
+<span class="nc" id="L156">                    resource.getMetadata().getNamespace(),</span>
+<span class="nc" id="L157">                    resource.getMetadata().getName()));</span>
+<span class="nc" id="L158">            k8sClient.entandoResources().deploymentFailed(resource, e);</span>
+<span class="fc" id="L159">        }</span>
+<span class="fc" id="L160">    }</span>
 
     protected DatabaseServiceResult prepareDatabaseService(EntandoCustomResource entandoCustomResource, DbmsVendor dbmsVendor,
             String nameQualifier) {
-<span class="fc" id="L171">        Optional&lt;ExternalDatabaseDeployment&gt; externalDatabase = k8sClient.entandoResources()</span>
-<span class="fc" id="L172">                .findExternalDatabase(entandoCustomResource, dbmsVendor);</span>
+<span class="fc" id="L164">        Optional&lt;ExternalDatabaseDeployment&gt; externalDatabase = k8sClient.entandoResources()</span>
+<span class="fc" id="L165">                .findExternalDatabase(entandoCustomResource, dbmsVendor);</span>
         DatabaseServiceResult result;
-<span class="fc bfc" id="L174" title="All 2 branches covered.">        if (externalDatabase.isPresent()) {</span>
-<span class="fc" id="L175">            result = new DatabaseServiceResult(externalDatabase.get().getService(), externalDatabase.get().getEntandoDatabaseService());</span>
+<span class="fc bfc" id="L167" title="All 2 branches covered.">        if (externalDatabase.isPresent()) {</span>
+<span class="fc" id="L168">            result = new DatabaseServiceResult(externalDatabase.get().getService(), externalDatabase.get().getEntandoDatabaseService());</span>
         } else {
-<span class="fc" id="L177">            final DatabaseDeployable databaseDeployable = new DatabaseDeployable(DbmsVendorStrategy.forVendor(dbmsVendor),</span>
+<span class="fc" id="L170">            final DatabaseDeployable databaseDeployable = new DatabaseDeployable(DbmsVendorStrategy.forVendor(dbmsVendor),</span>
                     entandoCustomResource, nameQualifier);
-<span class="fc" id="L179">            final DeployCommand&lt;DatabaseServiceResult&gt; dbCommand = new DeployCommand&lt;&gt;(databaseDeployable);</span>
-<span class="fc" id="L180">            result = dbCommand.execute(k8sClient, empty());</span>
-<span class="pc bpc" id="L181" title="1 of 2 branches missed.">            if (result.hasFailed()) {</span>
-<span class="nc" id="L182">                throw new EntandoControllerException(&quot;Database deployment failed&quot;);</span>
+<span class="fc" id="L172">            final DeployCommand&lt;DatabaseServiceResult&gt; dbCommand = new DeployCommand&lt;&gt;(databaseDeployable);</span>
+<span class="fc" id="L173">            result = dbCommand.execute(k8sClient, empty());</span>
+<span class="pc bpc" id="L174" title="1 of 2 branches missed.">            if (result.hasFailed()) {</span>
+<span class="nc" id="L175">                throw new EntandoControllerException(&quot;Database deployment failed&quot;);</span>
             }
         }
-<span class="fc" id="L185">        return result;</span>
+<span class="fc" id="L178">        return result;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
