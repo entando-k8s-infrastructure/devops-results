@@ -42,46 +42,46 @@ public class EntandoResourceObserver&lt;
         L extends CustomResourceList&lt;R&gt;,
         D extends DoneableEntandoCustomResource&lt;D, R&gt;&gt; implements Watcher&lt;R&gt; {
 
-<span class="nc" id="L45">    private static final Logger LOGGER = Logger.getLogger(EntandoResourceObserver.class.getName());</span>
-<span class="nc" id="L46">    private final Map&lt;String, R&gt; cache = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc" id="L45">    private static final Logger LOGGER = Logger.getLogger(EntandoResourceObserver.class.getName());</span>
+<span class="fc" id="L46">    private final Map&lt;String, R&gt; cache = new ConcurrentHashMap&lt;&gt;();</span>
     private final BiConsumer&lt;Action, R&gt; callback;
-<span class="nc" id="L48">    private Executor executor = Executors.newSingleThreadExecutor();</span>
+<span class="fc" id="L48">    private Executor executor = Executors.newSingleThreadExecutor();</span>
 
-<span class="nc" id="L50">    public EntandoResourceObserver(CustomResourceOperationsImpl&lt;R, L, D&gt; operations, BiConsumer&lt;Action, R&gt; callback) {</span>
-<span class="nc" id="L51">        this.callback = callback;</span>
-<span class="nc" id="L52">        processExistingRequestedEntandoResources(operations);</span>
-<span class="nc" id="L53">        operations.watch(this);</span>
-<span class="nc" id="L54">    }</span>
+<span class="fc" id="L50">    public EntandoResourceObserver(CustomResourceOperationsImpl&lt;R, L, D&gt; operations, BiConsumer&lt;Action, R&gt; callback) {</span>
+<span class="fc" id="L51">        this.callback = callback;</span>
+<span class="fc" id="L52">        processExistingRequestedEntandoResources(operations);</span>
+<span class="fc" id="L53">        operations.watch(this);</span>
+<span class="fc" id="L54">    }</span>
 
     private void processExistingRequestedEntandoResources(CustomResourceOperationsImpl&lt;R, L, D&gt; operations) {
-<span class="nc" id="L57">        List&lt;R&gt; items = operations.list().getItems();</span>
-<span class="nc" id="L58">        EntandoDeploymentPhaseWatcher&lt;R, L, D&gt; entandoDeploymentPhaseWatcher = new EntandoDeploymentPhaseWatcher&lt;&gt;(operations);</span>
-<span class="nc bnc" id="L59" title="All 2 branches missed.">        for (R item : items) {</span>
-<span class="nc bnc" id="L60" title="All 2 branches missed.">            if (item.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.REQUESTED) {</span>
-<span class="nc" id="L61">                eventReceived(Action.ADDED, item);</span>
-<span class="nc" id="L62">                entandoDeploymentPhaseWatcher.waitToBeProcessed(item);</span>
-<span class="nc bnc" id="L63" title="All 2 branches missed.">            }else if(!isEmpty(item.getMetadata().getDeletionTimestamp())){</span>
+<span class="fc" id="L57">        List&lt;R&gt; items = operations.list().getItems();</span>
+<span class="fc" id="L58">        EntandoDeploymentPhaseWatcher&lt;R, L, D&gt; entandoDeploymentPhaseWatcher = new EntandoDeploymentPhaseWatcher&lt;&gt;(operations);</span>
+<span class="fc bfc" id="L59" title="All 2 branches covered.">        for (R item : items) {</span>
+<span class="pc bpc" id="L60" title="1 of 2 branches missed.">            if (item.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.REQUESTED) {</span>
+<span class="fc" id="L61">                eventReceived(Action.ADDED, item);</span>
+<span class="fc" id="L62">                entandoDeploymentPhaseWatcher.waitToBeProcessed(item);</span>
+<span class="nc bnc" id="L63" title="All 2 branches missed.">            } else if (!isEmpty(item.getMetadata().getDeletionTimestamp())) {</span>
 <span class="nc" id="L64">                eventReceived(Action.DELETED, item);</span>
 <span class="nc" id="L65">                entandoDeploymentPhaseWatcher.waitToBeProcessed(item);</span>
             }
-<span class="nc" id="L67">            cache.put(item.getMetadata().getUid(), item);</span>
-<span class="nc" id="L68">        }</span>
-<span class="nc" id="L69">    }</span>
+<span class="fc" id="L67">            cache.put(item.getMetadata().getUid(), item);</span>
+<span class="fc" id="L68">        }</span>
+<span class="fc" id="L69">    }</span>
 
     @Override
     public void eventReceived(Action action, R resource) {
         try {
-<span class="nc bnc" id="L74" title="All 4 branches missed.">            if (isNewEvent(resource) &amp;&amp; isNotOwnedByCompositeApp(resource)) {</span>
-<span class="nc" id="L75">                performCallback(action, resource);</span>
+<span class="pc bpc" id="L74" title="1 of 4 branches missed.">            if (isNewEvent(resource) &amp;&amp; isNotOwnedByCompositeApp(resource)) {</span>
+<span class="fc" id="L75">                performCallback(action, resource);</span>
             }
 <span class="nc" id="L77">        } catch (Exception e) {</span>
 <span class="nc" id="L78">            LOGGER.log(Level.SEVERE, e, () -&gt; format(&quot;Could not process the %s %s/%s&quot;, resource.getKind(),</span>
 <span class="nc" id="L79">                    resource.getMetadata().getNamespace(), resource.getMetadata().getName()));</span>
-<span class="nc" id="L80">        }</span>
-<span class="nc" id="L81">    }</span>
+<span class="fc" id="L80">        }</span>
+<span class="fc" id="L81">    }</span>
 
     private boolean isNotOwnedByCompositeApp(R resource) {
-<span class="nc" id="L84">        return resource.getMetadata().getOwnerReferences().stream().noneMatch(ownerReference -&gt; ownerReference.getKind().equals(</span>
+<span class="pc" id="L84">        return resource.getMetadata().getOwnerReferences().stream().noneMatch(ownerReference -&gt; ownerReference.getKind().equals(</span>
 <span class="nc" id="L85">                EntandoCompositeApp.class.getSimpleName()));</span>
     }
 
@@ -91,11 +91,11 @@ public class EntandoResourceObserver&lt;
 <span class="nc" id="L91">    }</span>
 
     protected void performCallback(Action action, R resource) {
-<span class="nc" id="L94">        logAction(Level.INFO, &quot;Received %s for resource %s %s/%s&quot;, action, resource);</span>
-<span class="nc bnc" id="L95" title="All 4 branches missed.">        if (action == Action.ADDED || action == Action.MODIFIED) {</span>
-<span class="nc" id="L96">            cache.put(resource.getMetadata().getUid(), resource);</span>
-<span class="nc bnc" id="L97" title="All 2 branches missed.">            if (resource.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.REQUESTED) {</span>
-<span class="nc" id="L98">                executor.execute(() -&gt; callback.accept(action, resource));</span>
+<span class="fc" id="L94">        logAction(Level.INFO, &quot;Received %s for resource %s %s/%s&quot;, action, resource);</span>
+<span class="pc bpc" id="L95" title="3 of 4 branches missed.">        if (action == Action.ADDED || action == Action.MODIFIED) {</span>
+<span class="fc" id="L96">            cache.put(resource.getMetadata().getUid(), resource);</span>
+<span class="pc bpc" id="L97" title="1 of 2 branches missed.">            if (resource.getStatus().getEntandoDeploymentPhase() == EntandoDeploymentPhase.REQUESTED) {</span>
+<span class="fc" id="L98">                executor.execute(() -&gt; callback.accept(action, resource));</span>
 <span class="nc bnc" id="L99" title="All 2 branches missed.">            } else if (resource.getStatus().getEntandoDeploymentPhase().equals(EntandoDeploymentPhase.SUCCESSFUL)</span>
 <span class="nc bnc" id="L100" title="All 2 branches missed.">                    &amp;&amp; !Strings.isNullOrEmpty(resource.getMetadata().getDeletionTimestamp())) {</span>
 <span class="nc" id="L101">                executor.execute(() -&gt; callback.accept(Action.DELETED, resource));</span>
@@ -105,25 +105,25 @@ public class EntandoResourceObserver&lt;
         } else {
 <span class="nc" id="L106">            logAction(Level.WARNING, &quot;EntandoResourceObserver could not process the %s action on the %s %s/%s&quot;, action, resource);</span>
         }
-<span class="nc" id="L108">    }</span>
+<span class="fc" id="L108">    }</span>
 
     private void logAction(Level info, String format, Action action, R resource) {
-<span class="nc" id="L111">        LOGGER.log(info,</span>
-<span class="nc" id="L112">                () -&gt; format(format, action.name(), resource.getKind(), resource.getMetadata().getNamespace(),</span>
-<span class="nc" id="L113">                        resource.getMetadata().getName()));</span>
-<span class="nc" id="L114">    }</span>
+<span class="fc" id="L111">        LOGGER.log(info,</span>
+<span class="fc" id="L112">                () -&gt; format(format, action.name(), resource.getKind(), resource.getMetadata().getNamespace(),</span>
+<span class="fc" id="L113">                        resource.getMetadata().getName()));</span>
+<span class="fc" id="L114">    }</span>
 
     protected boolean isNewEvent(R newResource) {
-<span class="nc" id="L117">        boolean isNewEvent = true;</span>
-<span class="nc bnc" id="L118" title="All 2 branches missed.">        if (cache.containsKey(newResource.getMetadata().getUid())) {</span>
-<span class="nc" id="L119">            R oldResource = cache.get(newResource.getMetadata().getUid());</span>
-<span class="nc" id="L120">            int knownResourceVersion = Integer.parseInt(oldResource.getMetadata().getResourceVersion());</span>
-<span class="nc" id="L121">            int receivedResourceVersion = Integer.parseInt(newResource.getMetadata().getResourceVersion());</span>
-<span class="nc bnc" id="L122" title="All 2 branches missed.">            if (knownResourceVersion &gt; receivedResourceVersion) {</span>
-<span class="nc" id="L123">                isNewEvent = false;</span>
+<span class="fc" id="L117">        boolean isNewEvent = true;</span>
+<span class="fc bfc" id="L118" title="All 2 branches covered.">        if (cache.containsKey(newResource.getMetadata().getUid())) {</span>
+<span class="fc" id="L119">            R oldResource = cache.get(newResource.getMetadata().getUid());</span>
+<span class="fc" id="L120">            int knownResourceVersion = Integer.parseInt(oldResource.getMetadata().getResourceVersion());</span>
+<span class="fc" id="L121">            int receivedResourceVersion = Integer.parseInt(newResource.getMetadata().getResourceVersion());</span>
+<span class="pc bpc" id="L122" title="1 of 2 branches missed.">            if (knownResourceVersion &gt; receivedResourceVersion) {</span>
+<span class="fc" id="L123">                isNewEvent = false;</span>
             }
         }
-<span class="nc" id="L126">        return isNewEvent;</span>
+<span class="fc" id="L126">        return isNewEvent;</span>
     }
 
 }
