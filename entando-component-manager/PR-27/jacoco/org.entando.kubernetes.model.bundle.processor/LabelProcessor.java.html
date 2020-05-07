@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>LabelProcessor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.model.bundle.processor</a> &gt; <span class="el_source">LabelProcessor.java</span></div><h1>LabelProcessor.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.model.bundle.processor;
+
+import static java.util.Optional.ofNullable;
+
+import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Optional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.entando.kubernetes.client.core.EntandoCoreClient;
+import org.entando.kubernetes.model.bundle.BundleReader;
+import org.entando.kubernetes.model.bundle.descriptor.ComponentDescriptor;
+import org.entando.kubernetes.model.bundle.descriptor.ComponentSpecDescriptor;
+import org.entando.kubernetes.model.bundle.descriptor.LabelDescriptor;
+import org.entando.kubernetes.model.bundle.installable.Installable;
+import org.entando.kubernetes.model.bundle.installable.LabelInstallable;
+import org.entando.kubernetes.model.digitalexchange.ComponentType;
+import org.entando.kubernetes.model.digitalexchange.EntandoBundleComponentJob;
+import org.entando.kubernetes.model.digitalexchange.EntandoBundleJob;
+import org.springframework.stereotype.Service;
+
+/**
+ * Processor to create Labels
+ *
+ * @author Sergio Marcelino
+ */
+<span class="fc" id="L28">@Slf4j</span>
+@Service
+@RequiredArgsConstructor
+public class LabelProcessor implements ComponentProcessor {
+
+    private final EntandoCoreClient engineService;
+
+    @Override
+    public List&lt;Installable&gt; process(final EntandoBundleJob job, final BundleReader npr,
+            final ComponentDescriptor descriptor) throws IOException {
+
+<span class="fc" id="L39">        final Optional&lt;List&lt;LabelDescriptor&gt;&gt; labelDescriptors = ofNullable(descriptor.getComponents())</span>
+<span class="fc" id="L40">                .map(ComponentSpecDescriptor::getLabels);</span>
+<span class="fc" id="L41">        final List&lt;Installable&gt; installables = new LinkedList&lt;&gt;();</span>
+
+<span class="pc bpc" id="L43" title="1 of 2 branches missed.">        if (labelDescriptors.isPresent()) {</span>
+<span class="fc bfc" id="L44" title="All 2 branches covered.">            for (final LabelDescriptor labelDescriptor : labelDescriptors.get()) {</span>
+<span class="fc" id="L45">                installables.add(new LabelInstallable(engineService, labelDescriptor));</span>
+<span class="fc" id="L46">            }</span>
+        }
+
+<span class="fc" id="L49">        return installables;</span>
+    }
+
+    @Override
+    public boolean shouldProcess(final ComponentType componentType) {
+<span class="fc bfc" id="L54" title="All 2 branches covered.">        return componentType == ComponentType.LABEL;</span>
+    }
+
+    @Override
+    public void uninstall(final EntandoBundleComponentJob component) {
+<span class="fc" id="L59">        log.info(&quot;Removing Label {}&quot;, component.getName());</span>
+<span class="fc" id="L60">        engineService.deleteLabel(component.getName());</span>
+<span class="fc" id="L61">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
