@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DatabaseServiceResult.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando K8S Operator Common Library</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.controller.database</a> &gt; <span class="el_source">DatabaseServiceResult.java</span></div><h1>DatabaseServiceResult.java</h1><pre class="source lang-java linenums">/*
+ *
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ *  This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ */
+
+package org.entando.kubernetes.controller.database;
+
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.Service;
+import java.util.Collections;
+import java.util.Map;
+import java.util.Optional;
+import org.entando.kubernetes.controller.AbstractServiceResult;
+import org.entando.kubernetes.controller.PodResult;
+import org.entando.kubernetes.model.externaldatabase.EntandoDatabaseService;
+
+public class DatabaseServiceResult extends AbstractServiceResult {
+
+    private final DbmsVendorStrategy vendor;
+    private final String databaseName;
+    private final String databaseSecretName;
+    private String tablespace;
+    private Pod pod;
+    private Map&lt;String, String&gt; databaseParameters;
+
+    public DatabaseServiceResult(Service service, DbmsVendorStrategy vendor, String databaseName, String databaseSecretName, Pod pod) {
+<span class="fc" id="L38">        this(service, vendor, databaseName, databaseSecretName);</span>
+<span class="fc" id="L39">        this.pod = pod;</span>
+<span class="fc" id="L40">        this.databaseParameters = Collections.emptyMap();</span>
+<span class="fc" id="L41">    }</span>
+
+    private DatabaseServiceResult(Service service, DbmsVendorStrategy vendor, String databaseName, String databaseSecretName) {
+<span class="fc" id="L44">        super(service);</span>
+<span class="fc" id="L45">        this.vendor = vendor;</span>
+<span class="fc" id="L46">        this.databaseName = databaseName;</span>
+<span class="fc" id="L47">        this.databaseSecretName = databaseSecretName;</span>
+<span class="fc" id="L48">    }</span>
+
+    public DatabaseServiceResult(Service service, EntandoDatabaseService databaseService) {
+<span class="fc" id="L51">        this(service,</span>
+<span class="fc" id="L52">                DbmsVendorStrategy.forVendor(databaseService.getSpec().getDbms()),</span>
+<span class="fc" id="L53">                databaseService.getSpec().getDatabaseName(),</span>
+<span class="fc" id="L54">                databaseService.getSpec().getSecretName());</span>
+<span class="fc" id="L55">        this.databaseParameters = databaseService.getSpec().getJdbcParameters();</span>
+<span class="fc" id="L56">        this.tablespace = databaseService.getSpec().getTablespace().orElse(null);</span>
+<span class="fc" id="L57">    }</span>
+
+    public Optional&lt;String&gt; getTablespace() {
+<span class="fc" id="L60">        return Optional.ofNullable(tablespace);</span>
+    }
+
+    public Map&lt;String, String&gt; getJdbcParameters() {
+<span class="fc" id="L64">        return databaseParameters;</span>
+    }
+
+    public String getDatabaseSecretName() {
+<span class="fc" id="L68">        return databaseSecretName;</span>
+    }
+
+    public String getDatabaseName() {
+<span class="fc" id="L72">        return databaseName;</span>
+    }
+
+    public DbmsVendorStrategy getVendor() {
+<span class="fc" id="L76">        return vendor;</span>
+    }
+
+    public boolean hasFailed() {
+<span class="fc" id="L80">        return Optional.ofNullable(pod).map(existingPod -&gt; PodResult.of(existingPod).hasFailed()).orElse(false);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
