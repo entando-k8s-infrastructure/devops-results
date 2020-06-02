@@ -58,43 +58,40 @@ public class EntandoKeycloakServerController extends AbstractDbAwareController&l
     @Override
     protected void synchronizeDeploymentState(EntandoKeycloakServer newEntandoKeycloakServer) {
         // Create database for Keycloak
-<span class="fc" id="L61">        DatabaseServiceResult databaseServiceResult = null;</span>
-<span class="fc bfc" id="L62" title="All 2 branches covered.">        if (newEntandoKeycloakServer.getSpec().getDbms().orElse(DbmsVendor.NONE) != DbmsVendor.NONE) {</span>
-<span class="fc" id="L63">            databaseServiceResult = prepareDatabaseService(newEntandoKeycloakServer, newEntandoKeycloakServer.getSpec().getDbms().get(),</span>
-                    &quot;db&quot;);
-        }
+<span class="fc" id="L61">        DatabaseServiceResult databaseServiceResult = prepareDatabaseService(newEntandoKeycloakServer,</span>
+<span class="fc" id="L62">                newEntandoKeycloakServer.getSpec().getDbms().orElse(DbmsVendor.EMBEDDED), &quot;db&quot;);</span>
         // Create the Keycloak service using the provided database
-<span class="fc" id="L67">        KeycloakDeployable keycloakDeployable = new KeycloakDeployable(newEntandoKeycloakServer, databaseServiceResult);</span>
-<span class="fc" id="L68">        DeployCommand&lt;ServiceDeploymentResult&gt; keycloakCommand = new DeployCommand&lt;&gt;(keycloakDeployable);</span>
-<span class="fc" id="L69">        ServiceDeploymentResult serviceDeploymentResult = keycloakCommand.execute(k8sClient, Optional.of(keycloakClient));</span>
-<span class="pc bpc" id="L70" title="1 of 2 branches missed.">        if (keycloakCommand.getPod() != null) {</span>
-<span class="pc bpc" id="L71" title="1 of 2 branches missed.">            if (newEntandoKeycloakServer.getSpec().isDefault()) {</span>
-<span class="fc" id="L72">                copySecretToLocalNamespace(newEntandoKeycloakServer, serviceDeploymentResult);</span>
+<span class="fc" id="L64">        KeycloakDeployable keycloakDeployable = new KeycloakDeployable(newEntandoKeycloakServer, databaseServiceResult);</span>
+<span class="fc" id="L65">        DeployCommand&lt;ServiceDeploymentResult&gt; keycloakCommand = new DeployCommand&lt;&gt;(keycloakDeployable);</span>
+<span class="fc" id="L66">        ServiceDeploymentResult serviceDeploymentResult = keycloakCommand.execute(k8sClient, Optional.of(keycloakClient));</span>
+<span class="pc bpc" id="L67" title="1 of 2 branches missed.">        if (keycloakCommand.getPod() != null) {</span>
+<span class="pc bpc" id="L68" title="1 of 2 branches missed.">            if (newEntandoKeycloakServer.getSpec().isDefault()) {</span>
+<span class="fc" id="L69">                copySecretToLocalNamespace(newEntandoKeycloakServer, serviceDeploymentResult);</span>
             }
-<span class="fc" id="L74">            ensureKeycloakRealm();</span>
+<span class="fc" id="L71">            ensureKeycloakRealm();</span>
         }
-<span class="fc" id="L76">        k8sClient.entandoResources().updateStatus(newEntandoKeycloakServer, keycloakCommand.getStatus());</span>
-<span class="fc" id="L77">    }</span>
+<span class="fc" id="L73">        k8sClient.entandoResources().updateStatus(newEntandoKeycloakServer, keycloakCommand.getStatus());</span>
+<span class="fc" id="L74">    }</span>
 
     private void ensureKeycloakRealm() {
-<span class="fc" id="L80">        KeycloakConnectionConfig keycloakDeploymentResult = k8sClient.entandoResources().findKeycloak(Optional::empty);</span>
-<span class="fc" id="L81">        logger.severe(&quot;Attempting to log into Keycloak at &quot; + keycloakDeploymentResult.getBaseUrl());</span>
-<span class="fc" id="L82">        keycloakClient.login(keycloakDeploymentResult.getBaseUrl(), keycloakDeploymentResult.getUsername(),</span>
-<span class="fc" id="L83">                keycloakDeploymentResult.getPassword());</span>
-<span class="fc" id="L84">        keycloakClient.ensureRealm(KubeUtils.ENTANDO_KEYCLOAK_REALM);</span>
-<span class="fc" id="L85">    }</span>
+<span class="fc" id="L77">        KeycloakConnectionConfig keycloakDeploymentResult = k8sClient.entandoResources().findKeycloak(Optional::empty);</span>
+<span class="fc" id="L78">        logger.severe(&quot;Attempting to log into Keycloak at &quot; + keycloakDeploymentResult.getBaseUrl());</span>
+<span class="fc" id="L79">        keycloakClient.login(keycloakDeploymentResult.getBaseUrl(), keycloakDeploymentResult.getUsername(),</span>
+<span class="fc" id="L80">                keycloakDeploymentResult.getPassword());</span>
+<span class="fc" id="L81">        keycloakClient.ensureRealm(KubeUtils.ENTANDO_KEYCLOAK_REALM);</span>
+<span class="fc" id="L82">    }</span>
 
     private void copySecretToLocalNamespace(EntandoKeycloakServer keycloakSever, ServiceDeploymentResult serviceDeploymentResult) {
-<span class="fc" id="L88">        Secret kcSecret = k8sClient.secrets().loadSecret(keycloakSever, KeycloakDeployableContainer.secretName(keycloakSever));</span>
-<span class="fc" id="L89">        KeycloakConnectionConfig keycloakConnectionConfig = new KeycloakConnectionSecret(kcSecret);</span>
-<span class="fc" id="L90">        k8sClient.secrets().overwriteControllerSecret(new SecretBuilder()</span>
-<span class="fc" id="L91">                .withNewMetadata()</span>
-<span class="fc" id="L92">                .withName(EntandoOperatorConfig.getDefaultKeycloakSecretName())</span>
-<span class="fc" id="L93">                .endMetadata()</span>
-<span class="fc" id="L94">                .addToStringData(KubeUtils.USERNAME_KEY, keycloakConnectionConfig.getUsername())</span>
-<span class="fc" id="L95">                .addToStringData(KubeUtils.PASSSWORD_KEY, keycloakConnectionConfig.getPassword())</span>
-<span class="fc" id="L96">                .addToStringData(KubeUtils.URL_KEY, serviceDeploymentResult.getExternalBaseUrl())</span>
-<span class="fc" id="L97">                .build());</span>
-<span class="fc" id="L98">    }</span>
+<span class="fc" id="L85">        Secret kcSecret = k8sClient.secrets().loadSecret(keycloakSever, KeycloakDeployableContainer.secretName(keycloakSever));</span>
+<span class="fc" id="L86">        KeycloakConnectionConfig keycloakConnectionConfig = new KeycloakConnectionSecret(kcSecret);</span>
+<span class="fc" id="L87">        k8sClient.secrets().overwriteControllerSecret(new SecretBuilder()</span>
+<span class="fc" id="L88">                .withNewMetadata()</span>
+<span class="fc" id="L89">                .withName(EntandoOperatorConfig.getDefaultKeycloakSecretName())</span>
+<span class="fc" id="L90">                .endMetadata()</span>
+<span class="fc" id="L91">                .addToStringData(KubeUtils.USERNAME_KEY, keycloakConnectionConfig.getUsername())</span>
+<span class="fc" id="L92">                .addToStringData(KubeUtils.PASSSWORD_KEY, keycloakConnectionConfig.getPassword())</span>
+<span class="fc" id="L93">                .addToStringData(KubeUtils.URL_KEY, serviceDeploymentResult.getExternalBaseUrl())</span>
+<span class="fc" id="L94">                .build());</span>
+<span class="fc" id="L95">    }</span>
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
