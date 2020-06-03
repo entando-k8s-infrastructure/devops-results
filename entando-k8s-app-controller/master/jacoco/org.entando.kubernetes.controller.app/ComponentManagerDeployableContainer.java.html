@@ -25,17 +25,20 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import org.entando.kubernetes.controller.KeycloakClientConfig;
 import org.entando.kubernetes.controller.KeycloakConnectionConfig;
 import org.entando.kubernetes.controller.KubeUtils;
 import org.entando.kubernetes.controller.common.InfrastructureConfig;
 import org.entando.kubernetes.controller.database.DatabaseSchemaCreationResult;
+import org.entando.kubernetes.controller.database.DbmsVendorConfig;
 import org.entando.kubernetes.controller.spi.DatabasePopulator;
+import org.entando.kubernetes.controller.spi.PersistentVolumeAware;
 import org.entando.kubernetes.controller.spi.SpringBootDeployableContainer;
 import org.entando.kubernetes.model.app.EntandoApp;
 import org.entando.kubernetes.model.plugin.Permission;
 
-public class ComponentManagerDeployableContainer implements SpringBootDeployableContainer {
+public class ComponentManagerDeployableContainer implements SpringBootDeployableContainer, PersistentVolumeAware {
 
     public static final String COMPONENT_MANAGER_QUALIFIER = &quot;de&quot;;
     public static final String COMPONENT_MANAGER_IMAGE_NAME = &quot;entando/entando-component-manager&quot;;
@@ -44,91 +47,112 @@ public class ComponentManagerDeployableContainer implements SpringBootDeployable
     private final EntandoApp entandoApp;
     private final KeycloakConnectionConfig keycloakConnectionConfig;
     private final Optional&lt;InfrastructureConfig&gt; infrastructureConfig;
-    private Map&lt;String, DatabaseSchemaCreationResult&gt; dbSchemas;
+<span class="fc" id="L50">    private Map&lt;String, DatabaseSchemaCreationResult&gt; dbSchemas = new ConcurrentHashMap&lt;&gt;();</span>
+
+<span class="fc" id="L52">    private static final DbmsVendorConfig DEFAULT_EMBEDDED_VENDOR = DbmsVendorConfig.H2;</span>
 
     public ComponentManagerDeployableContainer(EntandoApp entandoApp, KeycloakConnectionConfig keycloakConnectionConfig,
-<span class="fc" id="L50">            InfrastructureConfig infrastructureConfig) {</span>
-<span class="fc" id="L51">        this.entandoApp = entandoApp;</span>
-<span class="fc" id="L52">        this.keycloakConnectionConfig = keycloakConnectionConfig;</span>
-<span class="fc" id="L53">        this.infrastructureConfig = Optional.ofNullable(infrastructureConfig);</span>
-<span class="fc" id="L54">    }</span>
+<span class="fc" id="L55">            InfrastructureConfig infrastructureConfig) {</span>
+<span class="fc" id="L56">        this.entandoApp = entandoApp;</span>
+<span class="fc" id="L57">        this.keycloakConnectionConfig = keycloakConnectionConfig;</span>
+<span class="fc" id="L58">        this.infrastructureConfig = Optional.ofNullable(infrastructureConfig);</span>
+<span class="fc" id="L59">    }</span>
 
     @Override
     public String determineImageToUse() {
-<span class="fc" id="L58">        return COMPONENT_MANAGER_IMAGE_NAME;</span>
+<span class="fc" id="L63">        return COMPONENT_MANAGER_IMAGE_NAME;</span>
     }
 
     @Override
     public String getNameQualifier() {
-<span class="fc" id="L63">        return COMPONENT_MANAGER_QUALIFIER;</span>
+<span class="fc" id="L68">        return COMPONENT_MANAGER_QUALIFIER;</span>
     }
 
     @Override
     public int getPort() {
-<span class="fc" id="L68">        return 8083;</span>
+<span class="fc" id="L73">        return 8083;</span>
     }
 
     @Override
     public void addEnvironmentVariables(List&lt;EnvVar&gt; vars) {
-<span class="fc" id="L73">        String entandoUrl = format(&quot;http://localhost:%s%s&quot;, EntandoAppDeployableContainer.PORT,</span>
-<span class="fc" id="L74">                entandoApp.getSpec().getIngressPath().orElse(EntandoAppDeployableContainer.INGRESS_WEB_CONTEXT));</span>
-<span class="fc" id="L75">        vars.add(new EnvVar(&quot;ENTANDO_APP_NAME&quot;, entandoApp.getMetadata().getName(), null));</span>
-<span class="fc" id="L76">        vars.add(new EnvVar(&quot;ENTANDO_URL&quot;, entandoUrl, null));</span>
-<span class="fc" id="L77">        vars.add(new EnvVar(&quot;SERVER_PORT&quot;, String.valueOf(getPort()), null));</span>
-<span class="fc" id="L78">        infrastructureConfig.ifPresent(c -&gt; vars.add(new EnvVar(&quot;ENTANDO_K8S_SERVICE_URL&quot;, c.getK8SExternalServiceUrl(), null)));</span>
-<span class="fc" id="L79">    }</span>
+<span class="fc" id="L78">        String entandoUrl = format(&quot;http://localhost:%s%s&quot;, EntandoAppDeployableContainer.PORT,</span>
+<span class="fc" id="L79">                entandoApp.getSpec().getIngressPath().orElse(EntandoAppDeployableContainer.INGRESS_WEB_CONTEXT));</span>
+<span class="fc" id="L80">        vars.add(new EnvVar(&quot;ENTANDO_APP_NAME&quot;, entandoApp.getMetadata().getName(), null));</span>
+<span class="fc" id="L81">        vars.add(new EnvVar(&quot;ENTANDO_URL&quot;, entandoUrl, null));</span>
+<span class="fc" id="L82">        vars.add(new EnvVar(&quot;SERVER_PORT&quot;, String.valueOf(getPort()), null));</span>
+<span class="fc" id="L83">        infrastructureConfig.ifPresent(c -&gt; vars.add(new EnvVar(&quot;ENTANDO_K8S_SERVICE_URL&quot;, c.getK8SExternalServiceUrl(), null)));</span>
+<span class="fc" id="L84">    }</span>
+
+    @Override
+    public void addDatabaseConnectionVariables(List&lt;EnvVar&gt; vars) {
+<span class="fc" id="L88">        SpringBootDeployableContainer.super.addDatabaseConnectionVariables(vars);</span>
+
+<span class="fc bfc" id="L90" title="All 2 branches covered.">        if (getDatabaseSchema() == null) {</span>
+<span class="fc" id="L91">            vars.add(new EnvVar(SpringProperty.SPRING_JPA_DATABASE_PLATFORM.name(), DEFAULT_EMBEDDED_VENDOR.getHibernateDialect(), null));</span>
+<span class="fc" id="L92">            vars.add(new EnvVar(SpringProperty.SPRING_DATASOURCE_USERNAME.name(), DEFAULT_EMBEDDED_VENDOR.getDefaultUser(), null));</span>
+<span class="fc" id="L93">            vars.add(new EnvVar(SpringProperty.SPRING_DATASOURCE_PASSWORD.name(), DEFAULT_EMBEDDED_VENDOR.getDefaultPassword(), null));</span>
+<span class="fc" id="L94">            vars.add(new EnvVar(SpringProperty.SPRING_DATASOURCE_URL.name(), DEFAULT_EMBEDDED_VENDOR.getConnectionStringBuilder()</span>
+<span class="fc" id="L95">                    .toHost(&quot;/entando-data/databases/&quot; + COMPONENT_MANAGER_QUALIFIER)</span>
+<span class="fc" id="L96">                    .usingDatabase(DEFAULT_EMBEDDED_VENDOR.toString().toLowerCase() + &quot;.db&quot;)</span>
+<span class="fc" id="L97">                    .buildConnectionString(), null));</span>
+        }
+<span class="fc" id="L99">    }</span>
 
     @Override
     public int getMemoryLimitMebibytes() {
-<span class="fc" id="L83">        return 768;</span>
+<span class="fc" id="L103">        return 768;</span>
     }
 
     @Override
     public DatabaseSchemaCreationResult getDatabaseSchema() {
-<span class="fc" id="L88">        return dbSchemas.get(DEDB);</span>
+<span class="fc" id="L108">        return dbSchemas.get(DEDB);</span>
     }
 
     @Override
     public int getCpuLimitMillicores() {
-<span class="fc" id="L93">        return 750;</span>
+<span class="fc" id="L113">        return 750;</span>
     }
 
     public KeycloakConnectionConfig getKeycloakConnectionConfig() {
-<span class="fc" id="L97">        return keycloakConnectionConfig;</span>
+<span class="fc" id="L117">        return keycloakConnectionConfig;</span>
     }
 
     @Override
     public KeycloakClientConfig getKeycloakClientConfig() {
-<span class="fc" id="L102">        String entandoAppClientId = EntandoAppDeployableContainer.clientIdOf(entandoApp);</span>
-<span class="fc" id="L103">        String clientId = entandoApp.getMetadata().getName() + &quot;-&quot; + getNameQualifier();</span>
-<span class="fc" id="L104">        List&lt;Permission&gt; permissions = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L105">        permissions.add(new Permission(entandoAppClientId, &quot;superuser&quot;));</span>
-<span class="fc" id="L106">        this.infrastructureConfig.ifPresent(c -&gt; permissions.add(new Permission(c.getK8sServiceClientId(), KubeUtils.ENTANDO_APP_ROLE)));</span>
-<span class="fc" id="L107">        return new KeycloakClientConfig(KubeUtils.ENTANDO_KEYCLOAK_REALM, clientId, clientId,</span>
-<span class="fc" id="L108">                Collections.emptyList(),</span>
+<span class="fc" id="L122">        String entandoAppClientId = EntandoAppDeployableContainer.clientIdOf(entandoApp);</span>
+<span class="fc" id="L123">        String clientId = entandoApp.getMetadata().getName() + &quot;-&quot; + getNameQualifier();</span>
+<span class="fc" id="L124">        List&lt;Permission&gt; permissions = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L125">        permissions.add(new Permission(entandoAppClientId, &quot;superuser&quot;));</span>
+<span class="fc" id="L126">        this.infrastructureConfig.ifPresent(c -&gt; permissions.add(new Permission(c.getK8sServiceClientId(), KubeUtils.ENTANDO_APP_ROLE)));</span>
+<span class="fc" id="L127">        return new KeycloakClientConfig(KubeUtils.ENTANDO_KEYCLOAK_REALM, clientId, clientId,</span>
+<span class="fc" id="L128">                Collections.emptyList(),</span>
                 permissions);
     }
 
     @Override
     public String getWebContextPath() {
-<span class="fc" id="L114">        return &quot;/digital-exchange&quot;;</span>
+<span class="fc" id="L134">        return &quot;/digital-exchange&quot;;</span>
     }
 
     @Override
     public Optional&lt;String&gt; getHealthCheckPath() {
-<span class="fc" id="L119">        return Optional.of(getWebContextPath() + &quot;/actuator/health&quot;);</span>
+<span class="fc" id="L139">        return Optional.of(getWebContextPath() + &quot;/actuator/health&quot;);</span>
     }
 
     @Override
     public List&lt;String&gt; getDbSchemaQualifiers() {
-<span class="fc" id="L124">        return Arrays.asList(DEDB);</span>
+<span class="fc" id="L144">        return Arrays.asList(DEDB);</span>
     }
 
     @Override
     public Optional&lt;DatabasePopulator&gt; useDatabaseSchemas(Map&lt;String, DatabaseSchemaCreationResult&gt; dbSchemas) {
-<span class="fc" id="L129">        this.dbSchemas = dbSchemas;</span>
-<span class="fc" id="L130">        return Optional.empty();</span>
+<span class="fc" id="L149">        this.dbSchemas = Optional.ofNullable(dbSchemas).orElse(new ConcurrentHashMap&lt;&gt;());</span>
+<span class="fc" id="L150">        return Optional.empty();</span>
     }
 
+    @Override
+    public String getVolumeMountPath() {
+<span class="fc" id="L155">        return &quot;/entando-data&quot;;</span>
+    }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
