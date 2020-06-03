@@ -39,19 +39,19 @@ import org.entando.kubernetes.model.EntandoCustomResource;
 
 public class DatabaseDeployable implements Deployable&lt;DatabaseServiceResult&gt;, Secretive {
 
-<span class="fc" id="L42">    private final Map&lt;DbmsVendorStrategy, VariableInitializer&gt; variableInitializers = new ConcurrentHashMap&lt;&gt;();</span>
-    private final DbmsVendorStrategy dbmsVendor;
+<span class="fc" id="L42">    private final Map&lt;DbmsDockerVendorStrategy, VariableInitializer&gt; variableInitializers = new ConcurrentHashMap&lt;&gt;();</span>
+    private final DbmsDockerVendorStrategy dbmsVendor;
     private final EntandoCustomResource customResource;
     private final List&lt;DeployableContainer&gt; containers;
     private final String nameQualifier;
 
-<span class="fc" id="L48">    public DatabaseDeployable(DbmsVendorStrategy dbmsVendor, EntandoCustomResource customResource, String nameQualifier) {</span>
-<span class="fc" id="L49">        variableInitializers.put(DbmsVendorStrategy.MYSQL, vars -&gt;</span>
+<span class="fc" id="L48">    public DatabaseDeployable(DbmsDockerVendorStrategy dbmsVendor, EntandoCustomResource customResource, String nameQualifier) {</span>
+<span class="fc" id="L49">        variableInitializers.put(DbmsDockerVendorStrategy.MYSQL, vars -&gt;</span>
                 //No DB creation. Dbs are created during schema creation
 <span class="fc" id="L51">                vars.add(new EnvVar(&quot;MYSQL_ROOT_PASSWORD&quot;, null,</span>
 <span class="fc" id="L52">                        KubeUtils.secretKeyRef(getDatabaseAdminSecretName(), KubeUtils.PASSSWORD_KEY)))</span>
         );
-<span class="fc" id="L54">        variableInitializers.put(DbmsVendorStrategy.POSTGRESQL, vars -&gt; {</span>
+<span class="fc" id="L54">        variableInitializers.put(DbmsDockerVendorStrategy.POSTGRESQL, vars -&gt; {</span>
 <span class="fc" id="L55">            vars.add(new EnvVar(&quot;POSTGRESQL_DATABASE&quot;, getDatabaseName(), null));</span>
             // This username will not be used, as we will be creating schema/user pairs,
             // but without it the DB isn't created.
@@ -112,12 +112,12 @@ public class DatabaseDeployable implements Deployable&lt;DatabaseServiceResult&g
 
     public static class DatabaseContainer implements ServiceBackingContainer, PersistentVolumeAware, HasHealthCommand {
 
-        private final Map&lt;DbmsVendorStrategy, VariableInitializer&gt; variableInitializers;
-        private final DbmsVendorStrategy dbmsVendor;
+        private final Map&lt;DbmsDockerVendorStrategy, VariableInitializer&gt; variableInitializers;
+        private final DbmsDockerVendorStrategy dbmsVendor;
         private final String nameQualifier;
 
-        public DatabaseContainer(Map&lt;DbmsVendorStrategy, VariableInitializer&gt; variableInitializers,
-                DbmsVendorStrategy dbmsVendor,
+        public DatabaseContainer(Map&lt;DbmsDockerVendorStrategy, VariableInitializer&gt; variableInitializers,
+                DbmsDockerVendorStrategy dbmsVendor,
 <span class="fc" id="L121">                String nameQualifier) {</span>
 <span class="fc" id="L122">            this.variableInitializers = variableInitializers;</span>
 <span class="fc" id="L123">            this.dbmsVendor = dbmsVendor;</span>
