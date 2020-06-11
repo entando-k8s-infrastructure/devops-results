@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DefaultKeycloakClient.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando K8S Operator Common Library</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.client</a> &gt; <span class="el_source">DefaultKeycloakClient.java</span></div><h1>DefaultKeycloakClient.java</h1><pre class="source lang-java linenums">/*
+ *
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ *  This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ */
+
+package org.entando.kubernetes.client;
+
+import static java.lang.Thread.sleep;
+
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import javax.ws.rs.ForbiddenException;
+import javax.ws.rs.NotAuthorizedException;
+import javax.ws.rs.NotFoundException;
+import javax.ws.rs.ProcessingException;
+import javax.ws.rs.ServiceUnavailableException;
+import javax.ws.rs.core.Response;
+import org.entando.kubernetes.controller.EntandoOperatorConfig;
+import org.entando.kubernetes.controller.KeycloakClientConfig;
+import org.entando.kubernetes.controller.KubeUtils;
+import org.entando.kubernetes.controller.SimpleKeycloakClient;
+import org.entando.kubernetes.model.plugin.ExpectedRole;
+import org.entando.kubernetes.model.plugin.Permission;
+import org.keycloak.OAuth2Constants;
+import org.keycloak.admin.client.Keycloak;
+import org.keycloak.admin.client.KeycloakBuilder;
+import org.keycloak.admin.client.resource.ClientResource;
+import org.keycloak.admin.client.resource.ClientsResource;
+import org.keycloak.admin.client.resource.RealmResource;
+import org.keycloak.common.enums.SslRequired;
+import org.keycloak.representations.idm.ClientRepresentation;
+import org.keycloak.representations.idm.CredentialRepresentation;
+import org.keycloak.representations.idm.RealmRepresentation;
+import org.keycloak.representations.idm.RoleRepresentation;
+import org.keycloak.representations.idm.UserRepresentation;
+
+public class DefaultKeycloakClient implements SimpleKeycloakClient {
+
+    public static final String MASTER_REALM = &quot;master&quot;;
+    public static final String EXCEPTION_RESOLVING_MASTER_REALM_ON_KEYCLOAK = &quot;Exception resolving master realm on Keycloak&quot;;
+<span class="fc" id="L57">    private static final Logger LOGGER = Logger.getLogger(DefaultKeycloakClient.class.getName());</span>
+    private static final int MAX_RETRY_COUNT = 60;
+    private Keycloak keycloak;
+<span class="pc" id="L60">    private boolean isHttps = false;</span>
+
+<span class="fc" id="L62">    public DefaultKeycloakClient() {</span>
+<span class="fc" id="L63">    }</span>
+
+<span class="nc" id="L65">    public DefaultKeycloakClient(Keycloak keycloak) {</span>
+<span class="nc" id="L66">        this.keycloak = keycloak;</span>
+<span class="nc" id="L67">    }</span>
+
+    private static RoleRepresentation toRoleRepresentation(ExpectedRole expectedRole) {
+<span class="fc" id="L70">        RoleRepresentation roleRepresentation = new RoleRepresentation();</span>
+<span class="fc" id="L71">        roleRepresentation.setName(expectedRole.getCode());</span>
+<span class="fc" id="L72">        roleRepresentation.setDescription(expectedRole.getName());</span>
+<span class="fc" id="L73">        return roleRepresentation;</span>
+    }
+
+    @Override
+    public void login(String baseUrl, String username, String password) {
+<span class="fc" id="L78">        isHttps = baseUrl.toLowerCase().startsWith(&quot;https&quot;);</span>
+<span class="fc" id="L79">        keycloak = KeycloakBuilder.builder()</span>
+<span class="fc" id="L80">                .serverUrl(baseUrl)</span>
+<span class="fc" id="L81">                .grantType(OAuth2Constants.PASSWORD)</span>
+<span class="fc" id="L82">                .realm(MASTER_REALM)</span>
+<span class="fc" id="L83">                .clientId(&quot;admin-cli&quot;)</span>
+<span class="fc" id="L84">                .username(username)</span>
+<span class="fc" id="L85">                .password(password)</span>
+<span class="fc" id="L86">                .build();</span>
+<span class="fc" id="L87">        int count = 0;</span>
+<span class="fc" id="L88">        boolean connectionFailed = true;</span>
+<span class="fc bfc" id="L89" title="All 2 branches covered.">        while (connectionFailed) {</span>
+            try {
+<span class="pc bpc" id="L91" title="1 of 2 branches missed.">                if (isKeycloakAvailable()) {</span>
+<span class="fc" id="L92">                    connectionFailed = false;</span>
+                } else {
+<span class="nc" id="L94">                    count++;</span>
+<span class="nc bnc" id="L95" title="All 2 branches missed.">                    if (count &gt; MAX_RETRY_COUNT) {</span>
+<span class="nc" id="L96">                        throw new IllegalStateException(&quot;Could not connect to &quot; + baseUrl);</span>
+                    } else {
+<span class="nc" id="L98">                        sleep(1000);</span>
+                    }
+                }
+<span class="nc" id="L101">            } catch (InterruptedException e) {</span>
+<span class="nc" id="L102">                LOGGER.log(Level.WARNING, &quot;Should not happen&quot;, e);</span>
+<span class="nc" id="L103">                Thread.currentThread().interrupt();</span>
+<span class="pc" id="L104">            }</span>
+        }
+<span class="fc" id="L106">    }</span>
+
+    private boolean isKeycloakAvailable() {
+        try {
+<span class="fc" id="L110">            keycloak.realm(MASTER_REALM).toRepresentation();</span>
+<span class="fc" id="L111">            return true;</span>
+<span class="nc" id="L112">        } catch (ProcessingException e) {</span>
+<span class="nc" id="L113">            LOGGER.log(Level.SEVERE, EXCEPTION_RESOLVING_MASTER_REALM_ON_KEYCLOAK, e);</span>
+<span class="nc bnc" id="L114" title="All 4 branches missed.">            return e.getCause() instanceof ForbiddenException || e.getCause() instanceof NotAuthorizedException;</span>
+<span class="nc" id="L115">        } catch (ForbiddenException | NotAuthorizedException e) {</span>
+<span class="nc" id="L116">            LOGGER.log(Level.SEVERE, EXCEPTION_RESOLVING_MASTER_REALM_ON_KEYCLOAK, e);</span>
+            //Could be valid - no access to master
+<span class="nc" id="L118">            return true;</span>
+<span class="nc" id="L119">        } catch (ServiceUnavailableException | NotFoundException e) {</span>
+<span class="nc" id="L120">            LOGGER.log(Level.SEVERE, EXCEPTION_RESOLVING_MASTER_REALM_ON_KEYCLOAK, e);</span>
+<span class="nc" id="L121">            return false;</span>
+        }
+    }
+
+    @Override
+    public void ensureRealm(String realm) {
+<span class="fc" id="L127">        RealmResource realmResource = keycloak.realm(realm);</span>
+<span class="fc" id="L128">        RealmRepresentation realmRepresentation = getRealmRepresentation(realmResource);</span>
+<span class="pc bpc" id="L129" title="1 of 2 branches missed.">        if (realmRepresentation == null) {</span>
+<span class="nc" id="L130">            RealmRepresentation newRealm = new RealmRepresentation();</span>
+<span class="nc" id="L131">            newRealm.setEnabled(true);</span>
+<span class="nc" id="L132">            newRealm.setRealm(realm);</span>
+<span class="nc bnc" id="L133" title="All 2 branches missed.">            if (shouldDisableSsl()) {</span>
+<span class="nc" id="L134">                newRealm.setSslRequired(SslRequired.NONE.name().toLowerCase());</span>
+            }
+<span class="nc" id="L136">            newRealm.setDisplayName(realm);</span>
+<span class="nc" id="L137">            keycloak.realms().create(newRealm);</span>
+<span class="nc" id="L138">            createFirstUser(realmResource);</span>
+<span class="nc" id="L139">            createOperatorClient(realmResource);</span>
+        }
+<span class="fc" id="L141">    }</span>
+
+    private boolean shouldDisableSsl() {
+<span class="nc bnc" id="L144" title="All 4 branches missed.">        return EntandoOperatorConfig.disableKeycloakSslRequirement() &amp;&amp; !isHttps;</span>
+    }
+
+    @Override
+    public void assignRoleToClientServiceAccount(String realm, String serviceAccountClientId, Permission serviceRole) {
+<span class="nc" id="L149">        RealmResource realmResource = keycloak.realm(realm);</span>
+<span class="nc" id="L150">        Optional&lt;ClientResource&gt; clientResource = findByClientId(realmResource, serviceAccountClientId);</span>
+<span class="nc" id="L151">        assignServiceAccountRole(realmResource, clientResource.orElseThrow(IllegalArgumentException::new), serviceRole);</span>
+<span class="nc" id="L152">    }</span>
+
+    private RealmRepresentation getRealmRepresentation(RealmResource realmResource) {
+        try {
+<span class="fc" id="L156">            return realmResource.toRepresentation();</span>
+<span class="nc" id="L157">        } catch (NotFoundException e) {</span>
+<span class="nc" id="L158">            return null;</span>
+        }
+    }
+
+    @Override
+    public void createPublicClient(String realm, String domain) {
+<span class="fc" id="L164">        RealmResource realmResource = keycloak.realm(realm);</span>
+<span class="fc" id="L165">        createPublicClient(realmResource, domain);</span>
+<span class="fc" id="L166">    }</span>
+
+    private void createPublicClient(RealmResource realmResource, String domain) {
+<span class="fc" id="L169">        List&lt;ClientRepresentation&gt; existing = realmResource.clients().findByClientId(KubeUtils.PUBLIC_CLIENT_ID);</span>
+<span class="pc bpc" id="L170" title="1 of 2 branches missed.">        if (existing.isEmpty()) {</span>
+<span class="nc" id="L171">            ClientRepresentation client = new ClientRepresentation();</span>
+<span class="nc" id="L172">            client.setName(&quot;Entando WEB&quot;);</span>
+<span class="nc" id="L173">            client.setClientId(KubeUtils.PUBLIC_CLIENT_ID);</span>
+<span class="nc" id="L174">            client.setEnabled(true);</span>
+<span class="nc" id="L175">            client.setServiceAccountsEnabled(false);</span>
+<span class="nc" id="L176">            client.setStandardFlowEnabled(true);</span>
+<span class="nc" id="L177">            client.setImplicitFlowEnabled(true);</span>
+<span class="nc" id="L178">            client.setDirectAccessGrantsEnabled(false);</span>
+<span class="nc" id="L179">            client.setAuthorizationServicesEnabled(false);</span>
+<span class="nc bnc" id="L180" title="All 2 branches missed.">            client.setRedirectUris(Collections.singletonList(&quot;*&quot;.equals(domain) ? domain : domain + &quot;/*&quot;));</span>
+<span class="nc" id="L181">            client.setPublicClient(true);</span>
+<span class="nc" id="L182">            client.setOrigin(domain);</span>
+<span class="nc" id="L183">            client.setWebOrigins(Collections.singletonList(domain));</span>
+<span class="nc" id="L184">            realmResource.clients().create(client);</span>
+<span class="nc" id="L185">        } else {</span>
+<span class="fc" id="L186">            ClientRepresentation client = existing.get(0);</span>
+<span class="fc" id="L187">            client.getRedirectUris().add(domain + &quot;/*&quot;);</span>
+<span class="fc" id="L188">            client.getWebOrigins().add(domain);</span>
+<span class="fc" id="L189">            realmResource.clients().get(client.getId()).update(client);</span>
+        }
+<span class="fc" id="L191">    }</span>
+
+    //TODO this is a signficant security risk but should fall away when we move the Component registration elsewhere
+    private void createOperatorClient(RealmResource realmResource) {
+<span class="nc" id="L195">        ClientRepresentation client = new ClientRepresentation();</span>
+<span class="nc" id="L196">        client.setName(&quot;Entando K8s Operator&quot;);</span>
+<span class="nc" id="L197">        client.setClientId(KubeUtils.OPERATOR_CLIENT_ID);</span>
+<span class="nc" id="L198">        client.setSecret(KubeUtils.OPERATOR_CLIENT_ID);</span>
+<span class="nc" id="L199">        client.setEnabled(true);</span>
+<span class="nc" id="L200">        client.setStandardFlowEnabled(false);</span>
+<span class="nc" id="L201">        client.setImplicitFlowEnabled(false);</span>
+<span class="nc" id="L202">        client.setDirectAccessGrantsEnabled(false);</span>
+<span class="nc" id="L203">        client.setServiceAccountsEnabled(true);</span>
+<span class="nc" id="L204">        client.setAuthorizationServicesEnabled(false);</span>
+<span class="nc" id="L205">        realmResource.clients().create(client);</span>
+<span class="nc" id="L206">    }</span>
+
+    private void createFirstUser(RealmResource realmResource) {
+<span class="nc" id="L209">        final UserRepresentation user = new UserRepresentation();</span>
+<span class="nc" id="L210">        user.setUsername(&quot;admin&quot;);</span>
+<span class="nc" id="L211">        user.setEnabled(true);</span>
+<span class="nc" id="L212">        try (Response response = realmResource.users().create(user)) {</span>
+<span class="nc" id="L213">            CredentialRepresentation credentials = new CredentialRepresentation();</span>
+<span class="nc" id="L214">            credentials.setValue(&quot;adminadmin&quot;);</span>
+<span class="nc" id="L215">            credentials.setTemporary(true);</span>
+<span class="nc" id="L216">            credentials.setType(KubeUtils.PASSSWORD_KEY);</span>
+<span class="nc" id="L217">            String userId = response.getLocation().getPath().replaceAll(&quot;.*/([^/]+)$&quot;, &quot;$1&quot;);</span>
+<span class="nc" id="L218">            realmResource.users().get(userId).resetPassword(credentials);</span>
+        }
+<span class="nc" id="L220">    }</span>
+
+    @Override
+    public String prepareClientAndReturnSecret(KeycloakClientConfig config) {
+<span class="fc" id="L224">        String id = findOrCreateClient(config);</span>
+<span class="fc" id="L225">        updateClient(config, id);</span>
+<span class="fc" id="L226">        return keycloak.realm(config.getRealm()).clients().get(id).getSecret().getValue();</span>
+    }
+
+    private String findOrCreateClient(KeycloakClientConfig config) {
+<span class="fc" id="L230">        RealmResource realmResource = keycloak.realm(config.getRealm());</span>
+<span class="fc" id="L231">        Optional&lt;ClientRepresentation&gt; clientRepresentation = findClient(config);</span>
+<span class="pc bpc" id="L232" title="1 of 2 branches missed.">        if (clientRepresentation.isPresent()) {</span>
+<span class="fc" id="L233">            return clientRepresentation.get().getId();</span>
+        } else {
+<span class="nc" id="L235">            ClientRepresentation client = new ClientRepresentation();</span>
+<span class="nc" id="L236">            client.setName(config.getClientName());</span>
+<span class="nc" id="L237">            client.setClientId(config.getClientId());</span>
+<span class="nc" id="L238">            client.setEnabled(true);</span>
+<span class="nc" id="L239">            client.setServiceAccountsEnabled(true);</span>
+<span class="nc" id="L240">            client.setStandardFlowEnabled(true);</span>
+<span class="nc" id="L241">            client.setImplicitFlowEnabled(true);</span>
+<span class="nc" id="L242">            client.setDirectAccessGrantsEnabled(true);</span>
+<span class="nc" id="L243">            client.setAuthorizationServicesEnabled(false);</span>
+<span class="nc" id="L244">            try (Response response = realmResource.clients().create(client)) {</span>
+<span class="nc" id="L245">                String id = response.getLocation().getPath().replaceAll(&quot;.*/([^/]+)$&quot;, &quot;$1&quot;);</span>
+<span class="nc" id="L246">                realmResource.clients().get(id).generateNewSecret();</span>
+<span class="nc" id="L247">                return id;</span>
+            }
+        }
+    }
+
+    private Optional&lt;ClientRepresentation&gt; findClient(KeycloakClientConfig config) {
+<span class="fc" id="L253">        return keycloak.realm(config.getRealm()).clients()</span>
+<span class="fc" id="L254">                .findByClientId(config.getClientId())</span>
+<span class="fc" id="L255">                .stream().findFirst();</span>
+    }
+
+    @Override
+    public void updateClient(KeycloakClientConfig config) {
+<span class="nc" id="L260">        findClient(config).ifPresent(client -&gt; updateClient(config, client.getId()));</span>
+<span class="nc" id="L261">    }</span>
+
+    @SuppressWarnings(&quot;squid:S1155&quot;)//Because having a double negative in an if statement reduces readibility
+    private void updateClient(KeycloakClientConfig config, String id) {
+<span class="fc" id="L265">        RealmResource realmResource = keycloak.realm(config.getRealm());</span>
+<span class="fc" id="L266">        ClientResource clientResource = realmResource.clients().get(id);</span>
+<span class="fc" id="L267">        List&lt;ExpectedRole&gt; desiredRoles = config.getRoles();</span>
+<span class="fc" id="L268">        List&lt;RoleRepresentation&gt; currentRoles = clientResource.roles().list();</span>
+<span class="fc" id="L269">        Set&lt;String&gt; desiredRoleNames = desiredRoles.stream()</span>
+<span class="fc" id="L270">                .map(ExpectedRole::getName)</span>
+<span class="fc" id="L271">                .collect(Collectors.toSet());</span>
+<span class="fc" id="L272">        List&lt;String&gt; currentRoleNames = currentRoles.stream()</span>
+<span class="fc" id="L273">                .map(RoleRepresentation::getName)</span>
+<span class="fc" id="L274">                .collect(Collectors.toList());</span>
+<span class="fc" id="L275">        currentRoleNames.stream()</span>
+<span class="pc bpc" id="L276" title="1 of 2 branches missed.">                .filter(roleName -&gt; !desiredRoleNames.contains(roleName))</span>
+<span class="fc" id="L277">                .forEach(clientResource.roles()::deleteRole);</span>
+<span class="pc bpc" id="L278" title="1 of 2 branches missed.">        desiredRoles.stream().filter(role -&gt; !currentRoleNames.contains(role.getName()))</span>
+<span class="fc" id="L279">                .map(DefaultKeycloakClient::toRoleRepresentation)</span>
+<span class="fc" id="L280">                .forEach(clientResource.roles()::create);</span>
+<span class="fc" id="L281">        config.getPermissions().forEach(role -&gt; assignServiceAccountRole(realmResource, clientResource, role));</span>
+<span class="fc" id="L282">        List&lt;String&gt; redirectUris = config.getRedirectUris();</span>
+<span class="pc bpc" id="L283" title="1 of 2 branches missed.">        if (redirectUris.size() &gt; 0) {</span>
+<span class="fc" id="L284">            ClientRepresentation clientRepresentation = clientResource.toRepresentation();</span>
+<span class="fc" id="L285">            clientRepresentation.getRedirectUris().addAll(redirectUris);</span>
+<span class="fc" id="L286">            clientResource.update(clientRepresentation);</span>
+
+        }
+<span class="fc" id="L289">    }</span>
+
+    private void assignServiceAccountRole(RealmResource realmResource, ClientResource clientResource, Permission serviceRole) {
+<span class="fc" id="L292">        findByClientId(realmResource, serviceRole.getClientId()).ifPresent(toAssociateClientResource -&gt; {</span>
+<span class="fc" id="L293">            String toAssociateClientUuid = toAssociateClientResource.toRepresentation().getId();</span>
+<span class="fc" id="L294">            RoleRepresentation role = toAssociateClientResource.roles().get(serviceRole.getRole()).toRepresentation();</span>
+<span class="fc" id="L295">            realmResource.users().get(clientResource.getServiceAccountUser().getId()).roles()</span>
+<span class="fc" id="L296">                    .clientLevel(toAssociateClientUuid)</span>
+<span class="fc" id="L297">                    .add(Collections.singletonList(role));</span>
+<span class="fc" id="L298">        });</span>
+<span class="fc" id="L299">    }</span>
+
+    private Optional&lt;ClientResource&gt; findByClientId(RealmResource realmResource, String clientId) {
+<span class="fc" id="L302">        ClientsResource clientsResource = realmResource.clients();</span>
+<span class="fc" id="L303">        return clientsResource.findByClientId(clientId).stream().findFirst()</span>
+<span class="fc" id="L304">                .map(ClientRepresentation::getId)</span>
+<span class="fc" id="L305">                .map(clientsResource::get);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
