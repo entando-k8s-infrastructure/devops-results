@@ -11,10 +11,10 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package org.entando.entando.aps.system.services.dataobjectsearchengine;
 
 import com.agiletec.aps.system.common.AbstractService;
+import com.agiletec.aps.system.common.IManager;
 import com.agiletec.aps.system.common.entity.event.EntityTypesChangingEvent;
 import com.agiletec.aps.system.common.entity.event.EntityTypesChangingObserver;
 import com.agiletec.aps.system.common.entity.model.IApsEntity;
@@ -24,10 +24,12 @@ import com.agiletec.aps.system.common.searchengine.IndexableAttributeInterface;
 import com.agiletec.aps.system.common.tree.ITreeNode;
 import com.agiletec.aps.system.exception.ApsSystemException;
 import com.agiletec.aps.util.DateConverter;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+
 import org.apache.commons.lang.StringUtils;
 import org.entando.entando.aps.system.services.dataobject.IDataObjectManager;
 import org.entando.entando.aps.system.services.dataobject.event.PublicDataChangedEvent;
@@ -39,284 +41,284 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Servizio detentore delle operazioni di indicizzazione di oggetti ricercabili tramite motore di ricerca.
+ * Servizio detentore delle operazioni di indicizzazione di oggetti ricercabili
+ * tramite motore di ricerca.
  *
  * @author M.Diana - E.Santoboni
  */
-<span class="nc" id="L46">public class SearchEngineManager extends AbstractService</span>
-        implements IDataObjectSearchEngineManager, PublicDataChangedObserver, EntityTypesChangingObserver {
+<span class="nc" id="L49">public class SearchEngineManager extends AbstractService</span>
+		implements IDataObjectSearchEngineManager, PublicDataChangedObserver, EntityTypesChangingObserver {
 
-    public static final String RELOAD_THREAD_NAME_PREFIX = &quot;RELOAD_INDEX_&quot;;
-<span class="nc" id="L50">    private static final Logger _logger = LoggerFactory.getLogger(SearchEngineManager.class);</span>
-    private ISearchEngineDAOFactory _factory;
-    private IIndexerDAO _indexerDao;
-    private ISearcherDAO _searcherDao;
-    private int _status;
-    private LastReloadInfo _lastReloadInfo;
-<span class="nc" id="L56">    private List&lt;ApsEvent&gt; _publicContentChangedEventQueue = new ArrayList&lt;ApsEvent&gt;();</span>
-    private String _newTempSubDirectory;
-    private IDataObjectManager dataObjectManager;
+<span class="nc" id="L52">	private static final Logger _logger = LoggerFactory.getLogger(SearchEngineManager.class);</span>
 
-    @Override
-    public void init() throws Exception {
-<span class="nc" id="L62">        this._indexerDao = this.getFactory().getIndexer();</span>
-<span class="nc" id="L63">        this._searcherDao = this.getFactory().getSearcher();</span>
-<span class="nc" id="L64">    }</span>
+	@Override
+	public void init() throws Exception {
+<span class="nc" id="L56">		this._indexerDao = this.getFactory().getIndexer();</span>
+<span class="nc" id="L57">		this._searcherDao = this.getFactory().getSearcher();</span>
+<span class="nc" id="L58">	}</span>
 
-    @Override
-    public void refresh() throws Throwable {
-<span class="nc" id="L68">        this.release();</span>
-<span class="nc" id="L69">        this._lastReloadInfo = null;</span>
-<span class="nc" id="L70">        this.getFactory().init();</span>
-<span class="nc" id="L71">        this.init();</span>
-<span class="nc" id="L72">    }</span>
+	@Override
+	public void refresh() throws Throwable {
+<span class="nc" id="L62">		this.release();</span>
+<span class="nc" id="L63">		this._lastReloadInfo = null;</span>
+<span class="nc" id="L64">		this.getFactory().init();</span>
+<span class="nc" id="L65">		this.init();</span>
+<span class="nc" id="L66">	}</span>
 
-    @Override
-    public void updateFromPublicDataObjectChanged(PublicDataChangedEvent event) {
-<span class="nc bnc" id="L76" title="All 2 branches missed.">        if (this.getStatus() == STATUS_RELOADING_INDEXES_IN_PROGRESS) {</span>
-<span class="nc" id="L77">            this._publicContentChangedEventQueue.add(0, event);</span>
-        } else {
-<span class="nc" id="L79">            this.manageEvent(event);</span>
-        }
-<span class="nc" id="L81">    }</span>
+	@Override
+	public void updateFromPublicDataObjectChanged(PublicDataChangedEvent event) {
+<span class="nc bnc" id="L70" title="All 2 branches missed.">		if (this.getStatus() == STATUS_RELOADING_INDEXES_IN_PROGRESS) {</span>
+<span class="nc" id="L71">			this._publicContentChangedEventQueue.add(0, event);</span>
+		} else {
+<span class="nc" id="L73">			this.manageEvent(event);</span>
+		}
+<span class="nc" id="L75">	}</span>
 
-    private void manageEvent(PublicDataChangedEvent event) {
-<span class="nc" id="L84">        DataObject dataObject = event.getDataObject();</span>
-        try {
-<span class="nc bnc" id="L86" title="All 4 branches missed.">            switch (event.getOperationCode()) {</span>
-                case PublicDataChangedEvent.INSERT_OPERATION_CODE:
-<span class="nc" id="L88">                    this.addEntityToIndex(dataObject);</span>
-<span class="nc" id="L89">                    break;</span>
-                case PublicDataChangedEvent.REMOVE_OPERATION_CODE:
-<span class="nc" id="L91">                    this.deleteIndexedEntity(dataObject.getId());</span>
-<span class="nc" id="L92">                    break;</span>
-                case PublicDataChangedEvent.UPDATE_OPERATION_CODE:
-<span class="nc" id="L94">                    this.updateIndexedEntity(dataObject);</span>
-<span class="nc" id="L95">                    break;</span>
-                default:
-                    break;
-            }
-<span class="nc" id="L99">        } catch (Throwable t) {</span>
-<span class="nc" id="L100">            _logger.error(&quot;Error on event notification&quot;, t);</span>
-<span class="nc" id="L101">        }</span>
-<span class="nc" id="L102">    }</span>
+	private void manageEvent(PublicDataChangedEvent event) {
+<span class="nc" id="L78">		DataObject dataObject = event.getDataObject();</span>
+		try {
+<span class="nc bnc" id="L80" title="All 4 branches missed.">			switch (event.getOperationCode()) {</span>
+				case PublicDataChangedEvent.INSERT_OPERATION_CODE:
+<span class="nc" id="L82">					this.addEntityToIndex(dataObject);</span>
+<span class="nc" id="L83">					break;</span>
+				case PublicDataChangedEvent.REMOVE_OPERATION_CODE:
+<span class="nc" id="L85">					this.deleteIndexedEntity(dataObject.getId());</span>
+<span class="nc" id="L86">					break;</span>
+				case PublicDataChangedEvent.UPDATE_OPERATION_CODE:
+<span class="nc" id="L88">					this.updateIndexedEntity(dataObject);</span>
+					break;
+			}
+<span class="nc" id="L91">		} catch (Throwable t) {</span>
+<span class="nc" id="L92">			_logger.error(&quot;Error on event notification&quot;, t);</span>
+<span class="nc" id="L93">		}</span>
+<span class="nc" id="L94">	}</span>
 
-    protected void sellOfQueueEvents() {
-<span class="nc" id="L105">        int size = this._publicContentChangedEventQueue.size();</span>
-<span class="nc bnc" id="L106" title="All 2 branches missed.">        if (size &gt; 0) {</span>
-<span class="nc bnc" id="L107" title="All 2 branches missed.">            for (int i = 0; i &lt; size; i++) {</span>
-<span class="nc" id="L108">                PublicDataChangedEvent event = (PublicDataChangedEvent) this._publicContentChangedEventQueue.get(0);</span>
-<span class="nc" id="L109">                this.manageEvent(event);</span>
-<span class="nc" id="L110">                this._publicContentChangedEventQueue.remove(0);</span>
-            }
-        }
-<span class="nc" id="L113">    }</span>
+	protected void sellOfQueueEvents() {
+<span class="nc" id="L97">		int size = this._publicContentChangedEventQueue.size();</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">		if (size &gt; 0) {</span>
+<span class="nc bnc" id="L99" title="All 2 branches missed.">			for (int i = 0; i &lt; size; i++) {</span>
+<span class="nc" id="L100">				PublicDataChangedEvent event = (PublicDataChangedEvent) this._publicContentChangedEventQueue.get(0);</span>
+<span class="nc" id="L101">				this.manageEvent(event);</span>
+<span class="nc" id="L102">				this._publicContentChangedEventQueue.remove(0);</span>
+			}
+		}
+<span class="nc" id="L105">	}</span>
 
-    @Override
-    public Thread startReloadDataObjectsReferences() throws ApsSystemException {
-<span class="nc" id="L117">        String newTempSubDirectory = &quot;indexdir&quot; + DateConverter.getFormattedDate(new Date(), &quot;yyyyMMddHHmmss&quot;);</span>
-<span class="nc" id="L118">        return this.startReloadDataObjectsReferences(newTempSubDirectory);</span>
-    }
+	@Override
+	public Thread startReloadDataObjectsReferences() throws ApsSystemException {
+<span class="nc" id="L109">		String newTempSubDirectory = &quot;indexdir&quot; + DateConverter.getFormattedDate(new Date(), &quot;yyyyMMddHHmmss&quot;);</span>
+<span class="nc" id="L110">		return this.startReloadDataObjectsReferences(newTempSubDirectory);</span>
+	}
 
-    @Override
-    public Thread startReloadDataObjectsReferences(String subDirectory) throws ApsSystemException {
-<span class="nc" id="L123">        IndexLoaderThread loaderThread = null;</span>
-<span class="nc bnc" id="L124" title="All 4 branches missed.">        if (this.getStatus() == STATUS_READY || this.getStatus() == STATUS_NEED_TO_RELOAD_INDEXES) {</span>
-            try {
-<span class="nc" id="L126">                this._newTempSubDirectory = subDirectory;</span>
-<span class="nc" id="L127">                IIndexerDAO newIndexer = this.getFactory().getIndexer(_newTempSubDirectory);</span>
-<span class="nc" id="L128">                loaderThread = new IndexLoaderThread(this, this.getDataObjectManager(), newIndexer);</span>
-<span class="nc" id="L129">                String threadName = RELOAD_THREAD_NAME_PREFIX + DateConverter.getFormattedDate(new Date(), &quot;yyyyMMddHHmmss&quot;);</span>
-<span class="nc" id="L130">                loaderThread.setName(threadName);</span>
-<span class="nc" id="L131">                this.setStatus(STATUS_RELOADING_INDEXES_IN_PROGRESS);</span>
-<span class="nc" id="L132">                loaderThread.start();</span>
-<span class="nc" id="L133">                _logger.info(&quot;Reload Contents References job started&quot;);</span>
-<span class="nc" id="L134">            } catch (Throwable t) {</span>
-<span class="nc" id="L135">                throw new ApsSystemException(&quot;Error reloading Contents References&quot;, t);</span>
-<span class="nc" id="L136">            }</span>
-        } else {
-<span class="nc" id="L138">            _logger.info(&quot;Reload Contents References job suspended: current status: {}&quot;, this.getStatus());</span>
-        }
-<span class="nc" id="L140">        return loaderThread;</span>
-    }
+	@Override
+	public Thread startReloadDataObjectsReferences(String subDirectory) throws ApsSystemException {
+<span class="nc" id="L115">		IndexLoaderThread loaderThread = null;</span>
+<span class="nc bnc" id="L116" title="All 4 branches missed.">		if (this.getStatus() == STATUS_READY || this.getStatus() == STATUS_NEED_TO_RELOAD_INDEXES) {</span>
+			try {
+<span class="nc" id="L118">				this._newTempSubDirectory = subDirectory;</span>
+<span class="nc" id="L119">				IIndexerDAO newIndexer = this.getFactory().getIndexer(_newTempSubDirectory);</span>
+<span class="nc" id="L120">				loaderThread = new IndexLoaderThread(this, this.getDataObjectManager(), newIndexer);</span>
+<span class="nc" id="L121">				String threadName = RELOAD_THREAD_NAME_PREFIX + DateConverter.getFormattedDate(new Date(), &quot;yyyyMMddHHmmss&quot;);</span>
+<span class="nc" id="L122">				loaderThread.setName(threadName);</span>
+<span class="nc" id="L123">				this.setStatus(STATUS_RELOADING_INDEXES_IN_PROGRESS);</span>
+<span class="nc" id="L124">				loaderThread.start();</span>
+<span class="nc" id="L125">				_logger.info(&quot;Reload Contents References job started&quot;);</span>
+<span class="nc" id="L126">			} catch (Throwable t) {</span>
+<span class="nc" id="L127">				throw new ApsSystemException(&quot;Error reloading Contents References&quot;, t);</span>
+<span class="nc" id="L128">			}</span>
+		} else {
+<span class="nc" id="L130">			_logger.info(&quot;Reload Contents References job suspended: current status: {}&quot;, this.getStatus());</span>
+		}
+<span class="nc" id="L132">		return loaderThread;</span>
+	}
 
-    @Override
-    public void updateFromEntityTypesChanging(EntityTypesChangingEvent event) {
-<span class="nc bnc" id="L145" title="All 2 branches missed.">        if (this.getDataObjectManager().getName().equals(event.getEntityManagerName())) {</span>
-<span class="nc bnc" id="L146" title="All 2 branches missed.">            if (this.getStatus() == STATUS_NEED_TO_RELOAD_INDEXES) {</span>
-<span class="nc" id="L147">                return;</span>
-            }
-<span class="nc" id="L149">            boolean needToReload = false;</span>
-<span class="nc bnc" id="L150" title="All 2 branches missed.">            if (event.getOperationCode() == EntityTypesChangingEvent.INSERT_OPERATION_CODE) {</span>
-<span class="nc" id="L151">                return;</span>
-<span class="nc bnc" id="L152" title="All 2 branches missed.">            } else if (event.getOperationCode() == EntityTypesChangingEvent.REMOVE_OPERATION_CODE) {</span>
-<span class="nc" id="L153">                needToReload = true;</span>
-<span class="nc bnc" id="L154" title="All 2 branches missed.">            } else if (event.getOperationCode() == EntityTypesChangingEvent.UPDATE_OPERATION_CODE) {</span>
-<span class="nc" id="L155">                needToReload = this.verifyReloadingNeeded(event.getOldEntityType(), event.getNewEntityType());</span>
-            }
-<span class="nc bnc" id="L157" title="All 2 branches missed.">            if (needToReload == true) {</span>
-<span class="nc" id="L158">                this.setStatus(STATUS_NEED_TO_RELOAD_INDEXES);</span>
-            }
-        }
-<span class="nc" id="L161">    }</span>
+	@Override
+	public void updateFromEntityTypesChanging(EntityTypesChangingEvent event) {
+<span class="nc bnc" id="L137" title="All 2 branches missed.">		if (((IManager) this.getDataObjectManager()).getName().equals(event.getEntityManagerName())) {</span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">			if (this.getStatus() == STATUS_NEED_TO_RELOAD_INDEXES) {</span>
+<span class="nc" id="L139">				return;</span>
+			}
+<span class="nc" id="L141">			boolean needToReload = false;</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">			if (event.getOperationCode() == EntityTypesChangingEvent.INSERT_OPERATION_CODE) {</span>
+<span class="nc" id="L143">				return;</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">			} else if (event.getOperationCode() == EntityTypesChangingEvent.REMOVE_OPERATION_CODE) {</span>
+<span class="nc" id="L145">				needToReload = true;</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">			} else if (event.getOperationCode() == EntityTypesChangingEvent.UPDATE_OPERATION_CODE) {</span>
+<span class="nc" id="L147">				needToReload = this.verifyReloadingNeeded(event.getOldEntityType(), event.getNewEntityType());</span>
+			}
+<span class="nc bnc" id="L149" title="All 2 branches missed.">			if (needToReload == true) {</span>
+<span class="nc" id="L150">				this.setStatus(STATUS_NEED_TO_RELOAD_INDEXES);</span>
+			}
+		}
+<span class="nc" id="L153">	}</span>
 
-    protected boolean verifyReloadingNeeded(IApsEntity oldEntityType, IApsEntity newEntityType) {
-<span class="nc" id="L164">        List&lt;AttributeInterface&gt; attributes = oldEntityType.getAttributeList();</span>
-<span class="nc bnc" id="L165" title="All 2 branches missed.">        for (int i = 0; i &lt; attributes.size(); i++) {</span>
-<span class="nc" id="L166">            AttributeInterface oldAttribute = attributes.get(i);</span>
-<span class="nc" id="L167">            AttributeInterface newAttribute = newEntityType.getAttribute(oldAttribute.getName());</span>
-<span class="nc bnc" id="L168" title="All 2 branches missed.">            boolean isOldAttributeIndexeable = (oldAttribute.getIndexingType() != null &amp;&amp; oldAttribute.getIndexingType()</span>
-<span class="nc bnc" id="L169" title="All 2 branches missed.">                    .equalsIgnoreCase(IndexableAttributeInterface.INDEXING_TYPE_TEXT));</span>
-<span class="nc bnc" id="L170" title="All 4 branches missed.">            boolean isNewAttributeIndexeable = (newAttribute != null &amp;&amp; newAttribute.getIndexingType() != null &amp;&amp; newAttribute</span>
-<span class="nc bnc" id="L171" title="All 2 branches missed.">                    .getIndexingType().equalsIgnoreCase(IndexableAttributeInterface.INDEXING_TYPE_TEXT));</span>
-<span class="nc bnc" id="L172" title="All 8 branches missed.">            if ((isOldAttributeIndexeable &amp;&amp; !isNewAttributeIndexeable) || (!isOldAttributeIndexeable &amp;&amp; isNewAttributeIndexeable)) {</span>
-<span class="nc" id="L173">                return true;</span>
-            }
-        }
-<span class="nc" id="L176">        return false;</span>
-    }
+	protected boolean verifyReloadingNeeded(IApsEntity oldEntityType, IApsEntity newEntityType) {
+<span class="nc" id="L156">		List&lt;AttributeInterface&gt; attributes = oldEntityType.getAttributeList();</span>
+<span class="nc bnc" id="L157" title="All 2 branches missed.">		for (int i = 0; i &lt; attributes.size(); i++) {</span>
+<span class="nc" id="L158">			AttributeInterface oldAttribute = attributes.get(i);</span>
+<span class="nc" id="L159">			AttributeInterface newAttribute = (AttributeInterface) newEntityType.getAttribute(oldAttribute.getName());</span>
+<span class="nc bnc" id="L160" title="All 4 branches missed.">			boolean isOldAttributeIndexeable = (oldAttribute.getIndexingType() != null &amp;&amp; oldAttribute.getIndexingType().equalsIgnoreCase(IndexableAttributeInterface.INDEXING_TYPE_TEXT));</span>
+<span class="nc bnc" id="L161" title="All 6 branches missed.">			boolean isNewAttributeIndexeable = (newAttribute != null &amp;&amp; newAttribute.getIndexingType() != null &amp;&amp; newAttribute.getIndexingType().equalsIgnoreCase(IndexableAttributeInterface.INDEXING_TYPE_TEXT));</span>
+<span class="nc bnc" id="L162" title="All 8 branches missed.">			if ((isOldAttributeIndexeable &amp;&amp; !isNewAttributeIndexeable) || (!isOldAttributeIndexeable &amp;&amp; isNewAttributeIndexeable)) {</span>
+<span class="nc" id="L163">				return true;</span>
+			}
+		}
+<span class="nc" id="L166">		return false;</span>
+	}
 
-    @Override
-    public void addEntityToIndex(IApsEntity entity) throws ApsSystemException {
-        try {
-<span class="nc" id="L182">            this._indexerDao.add(entity);</span>
-<span class="nc" id="L183">        } catch (ApsSystemException e) {</span>
-<span class="nc" id="L184">            _logger.error(&quot;Error saving content to index&quot;, e);</span>
-<span class="nc" id="L185">            throw e;</span>
-<span class="nc" id="L186">        }</span>
-<span class="nc" id="L187">    }</span>
+	@Override
+	public void addEntityToIndex(IApsEntity entity) throws ApsSystemException {
+		try {
+<span class="nc" id="L172">			this._indexerDao.add(entity);</span>
+<span class="nc" id="L173">		} catch (ApsSystemException e) {</span>
+<span class="nc" id="L174">			_logger.error(&quot;Error saving content to index&quot;, e);</span>
+<span class="nc" id="L175">			throw e;</span>
+<span class="nc" id="L176">		}</span>
+<span class="nc" id="L177">	}</span>
 
-    @Override
-    public void deleteIndexedEntity(String entityId) throws ApsSystemException {
-        try {
-<span class="nc" id="L192">            this._indexerDao.delete(IIndexerDAO.DATAOBJECT_ID_FIELD_NAME, entityId);</span>
-<span class="nc" id="L193">        } catch (ApsSystemException e) {</span>
-<span class="nc" id="L194">            _logger.error(&quot;Error deleting content {} from index&quot;, entityId, e);</span>
-<span class="nc" id="L195">            throw e;</span>
-<span class="nc" id="L196">        }</span>
-<span class="nc" id="L197">    }</span>
+	@Override
+	public void deleteIndexedEntity(String entityId) throws ApsSystemException {
+		try {
+<span class="nc" id="L182">			this._indexerDao.delete(IIndexerDAO.DATAOBJECT_ID_FIELD_NAME, entityId);</span>
+<span class="nc" id="L183">		} catch (ApsSystemException e) {</span>
+<span class="nc" id="L184">			_logger.error(&quot;Error deleting content {} from index&quot;, entityId, e);</span>
+<span class="nc" id="L185">			throw e;</span>
+<span class="nc" id="L186">		}</span>
+<span class="nc" id="L187">	}</span>
 
-    protected void notifyEndingIndexLoading(LastReloadInfo info, IIndexerDAO newIndexerDAO) {
-        try {
-<span class="nc bnc" id="L201" title="All 2 branches missed.">            if (info.getResult() == LastReloadInfo.ID_SUCCESS_RESULT) {</span>
-<span class="nc" id="L202">                ISearcherDAO newSearcherDAO = this.getFactory().getSearcher(this._newTempSubDirectory);</span>
-<span class="nc" id="L203">                this.getFactory().updateSubDir(_newTempSubDirectory);</span>
-<span class="nc" id="L204">                this._indexerDao = newIndexerDAO;</span>
-<span class="nc" id="L205">                this._searcherDao = newSearcherDAO;</span>
-<span class="nc" id="L206">                this._lastReloadInfo = info;</span>
-<span class="nc bnc" id="L207" title="All 2 branches missed.">            } else if (null != this._newTempSubDirectory) {</span>
-<span class="nc" id="L208">                this.getFactory().deleteSubDirectory(this._newTempSubDirectory);</span>
-            }
-<span class="nc" id="L210">        } catch (Throwable t) {</span>
-<span class="nc" id="L211">            _logger.error(&quot;error updating LastReloadInfo&quot;, t);</span>
-        } finally {
-<span class="nc bnc" id="L213" title="All 2 branches missed.">            if (this.getStatus() != STATUS_NEED_TO_RELOAD_INDEXES) {</span>
-<span class="nc" id="L214">                this.setStatus(STATUS_READY);</span>
-            }
-<span class="nc" id="L216">            this._newTempSubDirectory = null;</span>
-        }
-<span class="nc" id="L218">    }</span>
+	protected void notifyEndingIndexLoading(LastReloadInfo info, IIndexerDAO newIndexerDAO) {
+		try {
+<span class="nc bnc" id="L191" title="All 2 branches missed.">			if (info.getResult() == LastReloadInfo.ID_SUCCESS_RESULT) {</span>
+<span class="nc" id="L192">				ISearcherDAO newSearcherDAO = this.getFactory().getSearcher(this._newTempSubDirectory);</span>
+<span class="nc" id="L193">				this.getFactory().updateSubDir(_newTempSubDirectory);</span>
+<span class="nc" id="L194">				this._indexerDao = newIndexerDAO;</span>
+<span class="nc" id="L195">				this._searcherDao = newSearcherDAO;</span>
+<span class="nc" id="L196">				this._lastReloadInfo = info;</span>
+<span class="nc bnc" id="L197" title="All 2 branches missed.">			} else if (null != this._newTempSubDirectory) {</span>
+<span class="nc" id="L198">				this.getFactory().deleteSubDirectory(this._newTempSubDirectory);</span>
+			}
+<span class="nc" id="L200">		} catch (Throwable t) {</span>
+<span class="nc" id="L201">			_logger.error(&quot;error updating LastReloadInfo&quot;, t);</span>
+		} finally {
+<span class="nc bnc" id="L203" title="All 2 branches missed.">			if (this.getStatus() != STATUS_NEED_TO_RELOAD_INDEXES) {</span>
+<span class="nc" id="L204">				this.setStatus(STATUS_READY);</span>
+			}
+<span class="nc" id="L206">			this._newTempSubDirectory = null;</span>
+		}
+<span class="nc" id="L208">	}</span>
 
-    @Override
-    public LastReloadInfo getLastReloadInfo() {
-<span class="nc" id="L222">        return this._lastReloadInfo;</span>
-    }
+	@Override
+	public LastReloadInfo getLastReloadInfo() {
+<span class="nc" id="L212">		return this._lastReloadInfo;</span>
+	}
 
-    @Override
-    public List&lt;String&gt; searchId(String sectionCode, String langCode,
-            String word, Collection&lt;String&gt; allowedGroups) throws ApsSystemException {
-<span class="nc" id="L228">        return this.searchEntityId(langCode, word, allowedGroups);</span>
-    }
+	@Override
+	public List&lt;String&gt; searchId(String sectionCode, String langCode,
+			String word, Collection&lt;String&gt; allowedGroups) throws ApsSystemException {
+<span class="nc" id="L218">		return this.searchEntityId(langCode, word, allowedGroups);</span>
+	}
 
-    @Override
-    public List&lt;String&gt; searchEntityId(String langCode, String word,
-            Collection&lt;String&gt; allowedGroups) throws ApsSystemException {
-<span class="nc" id="L234">        SearchEngineFilter[] filters = new SearchEngineFilter[0];</span>
-<span class="nc bnc" id="L235" title="All 4 branches missed.">        if (StringUtils.isNotEmpty(langCode) &amp;&amp; StringUtils.isNotEmpty(word)) {</span>
-<span class="nc" id="L236">            SearchEngineFilter filter = new SearchEngineFilter(langCode, word);</span>
-<span class="nc" id="L237">            filter.setFullTextSearch(true);</span>
-<span class="nc" id="L238">            filters = this.addFilter(filters, filter);</span>
-        }
-<span class="nc" id="L240">        return this.searchEntityId(filters, null, allowedGroups);</span>
-    }
+	@Override
+	public List&lt;String&gt; searchEntityId(String langCode, String word,
+			Collection&lt;String&gt; allowedGroups) throws ApsSystemException {
+<span class="nc" id="L224">		SearchEngineFilter[] filters = new SearchEngineFilter[0];</span>
+<span class="nc bnc" id="L225" title="All 4 branches missed.">		if (StringUtils.isNotEmpty(langCode) &amp;&amp; StringUtils.isNotEmpty(word)) {</span>
+<span class="nc" id="L226">			SearchEngineFilter filter = new SearchEngineFilter(langCode, word);</span>
+<span class="nc" id="L227">            filter.setFullTextSearch(true);</span>
+<span class="nc" id="L228">			filters = this.addFilter(filters, filter);</span>
+		}
+<span class="nc" id="L230">		return this.searchEntityId(filters, null, allowedGroups);</span>
+	}
 
-    private SearchEngineFilter[] addFilter(SearchEngineFilter[] filters, SearchEngineFilter filterToAdd) {
-<span class="nc" id="L244">        int len = filters.length;</span>
-<span class="nc" id="L245">        SearchEngineFilter[] newFilters = new SearchEngineFilter[len + 1];</span>
-<span class="nc bnc" id="L246" title="All 2 branches missed.">        for (int i = 0; i &lt; len; i++) {</span>
-<span class="nc" id="L247">            newFilters[i] = filters[i];</span>
-        }
-<span class="nc" id="L249">        newFilters[len] = filterToAdd;</span>
-<span class="nc" id="L250">        return newFilters;</span>
-    }
+	private SearchEngineFilter[] addFilter(SearchEngineFilter[] filters, SearchEngineFilter filterToAdd) {
+<span class="nc" id="L234">		int len = filters.length;</span>
+<span class="nc" id="L235">		SearchEngineFilter[] newFilters = new SearchEngineFilter[len + 1];</span>
+<span class="nc bnc" id="L236" title="All 2 branches missed.">		for (int i = 0; i &lt; len; i++) {</span>
+<span class="nc" id="L237">			newFilters[i] = filters[i];</span>
+		}
+<span class="nc" id="L239">		newFilters[len] = filterToAdd;</span>
+<span class="nc" id="L240">		return newFilters;</span>
+	}
 
-    //@Override
-    public List&lt;String&gt; searchId(String sectionCode, SearchEngineFilter[] filters, Collection&lt;String&gt; allowedGroups)
-            throws ApsSystemException {
-<span class="nc" id="L256">        return this.searchEntityId(filters, null, allowedGroups);</span>
-    }
+	//@Override
+	public List&lt;String&gt; searchId(String sectionCode, SearchEngineFilter[] filters, Collection&lt;String&gt; allowedGroups) throws ApsSystemException {
+<span class="nc" id="L245">		return this.searchEntityId(filters, null, allowedGroups);</span>
+	}
 
-    //@Override
-    public List&lt;String&gt; searchEntityId(SearchEngineFilter[] filters, Collection&lt;ITreeNode&gt; categories, Collection&lt;String&gt; allowedGroups)
-            throws ApsSystemException {
-<span class="nc" id="L262">        List&lt;String&gt; contentsId = null;</span>
-        try {
-<span class="nc" id="L264">            contentsId = _searcherDao.searchContentsId(filters, categories, allowedGroups);</span>
-<span class="nc" id="L265">        } catch (Throwable t) {</span>
-<span class="nc" id="L266">            _logger.error(&quot;Error searching content id list. &quot;, t);</span>
-<span class="nc" id="L267">            throw new ApsSystemException(&quot;Error searching content id list&quot;, t);</span>
-<span class="nc" id="L268">        }</span>
-<span class="nc" id="L269">        return contentsId;</span>
-    }
+	//@Override
+	public List&lt;String&gt; searchEntityId(SearchEngineFilter[] filters, Collection&lt;ITreeNode&gt; categories, Collection&lt;String&gt; allowedGroups) throws ApsSystemException {
+<span class="nc" id="L250">		List&lt;String&gt; contentsId = null;</span>
+		try {
+<span class="nc" id="L252">			contentsId = _searcherDao.searchContentsId(filters, categories, allowedGroups);</span>
+<span class="nc" id="L253">		} catch (Throwable t) {</span>
+<span class="nc" id="L254">			_logger.error(&quot;Error searching content id list. &quot;, t);</span>
+<span class="nc" id="L255">			throw new ApsSystemException(&quot;Error searching content id list&quot;, t);</span>
+<span class="nc" id="L256">		}</span>
+<span class="nc" id="L257">		return contentsId;</span>
+	}
 
-    //@Override
-    public FacetedContentsResult searchFacetedEntities(SearchEngineFilter[] filters, Collection&lt;ITreeNode&gt; categories,
-            Collection&lt;String&gt; allowedGroups) throws ApsSystemException {
-<span class="nc" id="L275">        FacetedContentsResult contentsId = null;</span>
-        try {
-<span class="nc" id="L277">            contentsId = _searcherDao.searchFacetedContents(filters, categories, allowedGroups);</span>
-<span class="nc" id="L278">        } catch (Throwable t) {</span>
-<span class="nc" id="L279">            _logger.error(&quot;Error searching faceted dataobject&quot;, t);</span>
-<span class="nc" id="L280">            throw new ApsSystemException(&quot;Error searching faceted dataobject&quot;, t);</span>
-<span class="nc" id="L281">        }</span>
-<span class="nc" id="L282">        return contentsId;</span>
-    }
+	//@Override
+	public FacetedContentsResult searchFacetedEntities(SearchEngineFilter[] filters, Collection&lt;ITreeNode&gt; categories, Collection&lt;String&gt; allowedGroups) throws ApsSystemException {
+<span class="nc" id="L262">		FacetedContentsResult contentsId = null;</span>
+		try {
+<span class="nc" id="L264">			contentsId = _searcherDao.searchFacetedContents(filters, categories, allowedGroups);</span>
+<span class="nc" id="L265">		} catch (Throwable t) {</span>
+<span class="nc" id="L266">			_logger.error(&quot;Error searching faceted dataobject&quot;, t);</span>
+<span class="nc" id="L267">			throw new ApsSystemException(&quot;Error searching faceted dataobject&quot;, t);</span>
+<span class="nc" id="L268">		}</span>
+<span class="nc" id="L269">		return contentsId;</span>
+	}
 
-    @Override
-    public int getStatus() {
-<span class="nc" id="L287">        return this._status;</span>
-    }
+	@Override
+	public int getStatus() {
+<span class="nc" id="L274">		return this._status;</span>
+	}
 
-    protected void setStatus(int status) {
-<span class="nc" id="L291">        this._status = status;</span>
-<span class="nc" id="L292">    }</span>
+	protected void setStatus(int status) {
+<span class="nc" id="L278">		this._status = status;</span>
+<span class="nc" id="L279">	}</span>
 
-    @Override
-    public void updateIndexedEntity(IApsEntity entity) throws ApsSystemException {
-        try {
-<span class="nc" id="L297">            this.deleteIndexedEntity(entity.getId());</span>
-<span class="nc" id="L298">            this.addEntityToIndex(entity);</span>
-<span class="nc" id="L299">        } catch (ApsSystemException e) {</span>
-<span class="nc" id="L300">            _logger.error(&quot;Error updating content&quot;, e);</span>
-<span class="nc" id="L301">            throw e;</span>
-<span class="nc" id="L302">        }</span>
-<span class="nc" id="L303">    }</span>
+	@Override
+	public void updateIndexedEntity(IApsEntity entity) throws ApsSystemException {
+		try {
+<span class="nc" id="L284">			this.deleteIndexedEntity(entity.getId());</span>
+<span class="nc" id="L285">			this.addEntityToIndex(entity);</span>
+<span class="nc" id="L286">		} catch (ApsSystemException e) {</span>
+<span class="nc" id="L287">			_logger.error(&quot;Error updating content&quot;, e);</span>
+<span class="nc" id="L288">			throw e;</span>
+<span class="nc" id="L289">		}</span>
+<span class="nc" id="L290">	}</span>
 
-    protected ISearchEngineDAOFactory getFactory() {
-<span class="nc" id="L306">        return _factory;</span>
-    }
+	protected ISearchEngineDAOFactory getFactory() {
+<span class="nc" id="L293">		return _factory;</span>
+	}
 
-    public void setFactory(ISearchEngineDAOFactory factory) {
-<span class="nc" id="L310">        this._factory = factory;</span>
-<span class="nc" id="L311">    }</span>
+	public void setFactory(ISearchEngineDAOFactory factory) {
+<span class="nc" id="L297">		this._factory = factory;</span>
+<span class="nc" id="L298">	}</span>
 
-    public IDataObjectManager getDataObjectManager() {
-<span class="nc" id="L314">        return dataObjectManager;</span>
-    }
+	public IDataObjectManager getDataObjectManager() {
+<span class="nc" id="L301">		return dataObjectManager;</span>
+	}
 
-    public void setDataObjectManager(IDataObjectManager dataObjectManager) {
-<span class="nc" id="L318">        this.dataObjectManager = dataObjectManager;</span>
-<span class="nc" id="L319">    }</span>
+	public void setDataObjectManager(IDataObjectManager dataObjectManager) {
+<span class="nc" id="L305">		this.dataObjectManager = dataObjectManager;</span>
+<span class="nc" id="L306">	}</span>
+
+	private ISearchEngineDAOFactory _factory;
+
+	private IIndexerDAO _indexerDao;
+	private ISearcherDAO _searcherDao;
+
+	private int _status;
+	private LastReloadInfo _lastReloadInfo;
+<span class="nc" id="L315">	private List&lt;ApsEvent&gt; _publicContentChangedEventQueue = new ArrayList&lt;ApsEvent&gt;();</span>
+
+	public static final String RELOAD_THREAD_NAME_PREFIX = &quot;RELOAD_INDEX_&quot;;
+
+	private String _newTempSubDirectory;
+
+	private IDataObjectManager dataObjectManager;
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

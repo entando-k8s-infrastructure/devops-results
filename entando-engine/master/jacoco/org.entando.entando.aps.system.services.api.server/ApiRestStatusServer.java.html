@@ -11,11 +11,8 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package org.entando.entando.aps.system.services.api.server;
 
-import com.agiletec.aps.system.SystemConstants;
-import com.agiletec.aps.util.ApsWebApplicationUtils;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -23,6 +20,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
+
 import org.entando.entando.aps.system.services.api.IApiErrorCodes;
 import org.entando.entando.aps.system.services.api.model.ApiError;
 import org.entando.entando.aps.system.services.api.model.ApiException;
@@ -31,19 +29,22 @@ import org.entando.entando.aps.system.services.api.model.StringApiResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.agiletec.aps.system.SystemConstants;
+import com.agiletec.aps.util.ApsWebApplicationUtils;
+
 /**
  * @author E.Santoboni
  */
-<span class="nc" id="L37">public class ApiRestStatusServer {</span>
+<span class="nc" id="L38">public class ApiRestStatusServer {</span>
 
-<span class="nc" id="L39">    private static final Logger _logger = LoggerFactory.getLogger(ApiRestStatusServer.class);</span>
-
+<span class="nc" id="L40">	private static final Logger _logger = LoggerFactory.getLogger(ApiRestStatusServer.class);</span>
+	
     @GET
     @Produces({&quot;application/json&quot;, &quot;application/xml&quot;, &quot;application/javascript&quot;})
     @Path(&quot;/{resourceName}/{httpMethod}&quot;)
     public Object getApiStatus(@PathParam(&quot;httpMethod&quot;) String httpMethodString,
             @PathParam(&quot;resourceName&quot;) String resourceName, @Context HttpServletRequest request) {
-<span class="nc" id="L46">        return this.getApiStatus(httpMethodString, null, resourceName, request);</span>
+<span class="nc" id="L47">        return this.getApiStatus(httpMethodString, null, resourceName, request);</span>
     }
 
     @GET
@@ -51,11 +52,10 @@ import org.slf4j.LoggerFactory;
     @Path(&quot;/{namespace}/{resourceName}/{httpMethod}&quot;)
     public Object getApiStatus(@PathParam(&quot;httpMethod&quot;) String httpMethodString,
             @PathParam(&quot;namespace&quot;) String namespace, @PathParam(&quot;resourceName&quot;) String resourceName, @Context HttpServletRequest request) {
-<span class="nc" id="L54">        StringApiResponse response = new StringApiResponse();</span>
-<span class="nc" id="L55">        ApiMethod.HttpMethod httpMethod = Enum.valueOf(ApiMethod.HttpMethod.class, httpMethodString.toUpperCase());</span>
+<span class="nc" id="L55">        StringApiResponse response = new StringApiResponse();</span>
+<span class="nc" id="L56">        ApiMethod.HttpMethod httpMethod = Enum.valueOf(ApiMethod.HttpMethod.class, httpMethodString.toUpperCase());</span>
         try {
-<span class="nc" id="L57">            IResponseBuilder responseBuilder = (IResponseBuilder) ApsWebApplicationUtils</span>
-<span class="nc" id="L58">                    .getBean(SystemConstants.API_RESPONSE_BUILDER, request);</span>
+<span class="nc" id="L58">            IResponseBuilder responseBuilder = (IResponseBuilder) ApsWebApplicationUtils.getBean(SystemConstants.API_RESPONSE_BUILDER, request);</span>
 <span class="nc" id="L59">            ApiMethod apiMethod = responseBuilder.extractApiMethod(httpMethod, namespace, resourceName);</span>
 <span class="nc bnc" id="L60" title="All 2 branches missed.">            if (null != apiMethod.getRequiredPermission()) {</span>
 <span class="nc" id="L61">                response.setResult(ApiStatus.AUTHORIZATION_REQUIRED.toString(), null);</span>
@@ -65,7 +65,7 @@ import org.slf4j.LoggerFactory;
 <span class="nc" id="L65">                response.setResult(ApiStatus.FREE.toString(), null);</span>
             }
 <span class="nc" id="L67">        } catch (ApiException ae) {</span>
-<span class="nc" id="L68">            response.addErrors(ae.getErrors());</span>
+<span class="nc" id="L68">            response.addErrors(((ApiException) ae).getErrors());</span>
 <span class="nc" id="L69">            response.setResult(ApiStatus.INACTIVE.toString(), null);</span>
 <span class="nc" id="L70">        } catch (Throwable t) {</span>
 <span class="nc" id="L71">            return this.buildErrorResponse(httpMethod, namespace, resourceName, t);</span>
@@ -74,21 +74,20 @@ import org.slf4j.LoggerFactory;
     }
 
     private StringApiResponse buildErrorResponse(ApiMethod.HttpMethod httpMethod,
-            String namespace, String resourceName, Throwable t) {
-<span class="nc" id="L78">        StringBuilder buffer = new StringBuilder();</span>
-<span class="nc" id="L79">        buffer.append(&quot;Method '&quot;).append(httpMethod)</span>
-<span class="nc" id="L80">                .append(&quot;' Namespace '&quot;).append(namespace).append(&quot;' Resource '&quot;).append(resourceName).append(&quot;'&quot;);</span>
-<span class="nc" id="L81">        _logger.error(&quot;Error building api response  - {}&quot;, buffer.toString(), t);</span>
+			String namespace, String resourceName, Throwable t) {
+<span class="nc" id="L78">		StringBuilder buffer = new StringBuilder();</span>
+<span class="nc" id="L79">		buffer.append(&quot;Method '&quot;).append(httpMethod).</span>
+<span class="nc" id="L80">				append(&quot;' Namespace '&quot;).append(namespace).append(&quot;' Resource '&quot;).append(resourceName).append(&quot;'&quot;);</span>
+<span class="nc" id="L81">		_logger.error(&quot;Error building api response  - {}&quot;, buffer.toString(), t);</span>
 <span class="nc" id="L82">        StringApiResponse response = new StringApiResponse();</span>
-<span class="nc" id="L83">        ApiError error = new ApiError(IApiErrorCodes.SERVER_ERROR, &quot;Error building response - &quot; + buffer.toString(),</span>
-                Response.Status.INTERNAL_SERVER_ERROR);
-<span class="nc" id="L85">        response.addError(error);</span>
-<span class="nc" id="L86">        response.setResult(IResponseBuilder.FAILURE, null);</span>
-<span class="nc" id="L87">        return response;</span>
+<span class="nc" id="L83">        ApiError error = new ApiError(IApiErrorCodes.SERVER_ERROR, &quot;Error building response - &quot; + buffer.toString(), Response.Status.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L84">        response.addError(error);</span>
+<span class="nc" id="L85">        response.setResult(IResponseBuilder.FAILURE, null);</span>
+<span class="nc" id="L86">        return response;</span>
     }
 
-<span class="nc" id="L90">    public enum ApiStatus {</span>
-<span class="nc" id="L91">        FREE, INACTIVE, AUTHENTICATION_REQUIRED, AUTHORIZATION_REQUIRED</span>
+<span class="nc" id="L89">    public static enum ApiStatus {</span>
+<span class="nc" id="L90">        FREE, INACTIVE, AUTHENTICATION_REQUIRED, AUTHORIZATION_REQUIRED</span>
     }
 
 }

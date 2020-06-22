@@ -11,125 +11,133 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package org.entando.entando.aps.system.services.userprofile;
+
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+
+import org.entando.entando.aps.system.services.userprofile.model.IUserProfile;
+import org.entando.entando.aps.system.services.userprofile.model.UserProfileRecord;
 
 import com.agiletec.aps.system.common.entity.AbstractEntityDAO;
 import com.agiletec.aps.system.common.entity.model.ApsEntityRecord;
 import com.agiletec.aps.system.common.entity.model.IApsEntity;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import org.entando.entando.aps.system.services.userprofile.model.IUserProfile;
-import org.entando.entando.aps.system.services.userprofile.model.UserProfileRecord;
 
 /**
- * Data Access Object for UserProfile Object.
- *
+ * Data Access Object for UserProfile Object. 
  * @author E.Santoboni
  */
-<span class="nc" id="L30">public class UserProfileDAO extends AbstractEntityDAO implements IUserProfileDAO {</span>
+<span class="nc" id="L30">public class UserProfileDAO extends AbstractEntityDAO implements IUserProfileDAO  {</span>
+	
+	@Override
+	protected String getLoadEntityRecordQuery() {
+<span class="nc" id="L34">		return GET_PROFILE_VO;</span>
+	}
+	
+	@Override
+	protected ApsEntityRecord createEntityRecord(ResultSet res) throws Throwable {
+<span class="nc" id="L39">		UserProfileRecord profile = new UserProfileRecord();</span>
+<span class="nc" id="L40">		profile.setId(res.getString(&quot;username&quot;));</span>
+<span class="nc" id="L41">		profile.setTypeCode(res.getString(&quot;profiletype&quot;));</span>
+<span class="nc" id="L42">		profile.setXml(res.getString(&quot;profilexml&quot;));</span>
+<span class="nc bnc" id="L43" title="All 2 branches missed.">		profile.setPublicProfile(res.getInt(&quot;publicprofile&quot;) == 1);</span>
+<span class="nc" id="L44">		return profile;</span>
+	}
+	
+	@Override
+	protected String getAddEntityRecordQuery() {
+<span class="nc" id="L49">		return INSERT_PROFILE;</span>
+	}
+	
+	@Override
+	protected void buildAddEntityStatement(IApsEntity entity, PreparedStatement stat) throws Throwable {
+<span class="nc" id="L54">		IUserProfile profile = (IUserProfile) entity;</span>
+<span class="nc" id="L55">		stat.setString(1, profile.getUsername());</span>
+<span class="nc" id="L56">		stat.setString(2, profile.getTypeCode());</span>
+<span class="nc" id="L57">		stat.setString(3, profile.getXML());</span>
+<span class="nc bnc" id="L58" title="All 2 branches missed.">		if (profile.isPublicProfile()) {</span>
+<span class="nc" id="L59">			stat.setInt(4, 1);</span>
+		} else {
+<span class="nc" id="L61">			stat.setInt(4, 0);</span>
+		}
+<span class="nc" id="L63">	}</span>
+	
+	@Override
+	protected String getUpdateEntityRecordQuery() {
+<span class="nc" id="L67">		return UPDATE_PROFILE;</span>
+	}
+	
+	@Override
+	protected void buildUpdateEntityStatement(IApsEntity entity, PreparedStatement stat) throws Throwable {
+<span class="nc" id="L72">		IUserProfile profile = (IUserProfile) entity;</span>
+<span class="nc" id="L73">		stat.setString(1, profile.getTypeCode());</span>
+<span class="nc" id="L74">		stat.setString(2, profile.getXML());</span>
+<span class="nc bnc" id="L75" title="All 2 branches missed.">		if (profile.isPublicProfile()) {</span>
+<span class="nc" id="L76">			stat.setInt(3, 1);</span>
+		} else {
+<span class="nc" id="L78">			stat.setInt(3, 0);</span>
+		}
+<span class="nc" id="L80">		stat.setString(4, profile.getUsername());</span>
+<span class="nc" id="L81">	}</span>
+	
+	@Override
+	protected String getDeleteEntityRecordQuery() {
+<span class="nc" id="L85">		return DELETE_PROFILE_BY_USER;</span>
+	}
+	
+	@Override
+	protected String getAddingSearchRecordQuery() {
+<span class="nc" id="L90">		return ADD_PROFILE_SEARCH_RECORD;</span>
+	}
 
-    private static final String ADD_PROFILE_SEARCH_RECORD =
-            &quot;INSERT INTO authuserprofilesearch &quot; +
-                    &quot;(username, attrname, textvalue, datevalue, numvalue, langcode) &quot; +
-                    &quot;VALUES ( ? , ? , ? , ? , ? , ? ) &quot;;
-    private static final String DELETE_PROFILE_SEARCH_RECORD =
-            &quot;DELETE FROM authuserprofilesearch WHERE username = ? &quot;;
-    private static final String GET_ALL_ENTITY_ID =
-            &quot;SELECT username FROM authuserprofiles&quot;;
-    private static final String INSERT_PROFILE =
-            &quot;INSERT INTO authuserprofiles (username, profiletype, profilexml, publicprofile) values ( ? , ? , ? , ? ) &quot;;
-    private static final String DELETE_PROFILE_BY_USER =
-            &quot;DELETE FROM authuserprofiles WHERE username = ? &quot;;
-    private static final String GET_PROFILE_VO =
-            &quot;SELECT username, profiletype, profilexml, publicprofile FROM authuserprofiles WHERE username = ? &quot;;
-    private static final String UPDATE_PROFILE =
-            &quot;UPDATE authuserprofiles SET profiletype = ? , profilexml = ? , publicprofile = ? WHERE username = ? &quot;;
-    private static final String ADD_ATTRIBUTE_ROLE_RECORD =
-            &quot;INSERT INTO authuserprofileattrroles (username, attrname, rolename) VALUES ( ? , ? , ? )&quot;;
-    private static final String DELETE_ATTRIBUTE_ROLE_RECORD =
-            &quot;DELETE FROM authuserprofileattrroles WHERE username = ? &quot;;
+	@Override
+	protected String getExtractingAllEntityIdQuery() {
+<span class="nc" id="L95">		return GET_ALL_ENTITY_ID;</span>
+	}
 
-    @Override
-    protected String getLoadEntityRecordQuery() {
-<span class="nc" id="L55">        return GET_PROFILE_VO;</span>
-    }
-
-    @Override
-    protected ApsEntityRecord createEntityRecord(ResultSet res) throws Throwable {
-<span class="nc" id="L60">        UserProfileRecord profile = new UserProfileRecord();</span>
-<span class="nc" id="L61">        profile.setId(res.getString(&quot;username&quot;));</span>
-<span class="nc" id="L62">        profile.setTypeCode(res.getString(&quot;profiletype&quot;));</span>
-<span class="nc" id="L63">        profile.setXml(res.getString(&quot;profilexml&quot;));</span>
-<span class="nc bnc" id="L64" title="All 2 branches missed.">        profile.setPublicProfile(res.getInt(&quot;publicprofile&quot;) == 1);</span>
-<span class="nc" id="L65">        return profile;</span>
-    }
-
-    @Override
-    protected String getAddEntityRecordQuery() {
-<span class="nc" id="L70">        return INSERT_PROFILE;</span>
-    }
-
-    @Override
-    protected void buildAddEntityStatement(IApsEntity entity, PreparedStatement stat) throws Throwable {
-<span class="nc" id="L75">        IUserProfile profile = (IUserProfile) entity;</span>
-<span class="nc" id="L76">        stat.setString(1, profile.getUsername());</span>
-<span class="nc" id="L77">        stat.setString(2, profile.getTypeCode());</span>
-<span class="nc" id="L78">        stat.setString(3, profile.getXML());</span>
-<span class="nc bnc" id="L79" title="All 2 branches missed.">        if (profile.isPublicProfile()) {</span>
-<span class="nc" id="L80">            stat.setInt(4, 1);</span>
-        } else {
-<span class="nc" id="L82">            stat.setInt(4, 0);</span>
-        }
-<span class="nc" id="L84">    }</span>
-
-    @Override
-    protected String getUpdateEntityRecordQuery() {
-<span class="nc" id="L88">        return UPDATE_PROFILE;</span>
-    }
-
-    @Override
-    protected void buildUpdateEntityStatement(IApsEntity entity, PreparedStatement stat) throws Throwable {
-<span class="nc" id="L93">        IUserProfile profile = (IUserProfile) entity;</span>
-<span class="nc" id="L94">        stat.setString(1, profile.getTypeCode());</span>
-<span class="nc" id="L95">        stat.setString(2, profile.getXML());</span>
-<span class="nc bnc" id="L96" title="All 2 branches missed.">        if (profile.isPublicProfile()) {</span>
-<span class="nc" id="L97">            stat.setInt(3, 1);</span>
-        } else {
-<span class="nc" id="L99">            stat.setInt(3, 0);</span>
-        }
-<span class="nc" id="L101">        stat.setString(4, profile.getUsername());</span>
-<span class="nc" id="L102">    }</span>
-
-    @Override
-    protected String getDeleteEntityRecordQuery() {
-<span class="nc" id="L106">        return DELETE_PROFILE_BY_USER;</span>
-    }
-
-    @Override
-    protected String getAddingSearchRecordQuery() {
-<span class="nc" id="L111">        return ADD_PROFILE_SEARCH_RECORD;</span>
-    }
-
-    @Override
-    protected String getExtractingAllEntityIdQuery() {
-<span class="nc" id="L116">        return GET_ALL_ENTITY_ID;</span>
-    }
-
-    @Override
-    protected String getRemovingSearchRecordQuery() {
-<span class="nc" id="L121">        return DELETE_PROFILE_SEARCH_RECORD;</span>
-    }
-
-    @Override
-    protected String getAddingAttributeRoleRecordQuery() {
-<span class="nc" id="L126">        return ADD_ATTRIBUTE_ROLE_RECORD;</span>
-    }
-
-    @Override
-    protected String getRemovingAttributeRoleRecordQuery() {
-<span class="nc" id="L131">        return DELETE_ATTRIBUTE_ROLE_RECORD;</span>
-    }
-
+	@Override
+	protected String getRemovingSearchRecordQuery() {
+<span class="nc" id="L100">		return DELETE_PROFILE_SEARCH_RECORD;</span>
+	}
+	
+	@Override
+	protected String getAddingAttributeRoleRecordQuery() {
+<span class="nc" id="L105">		return ADD_ATTRIBUTE_ROLE_RECORD;</span>
+	}
+	
+	@Override
+	protected String getRemovingAttributeRoleRecordQuery() {
+<span class="nc" id="L110">		return DELETE_ATTRIBUTE_ROLE_RECORD;</span>
+	}
+	
+<span class="nc" id="L113">	private final String ADD_PROFILE_SEARCH_RECORD =</span>
+		&quot;INSERT INTO authuserprofilesearch &quot; +
+		&quot;(username, attrname, textvalue, datevalue, numvalue, langcode) &quot; +
+		&quot;VALUES ( ? , ? , ? , ? , ? , ? ) &quot;;
+	
+<span class="nc" id="L118">	private final String DELETE_PROFILE_SEARCH_RECORD =</span>
+		&quot;DELETE FROM authuserprofilesearch WHERE username = ? &quot;;
+	
+<span class="nc" id="L121">	private final String GET_ALL_ENTITY_ID = </span>
+		&quot;SELECT username FROM authuserprofiles&quot;;
+	
+<span class="nc" id="L124">	private final String INSERT_PROFILE = </span>
+		&quot;INSERT INTO authuserprofiles (username, profiletype, profilexml, publicprofile) values ( ? , ? , ? , ? ) &quot;;
+	
+<span class="nc" id="L127">	private final String DELETE_PROFILE_BY_USER = </span>
+		&quot;DELETE FROM authuserprofiles WHERE username = ? &quot;;
+	
+<span class="nc" id="L130">	private final String GET_PROFILE_VO = </span>
+		&quot;SELECT username, profiletype, profilexml, publicprofile FROM authuserprofiles WHERE username = ? &quot;;
+	
+<span class="nc" id="L133">	private final String UPDATE_PROFILE = </span>
+		&quot;UPDATE authuserprofiles SET profiletype = ? , profilexml = ? , publicprofile = ? WHERE username = ? &quot;;
+	
+<span class="nc" id="L136">	private final String ADD_ATTRIBUTE_ROLE_RECORD =</span>
+		&quot;INSERT INTO authuserprofileattrroles (username, attrname, rolename) VALUES ( ? , ? , ? )&quot;;
+	
+<span class="nc" id="L139">	private final String DELETE_ATTRIBUTE_ROLE_RECORD =</span>
+		&quot;DELETE FROM authuserprofileattrroles WHERE username = ? &quot;;
+	
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

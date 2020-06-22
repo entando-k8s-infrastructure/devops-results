@@ -11,8 +11,14 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package org.entando.entando.aps.system.init.util;
+
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import com.j256.ormlite.dao.BaseDaoImpl;
 import com.j256.ormlite.dao.Dao;
@@ -28,296 +34,291 @@ import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.support.DatabaseConnection;
 import com.j256.ormlite.support.DatabaseResults;
 import com.j256.ormlite.table.TableInfo;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 /**
- * Couple utility methods for the creating tables. Rewriting of main class com.j256.ormlite.table.TableUtils for manage Oracle index name
- * max size (30)
- *
- * As requested, the following notes from license http://ormlite.com/javadoc/ormlite-core/doc-files/ormlite_9.html#SEC72
- *
+ * Couple utility methods for the creating tables.
+ * Rewriting of main class com.j256.ormlite.table.TableUtils 
+ * for manage Oracle index name max size (30)
+ * 
+ * As requested, the following notes from license
+ * http://ormlite.com/javadoc/ormlite-core/doc-files/ormlite_9.html#SEC72
+ * 
  * This document is part of the ORMLite project.
- *
- * Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that
- * this permission notice appear in all copies.
- *
- * THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
- * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY
- * DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
- * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
+ * 
+ * Permission to use, copy, modify, and/or distribute this software for any purpose 
+ * with or without fee is hereby granted, provided that this permission notice appear in all copies.
+ * 
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot; AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD 
+ * TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. 
+ * IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, 
+ * OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, 
+ * DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, 
+ * ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. 
+ * 
  * @author graywatson - E.Santoboni
  */
 public class ApsTableUtils {
+	
+<span class="nc" id="L62">	private static Logger logger = LoggerFactory.getLogger(ApsTableUtils.class);</span>
+<span class="nc" id="L63">	private static final FieldType[] noFieldTypes = new FieldType[0];</span>
 
-<span class="nc" id="L58">    private static final FieldType[] noFieldTypes = new FieldType[0];</span>
-<span class="nc" id="L59">    private static Logger logger = LoggerFactory.getLogger(ApsTableUtils.class);</span>
+	/**
+	 * For static methods only.
+	 */
+	private ApsTableUtils() {}
 
-    /**
-     * For static methods only.
-     */
-    private ApsTableUtils() {
-    }
+	/**
+	 * Issue the database statements to create the table associated with a class.
+	 * 
+	 * @param connectionSource Associated connection source.
+	 * @param dataClass The class for which a table will be created.
+	 * @return The number of statements executed to do so.
+	 */
+	public static &lt;T&gt; int createTable(ConnectionSource connectionSource, Class&lt;T&gt; dataClass) throws SQLException {
+<span class="nc" id="L78">		return createTable(connectionSource, dataClass, false);</span>
+	}
+	
+	/**
+	 * Create a table if it does not already exist. This is not supported by all databases.
+	 * @param connectionSource Associated connection source.
+	 * @param dataClass The class for which a table will be created.
+	 * @return The number of statements executed to do so.
+	 * @throws SQLException in case of error
+	 */
+	public static &lt;T&gt; int createTableIfNotExists(ConnectionSource connectionSource, Class&lt;T&gt; dataClass)
+			throws SQLException {
+<span class="nc" id="L90">		return createTable(connectionSource, dataClass, true);</span>
+	}
+	
+	private static &lt;T, ID&gt; int createTable(ConnectionSource connectionSource, Class&lt;T&gt; dataClass, boolean ifNotExists)
+			throws SQLException {
+<span class="nc" id="L95">		Dao&lt;T, ID&gt; dao = DaoManager.createDao(connectionSource, dataClass);</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">		if (dao instanceof BaseDaoImpl&lt;?, ?&gt;) {</span>
+<span class="nc" id="L97">			return doCreateTable(connectionSource, ((BaseDaoImpl&lt;?, ?&gt;) dao).getTableInfo(), ifNotExists);</span>
+		} else {
+<span class="nc" id="L99">			TableInfo&lt;T, ID&gt; tableInfo = new TableInfo&lt;T, ID&gt;(connectionSource, null, dataClass);</span>
+<span class="nc" id="L100">			return doCreateTable(connectionSource, tableInfo, ifNotExists);</span>
+		}
+	}
+	
+	/**
+	 * Generate and return the list of statements to create a database table and any associated features.
+	 */
+	private static &lt;T, ID&gt; void addCreateTableStatements(DatabaseType databaseType, TableInfo&lt;T, ID&gt; tableInfo,
+			List&lt;String&gt; statements, List&lt;String&gt; queriesAfter, boolean ifNotExists) throws SQLException {
+<span class="nc" id="L109">		StringBuilder sb = new StringBuilder(256);</span>
+<span class="nc" id="L110">		sb.append(&quot;CREATE TABLE &quot;);</span>
+<span class="nc bnc" id="L111" title="All 4 branches missed.">		if (ifNotExists &amp;&amp; databaseType.isCreateIfNotExistsSupported()) {</span>
+<span class="nc" id="L112">			sb.append(&quot;IF NOT EXISTS &quot;);</span>
+		}
+<span class="nc" id="L114">		databaseType.appendEscapedEntityName(sb, tableInfo.getTableName());</span>
+<span class="nc" id="L115">		sb.append(&quot; (&quot;);</span>
+<span class="nc" id="L116">		List&lt;String&gt; additionalArgs = new ArrayList&lt;String&gt;();</span>
+<span class="nc" id="L117">		List&lt;String&gt; statementsBefore = new ArrayList&lt;String&gt;();</span>
+<span class="nc" id="L118">		List&lt;String&gt; statementsAfter = new ArrayList&lt;String&gt;();</span>
+		// our statement will be set here later
+<span class="nc" id="L120">		boolean first = true;</span>
+<span class="nc bnc" id="L121" title="All 2 branches missed.">		for (FieldType fieldType : tableInfo.getFieldTypes()) {</span>
+			// skip foreign collections
+<span class="nc bnc" id="L123" title="All 2 branches missed.">			if (fieldType.isForeignCollection()) {</span>
+<span class="nc" id="L124">				continue;</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">			} else if (first) {</span>
+<span class="nc" id="L126">				first = false;</span>
+			} else {
+<span class="nc" id="L128">				sb.append(&quot;, &quot;);</span>
+			}
+<span class="nc" id="L130">			String columnDefinition = fieldType.getColumnDefinition();</span>
+<span class="nc bnc" id="L131" title="All 2 branches missed.">			if (columnDefinition == null) {</span>
+				// we have to call back to the database type for the specific create syntax
+<span class="nc" id="L133">				databaseType.appendColumnArg(tableInfo.getTableName(), sb, fieldType, additionalArgs, statementsBefore,</span>
+						statementsAfter, queriesAfter);
+			} else {
+				// hand defined field
+<span class="nc" id="L137">				databaseType.appendEscapedEntityName(sb, fieldType.getColumnName());</span>
+<span class="nc" id="L138">				sb.append(' ').append(columnDefinition).append(' ');</span>
+			}
+		}
+		// add any sql that sets any primary key fields
+<span class="nc" id="L142">		databaseType.addPrimaryKeySql(tableInfo.getFieldTypes(), additionalArgs, statementsBefore, statementsAfter,</span>
+				queriesAfter);
+		// add any sql that sets any unique fields
+<span class="nc" id="L145">		databaseType.addUniqueComboSql(tableInfo.getFieldTypes(), additionalArgs, statementsBefore, statementsAfter,</span>
+				queriesAfter);
+<span class="nc bnc" id="L147" title="All 2 branches missed.">		for (String arg : additionalArgs) {</span>
+			// we will have spat out one argument already so we don't have to do the first dance
+<span class="nc" id="L149">			sb.append(&quot;, &quot;).append(arg);</span>
+<span class="nc" id="L150">		}</span>
+<span class="nc" id="L151">		sb.append(&quot;) &quot;);</span>
+<span class="nc" id="L152">		databaseType.appendCreateTableSuffix(sb);</span>
+<span class="nc" id="L153">		statements.addAll(statementsBefore);</span>
+<span class="nc" id="L154">		statements.add(sb.toString());</span>
+<span class="nc" id="L155">		statements.addAll(statementsAfter);</span>
+<span class="nc" id="L156">		addCreateIndexStatements(databaseType, tableInfo, statements, ifNotExists, false);</span>
+<span class="nc" id="L157">		addCreateIndexStatements(databaseType, tableInfo, statements, ifNotExists, true);</span>
+<span class="nc" id="L158">	}</span>
 
-    /**
-     * Issue the database statements to create the table associated with a class.
-     *
-     * @param connectionSource Associated connection source.
-     * @param dataClass The class for which a table will be created.
-     * @return The number of statements executed to do so.
-     */
-    public static &lt;T&gt; int createTable(ConnectionSource connectionSource, Class&lt;T&gt; dataClass) throws SQLException {
-<span class="nc" id="L75">        return createTable(connectionSource, dataClass, false);</span>
-    }
+	private static &lt;T, ID&gt; void addCreateIndexStatements(DatabaseType databaseType, TableInfo&lt;T, ID&gt; tableInfo,
+			List&lt;String&gt; statements, boolean ifNotExists, boolean unique) {
+		// run through and look for index annotations
+<span class="nc" id="L163">		Map&lt;String, List&lt;String&gt;&gt; indexMap = new HashMap&lt;String, List&lt;String&gt;&gt;();</span>
+<span class="nc bnc" id="L164" title="All 2 branches missed.">		for (FieldType fieldType : tableInfo.getFieldTypes()) {</span>
+			String indexName;
+<span class="nc bnc" id="L166" title="All 2 branches missed.">			if (unique) {</span>
+<span class="nc" id="L167">				indexName = fieldType.getUniqueIndexName();</span>
+			} else {
+<span class="nc" id="L169">				indexName = fieldType.getIndexName();</span>
+			}
+<span class="nc bnc" id="L171" title="All 2 branches missed.">			if (indexName == null) {</span>
+<span class="nc" id="L172">				continue;</span>
+			}
+<span class="nc" id="L174">			indexName = checkOracleIndexKeyName(databaseType, indexName, indexMap);</span>
+<span class="nc" id="L175">			List&lt;String&gt; columnList = indexMap.get(indexName);</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">			if (columnList == null) {</span>
+<span class="nc" id="L177">				columnList = new ArrayList&lt;String&gt;();</span>
+<span class="nc" id="L178">				indexMap.put(indexName, columnList);</span>
+			}
+<span class="nc" id="L180">			columnList.add(fieldType.getColumnName());</span>
+		}
+<span class="nc" id="L182">		StringBuilder sb = new StringBuilder(128);</span>
+<span class="nc bnc" id="L183" title="All 2 branches missed.">		for (Map.Entry&lt;String, List&lt;String&gt;&gt; indexEntry : indexMap.entrySet()) {</span>
+<span class="nc" id="L184">			logger.debug(&quot;creating index '{}' for table '{}&quot;, indexEntry.getKey(), tableInfo.getTableName());</span>
+<span class="nc" id="L185">			sb.append(&quot;CREATE &quot;);</span>
+<span class="nc bnc" id="L186" title="All 2 branches missed.">			if (unique) {</span>
+<span class="nc" id="L187">				sb.append(&quot;UNIQUE &quot;);</span>
+			}
+<span class="nc" id="L189">			sb.append(&quot;INDEX &quot;);</span>
+<span class="nc bnc" id="L190" title="All 4 branches missed.">			if (ifNotExists &amp;&amp; databaseType.isCreateIndexIfNotExistsSupported()) {</span>
+<span class="nc" id="L191">				sb.append(&quot;IF NOT EXISTS &quot;);</span>
+			}
+<span class="nc" id="L193">			String indexKey = indexEntry.getKey();</span>
+<span class="nc" id="L194">			databaseType.appendEscapedEntityName(sb, indexKey);</span>
+<span class="nc" id="L195">			sb.append(&quot; ON &quot;);</span>
+<span class="nc" id="L196">			databaseType.appendEscapedEntityName(sb, tableInfo.getTableName());</span>
+<span class="nc" id="L197">			sb.append(&quot; ( &quot;);</span>
+<span class="nc" id="L198">			boolean first = true;</span>
+<span class="nc bnc" id="L199" title="All 2 branches missed.">			for (String columnName : indexEntry.getValue()) {</span>
+<span class="nc bnc" id="L200" title="All 2 branches missed.">				if (first) {</span>
+<span class="nc" id="L201">					first = false;</span>
+				} else {
+<span class="nc" id="L203">					sb.append(&quot;, &quot;);</span>
+				}
+<span class="nc" id="L205">				databaseType.appendEscapedEntityName(sb, columnName);</span>
+<span class="nc" id="L206">			}</span>
+<span class="nc" id="L207">			sb.append(&quot; )&quot;);</span>
+<span class="nc" id="L208">			statements.add(sb.toString());</span>
+<span class="nc" id="L209">			sb.setLength(0);</span>
+<span class="nc" id="L210">		}</span>
+<span class="nc" id="L211">	}</span>
+	
+	/**
+	 * Extension for Oracle Index max length.
+	 * @param databaseType The database type
+	 * @param indexName The index name to check
+	 * @param indexMap the index map.
+	 * @return The processed index name.
+	 */
+	private static String checkOracleIndexKeyName(DatabaseType databaseType, String indexName, Map&lt;String, List&lt;String&gt;&gt; indexMap) {
+<span class="nc bnc" id="L221" title="All 2 branches missed.">		if (!ApsOracleDatabaseType.DATABASE_NAME.equals(databaseType.getDatabaseName())) {</span>
+<span class="nc" id="L222">			return indexName;</span>
+		}
+<span class="nc" id="L224">		String newIndexName = null;</span>
+<span class="nc bnc" id="L225" title="All 2 branches missed.">		if (indexName.trim().length() &gt; 28 </span>
+<span class="nc bnc" id="L226" title="All 2 branches missed.">				&amp;&amp; databaseType.getDatabaseName().equals(ApsOracleDatabaseType.DATABASE_NAME)) {</span>
+<span class="nc" id="L227">			newIndexName = indexName.substring(0, 27);</span>
+<span class="nc" id="L228">			int index = 0;</span>
+<span class="nc bnc" id="L229" title="All 2 branches missed.">			while (null != indexMap.get(newIndexName + index)) {</span>
+<span class="nc" id="L230">				++index;</span>
+			}
+<span class="nc" id="L232">			newIndexName += index;</span>
+<span class="nc" id="L233">		} else {</span>
+<span class="nc" id="L234">			newIndexName = indexName;</span>
+		}
+<span class="nc" id="L236">		return newIndexName;</span>
+	}
+	
+	private static &lt;T, ID&gt; int doCreateTable(ConnectionSource connectionSource, TableInfo&lt;T, ID&gt; tableInfo,
+			boolean ifNotExists) throws SQLException {
+<span class="nc" id="L241">		DatabaseType databaseType = connectionSource.getDatabaseType();</span>
+<span class="nc" id="L242">		logger.debug(&quot;creating table '{}'&quot;, tableInfo.getTableName());</span>
+<span class="nc" id="L243">		List&lt;String&gt; statements = new ArrayList&lt;String&gt;();</span>
+<span class="nc" id="L244">		List&lt;String&gt; queriesAfter = new ArrayList&lt;String&gt;();</span>
+<span class="nc" id="L245">		addCreateTableStatements(databaseType, tableInfo, statements, queriesAfter, ifNotExists);</span>
+<span class="nc" id="L246">		DatabaseConnection connection = connectionSource.getReadWriteConnection();</span>
+		try {
+<span class="nc" id="L248">			int stmtC =</span>
+<span class="nc" id="L249">					doStatements(connection, &quot;create&quot;, statements, false, databaseType.isCreateTableReturnsNegative(),</span>
+<span class="nc" id="L250">							databaseType.isCreateTableReturnsZero());</span>
+<span class="nc" id="L251">			stmtC += doCreateTestQueries(connection, databaseType, queriesAfter);</span>
+<span class="nc" id="L252">			return stmtC;</span>
+		} finally {
+<span class="nc" id="L254">			connectionSource.releaseConnection(connection);</span>
+		}
+	}
 
-    /**
-     * Create a table if it does not already exist. This is not supported by all databases.
-     *
-     * @param connectionSource Associated connection source.
-     * @param dataClass The class for which a table will be created.
-     * @return The number of statements executed to do so.
-     * @throws SQLException in case of error
-     */
-    public static &lt;T&gt; int createTableIfNotExists(ConnectionSource connectionSource, Class&lt;T&gt; dataClass)
-            throws SQLException {
-<span class="nc" id="L88">        return createTable(connectionSource, dataClass, true);</span>
-    }
+	private static int doStatements(DatabaseConnection connection, String label, Collection&lt;String&gt; statements,
+			boolean ignoreErrors, boolean returnsNegative, boolean expectingZero) throws SQLException {
+<span class="nc" id="L260">		int stmtC = 0;</span>
+<span class="nc bnc" id="L261" title="All 2 branches missed.">		for (String statement : statements) {</span>
+<span class="nc" id="L262">			int rowC = 0;</span>
+<span class="nc" id="L263">			CompiledStatement compiledStmt = null;</span>
+			try {
+<span class="nc" id="L265">				compiledStmt = connection.compileStatement(statement, StatementBuilder.StatementType.EXECUTE, noFieldTypes);</span>
+<span class="nc" id="L266">				rowC = compiledStmt.runExecute();</span>
+<span class="nc" id="L267">				logger.debug(&quot;executed {} table statement changed {} rows: {}&quot;, label, rowC, statement);</span>
+<span class="nc" id="L268">			} catch (SQLException e) {</span>
+<span class="nc bnc" id="L269" title="All 2 branches missed.">				if (ignoreErrors) {</span>
+<span class="nc" id="L270">					logger.debug(&quot;ignoring {} error '{}' for statement: {}&quot;, label, e, statement);</span>
+				} else {
+<span class="nc" id="L272">					throw SqlExceptionUtil.create(&quot;SQL statement failed: &quot; + statement, e);</span>
+				}
+			} finally {
+<span class="nc bnc" id="L275" title="All 2 branches missed.">				if (compiledStmt != null) {</span>
+<span class="nc" id="L276">					compiledStmt.close();</span>
+				}
+			}
+			// sanity check
+<span class="nc bnc" id="L280" title="All 2 branches missed.">			if (rowC &lt; 0) {</span>
+<span class="nc bnc" id="L281" title="All 2 branches missed.">				if (!returnsNegative) {</span>
+<span class="nc" id="L282">					throw new SQLException(&quot;SQL statement &quot; + statement + &quot; updated &quot; + rowC</span>
+							+ &quot; rows, we were expecting &gt;= 0&quot;);
+				}
+<span class="nc bnc" id="L285" title="All 4 branches missed.">			} else if (rowC &gt; 0 &amp;&amp; expectingZero) {</span>
+<span class="nc" id="L286">				throw new SQLException(&quot;SQL statement updated &quot; + rowC + &quot; rows, we were expecting == 0: &quot; + statement);</span>
+			}
+<span class="nc" id="L288">			stmtC++;</span>
+<span class="nc" id="L289">		}</span>
+<span class="nc" id="L290">		return stmtC;</span>
+	}
 
-    private static &lt;T, ID&gt; int createTable(ConnectionSource connectionSource, Class&lt;T&gt; dataClass, boolean ifNotExists)
-            throws SQLException {
-<span class="nc" id="L93">        Dao&lt;T, ID&gt; dao = DaoManager.createDao(connectionSource, dataClass);</span>
-<span class="nc bnc" id="L94" title="All 2 branches missed.">        if (dao instanceof BaseDaoImpl&lt;?, ?&gt;) {</span>
-<span class="nc" id="L95">            return doCreateTable(connectionSource, ((BaseDaoImpl&lt;?, ?&gt;) dao).getTableInfo(), ifNotExists);</span>
-        } else {
-<span class="nc" id="L97">            TableInfo&lt;T, ID&gt; tableInfo = new TableInfo&lt;T, ID&gt;(connectionSource, null, dataClass);</span>
-<span class="nc" id="L98">            return doCreateTable(connectionSource, tableInfo, ifNotExists);</span>
-        }
-    }
-
-    /**
-     * Generate and return the list of statements to create a database table and any associated features.
-     */
-    private static &lt;T, ID&gt; void addCreateTableStatements(DatabaseType databaseType, TableInfo&lt;T, ID&gt; tableInfo,
-            List&lt;String&gt; statements, List&lt;String&gt; queriesAfter, boolean ifNotExists) throws SQLException {
-<span class="nc" id="L107">        StringBuilder sb = new StringBuilder(256);</span>
-<span class="nc" id="L108">        sb.append(&quot;CREATE TABLE &quot;);</span>
-<span class="nc bnc" id="L109" title="All 4 branches missed.">        if (ifNotExists &amp;&amp; databaseType.isCreateIfNotExistsSupported()) {</span>
-<span class="nc" id="L110">            sb.append(&quot;IF NOT EXISTS &quot;);</span>
-        }
-<span class="nc" id="L112">        databaseType.appendEscapedEntityName(sb, tableInfo.getTableName());</span>
-<span class="nc" id="L113">        sb.append(&quot; (&quot;);</span>
-<span class="nc" id="L114">        List&lt;String&gt; additionalArgs = new ArrayList&lt;String&gt;();</span>
-<span class="nc" id="L115">        List&lt;String&gt; statementsBefore = new ArrayList&lt;String&gt;();</span>
-<span class="nc" id="L116">        List&lt;String&gt; statementsAfter = new ArrayList&lt;String&gt;();</span>
-        // our statement will be set here later
-<span class="nc" id="L118">        boolean first = true;</span>
-<span class="nc bnc" id="L119" title="All 2 branches missed.">        for (FieldType fieldType : tableInfo.getFieldTypes()) {</span>
-            // skip foreign collections
-<span class="nc bnc" id="L121" title="All 2 branches missed.">            if (fieldType.isForeignCollection()) {</span>
-<span class="nc" id="L122">                continue;</span>
-<span class="nc bnc" id="L123" title="All 2 branches missed.">            } else if (first) {</span>
-<span class="nc" id="L124">                first = false;</span>
-            } else {
-<span class="nc" id="L126">                sb.append(&quot;, &quot;);</span>
-            }
-<span class="nc" id="L128">            String columnDefinition = fieldType.getColumnDefinition();</span>
-<span class="nc bnc" id="L129" title="All 2 branches missed.">            if (columnDefinition == null) {</span>
-                // we have to call back to the database type for the specific create syntax
-<span class="nc" id="L131">                databaseType.appendColumnArg(tableInfo.getTableName(), sb, fieldType, additionalArgs, statementsBefore,</span>
-                        statementsAfter, queriesAfter);
-            } else {
-                // hand defined field
-<span class="nc" id="L135">                databaseType.appendEscapedEntityName(sb, fieldType.getColumnName());</span>
-<span class="nc" id="L136">                sb.append(' ').append(columnDefinition).append(' ');</span>
-            }
-        }
-        // add any sql that sets any primary key fields
-<span class="nc" id="L140">        databaseType.addPrimaryKeySql(tableInfo.getFieldTypes(), additionalArgs, statementsBefore, statementsAfter,</span>
-                queriesAfter);
-        // add any sql that sets any unique fields
-<span class="nc" id="L143">        databaseType.addUniqueComboSql(tableInfo.getFieldTypes(), additionalArgs, statementsBefore, statementsAfter,</span>
-                queriesAfter);
-<span class="nc bnc" id="L145" title="All 2 branches missed.">        for (String arg : additionalArgs) {</span>
-            // we will have spat out one argument already so we don't have to do the first dance
-<span class="nc" id="L147">            sb.append(&quot;, &quot;).append(arg);</span>
-<span class="nc" id="L148">        }</span>
-<span class="nc" id="L149">        sb.append(&quot;) &quot;);</span>
-<span class="nc" id="L150">        databaseType.appendCreateTableSuffix(sb);</span>
-<span class="nc" id="L151">        statements.addAll(statementsBefore);</span>
-<span class="nc" id="L152">        statements.add(sb.toString());</span>
-<span class="nc" id="L153">        statements.addAll(statementsAfter);</span>
-<span class="nc" id="L154">        addCreateIndexStatements(databaseType, tableInfo, statements, ifNotExists, false);</span>
-<span class="nc" id="L155">        addCreateIndexStatements(databaseType, tableInfo, statements, ifNotExists, true);</span>
-<span class="nc" id="L156">    }</span>
-
-    private static &lt;T, ID&gt; void addCreateIndexStatements(DatabaseType databaseType, TableInfo&lt;T, ID&gt; tableInfo,
-            List&lt;String&gt; statements, boolean ifNotExists, boolean unique) {
-        // run through and look for index annotations
-<span class="nc" id="L161">        Map&lt;String, List&lt;String&gt;&gt; indexMap = new HashMap&lt;String, List&lt;String&gt;&gt;();</span>
-<span class="nc bnc" id="L162" title="All 2 branches missed.">        for (FieldType fieldType : tableInfo.getFieldTypes()) {</span>
-            String indexName;
-<span class="nc bnc" id="L164" title="All 2 branches missed.">            if (unique) {</span>
-<span class="nc" id="L165">                indexName = fieldType.getUniqueIndexName();</span>
-            } else {
-<span class="nc" id="L167">                indexName = fieldType.getIndexName();</span>
-            }
-<span class="nc bnc" id="L169" title="All 2 branches missed.">            if (indexName == null) {</span>
-<span class="nc" id="L170">                continue;</span>
-            }
-<span class="nc" id="L172">            indexName = checkOracleIndexKeyName(databaseType, indexName, indexMap);</span>
-<span class="nc" id="L173">            List&lt;String&gt; columnList = indexMap.get(indexName);</span>
-<span class="nc bnc" id="L174" title="All 2 branches missed.">            if (columnList == null) {</span>
-<span class="nc" id="L175">                columnList = new ArrayList&lt;String&gt;();</span>
-<span class="nc" id="L176">                indexMap.put(indexName, columnList);</span>
-            }
-<span class="nc" id="L178">            columnList.add(fieldType.getColumnName());</span>
-        }
-<span class="nc" id="L180">        StringBuilder sb = new StringBuilder(128);</span>
-<span class="nc bnc" id="L181" title="All 2 branches missed.">        for (Map.Entry&lt;String, List&lt;String&gt;&gt; indexEntry : indexMap.entrySet()) {</span>
-<span class="nc" id="L182">            logger.debug(&quot;creating index '{}' for table '{}&quot;, indexEntry.getKey(), tableInfo.getTableName());</span>
-<span class="nc" id="L183">            sb.append(&quot;CREATE &quot;);</span>
-<span class="nc bnc" id="L184" title="All 2 branches missed.">            if (unique) {</span>
-<span class="nc" id="L185">                sb.append(&quot;UNIQUE &quot;);</span>
-            }
-<span class="nc" id="L187">            sb.append(&quot;INDEX &quot;);</span>
-<span class="nc bnc" id="L188" title="All 4 branches missed.">            if (ifNotExists &amp;&amp; databaseType.isCreateIndexIfNotExistsSupported()) {</span>
-<span class="nc" id="L189">                sb.append(&quot;IF NOT EXISTS &quot;);</span>
-            }
-<span class="nc" id="L191">            String indexKey = indexEntry.getKey();</span>
-<span class="nc" id="L192">            databaseType.appendEscapedEntityName(sb, indexKey);</span>
-<span class="nc" id="L193">            sb.append(&quot; ON &quot;);</span>
-<span class="nc" id="L194">            databaseType.appendEscapedEntityName(sb, tableInfo.getTableName());</span>
-<span class="nc" id="L195">            sb.append(&quot; ( &quot;);</span>
-<span class="nc" id="L196">            boolean first = true;</span>
-<span class="nc bnc" id="L197" title="All 2 branches missed.">            for (String columnName : indexEntry.getValue()) {</span>
-<span class="nc bnc" id="L198" title="All 2 branches missed.">                if (first) {</span>
-<span class="nc" id="L199">                    first = false;</span>
-                } else {
-<span class="nc" id="L201">                    sb.append(&quot;, &quot;);</span>
-                }
-<span class="nc" id="L203">                databaseType.appendEscapedEntityName(sb, columnName);</span>
-<span class="nc" id="L204">            }</span>
-<span class="nc" id="L205">            sb.append(&quot; )&quot;);</span>
-<span class="nc" id="L206">            statements.add(sb.toString());</span>
-<span class="nc" id="L207">            sb.setLength(0);</span>
-<span class="nc" id="L208">        }</span>
-<span class="nc" id="L209">    }</span>
-
-    /**
-     * Extension for Oracle Index max length.
-     *
-     * @param databaseType The database type
-     * @param indexName The index name to check
-     * @param indexMap the index map.
-     * @return The processed index name.
-     */
-    private static String checkOracleIndexKeyName(DatabaseType databaseType, String indexName, Map&lt;String, List&lt;String&gt;&gt; indexMap) {
-<span class="nc bnc" id="L220" title="All 2 branches missed.">        if (!ApsOracleDatabaseType.DATABASE_NAME.equals(databaseType.getDatabaseName())) {</span>
-<span class="nc" id="L221">            return indexName;</span>
-        }
-<span class="nc" id="L223">        String newIndexName = null;</span>
-<span class="nc bnc" id="L224" title="All 2 branches missed.">        if (indexName.trim().length() &gt; 28</span>
-<span class="nc bnc" id="L225" title="All 2 branches missed.">                &amp;&amp; databaseType.getDatabaseName().equals(ApsOracleDatabaseType.DATABASE_NAME)) {</span>
-<span class="nc" id="L226">            newIndexName = indexName.substring(0, 27);</span>
-<span class="nc" id="L227">            int index = 0;</span>
-<span class="nc bnc" id="L228" title="All 2 branches missed.">            while (null != indexMap.get(newIndexName + index)) {</span>
-<span class="nc" id="L229">                ++index;</span>
-            }
-<span class="nc" id="L231">            newIndexName += index;</span>
-<span class="nc" id="L232">        } else {</span>
-<span class="nc" id="L233">            newIndexName = indexName;</span>
-        }
-<span class="nc" id="L235">        return newIndexName;</span>
-    }
-
-    private static &lt;T, ID&gt; int doCreateTable(ConnectionSource connectionSource, TableInfo&lt;T, ID&gt; tableInfo,
-            boolean ifNotExists) throws SQLException {
-<span class="nc" id="L240">        DatabaseType databaseType = connectionSource.getDatabaseType();</span>
-<span class="nc" id="L241">        logger.debug(&quot;creating table '{}'&quot;, tableInfo.getTableName());</span>
-<span class="nc" id="L242">        List&lt;String&gt; statements = new ArrayList&lt;String&gt;();</span>
-<span class="nc" id="L243">        List&lt;String&gt; queriesAfter = new ArrayList&lt;String&gt;();</span>
-<span class="nc" id="L244">        addCreateTableStatements(databaseType, tableInfo, statements, queriesAfter, ifNotExists);</span>
-<span class="nc" id="L245">        DatabaseConnection connection = connectionSource.getReadWriteConnection();</span>
-        try {
-<span class="nc" id="L247">            int stmtC =</span>
-<span class="nc" id="L248">                    doStatements(connection, &quot;create&quot;, statements, false, databaseType.isCreateTableReturnsNegative(),</span>
-<span class="nc" id="L249">                            databaseType.isCreateTableReturnsZero());</span>
-<span class="nc" id="L250">            stmtC += doCreateTestQueries(connection, databaseType, queriesAfter);</span>
-<span class="nc" id="L251">            return stmtC;</span>
-        } finally {
-<span class="nc" id="L253">            connectionSource.releaseConnection(connection);</span>
-        }
-    }
-
-    private static int doStatements(DatabaseConnection connection, String label, Collection&lt;String&gt; statements,
-            boolean ignoreErrors, boolean returnsNegative, boolean expectingZero) throws SQLException {
-<span class="nc" id="L259">        int stmtC = 0;</span>
-<span class="nc bnc" id="L260" title="All 2 branches missed.">        for (String statement : statements) {</span>
-<span class="nc" id="L261">            int rowC = 0;</span>
-<span class="nc" id="L262">            CompiledStatement compiledStmt = null;</span>
-            try {
-<span class="nc" id="L264">                compiledStmt = connection.compileStatement(statement, StatementBuilder.StatementType.EXECUTE, noFieldTypes);</span>
-<span class="nc" id="L265">                rowC = compiledStmt.runExecute();</span>
-<span class="nc" id="L266">                logger.debug(&quot;executed {} table statement changed {} rows: {}&quot;, label, rowC, statement);</span>
-<span class="nc" id="L267">            } catch (SQLException e) {</span>
-<span class="nc bnc" id="L268" title="All 2 branches missed.">                if (ignoreErrors) {</span>
-<span class="nc" id="L269">                    logger.debug(&quot;ignoring {} error '{}' for statement: {}&quot;, label, e, statement);</span>
-                } else {
-<span class="nc" id="L271">                    throw SqlExceptionUtil.create(&quot;SQL statement failed: &quot; + statement, e);</span>
-                }
-            } finally {
-<span class="nc bnc" id="L274" title="All 2 branches missed.">                if (compiledStmt != null) {</span>
-<span class="nc" id="L275">                    compiledStmt.close();</span>
-                }
-            }
-            // sanity check
-<span class="nc bnc" id="L279" title="All 2 branches missed.">            if (rowC &lt; 0) {</span>
-<span class="nc bnc" id="L280" title="All 2 branches missed.">                if (!returnsNegative) {</span>
-<span class="nc" id="L281">                    throw new SQLException(&quot;SQL statement &quot; + statement + &quot; updated &quot; + rowC</span>
-                            + &quot; rows, we were expecting &gt;= 0&quot;);
-                }
-<span class="nc bnc" id="L284" title="All 4 branches missed.">            } else if (rowC &gt; 0 &amp;&amp; expectingZero) {</span>
-<span class="nc" id="L285">                throw new SQLException(&quot;SQL statement updated &quot; + rowC + &quot; rows, we were expecting == 0: &quot; + statement);</span>
-            }
-<span class="nc" id="L287">            stmtC++;</span>
-<span class="nc" id="L288">        }</span>
-<span class="nc" id="L289">        return stmtC;</span>
-    }
-
-    private static int doCreateTestQueries(DatabaseConnection connection, DatabaseType databaseType,
-            List&lt;String&gt; queriesAfter) throws SQLException {
-<span class="nc" id="L294">        int stmtC = 0;</span>
-        // now execute any test queries which test the newly created table
-<span class="nc bnc" id="L296" title="All 2 branches missed.">        for (String query : queriesAfter) {</span>
-<span class="nc" id="L297">            CompiledStatement compiledStmt = null;</span>
-            try {
-<span class="nc" id="L299">                compiledStmt = connection.compileStatement(query, StatementBuilder.StatementType.SELECT, noFieldTypes);</span>
-                // we don't care about an object cache here
-<span class="nc" id="L301">                DatabaseResults results = compiledStmt.runQuery(null);</span>
-<span class="nc" id="L302">                int rowC = 0;</span>
-                // count the results
-<span class="nc bnc" id="L304" title="All 2 branches missed.">                for (boolean isThereMore = results.first(); isThereMore; isThereMore = results.next()) {</span>
-<span class="nc" id="L305">                    rowC++;</span>
-                }
-<span class="nc" id="L307">                logger.debug(&quot;executing create table after-query got {} results: {}&quot;, rowC, query);</span>
-<span class="nc" id="L308">            } catch (SQLException e) {</span>
-                // we do this to make sure that the statement is in the exception
-<span class="nc" id="L310">                throw SqlExceptionUtil.create(&quot;executing create table after-query failed: &quot; + query, e);</span>
-            } finally {
-                // result set is closed by the statement being closed
-<span class="nc bnc" id="L313" title="All 2 branches missed.">                if (compiledStmt != null) {</span>
-<span class="nc" id="L314">                    compiledStmt.close();</span>
-                }
-            }
-<span class="nc" id="L317">            stmtC++;</span>
-<span class="nc" id="L318">        }</span>
-<span class="nc" id="L319">        return stmtC;</span>
-    }
-
+	private static int doCreateTestQueries(DatabaseConnection connection, DatabaseType databaseType,
+			List&lt;String&gt; queriesAfter) throws SQLException {
+<span class="nc" id="L295">		int stmtC = 0;</span>
+		// now execute any test queries which test the newly created table
+<span class="nc bnc" id="L297" title="All 2 branches missed.">		for (String query : queriesAfter) {</span>
+<span class="nc" id="L298">			CompiledStatement compiledStmt = null;</span>
+			try {
+<span class="nc" id="L300">				compiledStmt = connection.compileStatement(query, StatementBuilder.StatementType.SELECT, noFieldTypes);</span>
+				// we don't care about an object cache here
+<span class="nc" id="L302">				DatabaseResults results = compiledStmt.runQuery(null);</span>
+<span class="nc" id="L303">				int rowC = 0;</span>
+				// count the results
+<span class="nc bnc" id="L305" title="All 2 branches missed.">				for (boolean isThereMore = results.first(); isThereMore; isThereMore = results.next()) {</span>
+<span class="nc" id="L306">					rowC++;</span>
+				}
+<span class="nc" id="L308">				logger.debug(&quot;executing create table after-query got {} results: {}&quot;, rowC, query);</span>
+<span class="nc" id="L309">			} catch (SQLException e) {</span>
+				// we do this to make sure that the statement is in the exception
+<span class="nc" id="L311">				throw SqlExceptionUtil.create(&quot;executing create table after-query failed: &quot; + query, e);</span>
+			} finally {
+				// result set is closed by the statement being closed
+<span class="nc bnc" id="L314" title="All 2 branches missed.">				if (compiledStmt != null) {</span>
+<span class="nc" id="L315">					compiledStmt.close();</span>
+				}
+			}
+<span class="nc" id="L318">			stmtC++;</span>
+<span class="nc" id="L319">		}</span>
+<span class="nc" id="L320">		return stmtC;</span>
+	}
+	
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

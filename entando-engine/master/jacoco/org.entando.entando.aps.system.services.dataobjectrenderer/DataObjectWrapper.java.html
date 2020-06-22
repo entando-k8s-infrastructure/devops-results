@@ -11,8 +11,11 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package org.entando.entando.aps.system.services.dataobjectrenderer;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.BeanFactory;
 
 import com.agiletec.aps.system.RequestContext;
 import com.agiletec.aps.system.SystemConstants;
@@ -22,109 +25,107 @@ import com.agiletec.aps.system.services.baseconfig.ConfigInterface;
 import com.agiletec.aps.system.services.user.UserDetails;
 import com.agiletec.aps.util.DateConverter;
 import org.entando.entando.aps.system.services.dataobject.model.DataObject;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.BeanFactory;
 
 /**
- * Rappresenta un DataObject nella forma utilizzabile al servizio di renderizzazione. La classe estende HashMap per un agevole accesso agli
+ * Rappresenta un DataObject nella forma utilizzabile al servizio di
+ * renderizzazione. La classe estende HashMap per un agevole accesso agli
  * attributi che popolano il dataobject.
  *
  * @author M.Diana - E.Santoboni
  */
 public class DataObjectWrapper extends EntityWrapper {
 
-<span class="nc" id="L37">    private static final Logger _logger = LoggerFactory.getLogger(DataObjectWrapper.class);</span>
-    private RequestContext _reqCtx;
+<span class="nc" id="L38">	private static final Logger _logger = LoggerFactory.getLogger(DataObjectWrapper.class);</span>
 
-    /**
-     * Inizializzazione del Wrapper.
-     *
-     * @param dataobject Il dataobject da utilizzare dal servizio di renderizzazione.
-     */
-    public DataObjectWrapper(DataObject dataobject) {
-<span class="nc" id="L46">        super(dataobject);</span>
-<span class="nc" id="L47">    }</span>
+	/**
+	 * Inizializzazione del Wrapper.
+	 *
+	 * @param dataobject Il dataobject da utilizzare dal servizio di
+	 * renderizzazione.
+	 */
+	public DataObjectWrapper(DataObject dataobject) {
+<span class="nc" id="L47">		super(dataobject);</span>
+<span class="nc" id="L48">	}</span>
 
-    public DataObjectWrapper(DataObject dataobject, BeanFactory beanFactory) {
-<span class="nc" id="L50">        super(dataobject, beanFactory);</span>
-<span class="nc" id="L51">    }</span>
+	public DataObjectWrapper(DataObject dataobject, BeanFactory beanFactory) {
+<span class="nc" id="L51">		super(dataobject, beanFactory);</span>
+<span class="nc" id="L52">	}</span>
 
-    public boolean isUserAllowed(String permissionName) {
-        try {
-<span class="nc" id="L55">            IAuthorizationManager authManager</span>
-<span class="nc" id="L56">                    = (IAuthorizationManager) this.getBeanFactory().getBean(SystemConstants.AUTHORIZATION_SERVICE);</span>
-<span class="nc" id="L57">            UserDetails currentUser = (UserDetails) this.getReqCtx().getRequest().getSession()</span>
-<span class="nc" id="L58">                    .getAttribute(SystemConstants.SESSIONPARAM_CURRENT_USER);</span>
-<span class="nc bnc" id="L59" title="All 2 branches missed.">            if (null == currentUser) {</span>
-<span class="nc" id="L60">                return false;</span>
-            }
-<span class="nc bnc" id="L62" title="All 2 branches missed.">            if (!authManager.isAuthOnGroup(currentUser, this.getEntity().getMainGroup())) {</span>
-<span class="nc" id="L63">                return false;</span>
-            }
-<span class="nc bnc" id="L65" title="All 4 branches missed.">            if (null != permissionName &amp;&amp; permissionName.trim().length() &gt; 0 &amp;&amp; !authManager</span>
-<span class="nc bnc" id="L66" title="All 2 branches missed.">                    .isAuthOnPermission(currentUser, permissionName)) {</span>
-<span class="nc" id="L67">                return false;</span>
-            }
-<span class="nc" id="L69">        } catch (Throwable t) {</span>
-<span class="nc" id="L70">            _logger.error(&quot;Error checking authority - permission {}&quot;, permissionName, t);</span>
-<span class="nc" id="L71">            return false;</span>
-<span class="nc" id="L72">        }</span>
-<span class="nc" id="L73">        return true;</span>
-    }
+	public boolean isUserAllowed(String permissionName) {
+		try {
+<span class="nc" id="L56">			IAuthorizationManager authManager</span>
+<span class="nc" id="L57">					= (IAuthorizationManager) this.getBeanFactory().getBean(SystemConstants.AUTHORIZATION_SERVICE);</span>
+<span class="nc" id="L58">			UserDetails currentUser = (UserDetails) this.getReqCtx().getRequest().getSession().getAttribute(SystemConstants.SESSIONPARAM_CURRENT_USER);</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">			if (null == currentUser) {</span>
+<span class="nc" id="L60">				return false;</span>
+			}
+<span class="nc bnc" id="L62" title="All 2 branches missed.">			if (!authManager.isAuthOnGroup(currentUser, this.getEntity().getMainGroup())) {</span>
+<span class="nc" id="L63">				return false;</span>
+			}
+<span class="nc bnc" id="L65" title="All 6 branches missed.">			if (null != permissionName &amp;&amp; permissionName.trim().length() &gt; 0 &amp;&amp; !authManager.isAuthOnPermission(currentUser, permissionName)) {</span>
+<span class="nc" id="L66">				return false;</span>
+			}
+<span class="nc" id="L68">		} catch (Throwable t) {</span>
+<span class="nc" id="L69">			_logger.error(&quot;Error checking authority - permission {}&quot;, permissionName, t);</span>
+<span class="nc" id="L70">			return false;</span>
+<span class="nc" id="L71">		}</span>
+<span class="nc" id="L72">		return true;</span>
+	}
 
-    /**
-     * Return the value of a System parameter.
-     *
-     * @param paramName The name of parameters
-     * @return The value to return
-     * @deprecated this method has to be moved outside dataobject Wrapper
-     */
-    public String getConfigParameter(String paramName) {
-        try {
-<span class="nc" id="L85">            ConfigInterface configManager = (ConfigInterface) this.getBeanFactory().getBean(SystemConstants.BASE_CONFIG_MANAGER);</span>
-<span class="nc" id="L86">            return configManager.getParam(paramName);</span>
-<span class="nc" id="L87">        } catch (Throwable t) {</span>
-<span class="nc" id="L88">            _logger.error(&quot;Error extracting config parameter - parameter &quot;, paramName, t);</span>
-<span class="nc" id="L89">            return null;</span>
-        }
-    }
+	/**
+	 * Return the value of a System parameter.
+	 *
+	 * @param paramName The name of parameters
+	 * @return The value to return
+	 * @deprecated this method has to be moved outside dataobject Wrapper
+	 */
+	public String getConfigParameter(String paramName) {
+		try {
+<span class="nc" id="L84">			ConfigInterface configManager = (ConfigInterface) this.getBeanFactory().getBean(SystemConstants.BASE_CONFIG_MANAGER);</span>
+<span class="nc" id="L85">			return configManager.getParam(paramName);</span>
+<span class="nc" id="L86">		} catch (Throwable t) {</span>
+<span class="nc" id="L87">			_logger.error(&quot;Error extracting config parameter - parameter &quot;, paramName, t);</span>
+<span class="nc" id="L88">			return null;</span>
+		}
+	}
 
-    public String getLangCode() {
-<span class="nc" id="L94">        return super.getRenderingLang();</span>
-    }
+	public String getLangCode() {
+<span class="nc" id="L93">		return super.getRenderingLang();</span>
+	}
 
-    public String getCreated(String pattern) {
-<span class="nc" id="L98">        DataObject dataobject = (DataObject) super.getEntity();</span>
-<span class="nc bnc" id="L99" title="All 2 branches missed.">        if (null != dataobject.getCreated()) {</span>
-<span class="nc" id="L100">            return DateConverter.getFormattedDate(dataobject.getCreated(), pattern, this.getRenderingLang());</span>
-        }
-<span class="nc" id="L102">        return null;</span>
-    }
+	public String getCreated(String pattern) {
+<span class="nc" id="L97">		DataObject dataobject = (DataObject) super.getEntity();</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">		if (null != dataobject.getCreated()) {</span>
+<span class="nc" id="L99">			return DateConverter.getFormattedDate(dataobject.getCreated(), pattern, this.getRenderingLang());</span>
+		}
+<span class="nc" id="L101">		return null;</span>
+	}
 
-    public String getLastModified(String pattern) {
-<span class="nc" id="L106">        DataObject dataobject = (DataObject) super.getEntity();</span>
-<span class="nc bnc" id="L107" title="All 2 branches missed.">        if (null != dataobject.getLastModified()) {</span>
-<span class="nc" id="L108">            return DateConverter.getFormattedDate(dataobject.getLastModified(), pattern, this.getRenderingLang());</span>
-        }
-<span class="nc" id="L110">        return null;</span>
-    }
+	public String getLastModified(String pattern) {
+<span class="nc" id="L105">		DataObject dataobject = (DataObject) super.getEntity();</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">		if (null != dataobject.getLastModified()) {</span>
+<span class="nc" id="L107">			return DateConverter.getFormattedDate(dataobject.getLastModified(), pattern, this.getRenderingLang());</span>
+		}
+<span class="nc" id="L109">		return null;</span>
+	}
 
-    public String getVersion() {
-<span class="nc" id="L114">        return ((DataObject) super.getEntity()).getVersion();</span>
-    }
+	public String getVersion() {
+<span class="nc" id="L113">		return ((DataObject) super.getEntity()).getVersion();</span>
+	}
 
-    public String getLastEditor() {
-<span class="nc" id="L118">        return ((DataObject) super.getEntity()).getLastEditor();</span>
-    }
+	public String getLastEditor() {
+<span class="nc" id="L117">		return ((DataObject) super.getEntity()).getLastEditor();</span>
+	}
 
-    protected RequestContext getReqCtx() {
-<span class="nc" id="L122">        return _reqCtx;</span>
-    }
+	protected RequestContext getReqCtx() {
+<span class="nc" id="L121">		return _reqCtx;</span>
+	}
 
-    protected void setReqCtx(RequestContext reqCtx) {
-<span class="nc" id="L126">        this._reqCtx = reqCtx;</span>
-<span class="nc" id="L127">    }</span>
+	protected void setReqCtx(RequestContext reqCtx) {
+<span class="nc" id="L125">		this._reqCtx = reqCtx;</span>
+<span class="nc" id="L126">	}</span>
+
+	private RequestContext _reqCtx;
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

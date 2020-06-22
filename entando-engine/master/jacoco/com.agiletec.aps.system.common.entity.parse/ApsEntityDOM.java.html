@@ -11,201 +11,199 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package com.agiletec.aps.system.common.entity.parse;
 
-import com.agiletec.aps.system.common.entity.ApsEntityManager;
 import java.io.Serializable;
+
 import org.jdom.Document;
 import org.jdom.Element;
 import org.jdom.output.XMLOutputter;
+
+import com.agiletec.aps.system.common.entity.ApsEntityManager;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This class generates the XML of the single entity, and it is used by all those managers that manages ApsEntity elements. This class is
- * used by the managers that manage the ApsEntities; it is utilized by default in the Spring definition of the abstract service {@link
- * ApsEntityManager}; this definition can be substituted in the declaration of those services that, extending the 'ApsEntityManager'use a
- * custom DOM class to build the XML code that maps the structure of a new Entity Type. Such Entity Type must implement the 'IApsEntity'
- * interface.
- *
+ * This class generates the XML of the single entity, and it is used by all those managers that manages
+ * ApsEntity elements.
+ * This class is used by the managers that manage the ApsEntities; it is utilized by default in the 
+ * Spring definition of the abstract service {@link ApsEntityManager}; this definition can be substituted
+ * in the declaration of those services that, extending the 'ApsEntityManager'use a custom DOM class to
+ * build the XML code that maps the structure of a new Entity Type. Such Entity Type must implement the 
+ * 'IApsEntity' interface.
  * @author M.Morini - S.Didaci - E.Santoboni
  */
-<span class="nc" id="L34">public class ApsEntityDOM implements IApsEntityDOM, Serializable {</span>
+<span class="nc" id="L37">public class ApsEntityDOM implements IApsEntityDOM, Serializable {</span>
+	
+<span class="nc" id="L39">	private static final Logger _logger =  LoggerFactory.getLogger(ApsEntityDOM.class);</span>
+	
+	@Override
+	public ApsEntityDOM clone() {
+<span class="nc" id="L43">		ApsEntityDOM copy = null;</span>
+		try {
+<span class="nc" id="L45">			copy = this.getClass().newInstance();</span>
+<span class="nc" id="L46">			this.copyInto(copy);</span>
+<span class="nc" id="L47">		} catch (InstantiationException | IllegalAccessException t) {</span>
+<span class="nc" id="L48">			_logger.error(&quot;Error cloning {}&quot; + this.getClass(), t);</span>
+<span class="nc" id="L49">			throw new RuntimeException(&quot;Error cloning &quot; + this.getClass(), t);</span>
+<span class="nc" id="L50">		}</span>
+<span class="nc" id="L51">		return copy;</span>
+	}
+	
+	protected void copyInto(IApsEntityDOM copy) {
+<span class="nc" id="L55">		copy.setRootElementName(this._rootElementName);</span>
+<span class="nc" id="L56">	}</span>
+	
+	/**
+	 * DOM initialization;
+	 * this method must be invoked when starting to populate the fields.
+	 */
+	@Override
+	public void init() {
+<span class="nc" id="L64">		this.buildDOM();</span>
+<span class="nc" id="L65">	}</span>
+	
+	@Override
+	public void dispose() {
+<span class="nc" id="L69">		this._doc = null;</span>
+<span class="nc" id="L70">		this._root = null;</span>
+<span class="nc" id="L71">	}</span>
+	
+	/**
+	 * Assign the ID string to the entity.
+	 * @param id The entity ID
+	 */
+	@Override
+	public void setId(String id) {
+<span class="nc" id="L79">		this._root.setAttribute(&quot;id&quot;, id);</span>
+<span class="nc" id="L80">	}</span>
+	
+	/**
+	 * Set up the Entity Type code
+	 * @param typeCode The entity Type code.
+	 */
+	@Override
+	public void setTypeCode(String typeCode) {
+<span class="nc" id="L88">		this._root.setAttribute(&quot;typecode&quot;, typeCode);</span>
+<span class="nc" id="L89">	}</span>
+	
+	/**
+	 * Assign the given description to the Entity Type.
+	 * @param typeDescription The Entity Type description to associate.
+	 */
+	@Override
+	public void setTypeDescription(String typeDescription) {
+<span class="nc" id="L97">		this._root.setAttribute(&quot;typedescr&quot;, typeDescription);</span>
+<span class="nc" id="L98">	}</span>
+	@Override
+	@Deprecated
+	public void setTypeDescr(String typeDescr) {
+<span class="nc" id="L102">		this.setTypeDescription(typeDescr);</span>
+<span class="nc" id="L103">	}</span>
+	
+	/**
+	 * Assign the given description to the entity.
+	 * @param description The entity description.
+	 */
+	@Override
+	public void setDescription(String description) {
+<span class="nc" id="L111">		this._root.getChild(TAG_DESCR).setText(description);</span>
+<span class="nc" id="L112">	}</span>
+	@Override
+	@Deprecated
+	public void setDescr(String description) {
+<span class="nc" id="L116">		this.setDescription(description);</span>
+<span class="nc" id="L117">	}</span>
+	
+	/**
+	 * Assign the main group this entity belongs to.
+	 * @param group The main group.
+	 */
+	@Override
+	public void setMainGroup(String group){
+<span class="nc bnc" id="L125" title="All 2 branches missed.">		if (group != null) {</span>
+<span class="nc" id="L126">			this._root.getChild(TAG_GROUPS).setAttribute(&quot;mainGroup&quot;, group);</span>
+		}
+<span class="nc" id="L128">	}</span>
+	
+	/**
+	 * Add the code of a group authorized to visualize the entity.
+	 * @param groupName The group to add.
+	 */
+	@Override
+	public void addGroup(String groupName) {
+<span class="nc bnc" id="L136" title="All 2 branches missed.">		if (null != groupName) {</span>
+<span class="nc" id="L137">			Element groupTag = new Element(&quot;group&quot;);</span>
+<span class="nc" id="L138">			groupTag.setAttribute(&quot;name&quot;, groupName);</span>
+<span class="nc" id="L139">			this._root.getChild(TAG_GROUPS).addContent(groupTag);</span>
+		}
+<span class="nc" id="L141">	}</span>
+	
+	/**
+	 * Add, setting its value, a new element to the categories tag.
+	 * @param categoryCode The value of the category tag.
+	 */
+	@Override
+	public void addCategory(String categoryCode) {
+<span class="nc" id="L149">		Element tag = new Element(&quot;category&quot;);</span>
+<span class="nc" id="L150">		tag.setAttribute(&quot;id&quot;, categoryCode);</span>
+<span class="nc" id="L151">		_root.getChild(TAG_CATEGORIES).addContent(tag);</span>
+<span class="nc" id="L152">	}</span>
+	
+	/**
+	 * Add a new attribute to a tag.
+	 * @param attributeElem The element, which corresponds to an attribute, 
+	 * to add to the entity XML structure.
+	 */
+	@Override
+	public void addAttribute(Element attributeElem) {
+<span class="nc" id="L161">		this._root.getChild(TAG_ATTRIBUTES).addContent(attributeElem);</span>
+<span class="nc" id="L162">	}</span>
 
-<span class="nc" id="L36">    private static final Logger _logger = LoggerFactory.getLogger(ApsEntityDOM.class);</span>
-    private static final String TAG_DESCR = &quot;descr&quot;;
-    private static final String TAG_GROUPS = &quot;groups&quot;;
-    private static final String TAG_CATEGORIES = &quot;categories&quot;;
-    private static final String TAG_ATTRIBUTES = &quot;attributes&quot;;
-<span class="nc" id="L41">    private static final String[] TAGS = {TAG_DESCR, TAG_GROUPS, TAG_CATEGORIES, TAG_ATTRIBUTES};</span>
-    /**
-     * The JDOM document of the entity.
-     */
-    protected Document _doc;
-    /**
-     * The root of the JDOM document.
-     */
-    protected Element _root;
-    private String _rootElementName;
+	private void buildDOM() {
+<span class="nc" id="L165">		this._doc = new Document();</span>
+<span class="nc" id="L166">		this._root = new Element(this._rootElementName);</span>
+<span class="nc bnc" id="L167" title="All 2 branches missed.">		for (int i = 0; i &lt; TAGS.length; i++) {</span>
+<span class="nc" id="L168">			Element tag = new Element(TAGS[i]);</span>
+<span class="nc" id="L169">			_root.addContent(tag);</span>
+		}
+<span class="nc" id="L171">		_doc.setRootElement(_root);</span>
+<span class="nc" id="L172">	}</span>
 
-    @Override
-    public ApsEntityDOM clone() {
-<span class="nc" id="L54">        ApsEntityDOM copy = null;</span>
-        try {
-<span class="nc" id="L56">            copy = this.getClass().newInstance();</span>
-<span class="nc" id="L57">            this.copyInto(copy);</span>
-<span class="nc" id="L58">        } catch (InstantiationException | IllegalAccessException t) {</span>
-<span class="nc" id="L59">            _logger.error(&quot;Error cloning {}&quot; + this.getClass(), t);</span>
-<span class="nc" id="L60">            throw new RuntimeException(&quot;Error cloning &quot; + this.getClass(), t);</span>
-<span class="nc" id="L61">        }</span>
-<span class="nc" id="L62">        return copy;</span>
-    }
+	/**
+	 * Return the XML structure of the entity.
+	 * @return String The XML structure of the entity.
+	 */
+	@Override
+	public String getXMLDocument(){
+<span class="nc" id="L180">		XMLOutputter out = new XMLOutputter();</span>
+<span class="nc" id="L181">		String xml = out.outputString(_doc);</span>
+<span class="nc" id="L182">		return xml;</span>
+	}
 
-    protected void copyInto(IApsEntityDOM copy) {
-<span class="nc" id="L66">        copy.setRootElementName(this._rootElementName);</span>
-<span class="nc" id="L67">    }</span>
+	@Override
+	public void setRootElementName(String rootElementName) {
+<span class="nc" id="L187">		this._rootElementName = rootElementName;</span>
+<span class="nc" id="L188">	}</span>
 
-    /**
-     * DOM initialization; this method must be invoked when starting to populate the fields.
-     */
-    @Override
-    public void init() {
-<span class="nc" id="L74">        this.buildDOM();</span>
-<span class="nc" id="L75">    }</span>
+	/**
+	 * The JDOM document of the entity.
+	 */
+	protected Document _doc;
 
-    @Override
-    public void dispose() {
-<span class="nc" id="L79">        this._doc = null;</span>
-<span class="nc" id="L80">        this._root = null;</span>
-<span class="nc" id="L81">    }</span>
+	/**
+	 * The root of the JDOM document.
+	 */
+	protected Element _root;
 
-    /**
-     * Assign the ID string to the entity.
-     *
-     * @param id The entity ID
-     */
-    @Override
-    public void setId(String id) {
-<span class="nc" id="L90">        this._root.setAttribute(&quot;id&quot;, id);</span>
-<span class="nc" id="L91">    }</span>
+	private final static String TAG_DESCR = &quot;descr&quot;;
+	private final static String TAG_GROUPS = &quot;groups&quot;;
+	private final static String TAG_CATEGORIES = &quot;categories&quot;;
+	private final static String TAG_ATTRIBUTES = &quot;attributes&quot;;
+<span class="nc" id="L204">	private final static String[] TAGS = {TAG_DESCR, TAG_GROUPS, TAG_CATEGORIES, TAG_ATTRIBUTES};</span>
 
-    /**
-     * Set up the Entity Type code
-     *
-     * @param typeCode The entity Type code.
-     */
-    @Override
-    public void setTypeCode(String typeCode) {
-<span class="nc" id="L100">        this._root.setAttribute(&quot;typecode&quot;, typeCode);</span>
-<span class="nc" id="L101">    }</span>
-
-    /**
-     * Assign the given description to the Entity Type.
-     *
-     * @param typeDescription The Entity Type description to associate.
-     */
-    @Override
-    public void setTypeDescription(String typeDescription) {
-<span class="nc" id="L110">        this._root.setAttribute(&quot;typedescr&quot;, typeDescription);</span>
-<span class="nc" id="L111">    }</span>
-
-    @Override
-    @Deprecated
-    public void setTypeDescr(String typeDescr) {
-<span class="nc" id="L116">        this.setTypeDescription(typeDescr);</span>
-<span class="nc" id="L117">    }</span>
-
-    /**
-     * Assign the given description to the entity.
-     *
-     * @param description The entity description.
-     */
-    @Override
-    public void setDescription(String description) {
-<span class="nc" id="L126">        this._root.getChild(TAG_DESCR).setText(description);</span>
-<span class="nc" id="L127">    }</span>
-
-    @Override
-    @Deprecated
-    public void setDescr(String description) {
-<span class="nc" id="L132">        this.setDescription(description);</span>
-<span class="nc" id="L133">    }</span>
-
-    /**
-     * Assign the main group this entity belongs to.
-     *
-     * @param group The main group.
-     */
-    @Override
-    public void setMainGroup(String group) {
-<span class="nc bnc" id="L142" title="All 2 branches missed.">        if (group != null) {</span>
-<span class="nc" id="L143">            this._root.getChild(TAG_GROUPS).setAttribute(&quot;mainGroup&quot;, group);</span>
-        }
-<span class="nc" id="L145">    }</span>
-
-    /**
-     * Add the code of a group authorized to visualize the entity.
-     *
-     * @param groupName The group to add.
-     */
-    @Override
-    public void addGroup(String groupName) {
-<span class="nc bnc" id="L154" title="All 2 branches missed.">        if (null != groupName) {</span>
-<span class="nc" id="L155">            Element groupTag = new Element(&quot;group&quot;);</span>
-<span class="nc" id="L156">            groupTag.setAttribute(&quot;name&quot;, groupName);</span>
-<span class="nc" id="L157">            this._root.getChild(TAG_GROUPS).addContent(groupTag);</span>
-        }
-<span class="nc" id="L159">    }</span>
-
-    /**
-     * Add, setting its value, a new element to the categories tag.
-     *
-     * @param categoryCode The value of the category tag.
-     */
-    @Override
-    public void addCategory(String categoryCode) {
-<span class="nc" id="L168">        Element tag = new Element(&quot;category&quot;);</span>
-<span class="nc" id="L169">        tag.setAttribute(&quot;id&quot;, categoryCode);</span>
-<span class="nc" id="L170">        _root.getChild(TAG_CATEGORIES).addContent(tag);</span>
-<span class="nc" id="L171">    }</span>
-
-    /**
-     * Add a new attribute to a tag.
-     *
-     * @param attributeElem The element, which corresponds to an attribute, to add to the entity XML structure.
-     */
-    @Override
-    public void addAttribute(Element attributeElem) {
-<span class="nc" id="L180">        this._root.getChild(TAG_ATTRIBUTES).addContent(attributeElem);</span>
-<span class="nc" id="L181">    }</span>
-
-    private void buildDOM() {
-<span class="nc" id="L184">        this._doc = new Document();</span>
-<span class="nc" id="L185">        this._root = new Element(this._rootElementName);</span>
-<span class="nc bnc" id="L186" title="All 2 branches missed.">        for (int i = 0; i &lt; TAGS.length; i++) {</span>
-<span class="nc" id="L187">            Element tag = new Element(TAGS[i]);</span>
-<span class="nc" id="L188">            _root.addContent(tag);</span>
-        }
-<span class="nc" id="L190">        _doc.setRootElement(_root);</span>
-<span class="nc" id="L191">    }</span>
-
-    /**
-     * Return the XML structure of the entity.
-     *
-     * @return String The XML structure of the entity.
-     */
-    @Override
-    public String getXMLDocument() {
-<span class="nc" id="L200">        XMLOutputter out = new XMLOutputter();</span>
-<span class="nc" id="L201">        String xml = out.outputString(_doc);</span>
-<span class="nc" id="L202">        return xml;</span>
-    }
-
-    @Override
-    public void setRootElementName(String rootElementName) {
-<span class="nc" id="L207">        this._rootElementName = rootElementName;</span>
-<span class="nc" id="L208">    }</span>
+	private String _rootElementName;
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

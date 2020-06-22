@@ -11,7 +11,6 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package org.entando.entando.aps.system.services.label;
 
 import com.agiletec.aps.system.common.model.dao.SearcherDaoPaginatedResult;
@@ -35,42 +34,43 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.validation.BeanPropertyBindingResult;
 
-<span class="nc" id="L38">public class LabelService implements ILabelService {</span>
+<span class="nc" id="L37">public class LabelService implements ILabelService {</span>
 
-<span class="nc" id="L40">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+<span class="nc" id="L39">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
 
     private II18nManager i18nManager;
     private ILangManager langManager;
-<span class="nc" id="L44">    private LabelDtoBuilder dtoBuilder = new LabelDtoBuilder();</span>
+<span class="nc" id="L43">    private LabelDtoBuilder dtoBuilder = new LabelDtoBuilder();</span>
 
     protected II18nManager getI18nManager() {
-<span class="nc" id="L47">        return i18nManager;</span>
+<span class="nc" id="L46">        return i18nManager;</span>
     }
 
     public void setI18nManager(II18nManager i18nManager) {
-<span class="nc" id="L51">        this.i18nManager = i18nManager;</span>
-<span class="nc" id="L52">    }</span>
+<span class="nc" id="L50">        this.i18nManager = i18nManager;</span>
+<span class="nc" id="L51">    }</span>
 
     protected ILangManager getLangManager() {
-<span class="nc" id="L55">        return langManager;</span>
+<span class="nc" id="L54">        return langManager;</span>
     }
 
     public void setLangManager(ILangManager langManager) {
-<span class="nc" id="L59">        this.langManager = langManager;</span>
-<span class="nc" id="L60">    }</span>
+<span class="nc" id="L58">        this.langManager = langManager;</span>
+<span class="nc" id="L59">    }</span>
 
     protected LabelDtoBuilder getDtoBuilder() {
-<span class="nc" id="L63">        return dtoBuilder;</span>
+<span class="nc" id="L62">        return dtoBuilder;</span>
     }
 
     @SuppressWarnings({&quot;rawtypes&quot;, &quot;unchecked&quot;})
     @Override
     public PagedMetadata&lt;LabelDto&gt; getLabelGroups(final RestListRequest restRequest) {
-<span class="nc" id="L69">        final List&lt;LabelDto&gt; dtoList = this.getDtoBuilder().convert(this.i18nManager.getLabelGroups());</span>
-<span class="nc" id="L70">        final List&lt;LabelDto&gt; subList = new LabelRequestListProcessor(restRequest, dtoList).filterAndSort().toList();</span>
-<span class="nc" id="L71">        final SearcherDaoPaginatedResult&lt;LabelDto&gt; result = new SearcherDaoPaginatedResult(dtoList.size(), subList);</span>
-<span class="nc" id="L72">        final PagedMetadata&lt;LabelDto&gt; pagedMetadata = new PagedMetadata&lt;&gt;(restRequest, result);</span>
-<span class="nc" id="L73">        pagedMetadata.setBody(subList);</span>
+<span class="nc" id="L68">        final List&lt;LabelDto&gt; dtoList = this.getDtoBuilder().convert(this.i18nManager.getLabelGroups());</span>
+<span class="nc" id="L69">        final List&lt;LabelDto&gt; subList = new LabelRequestListProcessor(restRequest, dtoList).filterAndSort().toList();</span>
+<span class="nc" id="L70">        final SearcherDaoPaginatedResult&lt;LabelDto&gt; result = new SearcherDaoPaginatedResult(dtoList.size(), subList);</span>
+<span class="nc" id="L71">        final PagedMetadata&lt;LabelDto&gt; pagedMetadata = new PagedMetadata&lt;&gt;(restRequest, result);</span>
+<span class="nc" id="L72">        pagedMetadata.setBody(subList);</span>
+<span class="nc" id="L73">        pagedMetadata.imposeLimits();</span>
 <span class="nc" id="L74">        return pagedMetadata;</span>
     }
 
@@ -183,41 +183,35 @@ import org.springframework.validation.BeanPropertyBindingResult;
         }
     }
 
-    protected void validateLabelEntry(LabelDto labelDto, String defaultLang, BeanPropertyBindingResult bindingResult)
-            throws ApsSystemException {
-<span class="nc" id="L188">        List&lt;String&gt; configuredLangs = this.getLangManager().getLangs().stream().map(i -&gt; i.getCode()).collect(Collectors.toList());</span>
-<span class="nc" id="L189">        List&lt;String&gt; systemLangs = this.getLangManager().getAssignableLangs().stream()</span>
-<span class="nc" id="L190">                .map(i -&gt; i.getCode()).collect(Collectors.toList());</span>
-<span class="nc" id="L191">        labelDto.getTitles().entrySet().forEach(i -&gt; validateLangEntry(i, systemLangs, configuredLangs, defaultLang, bindingResult));</span>
-<span class="nc" id="L192">    }</span>
+    protected void validateLabelEntry(LabelDto labelDto, String defaultLang, BeanPropertyBindingResult bindingResult) throws ApsSystemException {
+<span class="nc" id="L187">        List&lt;String&gt; configuredLangs = this.getLangManager().getLangs().stream().map(i -&gt; i.getCode()).collect(Collectors.toList());</span>
+<span class="nc" id="L188">        List&lt;String&gt; systemLangs = this.getLangManager().getAssignableLangs().stream()</span>
+<span class="nc" id="L189">                                       .map(i -&gt; i.getCode()).collect(Collectors.toList());</span>
+<span class="nc" id="L190">        labelDto.getTitles().entrySet().forEach(i -&gt; validateLangEntry(i, systemLangs, configuredLangs, defaultLang, bindingResult));</span>
+<span class="nc" id="L191">    }</span>
 
     protected boolean validateDefaultLang(LabelDto labelDto, BeanPropertyBindingResult bindingResult, String defaultLang) {
-<span class="nc bnc" id="L195" title="All 4 branches missed.">        String label = (null != labelDto &amp;&amp; null != labelDto.getTitles()) ? labelDto.getTitles().get(defaultLang) : null;</span>
-<span class="nc bnc" id="L196" title="All 2 branches missed.">        if (StringUtils.isEmpty(label)) {</span>
-<span class="nc" id="L197">            bindingResult.reject(LabelValidator.ERRCODE_LABELGROUP_LANGS_DEFAULT_LANG_REQUIRED, new String[]{defaultLang},</span>
-                    &quot;labelGroup.langs.defaultLang.required&quot;);
-<span class="nc" id="L199">            return false;</span>
+<span class="nc bnc" id="L194" title="All 4 branches missed.">        String label = (null != labelDto &amp;&amp; null != labelDto.getTitles()) ? labelDto.getTitles().get(defaultLang) : null;</span>
+<span class="nc bnc" id="L195" title="All 2 branches missed.">        if (StringUtils.isEmpty(label)) {</span>
+<span class="nc" id="L196">            bindingResult.reject(LabelValidator.ERRCODE_LABELGROUP_LANGS_DEFAULT_LANG_REQUIRED, new String[]{defaultLang}, &quot;labelGroup.langs.defaultLang.required&quot;);</span>
+<span class="nc" id="L197">            return false;</span>
         }
-<span class="nc" id="L201">        return true;</span>
+<span class="nc" id="L199">        return true;</span>
     }
 
-    private void validateLangEntry(Entry&lt;String, String&gt; entry, List&lt;String&gt; systemLangs, List&lt;String&gt; configuredLangs,
-            String defaultLangCode, BeanPropertyBindingResult bindingResult) {
-<span class="nc" id="L206">        String currentLangCode = entry.getKey();</span>
-<span class="nc bnc" id="L207" title="All 2 branches missed.">        if (!systemLangs.contains(currentLangCode)) {</span>
-<span class="nc" id="L208">            bindingResult.reject(LabelValidator.ERRCODE_LABELGROUP_LANGS_INVALID_LANG, new String[]{currentLangCode},</span>
-                    &quot;labelGroup.langs.lang.invalid&quot;);
-<span class="nc" id="L210">            return;</span>
+    private void validateLangEntry(Entry&lt;String, String&gt; entry, List&lt;String&gt; systemLangs, List&lt;String&gt; configuredLangs, String defaultLangCode, BeanPropertyBindingResult bindingResult) {
+<span class="nc" id="L203">        String currentLangCode = entry.getKey();</span>
+<span class="nc bnc" id="L204" title="All 2 branches missed.">        if (!systemLangs.contains(currentLangCode)) {</span>
+<span class="nc" id="L205">            bindingResult.reject(LabelValidator.ERRCODE_LABELGROUP_LANGS_INVALID_LANG, new String[]{currentLangCode}, &quot;labelGroup.langs.lang.invalid&quot;);</span>
+<span class="nc" id="L206">            return;</span>
         }
-<span class="nc bnc" id="L212" title="All 2 branches missed.">        if (!configuredLangs.contains(currentLangCode)) {</span>
-<span class="nc" id="L213">            bindingResult.reject(LabelValidator.ERRCODE_LABELGROUP_LANGS_NOT_ACTIVE_LANG, new String[]{currentLangCode},</span>
-                    &quot;labelGroup.langs.lang.notActive&quot;);
+<span class="nc bnc" id="L208" title="All 2 branches missed.">        if (!configuredLangs.contains(currentLangCode)) {</span>
+<span class="nc" id="L209">            bindingResult.reject(LabelValidator.ERRCODE_LABELGROUP_LANGS_NOT_ACTIVE_LANG, new String[]{currentLangCode}, &quot;labelGroup.langs.lang.notActive&quot;);</span>
         }
-<span class="nc bnc" id="L216" title="All 4 branches missed.">        if (currentLangCode.equals(defaultLangCode) &amp;&amp; StringUtils.isBlank(entry.getValue())) {</span>
-<span class="nc" id="L217">            bindingResult.reject(LabelValidator.ERRCODE_LABELGROUP_LANGS_TEXT_REQUIRED, new String[]{currentLangCode},</span>
-                    &quot;labelGroup.langs.defaultLang.textRequired&quot;);
+<span class="nc bnc" id="L211" title="All 4 branches missed.">        if (currentLangCode.equals(defaultLangCode) &amp;&amp; StringUtils.isBlank(entry.getValue())) {</span>
+<span class="nc" id="L212">            bindingResult.reject(LabelValidator.ERRCODE_LABELGROUP_LANGS_TEXT_REQUIRED, new String[]{currentLangCode}, &quot;labelGroup.langs.defaultLang.textRequired&quot;);</span>
         }
-<span class="nc" id="L220">    }</span>
+<span class="nc" id="L214">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

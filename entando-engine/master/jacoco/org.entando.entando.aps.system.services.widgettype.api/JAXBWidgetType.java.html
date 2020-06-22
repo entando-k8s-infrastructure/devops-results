@@ -11,18 +11,21 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package org.entando.entando.aps.system.services.widgettype.api;
 
 import com.agiletec.aps.util.ApsProperties;
+
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+
 import javax.ws.rs.core.Response;
+
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlElementWrapper;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
+
 import org.entando.entando.aps.system.services.api.IApiErrorCodes;
 import org.entando.entando.aps.system.services.api.model.ApiException;
 import org.entando.entando.aps.system.services.guifragment.GuiFragment;
@@ -35,203 +38,189 @@ import org.entando.entando.aps.system.services.widgettype.WidgetTypeParameter;
  * @author E.Santoboni
  */
 @XmlRootElement(name = &quot;widgetType&quot;)
-@XmlType(propOrder = {&quot;code&quot;, &quot;titles&quot;, &quot;pluginCode&quot;, &quot;mainGroup&quot;, &quot;typeParameters&quot;, &quot;action&quot;, &quot;parentTypeCode&quot;, &quot;config&quot;, &quot;locked&quot;, &quot;gui&quot;,
-        &quot;fragments&quot;})
+@XmlType(propOrder = {&quot;code&quot;, &quot;titles&quot;, &quot;pluginCode&quot;, &quot;mainGroup&quot;, &quot;typeParameters&quot;, &quot;action&quot;, &quot;parentTypeCode&quot;, &quot;config&quot;, &quot;locked&quot;, &quot;gui&quot;, &quot;fragments&quot;})
 public class JAXBWidgetType implements Serializable {
-
-    private String _code;
-    private ApsProperties _titles;
-    private List&lt;WidgetTypeParameter&gt; _parameters;
-    private String _action;
-    private String _pluginCode;
-    private String _parentTypeCode;
-    private ApsProperties _config;
-    private boolean _locked;
-    private String _mainGroup;
-    private String _gui;
-    private List&lt;JAXBGuiFragment&gt; _fragments;
-
-<span class="nc" id="L54">    public JAXBWidgetType() {</span>
-<span class="nc" id="L55">    }</span>
-
-<span class="nc" id="L57">    public JAXBWidgetType(WidgetType widgetType, GuiFragment fragment, List&lt;GuiFragment&gt; fragments) {</span>
-<span class="nc" id="L58">        this.setAction(widgetType.getAction());</span>
-<span class="nc" id="L59">        this.setCode(widgetType.getCode());</span>
-<span class="nc" id="L60">        this.setConfig(widgetType.getConfig());</span>
-<span class="nc" id="L61">        this.setLocked(widgetType.isLocked());</span>
-<span class="nc" id="L62">        this.setMainGroup(widgetType.getMainGroup());</span>
-<span class="nc bnc" id="L63" title="All 2 branches missed.">        if (null != widgetType.getParentType()) {</span>
-<span class="nc" id="L64">            this.setParentTypeCode(widgetType.getParentType().getCode());</span>
-        }
-<span class="nc" id="L66">        this.setPluginCode(widgetType.getPluginCode());</span>
-<span class="nc" id="L67">        this.setTitles(widgetType.getTitles());</span>
-<span class="nc" id="L68">        this.setTypeParameters(widgetType.getTypeParameters());</span>
-<span class="nc bnc" id="L69" title="All 2 branches missed.">        if (null != fragment) {</span>
-<span class="nc" id="L70">            this.setGui(fragment.getCurrentGui());</span>
-        }
-<span class="nc bnc" id="L72" title="All 2 branches missed.">        if (null != fragments) {</span>
-<span class="nc" id="L73">            List&lt;JAXBGuiFragment&gt; jaxbFragments = null;</span>
-<span class="nc bnc" id="L74" title="All 2 branches missed.">            for (int i = 0; i &lt; fragments.size(); i++) {</span>
-<span class="nc" id="L75">                GuiFragment guiFragment = fragments.get(i);</span>
-<span class="nc bnc" id="L76" title="All 2 branches missed.">                if (null != guiFragment) {</span>
-<span class="nc" id="L77">                    JAXBGuiFragment jaxbGuiFragment = new JAXBGuiFragment(guiFragment);</span>
-<span class="nc bnc" id="L78" title="All 2 branches missed.">                    if (null == jaxbFragments) {</span>
-<span class="nc" id="L79">                        jaxbFragments = new ArrayList&lt;JAXBGuiFragment&gt;();</span>
-                    }
-<span class="nc" id="L81">                    jaxbFragments.add(jaxbGuiFragment);</span>
-                }
-            }
-<span class="nc" id="L84">            this.setFragments(jaxbFragments);</span>
-        }
-<span class="nc" id="L86">    }</span>
-
-    public WidgetType getNewWidgetType(IWidgetTypeManager widgetTypeManager) {
-<span class="nc" id="L89">        WidgetType type = new WidgetType();</span>
-<span class="nc" id="L90">        type.setCode(this.getCode());</span>
-<span class="nc" id="L91">        type.setTitles(this.getTitles());</span>
-<span class="nc" id="L92">        List&lt;WidgetTypeParameter&gt; parameters = this.getTypeParameters();</span>
-<span class="nc bnc" id="L93" title="All 4 branches missed.">        if (null != parameters &amp;&amp; !parameters.isEmpty()) {</span>
-<span class="nc" id="L94">            type.setTypeParameters(parameters);</span>
-<span class="nc" id="L95">            type.setAction(&quot;configSimpleParameter&quot;);</span>
-        } else {
-<span class="nc" id="L97">            ApsProperties configuration = this.getConfig();</span>
-<span class="nc" id="L98">            String parentTypeCode = this.getParentTypeCode();</span>
-<span class="nc bnc" id="L99" title="All 6 branches missed.">            if (null != parentTypeCode &amp;&amp; null != configuration &amp;&amp; !configuration.isEmpty()) {</span>
-<span class="nc" id="L100">                WidgetType parentType = widgetTypeManager.getWidgetType(parentTypeCode);</span>
-<span class="nc" id="L101">                type.setParentType(parentType);</span>
-<span class="nc" id="L102">                type.setConfig(configuration);</span>
-            }
-        }
-<span class="nc" id="L105">        type.setMainGroup(this.getMainGroup());</span>
-        //type.setLocked(this.isLocked());
-<span class="nc" id="L107">        type.setPluginCode(this.getPluginCode());</span>
-<span class="nc" id="L108">        return type;</span>
-    }
-
-    public WidgetType getModifiedWidgetType(IWidgetTypeManager widgetTypeManager) throws ApiException {
-<span class="nc" id="L112">        WidgetType type = widgetTypeManager.getWidgetType(this.getCode());</span>
-<span class="nc" id="L113">        type.setTitles(this.getTitles());</span>
-<span class="nc bnc" id="L114" title="All 2 branches missed.">        if (type.isLogic()) {</span>
-<span class="nc" id="L115">            ApsProperties configuration = this.getConfig();</span>
-<span class="nc" id="L116">            type.setConfig(configuration);</span>
-<span class="nc" id="L117">        } else {</span>
-<span class="nc" id="L118">            List&lt;WidgetTypeParameter&gt; parameters = this.getTypeParameters();</span>
-<span class="nc bnc" id="L119" title="All 4 branches missed.">            if (null != parameters &amp;&amp; !parameters.isEmpty()) {</span>
-                //Parameters of existing widget mustn't been changed
-                //type.setTypeParameters(parameters);
-                //type.setAction(&quot;configSimpleParameter&quot;);
-<span class="nc" id="L123">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR, &quot;Parameters of existing widget mustn't been changed&quot;,</span>
-                        Response.Status.CONFLICT);
-            }
-        }
-<span class="nc" id="L127">        type.setMainGroup(this.getMainGroup());</span>
-        //type.setLocked(this.isLocked());
-        //type.setPluginCode(this.getPluginCode());
-<span class="nc" id="L130">        return type;</span>
-    }
-
-    @XmlElement(name = &quot;code&quot;, required = false)
-    public String getCode() {
-<span class="nc" id="L135">        return _code;</span>
-    }
-
-    public void setCode(String code) {
-<span class="nc" id="L139">        this._code = code;</span>
-<span class="nc" id="L140">    }</span>
-
-    @XmlElement(name = &quot;title&quot;, required = false)
+	
+<span class="nc" id="L44">	public JAXBWidgetType() {}</span>
+	
+<span class="nc" id="L46">	public JAXBWidgetType(WidgetType widgetType, GuiFragment fragment, List&lt;GuiFragment&gt; fragments) {</span>
+<span class="nc" id="L47">		this.setAction(widgetType.getAction());</span>
+<span class="nc" id="L48">		this.setCode(widgetType.getCode());</span>
+<span class="nc" id="L49">		this.setConfig(widgetType.getConfig());</span>
+<span class="nc" id="L50">		this.setLocked(widgetType.isLocked());</span>
+<span class="nc" id="L51">		this.setMainGroup(widgetType.getMainGroup());</span>
+<span class="nc bnc" id="L52" title="All 2 branches missed.">		if (null != widgetType.getParentType()) {</span>
+<span class="nc" id="L53">			this.setParentTypeCode(widgetType.getParentType().getCode());</span>
+		}
+<span class="nc" id="L55">		this.setPluginCode(widgetType.getPluginCode());</span>
+<span class="nc" id="L56">		this.setTitles(widgetType.getTitles());</span>
+<span class="nc" id="L57">		this.setTypeParameters(widgetType.getTypeParameters());</span>
+<span class="nc bnc" id="L58" title="All 2 branches missed.">		if (null != fragment) {</span>
+<span class="nc" id="L59">			this.setGui(fragment.getCurrentGui());</span>
+		}
+<span class="nc bnc" id="L61" title="All 2 branches missed.">		if (null != fragments) {</span>
+<span class="nc" id="L62">			List&lt;JAXBGuiFragment&gt; jaxbFragments = null;</span>
+<span class="nc bnc" id="L63" title="All 2 branches missed.">			for (int i = 0; i &lt; fragments.size(); i++) {</span>
+<span class="nc" id="L64">				GuiFragment guiFragment = fragments.get(i);</span>
+<span class="nc bnc" id="L65" title="All 2 branches missed.">				if (null != guiFragment) {</span>
+<span class="nc" id="L66">					JAXBGuiFragment jaxbGuiFragment = new JAXBGuiFragment(guiFragment);</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">					if (null == jaxbFragments) {</span>
+<span class="nc" id="L68">						jaxbFragments = new ArrayList&lt;JAXBGuiFragment&gt;();</span>
+					}
+<span class="nc" id="L70">					jaxbFragments.add(jaxbGuiFragment);</span>
+				}
+			}
+<span class="nc" id="L73">			this.setFragments(jaxbFragments);</span>
+		}
+<span class="nc" id="L75">	}</span>
+	
+	public WidgetType getNewWidgetType(IWidgetTypeManager widgetTypeManager) {
+<span class="nc" id="L78">		WidgetType type = new WidgetType();</span>
+<span class="nc" id="L79">		type.setCode(this.getCode());</span>
+<span class="nc" id="L80">		type.setTitles(this.getTitles());</span>
+<span class="nc" id="L81">		List&lt;WidgetTypeParameter&gt; parameters = this.getTypeParameters();</span>
+<span class="nc bnc" id="L82" title="All 4 branches missed.">		if (null != parameters &amp;&amp; !parameters.isEmpty()) {</span>
+<span class="nc" id="L83">			type.setTypeParameters(parameters);</span>
+<span class="nc" id="L84">			type.setAction(&quot;configSimpleParameter&quot;);</span>
+		} else {
+<span class="nc" id="L86">			ApsProperties configuration = this.getConfig();</span>
+<span class="nc" id="L87">			String parentTypeCode = this.getParentTypeCode();</span>
+<span class="nc bnc" id="L88" title="All 6 branches missed.">			if (null != parentTypeCode &amp;&amp; null != configuration &amp;&amp; !configuration.isEmpty()) {</span>
+<span class="nc" id="L89">				WidgetType parentType = widgetTypeManager.getWidgetType(parentTypeCode);</span>
+<span class="nc" id="L90">				type.setParentType(parentType);</span>
+<span class="nc" id="L91">				type.setConfig(configuration);</span>
+			}
+		}
+<span class="nc" id="L94">		type.setMainGroup(this.getMainGroup());</span>
+		//type.setLocked(this.isLocked());
+<span class="nc" id="L96">		type.setPluginCode(this.getPluginCode());</span>
+<span class="nc" id="L97">		return type;</span>
+	}
+	
+	public WidgetType getModifiedWidgetType(IWidgetTypeManager widgetTypeManager) throws ApiException {
+<span class="nc" id="L101">		WidgetType type = widgetTypeManager.getWidgetType(this.getCode());</span>
+<span class="nc" id="L102">		type.setTitles(this.getTitles());</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">		if (type.isLogic()) {</span>
+<span class="nc" id="L104">			ApsProperties configuration = this.getConfig();</span>
+<span class="nc" id="L105">			type.setConfig(configuration);</span>
+<span class="nc" id="L106">		} else {</span>
+<span class="nc" id="L107">			List&lt;WidgetTypeParameter&gt; parameters = this.getTypeParameters();</span>
+<span class="nc bnc" id="L108" title="All 4 branches missed.">			if (null != parameters &amp;&amp; !parameters.isEmpty()) {</span>
+				//Parameters of existing widget mustn't been changed
+				//type.setTypeParameters(parameters);
+				//type.setAction(&quot;configSimpleParameter&quot;);
+<span class="nc" id="L112">				throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR, &quot;Parameters of existing widget mustn't been changed&quot;, Response.Status.CONFLICT);</span>
+			}
+		}
+<span class="nc" id="L115">		type.setMainGroup(this.getMainGroup());</span>
+		//type.setLocked(this.isLocked());
+		//type.setPluginCode(this.getPluginCode());
+<span class="nc" id="L118">		return type;</span>
+	}
+	
+	@XmlElement(name = &quot;code&quot;, required = false)
+	public String getCode() {
+<span class="nc" id="L123">		return _code;</span>
+	}
+	public void setCode(String code) {
+<span class="nc" id="L126">		this._code = code;</span>
+<span class="nc" id="L127">	}</span>
+	
+	@XmlElement(name = &quot;title&quot;, required = false)
     @XmlElementWrapper(name = &quot;titles&quot;, required = false)
-    public ApsProperties getTitles() {
-<span class="nc" id="L145">        return _titles;</span>
-    }
-
-    public void setTitles(ApsProperties titles) {
-<span class="nc" id="L149">        this._titles = titles;</span>
-<span class="nc" id="L150">    }</span>
-
-    @XmlElement(name = &quot;typeParameter&quot;, required = false)
+	public ApsProperties getTitles() {
+<span class="nc" id="L132">		return _titles;</span>
+	}
+	public void setTitles(ApsProperties titles) {
+<span class="nc" id="L135">		this._titles = titles;</span>
+<span class="nc" id="L136">	}</span>
+	
+	@XmlElement(name = &quot;typeParameter&quot;, required = false)
     @XmlElementWrapper(name = &quot;typeParameters&quot;, required = false)
-    public List&lt;WidgetTypeParameter&gt; getTypeParameters() {
-<span class="nc" id="L155">        return _parameters;</span>
-    }
-
-    public void setTypeParameters(List&lt;WidgetTypeParameter&gt; typeParameters) {
-<span class="nc" id="L159">        this._parameters = typeParameters;</span>
-<span class="nc" id="L160">    }</span>
-
-    @XmlElement(name = &quot;action&quot;, required = false)
-    public String getAction() {
-<span class="nc" id="L164">        return _action;</span>
-    }
-
-    public void setAction(String action) {
-<span class="nc" id="L168">        this._action = action;</span>
-<span class="nc" id="L169">    }</span>
-
-    @XmlElement(name = &quot;pluginCode&quot;, required = false)
-    public String getPluginCode() {
-<span class="nc" id="L173">        return _pluginCode;</span>
-    }
-
-    public void setPluginCode(String pluginCode) {
-<span class="nc" id="L177">        this._pluginCode = pluginCode;</span>
-<span class="nc" id="L178">    }</span>
-
-    @XmlElement(name = &quot;parentTypeCode&quot;, required = false)
-    protected String getParentTypeCode() {
-<span class="nc" id="L182">        return _parentTypeCode;</span>
-    }
-
-    protected void setParentTypeCode(String parentTypeCode) {
-<span class="nc" id="L186">        this._parentTypeCode = parentTypeCode;</span>
-<span class="nc" id="L187">    }</span>
-
-    @XmlElement(name = &quot;configuration&quot;, required = false)
+	public List&lt;WidgetTypeParameter&gt; getTypeParameters() {
+<span class="nc" id="L141">		return _parameters;</span>
+	}
+	public void setTypeParameters(List&lt;WidgetTypeParameter&gt; typeParameters) {
+<span class="nc" id="L144">		this._parameters = typeParameters;</span>
+<span class="nc" id="L145">	}</span>
+	
+	@XmlElement(name = &quot;action&quot;, required = false)
+	public String getAction() {
+<span class="nc" id="L149">		return _action;</span>
+	}
+	public void setAction(String action) {
+<span class="nc" id="L152">		this._action = action;</span>
+<span class="nc" id="L153">	}</span>
+	
+	@XmlElement(name = &quot;pluginCode&quot;, required = false)
+	public String getPluginCode() {
+<span class="nc" id="L157">		return _pluginCode;</span>
+	}
+	public void setPluginCode(String pluginCode) {
+<span class="nc" id="L160">		this._pluginCode = pluginCode;</span>
+<span class="nc" id="L161">	}</span>
+	
+	@XmlElement(name = &quot;parentTypeCode&quot;, required = false)
+	protected String getParentTypeCode() {
+<span class="nc" id="L165">		return _parentTypeCode;</span>
+	}
+	protected void setParentTypeCode(String parentTypeCode) {
+<span class="nc" id="L168">		this._parentTypeCode = parentTypeCode;</span>
+<span class="nc" id="L169">	}</span>
+	
+	@XmlElement(name = &quot;configuration&quot;, required = false)
     @XmlElementWrapper(name = &quot;configurations&quot;, required = false)
-    public ApsProperties getConfig() {
-<span class="nc" id="L192">        return _config;</span>
-    }
-
-    public void setConfig(ApsProperties config) {
-<span class="nc" id="L196">        this._config = config;</span>
-<span class="nc" id="L197">    }</span>
-
-    @XmlElement(name = &quot;locked&quot;, required = false)
-    public boolean isLocked() {
-<span class="nc" id="L201">        return _locked;</span>
-    }
-
-    public void setLocked(boolean locked) {
-<span class="nc" id="L205">        this._locked = locked;</span>
-<span class="nc" id="L206">    }</span>
-
-    @XmlElement(name = &quot;mainGroup&quot;, required = false)
-    public String getMainGroup() {
-<span class="nc" id="L210">        return _mainGroup;</span>
-    }
-
-    public void setMainGroup(String mainGroup) {
-<span class="nc" id="L214">        this._mainGroup = mainGroup;</span>
-<span class="nc" id="L215">    }</span>
-
-    @XmlElement(name = &quot;gui&quot;, required = false)
-    public String getGui() {
-<span class="nc" id="L219">        return _gui;</span>
-    }
-
-    public void setGui(String gui) {
-<span class="nc" id="L223">        this._gui = gui;</span>
-<span class="nc" id="L224">    }</span>
-
-    @XmlElement(name = &quot;fragment&quot;, required = false)
+	public ApsProperties getConfig() {
+<span class="nc" id="L174">		return _config;</span>
+	}
+	public void setConfig(ApsProperties config) {
+<span class="nc" id="L177">		this._config = config;</span>
+<span class="nc" id="L178">	}</span>
+	
+	@XmlElement(name = &quot;locked&quot;, required = false)
+	public boolean isLocked() {
+<span class="nc" id="L182">		return _locked;</span>
+	}
+	public void setLocked(boolean locked) {
+<span class="nc" id="L185">		this._locked = locked;</span>
+<span class="nc" id="L186">	}</span>
+	
+	@XmlElement(name = &quot;mainGroup&quot;, required = false)
+	public String getMainGroup() {
+<span class="nc" id="L190">		return _mainGroup;</span>
+	}
+	public void setMainGroup(String mainGroup) {
+<span class="nc" id="L193">		this._mainGroup = mainGroup;</span>
+<span class="nc" id="L194">	}</span>
+	
+	@XmlElement(name = &quot;gui&quot;, required = false)
+	public String getGui() {
+<span class="nc" id="L198">		return _gui;</span>
+	}
+	public void setGui(String gui) {
+<span class="nc" id="L201">		this._gui = gui;</span>
+<span class="nc" id="L202">	}</span>
+	
+	@XmlElement(name = &quot;fragment&quot;, required = false)
     @XmlElementWrapper(name = &quot;fragments&quot;, required = false)
-    public List&lt;JAXBGuiFragment&gt; getFragments() {
-<span class="nc" id="L229">        return _fragments;</span>
-    }
-
-    protected void setFragments(List&lt;JAXBGuiFragment&gt; fragments) {
-<span class="nc" id="L233">        this._fragments = fragments;</span>
-<span class="nc" id="L234">    }</span>
-
+	public List&lt;JAXBGuiFragment&gt; getFragments() {
+<span class="nc" id="L207">		return _fragments;</span>
+	}
+	protected void setFragments(List&lt;JAXBGuiFragment&gt; fragments) {
+<span class="nc" id="L210">		this._fragments = fragments;</span>
+<span class="nc" id="L211">	}</span>
+	
+	private String _code;
+	private ApsProperties _titles;
+	private List&lt;WidgetTypeParameter&gt; _parameters;
+	private String _action;
+	private String _pluginCode;
+	private String _parentTypeCode;
+	private ApsProperties _config;
+	private boolean _locked;
+	private String _mainGroup;
+	private String _gui;
+	private List&lt;JAXBGuiFragment&gt; _fragments;
+	
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

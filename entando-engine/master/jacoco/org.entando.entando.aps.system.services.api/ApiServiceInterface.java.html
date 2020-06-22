@@ -11,14 +11,8 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package org.entando.entando.aps.system.services.api;
 
-import com.agiletec.aps.system.SystemConstants;
-import com.agiletec.aps.system.services.authorization.IAuthorizationManager;
-import com.agiletec.aps.system.services.lang.ILangManager;
-import com.agiletec.aps.system.services.user.UserDetails;
-import com.agiletec.aps.util.ApsProperties;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -26,7 +20,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+
 import javax.ws.rs.core.Response;
+
 import org.apache.commons.beanutils.BeanComparator;
 import org.entando.entando.aps.system.services.api.model.ApiException;
 import org.entando.entando.aps.system.services.api.model.ApiMethodParameter;
@@ -37,164 +33,164 @@ import org.entando.entando.aps.system.services.api.server.IResponseBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.agiletec.aps.system.SystemConstants;
+import com.agiletec.aps.system.services.authorization.IAuthorizationManager;
+import com.agiletec.aps.system.services.lang.ILangManager;
+import com.agiletec.aps.system.services.user.UserDetails;
+import com.agiletec.aps.util.ApsProperties;
+
 /**
  * @author E.Santoboni
  */
-<span class="nc" id="L43">public class ApiServiceInterface {</span>
+<span class="nc" id="L45">public class ApiServiceInterface {</span>
 
-<span class="nc" id="L45">    private static final Logger _logger = LoggerFactory.getLogger(ApiServiceInterface.class);</span>
-    private IAuthorizationManager _authorizationManager;
+<span class="nc" id="L47">	private static final Logger _logger =  LoggerFactory.getLogger(ApiServiceInterface.class);</span>
+	
+    public ArrayList&lt;ServiceInfo&gt; getServices(Properties properties) throws ApiException {
+<span class="nc" id="L50">        ArrayList&lt;ServiceInfo&gt; services = new ArrayList&lt;ServiceInfo&gt;();</span>
+        try {
+<span class="nc" id="L52">            String defaultLangCode = this.getLangManager().getDefaultLang().getCode();</span>
+<span class="nc" id="L53">            String langCode = properties.getProperty(SystemConstants.API_LANG_CODE_PARAMETER);</span>
+<span class="nc" id="L54">            String tagParamValue = properties.getProperty(&quot;tag&quot;);</span>
+            //String myentandoParamValue = properties.getProperty(&quot;myentando&quot;);
+            //Boolean myentando = (null != myentandoParamValue &amp;&amp; myentandoParamValue.trim().length() &gt; 0) ? Boolean.valueOf(myentandoParamValue) : null;
+<span class="nc bnc" id="L57" title="All 4 branches missed.">            langCode = (null != langCode &amp;&amp; null != this.getLangManager().getLang(langCode)) ? langCode : defaultLangCode;</span>
+<span class="nc" id="L58">			Map&lt;String, ApiService&gt; masterServices = this.getApiCatalogManager().getServices(tagParamValue/*, myentando*/);</span>
+<span class="nc" id="L59">            Iterator&lt;ApiService&gt; iter = masterServices.values().iterator();</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">            while (iter.hasNext()) {</span>
+<span class="nc" id="L61">                ApiService service = (ApiService) iter.next();</span>
+<span class="nc bnc" id="L62" title="All 6 branches missed.">                if (service.isActive() &amp;&amp; !service.isHidden() &amp;&amp; this.checkServiceAuthorization(service, properties, false)) {</span>
+<span class="nc" id="L63">                    ServiceInfo smallService = this.createServiceInfo(service, langCode, defaultLangCode);</span>
+<span class="nc" id="L64">                    services.add(smallService);</span>
+                }
+<span class="nc" id="L66">            }</span>
+<span class="nc" id="L67">            BeanComparator comparator = new BeanComparator(&quot;description&quot;);</span>
+<span class="nc" id="L68">            Collections.sort(services, comparator);</span>
+<span class="nc" id="L69">        } catch (Throwable t) {</span>
+<span class="nc" id="L70">        	_logger.error(&quot;Error extracting services&quot;, t);</span>
+<span class="nc" id="L71">            throw new ApiException(IApiErrorCodes.SERVER_ERROR, &quot;Internal error&quot;);</span>
+<span class="nc" id="L72">        }</span>
+<span class="nc" id="L73">        return services;</span>
+    }
+    
+    protected ServiceInfo createServiceInfo(ApiService service, String langCode, String defaultLangCode) {
+<span class="nc" id="L77">        String description = service.getDescription().getProperty(langCode);</span>
+<span class="nc bnc" id="L78" title="All 4 branches missed.">        if (null == description || description.trim().length() == 0) {</span>
+<span class="nc" id="L79">            description = service.getDescription().getProperty(defaultLangCode);</span>
+        }
+<span class="nc" id="L81">        ServiceInfo smallService = new ServiceInfo(service.getKey(), description, service.getTag()/*, service.isMyEntando()*/);</span>
+<span class="nc" id="L82">        String[] freeParameters = service.getFreeParameters();</span>
+<span class="nc bnc" id="L83" title="All 4 branches missed.">        if (null != freeParameters &amp;&amp; freeParameters.length &gt; 0) {</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">            for (int i = 0; i &lt; freeParameters.length; i++) {</span>
+<span class="nc" id="L85">                String freeParameter = freeParameters[i];</span>
+<span class="nc" id="L86">                ApiMethodParameter apiParameter = service.getMaster().getParameter(freeParameter);</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">                if (null != apiParameter) {</span>
+<span class="nc" id="L88">                    ServiceParameterInfo spi = new ServiceParameterInfo(apiParameter);</span>
+<span class="nc" id="L89">                    ApsProperties serviceParameters = service.getParameters();</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">                    String defaultValue = (null != serviceParameters) ? serviceParameters.getProperty(freeParameter) : null;</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">                    if (null != defaultValue) {</span>
+<span class="nc" id="L92">                        spi.setDefaultValue(defaultValue);</span>
+<span class="nc" id="L93">                        spi.setRequired(false);</span>
+                    }
+<span class="nc" id="L95">                    smallService.addParameter(spi);</span>
+                }
+            }
+        }
+<span class="nc" id="L99">        return smallService;</span>
+    }
+    
+    public Object getService(Properties properties) throws ApiException {
+<span class="nc" id="L103">        Object response = null;</span>
+<span class="nc" id="L104">        String key = (String) properties.get(&quot;key&quot;);</span>
+        try {
+<span class="nc" id="L106">            ApiService service = this.getApiCatalogManager().getApiService(key);</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">            if (null == service) {</span>
+<span class="nc" id="L108">                throw new ApiException(IApiErrorCodes.API_SERVICE_INVALID, &quot;Service '&quot; + key + &quot;' does not exist&quot;);</span>
+            }
+<span class="nc bnc" id="L110" title="All 2 branches missed.">            if (!service.isActive()) {</span>
+<span class="nc" id="L111">                throw new ApiException(IApiErrorCodes.API_SERVICE_ACTIVE_FALSE, &quot;Service '&quot; + key + &quot;' is not active&quot;);</span>
+            }
+<span class="nc" id="L113">			this.checkServiceAuthorization(service, properties, true);</span>
+<span class="nc" id="L114">            Properties serviceParameters = new Properties();</span>
+<span class="nc" id="L115">            serviceParameters.putAll(service.getParameters());</span>
+<span class="nc" id="L116">            Iterator&lt;Object&gt; paramIter = properties.keySet().iterator();</span>
+<span class="nc" id="L117">            List&lt;String&gt; reservedParameters = Arrays.asList(SystemConstants.API_RESERVED_PARAMETERS);</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">            while (paramIter.hasNext()) {</span>
+<span class="nc" id="L119">                Object paramName = paramIter.next();</span>
+<span class="nc" id="L120">				String paramNameString = paramName.toString();</span>
+<span class="nc bnc" id="L121" title="All 4 branches missed.">                if (reservedParameters.contains(paramNameString) || service.isFreeParameter(paramNameString)) {</span>
+<span class="nc" id="L122">                    serviceParameters.put(paramNameString, properties.get(paramName));</span>
+                }
+<span class="nc" id="L124">            }</span>
+<span class="nc" id="L125">            response = this.getResponseBuilder().createResponse(service.getMaster(), serviceParameters);</span>
+<span class="nc" id="L126">        } catch (ApiException e) {</span>
+<span class="nc" id="L127">            throw e;</span>
+<span class="nc" id="L128">        } catch (Throwable t) {</span>
+<span class="nc" id="L129">        	_logger.error(&quot;Error invocating service - key '{}'&quot;, key, t);</span>
+<span class="nc" id="L130">            throw new ApiException(IApiErrorCodes.SERVER_ERROR, &quot;Internal error&quot;);</span>
+<span class="nc" id="L131">        }</span>
+<span class="nc" id="L132">        return response;</span>
+    }
+	
+	protected boolean checkServiceAuthorization(ApiService service, Properties properties, boolean throwApiException) throws ApiException, Throwable {
+<span class="nc bnc" id="L136" title="All 2 branches missed.">		if (!service.getRequiredAuth()) {</span>
+<span class="nc" id="L137">			return true;</span>
+		}
+		try {
+<span class="nc" id="L140">			UserDetails user = (UserDetails) properties.get(SystemConstants.API_USER_PARAMETER);</span>
+<span class="nc bnc" id="L141" title="All 2 branches missed.">            if (null == user) {</span>
+<span class="nc" id="L142">                throw new ApiException(IApiErrorCodes.API_AUTHENTICATION_REQUIRED, </span>
+<span class="nc" id="L143">						&quot;Authentication is mandatory for service '&quot; + service.getKey() + &quot;'&quot;, Response.Status.UNAUTHORIZED);</span>
+            }
+<span class="nc bnc" id="L145" title="All 4 branches missed.">			if ((null != service.getRequiredGroup() &amp;&amp; !this.getAuthorizationManager().isAuthOnGroup(user, service.getRequiredGroup())) </span>
+<span class="nc bnc" id="L146" title="All 4 branches missed.">					|| (null != service.getRequiredPermission() &amp;&amp; !this.getAuthorizationManager().isAuthOnPermission(user, service.getRequiredPermission()))) {</span>
+<span class="nc" id="L147">				throw new ApiException(IApiErrorCodes.API_AUTHORIZATION_REQUIRED, </span>
+<span class="nc" id="L148">						&quot;Permission denied for service '&quot; + service.getKey() + &quot;'&quot;, Response.Status.UNAUTHORIZED);</span>
+			}
+<span class="nc" id="L150">		} catch (ApiException ae) {</span>
+<span class="nc bnc" id="L151" title="All 2 branches missed.">			if (throwApiException) {</span>
+<span class="nc" id="L152">				throw ae;</span>
+			}
+<span class="nc" id="L154">			return false;</span>
+<span class="nc" id="L155">		} catch (Throwable t) {</span>
+<span class="nc" id="L156">			_logger.error(&quot;Error checking auth for service - key '{}'&quot;, service.getKey(), t);</span>
+<span class="nc" id="L157">            throw t;</span>
+<span class="nc" id="L158">		}</span>
+<span class="nc" id="L159">		return true;</span>
+	}
+	
+	protected IAuthorizationManager getAuthorizationManager() {
+<span class="nc" id="L163">		return _authorizationManager;</span>
+	}
+	public void setAuthorizationManager(IAuthorizationManager authorizationManager) {
+<span class="nc" id="L166">		this._authorizationManager = authorizationManager;</span>
+<span class="nc" id="L167">	}</span>
+	
+    protected IApiCatalogManager getApiCatalogManager() {
+<span class="nc" id="L170">        return _apiCatalogManager;</span>
+    }
+    public void setApiCatalogManager(IApiCatalogManager apiCatalogManager) {
+<span class="nc" id="L173">        this._apiCatalogManager = apiCatalogManager;</span>
+<span class="nc" id="L174">    }</span>
+	
+    protected ILangManager getLangManager() {
+<span class="nc" id="L177">        return _langManager;</span>
+    }
+    public void setLangManager(ILangManager langManager) {
+<span class="nc" id="L180">        this._langManager = langManager;</span>
+<span class="nc" id="L181">    }</span>
+	
+    protected IResponseBuilder getResponseBuilder() {
+<span class="nc" id="L184">        return _responseBuilder;</span>
+    }
+    public void setResponseBuilder(IResponseBuilder responseBuilder) {
+<span class="nc" id="L187">        this._responseBuilder = responseBuilder;</span>
+<span class="nc" id="L188">    }</span>
+    
+	private IAuthorizationManager _authorizationManager;
     private IApiCatalogManager _apiCatalogManager;
     private ILangManager _langManager;
     private IResponseBuilder _responseBuilder;
-
-    public ArrayList&lt;ServiceInfo&gt; getServices(Properties properties) throws ApiException {
-<span class="nc" id="L52">        ArrayList&lt;ServiceInfo&gt; services = new ArrayList&lt;ServiceInfo&gt;();</span>
-        try {
-<span class="nc" id="L54">            String defaultLangCode = this.getLangManager().getDefaultLang().getCode();</span>
-<span class="nc" id="L55">            String langCode = properties.getProperty(SystemConstants.API_LANG_CODE_PARAMETER);</span>
-<span class="nc" id="L56">            String tagParamValue = properties.getProperty(&quot;tag&quot;);</span>
-            //String myentandoParamValue = properties.getProperty(&quot;myentando&quot;);
-            //Boolean myentando = (null != myentandoParamValue &amp;&amp; myentandoParamValue.trim().length() &gt; 0) ? Boolean.valueOf
-            // (myentandoParamValue) : null;
-<span class="nc bnc" id="L60" title="All 4 branches missed.">            langCode = (null != langCode &amp;&amp; null != this.getLangManager().getLang(langCode)) ? langCode : defaultLangCode;</span>
-<span class="nc" id="L61">            Map&lt;String, ApiService&gt; masterServices = this.getApiCatalogManager().getServices(tagParamValue/*, myentando*/);</span>
-<span class="nc" id="L62">            Iterator&lt;ApiService&gt; iter = masterServices.values().iterator();</span>
-<span class="nc bnc" id="L63" title="All 2 branches missed.">            while (iter.hasNext()) {</span>
-<span class="nc" id="L64">                ApiService service = iter.next();</span>
-<span class="nc bnc" id="L65" title="All 6 branches missed.">                if (service.isActive() &amp;&amp; !service.isHidden() &amp;&amp; this.checkServiceAuthorization(service, properties, false)) {</span>
-<span class="nc" id="L66">                    ServiceInfo smallService = this.createServiceInfo(service, langCode, defaultLangCode);</span>
-<span class="nc" id="L67">                    services.add(smallService);</span>
-                }
-<span class="nc" id="L69">            }</span>
-<span class="nc" id="L70">            BeanComparator comparator = new BeanComparator(&quot;description&quot;);</span>
-<span class="nc" id="L71">            Collections.sort(services, comparator);</span>
-<span class="nc" id="L72">        } catch (Throwable t) {</span>
-<span class="nc" id="L73">            _logger.error(&quot;Error extracting services&quot;, t);</span>
-<span class="nc" id="L74">            throw new ApiException(IApiErrorCodes.SERVER_ERROR, &quot;Internal error&quot;);</span>
-<span class="nc" id="L75">        }</span>
-<span class="nc" id="L76">        return services;</span>
-    }
-
-    protected ServiceInfo createServiceInfo(ApiService service, String langCode, String defaultLangCode) {
-<span class="nc" id="L80">        String description = service.getDescription().getProperty(langCode);</span>
-<span class="nc bnc" id="L81" title="All 4 branches missed.">        if (null == description || description.trim().length() == 0) {</span>
-<span class="nc" id="L82">            description = service.getDescription().getProperty(defaultLangCode);</span>
-        }
-<span class="nc" id="L84">        ServiceInfo smallService = new ServiceInfo(service.getKey(), description, service.getTag()/*, service.isMyEntando()*/);</span>
-<span class="nc" id="L85">        String[] freeParameters = service.getFreeParameters();</span>
-<span class="nc bnc" id="L86" title="All 4 branches missed.">        if (null != freeParameters &amp;&amp; freeParameters.length &gt; 0) {</span>
-<span class="nc bnc" id="L87" title="All 2 branches missed.">            for (int i = 0; i &lt; freeParameters.length; i++) {</span>
-<span class="nc" id="L88">                String freeParameter = freeParameters[i];</span>
-<span class="nc" id="L89">                ApiMethodParameter apiParameter = service.getMaster().getParameter(freeParameter);</span>
-<span class="nc bnc" id="L90" title="All 2 branches missed.">                if (null != apiParameter) {</span>
-<span class="nc" id="L91">                    ServiceParameterInfo spi = new ServiceParameterInfo(apiParameter);</span>
-<span class="nc" id="L92">                    ApsProperties serviceParameters = service.getParameters();</span>
-<span class="nc bnc" id="L93" title="All 2 branches missed.">                    String defaultValue = (null != serviceParameters) ? serviceParameters.getProperty(freeParameter) : null;</span>
-<span class="nc bnc" id="L94" title="All 2 branches missed.">                    if (null != defaultValue) {</span>
-<span class="nc" id="L95">                        spi.setDefaultValue(defaultValue);</span>
-<span class="nc" id="L96">                        spi.setRequired(false);</span>
-                    }
-<span class="nc" id="L98">                    smallService.addParameter(spi);</span>
-                }
-            }
-        }
-<span class="nc" id="L102">        return smallService;</span>
-    }
-
-    public Object getService(Properties properties) throws ApiException {
-<span class="nc" id="L106">        Object response = null;</span>
-<span class="nc" id="L107">        String key = (String) properties.get(&quot;key&quot;);</span>
-        try {
-<span class="nc" id="L109">            ApiService service = this.getApiCatalogManager().getApiService(key);</span>
-<span class="nc bnc" id="L110" title="All 2 branches missed.">            if (null == service) {</span>
-<span class="nc" id="L111">                throw new ApiException(IApiErrorCodes.API_SERVICE_INVALID, &quot;Service '&quot; + key + &quot;' does not exist&quot;);</span>
-            }
-<span class="nc bnc" id="L113" title="All 2 branches missed.">            if (!service.isActive()) {</span>
-<span class="nc" id="L114">                throw new ApiException(IApiErrorCodes.API_SERVICE_ACTIVE_FALSE, &quot;Service '&quot; + key + &quot;' is not active&quot;);</span>
-            }
-<span class="nc" id="L116">            this.checkServiceAuthorization(service, properties, true);</span>
-<span class="nc" id="L117">            Properties serviceParameters = new Properties();</span>
-<span class="nc" id="L118">            serviceParameters.putAll(service.getParameters());</span>
-<span class="nc" id="L119">            Iterator&lt;Object&gt; paramIter = properties.keySet().iterator();</span>
-<span class="nc" id="L120">            List&lt;String&gt; reservedParameters = Arrays.asList(SystemConstants.API_RESERVED_PARAMETERS);</span>
-<span class="nc bnc" id="L121" title="All 2 branches missed.">            while (paramIter.hasNext()) {</span>
-<span class="nc" id="L122">                Object paramName = paramIter.next();</span>
-<span class="nc" id="L123">                String paramNameString = paramName.toString();</span>
-<span class="nc bnc" id="L124" title="All 4 branches missed.">                if (reservedParameters.contains(paramNameString) || service.isFreeParameter(paramNameString)) {</span>
-<span class="nc" id="L125">                    serviceParameters.put(paramNameString, properties.get(paramName));</span>
-                }
-<span class="nc" id="L127">            }</span>
-<span class="nc" id="L128">            response = this.getResponseBuilder().createResponse(service.getMaster(), serviceParameters);</span>
-<span class="nc" id="L129">        } catch (ApiException e) {</span>
-<span class="nc" id="L130">            throw e;</span>
-<span class="nc" id="L131">        } catch (Throwable t) {</span>
-<span class="nc" id="L132">            _logger.error(&quot;Error invocating service - key '{}'&quot;, key, t);</span>
-<span class="nc" id="L133">            throw new ApiException(IApiErrorCodes.SERVER_ERROR, &quot;Internal error&quot;);</span>
-<span class="nc" id="L134">        }</span>
-<span class="nc" id="L135">        return response;</span>
-    }
-
-    protected boolean checkServiceAuthorization(ApiService service, Properties properties, boolean throwApiException)
-            throws Throwable {
-<span class="nc bnc" id="L140" title="All 2 branches missed.">        if (!service.getRequiredAuth()) {</span>
-<span class="nc" id="L141">            return true;</span>
-        }
-        try {
-<span class="nc" id="L144">            UserDetails user = (UserDetails) properties.get(SystemConstants.API_USER_PARAMETER);</span>
-<span class="nc bnc" id="L145" title="All 2 branches missed.">            if (null == user) {</span>
-<span class="nc" id="L146">                throw new ApiException(IApiErrorCodes.API_AUTHENTICATION_REQUIRED,</span>
-<span class="nc" id="L147">                        &quot;Authentication is mandatory for service '&quot; + service.getKey() + &quot;'&quot;, Response.Status.UNAUTHORIZED);</span>
-            }
-<span class="nc bnc" id="L149" title="All 4 branches missed.">            if ((null != service.getRequiredGroup() &amp;&amp; !this.getAuthorizationManager().isAuthOnGroup(user, service.getRequiredGroup()))</span>
-<span class="nc bnc" id="L150" title="All 2 branches missed.">                    || (null != service.getRequiredPermission() &amp;&amp; !this.getAuthorizationManager()</span>
-<span class="nc bnc" id="L151" title="All 2 branches missed.">                    .isAuthOnPermission(user, service.getRequiredPermission()))) {</span>
-<span class="nc" id="L152">                throw new ApiException(IApiErrorCodes.API_AUTHORIZATION_REQUIRED,</span>
-<span class="nc" id="L153">                        &quot;Permission denied for service '&quot; + service.getKey() + &quot;'&quot;, Response.Status.UNAUTHORIZED);</span>
-            }
-<span class="nc" id="L155">        } catch (ApiException ae) {</span>
-<span class="nc bnc" id="L156" title="All 2 branches missed.">            if (throwApiException) {</span>
-<span class="nc" id="L157">                throw ae;</span>
-            }
-<span class="nc" id="L159">            return false;</span>
-<span class="nc" id="L160">        } catch (Throwable t) {</span>
-<span class="nc" id="L161">            _logger.error(&quot;Error checking auth for service - key '{}'&quot;, service.getKey(), t);</span>
-<span class="nc" id="L162">            throw t;</span>
-<span class="nc" id="L163">        }</span>
-<span class="nc" id="L164">        return true;</span>
-    }
-
-    protected IAuthorizationManager getAuthorizationManager() {
-<span class="nc" id="L168">        return _authorizationManager;</span>
-    }
-
-    public void setAuthorizationManager(IAuthorizationManager authorizationManager) {
-<span class="nc" id="L172">        this._authorizationManager = authorizationManager;</span>
-<span class="nc" id="L173">    }</span>
-
-    protected IApiCatalogManager getApiCatalogManager() {
-<span class="nc" id="L176">        return _apiCatalogManager;</span>
-    }
-
-    public void setApiCatalogManager(IApiCatalogManager apiCatalogManager) {
-<span class="nc" id="L180">        this._apiCatalogManager = apiCatalogManager;</span>
-<span class="nc" id="L181">    }</span>
-
-    protected ILangManager getLangManager() {
-<span class="nc" id="L184">        return _langManager;</span>
-    }
-
-    public void setLangManager(ILangManager langManager) {
-<span class="nc" id="L188">        this._langManager = langManager;</span>
-<span class="nc" id="L189">    }</span>
-
-    protected IResponseBuilder getResponseBuilder() {
-<span class="nc" id="L192">        return _responseBuilder;</span>
-    }
-
-    public void setResponseBuilder(IResponseBuilder responseBuilder) {
-<span class="nc" id="L196">        this._responseBuilder = responseBuilder;</span>
-<span class="nc" id="L197">    }</span>
-
+    
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

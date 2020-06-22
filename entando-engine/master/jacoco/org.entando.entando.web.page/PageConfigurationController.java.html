@@ -11,10 +11,10 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package org.entando.entando.web.page;
 
 import com.agiletec.aps.system.services.role.Permission;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -64,25 +64,27 @@ import org.springframework.web.bind.annotation.RestController;
 
     @RestAccessControl(permission = Permission.SUPERUSER)
     @RequestMapping(value = &quot;/pages/{pageCode}/configuration&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity&lt;RestResponse&lt;PageConfigurationDto, Map&gt;&gt; getPageConfiguration(@PathVariable String pageCode,
-            @RequestParam(value = &quot;status&quot;, required = false, defaultValue = IPageService.STATUS_DRAFT) String status) {
-<span class="nc" id="L69">        logger.debug(&quot;requested {} configuration&quot;, pageCode);</span>
-<span class="nc" id="L70">        PageConfigurationDto pageConfiguration = this.getPageService().getPageConfiguration(pageCode, status);</span>
-<span class="nc" id="L71">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L72">        metadata.put(&quot;status&quot;, status);</span>
-<span class="nc" id="L73">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(pageConfiguration, metadata), HttpStatus.OK);</span>
+    public ResponseEntity&lt;RestResponse&lt;PageConfigurationDto, Map&gt;&gt; getPageConfiguration(@PathVariable String pageCode, @RequestParam(value = &quot;status&quot;, required = false, defaultValue = IPageService.STATUS_DRAFT) String status) {
+<span class="nc" id="L68">        logger.debug(&quot;requested {} configuration&quot;, pageCode);</span>
+<span class="nc" id="L69">        PageConfigurationDto pageConfiguration = this.getPageService().getPageConfiguration(pageCode, status);</span>
+<span class="nc" id="L70">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L71">        metadata.put(&quot;status&quot;, status);</span>
+<span class="nc" id="L72">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(pageConfiguration, metadata), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.SUPERUSER)
     @RequestMapping(value = &quot;/pages/{pageCode}/widgets&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity&lt;RestResponse&lt;List&lt;WidgetConfigurationDto&gt;, Map&gt;&gt; getPageWidgets(@PathVariable String pageCode,
-            @RequestParam(value = &quot;status&quot;, required = false, defaultValue = IPageService.STATUS_DRAFT) String status) {
-<span class="nc" id="L80">        logger.debug(&quot;requested {} widgets detail&quot;, pageCode);</span>
-<span class="nc" id="L81">        PageConfigurationDto pageConfiguration = this.getPageService().getPageConfiguration(pageCode, status);</span>
-<span class="nc" id="L82">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L83">        metadata.put(&quot;status&quot;, status);</span>
+    public ResponseEntity&lt;RestResponse&lt;List&lt;WidgetConfigurationDto&gt;, Map&gt;&gt; getPageWidgets(@PathVariable String pageCode, @RequestParam(value = &quot;status&quot;, required = false, defaultValue = IPageService.STATUS_DRAFT) String status) {
+<span class="nc" id="L78">        logger.debug(&quot;requested {} widgets detail&quot;, pageCode);</span>
+<span class="nc" id="L79">        PageConfigurationDto pageConfiguration = this.getPageService().getPageConfiguration(pageCode, status);</span>
+<span class="nc" id="L80">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L81">        metadata.put(&quot;status&quot;, status);</span>
 
-<span class="nc" id="L85">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(Arrays.asList(pageConfiguration.getWidgets()), metadata), HttpStatus.OK);</span>
+<span class="nc" id="L83">        List&lt;WidgetConfigurationDto&gt; widgetConfigDtos = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">        if(pageConfiguration.getWidgets() != null){</span>
+<span class="nc" id="L85">            widgetConfigDtos = Arrays.asList(pageConfiguration.getWidgets());</span>
+        }
+<span class="nc" id="L87">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(widgetConfigDtos, metadata), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.SUPERUSER)
@@ -91,21 +93,20 @@ import org.springframework.web.bind.annotation.RestController;
             @PathVariable String frameId,
             @RequestParam(value = &quot;status&quot;, required = false, defaultValue = IPageService.STATUS_DRAFT) String status
     ) {
-<span class="nc" id="L94">        logger.debug(&quot;requested widget detail for page {} and frame {}&quot;, pageCode, frameId);</span>
+<span class="nc" id="L96">        logger.debug(&quot;requested widget detail for page {} and frame {}&quot;, pageCode, frameId);</span>
 
-<span class="nc" id="L96">        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(frameId, &quot;frameId&quot;);</span>
-<span class="nc" id="L97">        this.validateFrameId(frameId, bindingResult);</span>
+<span class="nc" id="L98">        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(frameId, &quot;frameId&quot;);</span>
+<span class="nc" id="L99">        this.validateFrameId(frameId, bindingResult);</span>
 
-<span class="nc bnc" id="L99" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L100">            throw new ValidationGenericException(bindingResult);</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L102">            throw new ValidationGenericException(bindingResult);</span>
         }
 
-<span class="nc" id="L103">        WidgetConfigurationDto widgetConfiguration = this.getPageService()</span>
-<span class="nc" id="L104">                .getWidgetConfiguration(pageCode, Integer.valueOf(frameId), status);</span>
+<span class="nc" id="L105">        WidgetConfigurationDto widgetConfiguration = this.getPageService().getWidgetConfiguration(pageCode, Integer.valueOf(frameId), status);</span>
 
-<span class="nc" id="L106">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L107">        metadata.put(&quot;status&quot;, status);</span>
-<span class="nc" id="L108">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(widgetConfiguration, metadata), HttpStatus.OK);</span>
+<span class="nc" id="L107">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L108">        metadata.put(&quot;status&quot;, status);</span>
+<span class="nc" id="L109">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(widgetConfiguration, metadata), HttpStatus.OK);</span>
     }
 
     @ActivityStreamAuditable
@@ -116,15 +117,14 @@ import org.springframework.web.bind.annotation.RestController;
             @PathVariable String frameId,
             @Valid @RequestBody WidgetConfigurationRequest widget,
             BindingResult bindingResult) {
-<span class="nc" id="L119">        logger.debug(&quot;updating widget configuration in page {} and frame {}&quot;, pageCode, frameId);</span>
+<span class="nc" id="L120">        logger.debug(&quot;updating widget configuration in page {} and frame {}&quot;, pageCode, frameId);</span>
 
-<span class="nc" id="L121">        this.validateFrameId(frameId, bindingResult);</span>
-<span class="nc bnc" id="L122" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L123">            throw new ValidationGenericException(bindingResult);</span>
+<span class="nc" id="L122">        this.validateFrameId(frameId, bindingResult);</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L124">            throw new ValidationGenericException(bindingResult);</span>
         }
 
-<span class="nc" id="L126">        WidgetConfigurationDto widgetConfiguration = this.getPageService()</span>
-<span class="nc" id="L127">                .updateWidgetConfiguration(pageCode, Integer.valueOf(frameId), widget);</span>
+<span class="nc" id="L127">        WidgetConfigurationDto widgetConfiguration = this.getPageService().updateWidgetConfiguration(pageCode, Integer.valueOf(frameId), widget);</span>
 <span class="nc" id="L128">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
 <span class="nc" id="L129">        metadata.put(&quot;status&quot;, IPageService.STATUS_DRAFT);</span>
 <span class="nc" id="L130">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(widgetConfiguration, metadata), HttpStatus.OK);</span>
@@ -132,49 +132,46 @@ import org.springframework.web.bind.annotation.RestController;
 
     @ActivityStreamAuditable
     @RestAccessControl(permission = Permission.SUPERUSER)
-    @RequestMapping(value = &quot;/pages/{pageCode}/widgets/{frameId}&quot;, method = RequestMethod.DELETE, produces =
-            MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = &quot;/pages/{pageCode}/widgets/{frameId}&quot;, method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;RestResponse&lt;Map, Map&gt;&gt; deletePageWidget(@PathVariable String pageCode, @PathVariable String frameId) {
-<span class="nc" id="L138">        logger.debug(&quot;removing widget configuration in page {} and frame {}&quot;, pageCode, frameId);</span>
-<span class="nc" id="L139">        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(frameId, &quot;frameId&quot;);</span>
-<span class="nc" id="L140">        this.validateFrameId(frameId, bindingResult);</span>
-<span class="nc bnc" id="L141" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L142">            throw new ValidationGenericException(bindingResult);</span>
+<span class="nc" id="L137">        logger.debug(&quot;removing widget configuration in page {} and frame {}&quot;, pageCode, frameId);</span>
+<span class="nc" id="L138">        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(frameId, &quot;frameId&quot;);</span>
+<span class="nc" id="L139">        this.validateFrameId(frameId, bindingResult);</span>
+<span class="nc bnc" id="L140" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L141">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="nc" id="L144">        this.getPageService().deleteWidgetConfiguration(pageCode, Integer.valueOf(frameId));</span>
-<span class="nc" id="L145">        Map&lt;String, String&gt; result = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L146">        result.put(&quot;code&quot;, frameId);</span>
-<span class="nc" id="L147">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L148">        metadata.put(&quot;status&quot;, IPageService.STATUS_DRAFT);</span>
-<span class="nc" id="L149">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(result, metadata), HttpStatus.OK);</span>
+<span class="nc" id="L143">        this.getPageService().deleteWidgetConfiguration(pageCode, Integer.valueOf(frameId));</span>
+<span class="nc" id="L144">        Map&lt;String, String&gt; result = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L145">        result.put(&quot;code&quot;, frameId);</span>
+<span class="nc" id="L146">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L147">        metadata.put(&quot;status&quot;, IPageService.STATUS_DRAFT);</span>
+<span class="nc" id="L148">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(result, metadata), HttpStatus.OK);</span>
     }
 
     @ActivityStreamAuditable
     @RestAccessControl(permission = Permission.SUPERUSER)
-    @RequestMapping(value = &quot;/pages/{pageCode}/configuration/restore&quot;, method = RequestMethod.PUT, produces =
-            MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = &quot;/pages/{pageCode}/configuration/restore&quot;, method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;RestResponse&lt;PageConfigurationDto, Map&gt;&gt; updatePageConfiguration(@PathVariable String pageCode) {
-<span class="nc" id="L157">        logger.debug(&quot;restore configuration on page {}&quot;, pageCode);</span>
-<span class="nc" id="L158">        PageConfigurationDto pageConfiguration = this.getPageService().restorePageConfiguration(pageCode);</span>
-<span class="nc" id="L159">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L160">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(pageConfiguration, metadata), HttpStatus.OK);</span>
+<span class="nc" id="L155">        logger.debug(&quot;restore configuration on page {}&quot;, pageCode);</span>
+<span class="nc" id="L156">        PageConfigurationDto pageConfiguration = this.getPageService().restorePageConfiguration(pageCode);</span>
+<span class="nc" id="L157">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L158">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(pageConfiguration, metadata), HttpStatus.OK);</span>
     }
 
     @ActivityStreamAuditable
     @RestAccessControl(permission = Permission.SUPERUSER)
-    @RequestMapping(value = &quot;/pages/{pageCode}/configuration/defaultWidgets&quot;, method = RequestMethod.PUT, produces =
-            MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(value = &quot;/pages/{pageCode}/configuration/defaultWidgets&quot;, method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;PageConfigurationDto&gt;&gt; applyDefaultWidgetsPageConfiguration(@PathVariable String pageCode) {
-<span class="nc" id="L168">        logger.debug(&quot;applying default widgets on page {}&quot;, pageCode);</span>
-<span class="nc" id="L169">        PageConfigurationDto pageConfiguration = this.getPageService().applyDefaultWidgets(pageCode);</span>
-<span class="nc" id="L170">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(pageConfiguration), HttpStatus.OK);</span>
+<span class="nc" id="L165">        logger.debug(&quot;applying default widgets on page {}&quot;, pageCode);</span>
+<span class="nc" id="L166">        PageConfigurationDto pageConfiguration = this.getPageService().applyDefaultWidgets(pageCode);</span>
+<span class="nc" id="L167">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(pageConfiguration), HttpStatus.OK);</span>
     }
 
     protected void validateFrameId(String frameId, BindingResult errors) {
-<span class="nc bnc" id="L174" title="All 2 branches missed.">        if (!StringUtils.isNumeric(frameId)) {</span>
-<span class="nc" id="L175">            errors.reject(EntandoMessageCodesResolver.ERR_CODE_URI_PARAMETER, new Object[]{frameId}, &quot;invalidParameter.framedId&quot;);</span>
+<span class="nc bnc" id="L171" title="All 2 branches missed.">        if (!StringUtils.isNumeric(frameId)) {</span>
+<span class="nc" id="L172">            errors.reject(EntandoMessageCodesResolver.ERR_CODE_URI_PARAMETER, new Object[]{frameId}, &quot;invalidParameter.framedId&quot;);</span>
         }
-<span class="nc" id="L177">    }</span>
+<span class="nc" id="L174">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

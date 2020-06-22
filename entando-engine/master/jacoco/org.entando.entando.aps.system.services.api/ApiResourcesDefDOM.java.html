@@ -11,24 +11,23 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package org.entando.entando.aps.system.services.api;
 
-import com.agiletec.aps.system.exception.ApsSystemException;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringReader;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
 import javax.xml.XMLConstants;
 import javax.xml.transform.Source;
 import javax.xml.transform.stream.StreamSource;
 import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
 import javax.xml.validation.Validator;
+
 import org.entando.entando.aps.system.services.api.model.ApiMethod;
 import org.entando.entando.aps.system.services.api.model.ApiResource;
 import org.jdom.Document;
@@ -37,16 +36,152 @@ import org.jdom.input.SAXBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.agiletec.aps.system.exception.ApsSystemException;
+import java.nio.charset.StandardCharsets;
+
 /**
  * @author E.Santoboni
  */
 public class ApiResourcesDefDOM {
 
+<span class="nc" id="L47">	private static final Logger _logger =  LoggerFactory.getLogger(ApiResourcesDefDOM.class);</span>
+	
+<span class="nc" id="L49">    public ApiResourcesDefDOM(String xmlText, String definitionPath) throws ApsSystemException {</span>
+<span class="nc" id="L50">        this.validate(xmlText, definitionPath);</span>
+<span class="nc" id="L51">        _logger.debug(&quot;Loading Resources from file : {}&quot;, definitionPath);</span>
+<span class="nc" id="L52">        this.decodeDOM(xmlText);</span>
+<span class="nc" id="L53">    }</span>
+    
+    private void validate(String xmlText, String definitionPath) throws ApsSystemException {
+<span class="nc" id="L56">        SchemaFactory factory =</span>
+<span class="nc" id="L57">                SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);</span>
+<span class="nc" id="L58">        InputStream schemaIs = null;</span>
+<span class="nc" id="L59">        InputStream xmlIs = null;</span>
+        try {
+<span class="nc" id="L61">            schemaIs = this.getClass().getResourceAsStream(&quot;apiMethodsDef-4.0.xsd&quot;);</span>
+<span class="nc" id="L62">            Source schemaSource = new StreamSource(schemaIs);</span>
+<span class="nc" id="L63">            Schema schema = factory.newSchema(schemaSource);</span>
+<span class="nc" id="L64">            Validator validator = schema.newValidator();</span>
+<span class="nc" id="L65">            xmlIs = new ByteArrayInputStream(xmlText.getBytes(StandardCharsets.UTF_8));</span>
+<span class="nc" id="L66">            Source source = new StreamSource(xmlIs);</span>
+<span class="nc" id="L67">            validator.validate(source);</span>
+<span class="nc" id="L68">            _logger.debug(&quot;Valid api methods definition : {}&quot;, definitionPath);</span>
+<span class="nc" id="L69">        } catch (Throwable t) {</span>
+<span class="nc" id="L70">            String message = &quot;Error validating api methods definition : &quot; + definitionPath;</span>
+<span class="nc" id="L71">            _logger.error(&quot;Error validating api methods definition : {}&quot;, definitionPath, t);</span>
+<span class="nc" id="L72">            throw new ApsSystemException(message, t);</span>
+        } finally {
+            try {
+<span class="nc bnc" id="L75" title="All 2 branches missed.">                if (null != schemaIs) {</span>
+<span class="nc" id="L76">                    schemaIs.close();</span>
+                }
+<span class="nc bnc" id="L78" title="All 2 branches missed.">                if (null != xmlIs) {</span>
+<span class="nc" id="L79">                    xmlIs.close();</span>
+                }
+<span class="nc" id="L81">            } catch (IOException e) {</span>
+<span class="nc" id="L82">            	_logger.error(&quot;error in validate&quot;, e);</span>
+<span class="nc" id="L83">            }</span>
+        }
+<span class="nc" id="L85">    }</span>
+    
+    public Map&lt;String, ApiResource&gt; getResources() {
+<span class="nc" id="L88">        Map&lt;String, ApiResource&gt; apiResources = new HashMap&lt;String, ApiResource&gt;();</span>
+        try {
+<span class="nc" id="L90">            List&lt;Element&gt; methodElements = this._doc.getRootElement().getChildren(METHOD_ELEMENT_NAME);</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">            if (null != methodElements) {</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">                for (int i = 0; i &lt; methodElements.size(); i++) {</span>
+<span class="nc" id="L93">                    Element methodElement = methodElements.get(i);</span>
+<span class="nc" id="L94">                    ApiMethod apiMethod = new ApiMethod(methodElement);</span>
+<span class="nc" id="L95">                    ApiResource resource = new ApiResource();</span>
+<span class="nc" id="L96">                    resource.setResourceName(apiMethod.getResourceName());</span>
+<span class="nc" id="L97">                    resource.setNamespace(apiMethod.getNamespace());</span>
+<span class="nc" id="L98">                    resource.setDescription(apiMethod.getDescription());</span>
+<span class="nc" id="L99">                    resource.setPluginCode(apiMethod.getPluginCode());</span>
+<span class="nc" id="L100">                    resource.setSource(apiMethod.getSource());</span>
+<span class="nc" id="L101">                    resource.setMethod(apiMethod);</span>
+<span class="nc" id="L102">                    this.checkResource(resource, apiResources);</span>
+                }
+            }
+<span class="nc" id="L105">            List&lt;Element&gt; resourceElements = this._doc.getRootElement().getChildren(RESOURCE_ELEMENT_NAME);</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">            if (null != resourceElements) {</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">                for (int j = 0; j &lt; resourceElements.size(); j++) {</span>
+<span class="nc" id="L108">                    Element resourceElement = resourceElements.get(j);</span>
+<span class="nc" id="L109">                    String resourceName = resourceElement.getAttributeValue(RESOURCE_ATTRIBUTE_NAME);</span>
+<span class="nc" id="L110">                    String namespace = resourceElement.getAttributeValue(RESOURCE_ATTRIBUTE_NAMESPACE);</span>
+<span class="nc" id="L111">                    Element descriptionElement = resourceElement.getChild(RESOURCE_DESCRIPTION_ELEMENT_NAME);</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">                    String resourceDescription = (null != descriptionElement) ? descriptionElement.getText() : null;</span>
+<span class="nc" id="L113">                    Element sourceElement = resourceElement.getChild(ApiResourcesDefDOM.SOURCE_ELEMENT_NAME);</span>
+<span class="nc" id="L114">                    String source = null;</span>
+<span class="nc" id="L115">                    String pluginCode = null;</span>
+<span class="nc bnc" id="L116" title="All 2 branches missed.">                    if (null != sourceElement) {</span>
+<span class="nc" id="L117">                        source = sourceElement.getText();</span>
+<span class="nc" id="L118">                        pluginCode = sourceElement.getAttributeValue(PLUGIN_CODE_ATTRIBUTE_NAME);</span>
+                    }
+<span class="nc" id="L120">                    ApiResource resource = new ApiResource();</span>
+<span class="nc" id="L121">                    resource.setResourceName(resourceName);</span>
+<span class="nc" id="L122">					resource.setNamespace(namespace);</span>
+<span class="nc" id="L123">                    resource.setDescription(resourceDescription);</span>
+<span class="nc" id="L124">                    resource.setPluginCode(pluginCode);</span>
+<span class="nc" id="L125">                    resource.setSource(source);</span>
+<span class="nc" id="L126">                    List&lt;Element&gt; resourceMethodElements = resourceElement.getChildren(METHOD_ELEMENT_NAME);</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">                    for (int k = 0; k &lt; resourceMethodElements.size(); k++) {</span>
+<span class="nc" id="L128">                        Element methodElement = resourceMethodElements.get(k);</span>
+<span class="nc" id="L129">                        ApiMethod apiMethod = new ApiMethod(resourceName, namespace, source, pluginCode, methodElement);</span>
+<span class="nc" id="L130">                        this.checkMethod(apiMethod, resource);</span>
+                    }
+<span class="nc" id="L132">                    this.checkResource(resource, apiResources);</span>
+                }
+            }
+<span class="nc" id="L135">        } catch (Throwable t) {</span>
+<span class="nc" id="L136">        	_logger.error(&quot;Error building api resources&quot;, t);</span>
+<span class="nc" id="L137">        }</span>
+<span class="nc" id="L138">        return apiResources;</span>
+    }
+    
+    private void checkResource(ApiResource resource, Map&lt;String, ApiResource&gt; apiResources) {
+        try {
+<span class="nc" id="L143">			ApiResource extractedResource = apiResources.get(resource.getCode());</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">            if (null != extractedResource) {</span>
+<span class="nc" id="L145">                _logger.error(&quot;ALERT: There is more than one API with namespace '{}', resource '{}' into the same definitions file - The second definition will be ignored!!!&quot;, resource.getNamespace(), resource.getResourceName());</span>
+            } else {
+<span class="nc" id="L147">                apiResources.put(resource.getCode(), resource);</span>
+            }
+<span class="nc" id="L149">        } catch (Exception e) {</span>
+<span class="nc" id="L150">        	_logger.error(&quot;Error checking api resource&quot;, e);</span>
+<span class="nc" id="L151">        }</span>
+<span class="nc" id="L152">    }</span>
+    
+    private void checkMethod(ApiMethod apiMethod, ApiResource resource) {
+        try {
+<span class="nc" id="L156">            ApiMethod extractedMethod = resource.getMethod(apiMethod.getHttpMethod());</span>
+<span class="nc bnc" id="L157" title="All 2 branches missed.">            if (null != extractedMethod) {</span>
+<span class="nc" id="L158">                _logger.error(&quot;ALERT: There is more than one API method {} for resource '{}' into the same definitions file - The second definition will be ignored!!!&quot;, apiMethod.getHttpMethod(), apiMethod.getResourceName() );</span>
+            } else {
+<span class="nc" id="L160">                resource.setMethod(apiMethod);</span>
+            }
+<span class="nc" id="L162">        } catch (Exception e) {</span>
+<span class="nc" id="L163">        	_logger.error(&quot;Error checking api method&quot;, e);</span>
+<span class="nc" id="L164">        }</span>
+<span class="nc" id="L165">    }</span>
+    
+    private void decodeDOM(String xmlText) throws ApsSystemException {
+<span class="nc" id="L168">        SAXBuilder builder = new SAXBuilder();</span>
+<span class="nc" id="L169">        builder.setValidation(false);</span>
+<span class="nc" id="L170">        StringReader reader = new StringReader(xmlText);</span>
+        try {
+<span class="nc" id="L172">            this._doc = builder.build(reader);</span>
+<span class="nc" id="L173">        } catch (Throwable t) {</span>
+<span class="nc" id="L174">            _logger.error(&quot;Error while parsing xml: {}&quot;, xmlText, t);</span>
+<span class="nc" id="L175">            throw new ApsSystemException(&quot;Error detected while parsing the XML&quot;, t);</span>
+<span class="nc" id="L176">        }</span>
+<span class="nc" id="L177">    }</span>
+    
+    private Document _doc;
     public static final String ROOT_ELEMENT_NAME = &quot;apiMethodDefinitions&quot;;
     public static final String METHOD_ELEMENT_NAME = &quot;method&quot;;
     public static final String RESOURCE_ELEMENT_NAME = &quot;resource&quot;;
     public static final String RESOURCE_ATTRIBUTE_NAME = &quot;name&quot;;
-    public static final String RESOURCE_ATTRIBUTE_NAMESPACE = &quot;namespace&quot;;
+	public static final String RESOURCE_ATTRIBUTE_NAMESPACE = &quot;namespace&quot;;
     public static final String RESOURCE_DESCRIPTION_ELEMENT_NAME = &quot;description&quot;;
     public static final String METHOD_DESCRIPTION_ELEMENT_NAME = &quot;description&quot;;
     public static final String ACTIVE_ATTRIBUTE_NAME = &quot;active&quot;;
@@ -71,164 +206,27 @@ public class ApiResourcesDefDOM {
     public static final String RELATED_WIDGET_MAP_PARAMETER_ELEMENT_NAME = &quot;mapParameter&quot;;
     public static final String RELATED_WIDGET_MAP_PARAMETER_WIDGET_ATTRIBUTE_NAME = &quot;widget&quot;;
     public static final String RELATED_WIDGET_MAP_PARAMETER_METHOD_ATTRIBUTE_NAME = &quot;method&quot;;
-    /**
-     * @deprecated Use {@link #RELATED_WIDGET_ELEMENT_NAME} instead
-     */
-    public static final String RELATED_SHOWLET_ELEMENT_NAME = RELATED_WIDGET_ELEMENT_NAME;
-    /**
-     * @deprecated Use {@link #RELATED_WIDGET_CODE_ATTRIBUTE_NAME} instead
-     */
-    public static final String RELATED_SHOWLET_CODE_ATTRIBUTE_NAME = RELATED_WIDGET_CODE_ATTRIBUTE_NAME;
-    /**
-     * @deprecated Use {@link #RELATED_WIDGET_MAP_PARAMETER_ELEMENT_NAME} instead
-     */
-    public static final String RELATED_SHOWLET_MAP_PARAMETER_ELEMENT_NAME = RELATED_WIDGET_MAP_PARAMETER_ELEMENT_NAME;
-    /**
-     * @deprecated Use {@link #RELATED_WIDGET_MAP_PARAMETER_WIDGET_ATTRIBUTE_NAME} instead
-     */
-    public static final String RELATED_SHOWLET_MAP_PARAMETER_SHOWLET_ATTRIBUTE_NAME = RELATED_WIDGET_MAP_PARAMETER_WIDGET_ATTRIBUTE_NAME;
-    /**
-     * @deprecated Use {@link #RELATED_WIDGET_MAP_PARAMETER_METHOD_ATTRIBUTE_NAME} instead
-     */
-    public static final String RELATED_SHOWLET_MAP_PARAMETER_METHOD_ATTRIBUTE_NAME = RELATED_WIDGET_MAP_PARAMETER_METHOD_ATTRIBUTE_NAME;
-<span class="nc" id="L94">    private static final Logger _logger = LoggerFactory.getLogger(ApiResourcesDefDOM.class);</span>
-    private Document _doc;
-
-<span class="nc" id="L97">    public ApiResourcesDefDOM(String xmlText, String definitionPath) throws ApsSystemException {</span>
-<span class="nc" id="L98">        this.validate(xmlText, definitionPath);</span>
-<span class="nc" id="L99">        _logger.debug(&quot;Loading Resources from file : {}&quot;, definitionPath);</span>
-<span class="nc" id="L100">        this.decodeDOM(xmlText);</span>
-<span class="nc" id="L101">    }</span>
-
-    private void validate(String xmlText, String definitionPath) throws ApsSystemException {
-<span class="nc" id="L104">        SchemaFactory factory =</span>
-<span class="nc" id="L105">                SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);</span>
-<span class="nc" id="L106">        InputStream schemaIs = null;</span>
-<span class="nc" id="L107">        InputStream xmlIs = null;</span>
-        try {
-<span class="nc" id="L109">            schemaIs = this.getClass().getResourceAsStream(&quot;apiMethodsDef-4.0.xsd&quot;);</span>
-<span class="nc" id="L110">            Source schemaSource = new StreamSource(schemaIs);</span>
-<span class="nc" id="L111">            Schema schema = factory.newSchema(schemaSource);</span>
-<span class="nc" id="L112">            Validator validator = schema.newValidator();</span>
-<span class="nc" id="L113">            xmlIs = new ByteArrayInputStream(xmlText.getBytes(StandardCharsets.UTF_8));</span>
-<span class="nc" id="L114">            Source source = new StreamSource(xmlIs);</span>
-<span class="nc" id="L115">            validator.validate(source);</span>
-<span class="nc" id="L116">            _logger.debug(&quot;Valid api methods definition : {}&quot;, definitionPath);</span>
-<span class="nc" id="L117">        } catch (Throwable t) {</span>
-<span class="nc" id="L118">            String message = &quot;Error validating api methods definition : &quot; + definitionPath;</span>
-<span class="nc" id="L119">            _logger.error(&quot;Error validating api methods definition : {}&quot;, definitionPath, t);</span>
-<span class="nc" id="L120">            throw new ApsSystemException(message, t);</span>
-        } finally {
-            try {
-<span class="nc bnc" id="L123" title="All 2 branches missed.">                if (null != schemaIs) {</span>
-<span class="nc" id="L124">                    schemaIs.close();</span>
-                }
-<span class="nc bnc" id="L126" title="All 2 branches missed.">                if (null != xmlIs) {</span>
-<span class="nc" id="L127">                    xmlIs.close();</span>
-                }
-<span class="nc" id="L129">            } catch (IOException e) {</span>
-<span class="nc" id="L130">                _logger.error(&quot;error in validate&quot;, e);</span>
-<span class="nc" id="L131">            }</span>
-        }
-<span class="nc" id="L133">    }</span>
-
-    public Map&lt;String, ApiResource&gt; getResources() {
-<span class="nc" id="L136">        Map&lt;String, ApiResource&gt; apiResources = new HashMap&lt;String, ApiResource&gt;();</span>
-        try {
-<span class="nc" id="L138">            List&lt;Element&gt; methodElements = this._doc.getRootElement().getChildren(METHOD_ELEMENT_NAME);</span>
-<span class="nc bnc" id="L139" title="All 2 branches missed.">            if (null != methodElements) {</span>
-<span class="nc bnc" id="L140" title="All 2 branches missed.">                for (int i = 0; i &lt; methodElements.size(); i++) {</span>
-<span class="nc" id="L141">                    Element methodElement = methodElements.get(i);</span>
-<span class="nc" id="L142">                    ApiMethod apiMethod = new ApiMethod(methodElement);</span>
-<span class="nc" id="L143">                    ApiResource resource = new ApiResource();</span>
-<span class="nc" id="L144">                    resource.setResourceName(apiMethod.getResourceName());</span>
-<span class="nc" id="L145">                    resource.setNamespace(apiMethod.getNamespace());</span>
-<span class="nc" id="L146">                    resource.setDescription(apiMethod.getDescription());</span>
-<span class="nc" id="L147">                    resource.setPluginCode(apiMethod.getPluginCode());</span>
-<span class="nc" id="L148">                    resource.setSource(apiMethod.getSource());</span>
-<span class="nc" id="L149">                    resource.setMethod(apiMethod);</span>
-<span class="nc" id="L150">                    this.checkResource(resource, apiResources);</span>
-                }
-            }
-<span class="nc" id="L153">            List&lt;Element&gt; resourceElements = this._doc.getRootElement().getChildren(RESOURCE_ELEMENT_NAME);</span>
-<span class="nc bnc" id="L154" title="All 2 branches missed.">            if (null != resourceElements) {</span>
-<span class="nc bnc" id="L155" title="All 2 branches missed.">                for (int j = 0; j &lt; resourceElements.size(); j++) {</span>
-<span class="nc" id="L156">                    Element resourceElement = resourceElements.get(j);</span>
-<span class="nc" id="L157">                    String resourceName = resourceElement.getAttributeValue(RESOURCE_ATTRIBUTE_NAME);</span>
-<span class="nc" id="L158">                    String namespace = resourceElement.getAttributeValue(RESOURCE_ATTRIBUTE_NAMESPACE);</span>
-<span class="nc" id="L159">                    Element descriptionElement = resourceElement.getChild(RESOURCE_DESCRIPTION_ELEMENT_NAME);</span>
-<span class="nc bnc" id="L160" title="All 2 branches missed.">                    String resourceDescription = (null != descriptionElement) ? descriptionElement.getText() : null;</span>
-<span class="nc" id="L161">                    Element sourceElement = resourceElement.getChild(ApiResourcesDefDOM.SOURCE_ELEMENT_NAME);</span>
-<span class="nc" id="L162">                    String source = null;</span>
-<span class="nc" id="L163">                    String pluginCode = null;</span>
-<span class="nc bnc" id="L164" title="All 2 branches missed.">                    if (null != sourceElement) {</span>
-<span class="nc" id="L165">                        source = sourceElement.getText();</span>
-<span class="nc" id="L166">                        pluginCode = sourceElement.getAttributeValue(PLUGIN_CODE_ATTRIBUTE_NAME);</span>
-                    }
-<span class="nc" id="L168">                    ApiResource resource = new ApiResource();</span>
-<span class="nc" id="L169">                    resource.setResourceName(resourceName);</span>
-<span class="nc" id="L170">                    resource.setNamespace(namespace);</span>
-<span class="nc" id="L171">                    resource.setDescription(resourceDescription);</span>
-<span class="nc" id="L172">                    resource.setPluginCode(pluginCode);</span>
-<span class="nc" id="L173">                    resource.setSource(source);</span>
-<span class="nc" id="L174">                    List&lt;Element&gt; resourceMethodElements = resourceElement.getChildren(METHOD_ELEMENT_NAME);</span>
-<span class="nc bnc" id="L175" title="All 2 branches missed.">                    for (int k = 0; k &lt; resourceMethodElements.size(); k++) {</span>
-<span class="nc" id="L176">                        Element methodElement = resourceMethodElements.get(k);</span>
-<span class="nc" id="L177">                        ApiMethod apiMethod = new ApiMethod(resourceName, namespace, source, pluginCode, methodElement);</span>
-<span class="nc" id="L178">                        this.checkMethod(apiMethod, resource);</span>
-                    }
-<span class="nc" id="L180">                    this.checkResource(resource, apiResources);</span>
-                }
-            }
-<span class="nc" id="L183">        } catch (Throwable t) {</span>
-<span class="nc" id="L184">            _logger.error(&quot;Error building api resources&quot;, t);</span>
-<span class="nc" id="L185">        }</span>
-<span class="nc" id="L186">        return apiResources;</span>
-    }
-
-    private void checkResource(ApiResource resource, Map&lt;String, ApiResource&gt; apiResources) {
-        try {
-<span class="nc" id="L191">            ApiResource extractedResource = apiResources.get(resource.getCode());</span>
-<span class="nc bnc" id="L192" title="All 2 branches missed.">            if (null != extractedResource) {</span>
-<span class="nc" id="L193">                _logger.error(</span>
-                        &quot;ALERT: There is more than one API with namespace '{}', resource '{}' into the same definitions file - The second&quot;
-                                + &quot; definition will be ignored!!!&quot;,
-<span class="nc" id="L196">                        resource.getNamespace(), resource.getResourceName());</span>
-            } else {
-<span class="nc" id="L198">                apiResources.put(resource.getCode(), resource);</span>
-            }
-<span class="nc" id="L200">        } catch (Exception e) {</span>
-<span class="nc" id="L201">            _logger.error(&quot;Error checking api resource&quot;, e);</span>
-<span class="nc" id="L202">        }</span>
-<span class="nc" id="L203">    }</span>
-
-    private void checkMethod(ApiMethod apiMethod, ApiResource resource) {
-        try {
-<span class="nc" id="L207">            ApiMethod extractedMethod = resource.getMethod(apiMethod.getHttpMethod());</span>
-<span class="nc bnc" id="L208" title="All 2 branches missed.">            if (null != extractedMethod) {</span>
-<span class="nc" id="L209">                _logger.error(</span>
-                        &quot;ALERT: There is more than one API method {} for resource '{}' into the same definitions file - The second &quot;
-                                + &quot;definition will be ignored!!!&quot;,
-<span class="nc" id="L212">                        apiMethod.getHttpMethod(), apiMethod.getResourceName());</span>
-            } else {
-<span class="nc" id="L214">                resource.setMethod(apiMethod);</span>
-            }
-<span class="nc" id="L216">        } catch (Exception e) {</span>
-<span class="nc" id="L217">            _logger.error(&quot;Error checking api method&quot;, e);</span>
-<span class="nc" id="L218">        }</span>
-<span class="nc" id="L219">    }</span>
-
-    private void decodeDOM(String xmlText) throws ApsSystemException {
-<span class="nc" id="L222">        SAXBuilder builder = new SAXBuilder();</span>
-<span class="nc" id="L223">        builder.setValidation(false);</span>
-<span class="nc" id="L224">        StringReader reader = new StringReader(xmlText);</span>
-        try {
-<span class="nc" id="L226">            this._doc = builder.build(reader);</span>
-<span class="nc" id="L227">        } catch (Throwable t) {</span>
-<span class="nc" id="L228">            _logger.error(&quot;Error while parsing xml: {}&quot;, xmlText, t);</span>
-<span class="nc" id="L229">            throw new ApsSystemException(&quot;Error detected while parsing the XML&quot;, t);</span>
-<span class="nc" id="L230">        }</span>
-<span class="nc" id="L231">    }</span>
-
+        
+	/**
+	 * @deprecated Use {@link #RELATED_WIDGET_ELEMENT_NAME} instead
+	 */
+	public static final String RELATED_SHOWLET_ELEMENT_NAME = RELATED_WIDGET_ELEMENT_NAME;
+	/**
+	 * @deprecated Use {@link #RELATED_WIDGET_CODE_ATTRIBUTE_NAME} instead
+	 */
+	public static final String RELATED_SHOWLET_CODE_ATTRIBUTE_NAME = RELATED_WIDGET_CODE_ATTRIBUTE_NAME;
+	/**
+	 * @deprecated Use {@link #RELATED_WIDGET_MAP_PARAMETER_ELEMENT_NAME} instead
+	 */
+	public static final String RELATED_SHOWLET_MAP_PARAMETER_ELEMENT_NAME = RELATED_WIDGET_MAP_PARAMETER_ELEMENT_NAME;
+	/**
+	 * @deprecated Use {@link #RELATED_WIDGET_MAP_PARAMETER_WIDGET_ATTRIBUTE_NAME} instead
+	 */
+	public static final String RELATED_SHOWLET_MAP_PARAMETER_SHOWLET_ATTRIBUTE_NAME = RELATED_WIDGET_MAP_PARAMETER_WIDGET_ATTRIBUTE_NAME;
+	/**
+	 * @deprecated Use {@link #RELATED_WIDGET_MAP_PARAMETER_METHOD_ATTRIBUTE_NAME} instead
+	 */
+	public static final String RELATED_SHOWLET_MAP_PARAMETER_METHOD_ATTRIBUTE_NAME = RELATED_WIDGET_MAP_PARAMETER_METHOD_ATTRIBUTE_NAME;
+	
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

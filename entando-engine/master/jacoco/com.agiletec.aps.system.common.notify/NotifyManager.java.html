@@ -11,13 +11,11 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package com.agiletec.aps.system.common.notify;
 
-import com.agiletec.aps.system.SystemConstants;
-import com.agiletec.aps.util.DateConverter;
 import java.io.Serializable;
 import java.util.Date;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
@@ -29,72 +27,75 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
 import org.springframework.context.ApplicationListener;
 
+import com.agiletec.aps.system.SystemConstants;
+import com.agiletec.aps.util.DateConverter;
+
 /**
  * Servizio notificatore eventi.
- *
  * @author M.Diana - E.Santoboni
  */
-<span class="nc" id="L37">public class NotifyManager implements INotifyManager, ApplicationListener,</span>
-        BeanFactoryAware, ApplicationEventPublisherAware, Serializable {
+<span class="nc" id="L37">public class NotifyManager implements INotifyManager, ApplicationListener, </span>
+BeanFactoryAware, ApplicationEventPublisherAware, Serializable {
 
-    public static final String NOTIFYING_THREAD_NAME = SystemConstants.ENTANDO_THREAD_NAME_PREFIX + &quot;NotifyingThreadName&quot;;
-<span class="nc" id="L41">    private static final Logger _logger = LoggerFactory.getLogger(NotifyManager.class);</span>
-    private ApplicationEventPublisher _eventPublisher;
-    private BeanFactory _beanFactory;
+<span class="nc" id="L40">	private static final Logger _logger = LoggerFactory.getLogger(NotifyManager.class);</span>
+	
+	@Override
+	public void onApplicationEvent(ApplicationEvent event) {
+<span class="nc bnc" id="L44" title="All 2 branches missed.">		if (event instanceof ApsEvent) {</span>
+<span class="nc" id="L45">			NotifyingEventThread thread = new NotifyingEventThread(this, (ApsEvent) event);</span>
+<span class="nc" id="L46">			thread.setName(NOTIFYING_THREAD_NAME + &quot;_&quot; + DateConverter.getFormattedDate(new Date(), &quot;yyyy-MM-dd-HH-mm-ss&quot;));</span>
+<span class="nc" id="L47">			thread.start();</span>
+<span class="nc" id="L48">			return;</span>
+		}
+<span class="nc" id="L50">		_logger.debug(&quot;Unhandled generic event detected: {}&quot;, event.getClass().getName());</span>
+<span class="nc" id="L51">	}</span>
 
-    @Override
-    public void onApplicationEvent(ApplicationEvent event) {
-<span class="nc bnc" id="L47" title="All 2 branches missed.">        if (event instanceof ApsEvent) {</span>
-<span class="nc" id="L48">            NotifyingEventThread thread = new NotifyingEventThread(this, (ApsEvent) event);</span>
-<span class="nc" id="L49">            thread.setName(NOTIFYING_THREAD_NAME + &quot;_&quot; + DateConverter.getFormattedDate(new Date(), &quot;yyyy-MM-dd-HH-mm-ss&quot;));</span>
-<span class="nc" id="L50">            thread.start();</span>
-<span class="nc" id="L51">            return;</span>
-        }
-<span class="nc" id="L53">        _logger.debug(&quot;Unhandled generic event detected: {}&quot;, event.getClass().getName());</span>
-<span class="nc" id="L54">    }</span>
+	/**
+	 * Notifica un evento ai corrispondenti servizi osservatori.
+	 * @param event L'evento da notificare.
+	 */
+	protected void notify(ApsEvent event) {
+<span class="nc" id="L58">		ListableBeanFactory factory = (ListableBeanFactory) this._beanFactory;</span>
+<span class="nc" id="L59">		String[] defNames = factory.getBeanNamesForType(event.getObserverInterface());</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">		for (int i=0; i&lt;defNames.length; i++) {</span>
+<span class="nc" id="L61">			Object observer = null;</span>
+			try {
+<span class="nc" id="L63">				observer = this._beanFactory.getBean(defNames[i]);</span>
+<span class="nc" id="L64">			} catch (Throwable t) {</span>
+<span class="nc" id="L65">				observer = null;</span>
+<span class="nc" id="L66">			}</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">			if (observer != null) {</span>
+<span class="nc" id="L68">				((ObserverService) observer).update(event);</span>
+<span class="nc" id="L69">				_logger.debug(&quot;The event {} was notified to the {} service&quot;, event.getClass().getName(), observer.getClass().getName());</span>
+			}
+		}
+<span class="nc" id="L72">		_logger.debug(&quot;The {} has been notified&quot;, event.getClass().getName());</span>
+<span class="nc" id="L73">	}</span>
 
-    /**
-     * Notifica un evento ai corrispondenti servizi osservatori.
-     *
-     * @param event L'evento da notificare.
-     */
-    protected void notify(ApsEvent event) {
-<span class="nc" id="L62">        ListableBeanFactory factory = (ListableBeanFactory) this._beanFactory;</span>
-<span class="nc" id="L63">        String[] defNames = factory.getBeanNamesForType(event.getObserverInterface());</span>
-<span class="nc bnc" id="L64" title="All 2 branches missed.">        for (int i = 0; i &lt; defNames.length; i++) {</span>
-<span class="nc" id="L65">            Object observer = null;</span>
-            try {
-<span class="nc" id="L67">                observer = this._beanFactory.getBean(defNames[i]);</span>
-<span class="nc" id="L68">            } catch (Throwable t) {</span>
-<span class="nc" id="L69">                observer = null;</span>
-<span class="nc" id="L70">            }</span>
-<span class="nc bnc" id="L71" title="All 2 branches missed.">            if (observer != null) {</span>
-<span class="nc" id="L72">                ((ObserverService) observer).update(event);</span>
-<span class="nc" id="L73">                _logger.debug(&quot;The event {} was notified to the {} service&quot;, event.getClass().getName(), observer.getClass().getName());</span>
-            }
-        }
-<span class="nc" id="L76">        _logger.debug(&quot;The {} has been notified&quot;, event.getClass().getName());</span>
-<span class="nc" id="L77">    }</span>
+	@Override
+	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+<span class="nc" id="L77">		this._beanFactory = beanFactory;</span>
+<span class="nc" id="L78">	}</span>
 
-    @Override
-    public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
-<span class="nc" id="L81">        this._beanFactory = beanFactory;</span>
-<span class="nc" id="L82">    }</span>
+	/**
+	 * Notifica un'evento a tutti i listener definiti nel sistema.
+	 * @param event L'evento da notificare.
+	 */
+	@Override
+	public void publishEvent(ApplicationEvent event) {
+<span class="nc" id="L86">		this._eventPublisher.publishEvent(event);</span>
+<span class="nc" id="L87">	}</span>
 
-    /**
-     * Notifica un'evento a tutti i listener definiti nel sistema.
-     *
-     * @param event L'evento da notificare.
-     */
-    @Override
-    public void publishEvent(ApplicationEvent event) {
-<span class="nc" id="L91">        this._eventPublisher.publishEvent(event);</span>
-<span class="nc" id="L92">    }</span>
+	@Override
+	public void setApplicationEventPublisher(ApplicationEventPublisher eventPublisher) {
+<span class="nc" id="L91">		this._eventPublisher = eventPublisher;</span>
+<span class="nc" id="L92">	}</span>
 
-    @Override
-    public void setApplicationEventPublisher(ApplicationEventPublisher eventPublisher) {
-<span class="nc" id="L96">        this._eventPublisher = eventPublisher;</span>
-<span class="nc" id="L97">    }</span>
+	private ApplicationEventPublisher _eventPublisher;
 
+	private BeanFactory _beanFactory;
+	
+	public static final String NOTIFYING_THREAD_NAME = SystemConstants.ENTANDO_THREAD_NAME_PREFIX + &quot;NotifyingThreadName&quot;;
+	
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

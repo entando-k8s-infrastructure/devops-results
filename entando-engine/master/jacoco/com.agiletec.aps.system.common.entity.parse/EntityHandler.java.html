@@ -11,8 +11,13 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package com.agiletec.aps.system.common.entity.parse;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.xml.sax.Attributes;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
 
 import com.agiletec.aps.system.common.entity.ApsEntityManager;
 import com.agiletec.aps.system.common.entity.model.IApsEntity;
@@ -20,118 +25,109 @@ import com.agiletec.aps.system.common.entity.model.attribute.AttributeInterface;
 import com.agiletec.aps.system.common.entity.parse.attribute.AttributeHandlerInterface;
 import com.agiletec.aps.system.services.category.Category;
 import com.agiletec.aps.system.services.category.ICategoryManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.xml.sax.Attributes;
-import org.xml.sax.SAXException;
-import org.xml.sax.helpers.DefaultHandler;
 
 /**
- * This class supports the parsing of the XML string that represents an Entity. This &quot;handler&quot; class is used by the managers which manage
- * the ApsEntities. This class is utilized by default in the definition of the Spring abstract service {@link ApsEntityManager}. This
- * definition must be substituted in the declaration of those services which make use, extending it, of the ApsEntityManager to support a
- * customized entity. This entity must implement the IApsEntity interface.
- *
+ * This class supports the parsing of the XML string that represents an Entity.
+ * This &quot;handler&quot; class is used by the managers which manage the ApsEntities.
+ * This class is utilized by default in the definition of the Spring abstract service {@link ApsEntityManager}.
+ * This definition must be substituted in the declaration of those services which make use, extending it,
+ * of the ApsEntityManager to support a customized entity. This entity must implement the IApsEntity
+ * interface. 
  * @author M.Diana - E.Santoboni
  */
-<span class="nc" id="L37">public class EntityHandler extends DefaultHandler {</span>
+<span class="nc" id="L38">public class EntityHandler extends DefaultHandler {</span>
 
-<span class="nc" id="L39">    private static final Logger _logger = LoggerFactory.getLogger(EntityHandler.class);</span>
-    private boolean _intoAttributes;
-    private IApsEntity _currentEntity;
-    private AttributeHandlerInterface _parserModule;
-    private StringBuffer _textBuffer;
-    private AttributeInterface _currentAttr;
-    private ICategoryManager _categoryManager;
-    private String _xmlAttributeRootElementName;
-
+<span class="nc" id="L40">	private static final Logger _logger = LoggerFactory.getLogger(EntityHandler.class);</span>
+	
     /**
      * Handler initialization.
-     *
-     * @param entity The Entity Prototype to fill with data.
+     * @param entity The Entity Prototype to fill with data. 
      * @param xmlAttributeRootElementName The name of the root XML attribute.
-     * @param categoryManager The category manager suitable for the Entity Type.
+     * @param categoryManager The category manager suitable for the Entity Type. 
      */
     public void initHandler(IApsEntity entity, String xmlAttributeRootElementName,
             ICategoryManager categoryManager) {
-<span class="nc" id="L57">        this.reset();</span>
-<span class="nc" id="L58">        this._currentEntity = entity;</span>
-<span class="nc" id="L59">        this._xmlAttributeRootElementName = xmlAttributeRootElementName;</span>
-<span class="nc" id="L60">        this._categoryManager = categoryManager;</span>
-<span class="nc" id="L61">    }</span>
-
+<span class="nc" id="L50">        this.reset();</span>
+<span class="nc" id="L51">        this._currentEntity = entity;</span>
+<span class="nc" id="L52">        this._xmlAttributeRootElementName = xmlAttributeRootElementName;</span>
+<span class="nc" id="L53">        this._categoryManager = categoryManager;</span>
+<span class="nc" id="L54">    }</span>
+    
     public EntityHandler getHandlerPrototype() {
-<span class="nc" id="L64">        EntityHandler handler = null;</span>
+<span class="nc" id="L57">        EntityHandler handler = null;</span>
         try {
-<span class="nc" id="L66">            Class handlerClass = Class.forName(this.getClass().getName());</span>
-<span class="nc" id="L67">            handler = (EntityHandler) handlerClass.newInstance();</span>
-<span class="nc" id="L68">        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {</span>
-<span class="nc" id="L69">            throw new RuntimeException(&quot;Error while cloning the entity handler: class &quot; + this.getClass().getName(), e);</span>
-<span class="nc" id="L70">        }</span>
-<span class="nc" id="L71">        return handler;</span>
+<span class="nc" id="L59">            Class handlerClass = Class.forName(this.getClass().getName());</span>
+<span class="nc" id="L60">            handler = (EntityHandler) handlerClass.newInstance();</span>
+<span class="nc" id="L61">        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {</span>
+<span class="nc" id="L62">            throw new RuntimeException(&quot;Error while cloning the entity handler: class &quot; + this.getClass().getName(), e);</span>
+<span class="nc" id="L63">        }</span>
+<span class="nc" id="L64">        return handler;</span>
     }
-
-    @Override
+    
+	@Override
     public void characters(char[] buf, int offset, int length) throws SAXException {
-<span class="nc" id="L76">        String s = new String(buf, offset, length);</span>
-<span class="nc bnc" id="L77" title="All 2 branches missed.">        if (_textBuffer == null) {</span>
-<span class="nc" id="L78">            _textBuffer = new StringBuffer(s);</span>
+<span class="nc" id="L69">        String s = new String(buf, offset, length);</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">        if (_textBuffer == null) {</span>
+<span class="nc" id="L71">            _textBuffer = new StringBuffer(s);</span>
         } else {
-<span class="nc" id="L80">            _textBuffer.append(s);</span>
+<span class="nc" id="L73">            _textBuffer.append(s);</span>
         }
-<span class="nc" id="L82">    }</span>
-
-    @Override
+<span class="nc" id="L75">    }</span>
+    
+	@Override
     public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
-<span class="nc" id="L86">        this._textBuffer = null;</span>
+<span class="nc" id="L79">        this._textBuffer = null;</span>
         try {
-<span class="nc bnc" id="L88" title="All 2 branches missed.">            if (this.isIntoAttributes()) {</span>
-<span class="nc" id="L89">                this.startAttribute(attributes, qName);</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">            if (this.isIntoAttributes()) {</span>
+<span class="nc" id="L82">                this.startAttribute(attributes, qName);</span>
             } else {
-<span class="nc bnc" id="L91" title="All 2 branches missed.">                if (qName.equals(this._xmlAttributeRootElementName)) {</span>
-<span class="nc" id="L92">                    this.startEntity(attributes, qName);</span>
-<span class="nc bnc" id="L93" title="All 2 branches missed.">                } else if (qName.equals(&quot;descr&quot;)) {</span>
-<span class="nc" id="L94">                    this.startDescr(attributes, qName);</span>
-<span class="nc bnc" id="L95" title="All 2 branches missed.">                } else if (qName.equals(&quot;groups&quot;)) {</span>
-<span class="nc" id="L96">                    this.startGroups(attributes, qName);</span>
-<span class="nc bnc" id="L97" title="All 2 branches missed.">                } else if (qName.equals(&quot;group&quot;)) {</span>
-<span class="nc" id="L98">                    this.startGroup(attributes, qName);</span>
-<span class="nc bnc" id="L99" title="All 2 branches missed.">                } else if (qName.equals(&quot;categories&quot;)) {</span>
-<span class="nc" id="L100">                    this.startCategories(attributes, qName);</span>
-<span class="nc bnc" id="L101" title="All 2 branches missed.">                } else if (qName.equals(&quot;category&quot;)) {</span>
-<span class="nc" id="L102">                    this.startCategory(attributes, qName);</span>
-<span class="nc bnc" id="L103" title="All 2 branches missed.">                } else if (qName.equals(&quot;attributes&quot;)) {</span>
-<span class="nc" id="L104">                    startAttributes(attributes, qName);</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">                if (qName.equals(this._xmlAttributeRootElementName)) {</span>
+<span class="nc" id="L85">                    this.startEntity(attributes, qName);</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">                } else if (qName.equals(&quot;descr&quot;)) {</span>
+<span class="nc" id="L87">                    this.startDescr(attributes, qName);</span>
+<span class="nc bnc" id="L88" title="All 2 branches missed.">                } else if (qName.equals(&quot;groups&quot;)) {</span>
+<span class="nc" id="L89">                    this.startGroups(attributes, qName);</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">                } else if (qName.equals(&quot;group&quot;)) {</span>
+<span class="nc" id="L91">                    this.startGroup(attributes, qName);</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">                } else if (qName.equals(&quot;categories&quot;)) {</span>
+<span class="nc" id="L93">                    this.startCategories(attributes, qName);</span>
+<span class="nc bnc" id="L94" title="All 2 branches missed.">                } else if (qName.equals(&quot;category&quot;)) {</span>
+<span class="nc" id="L95">                    this.startCategory(attributes, qName);</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">                } else if (qName.equals(&quot;attributes&quot;)) {</span>
+<span class="nc" id="L97">                    startAttributes(attributes, qName);</span>
                 } else {
-<span class="nc" id="L106">                    this.startEntityElement(uri, localName, qName, attributes);</span>
+<span class="nc" id="L99">                    this.startEntityElement(uri, localName, qName, attributes);</span>
                 }
             }
-<span class="nc" id="L109">        } catch (Throwable t) {</span>
-<span class="nc" id="L110">            _logger.error(&quot;error in startElement&quot;, t);</span>
-<span class="nc" id="L111">            throw new SAXException(t.getMessage(), new Exception(t));</span>
-<span class="nc" id="L112">        }</span>
-<span class="nc" id="L113">    }</span>
+<span class="nc" id="L102">        } catch (Throwable t) {</span>
+<span class="nc" id="L103">            _logger.error(&quot;error in startElement&quot;, t);</span>
+<span class="nc" id="L104">            throw new SAXException(t.getMessage(), new Exception(t));</span>
+<span class="nc" id="L105">        }</span>
+<span class="nc" id="L106">    }</span>
 
     /**
-     * Initialize the entity. This method is triggered by the startElement event on the root element in the XML defining the entity. This
-     * method must be extended when defining particular operations to perform on customized entities.
-     *
+     * Initialize the entity. This method is triggered by the startElement event
+     * on the root element in the XML defining the entity.
+     * This method must be extended when defining particular operations to perform
+     * on customized entities.
      * @param attributes The Attribute Elements.
      * @param qName The name of the XML attribute.
      * @throws SAXException If errors are detected while parsing the XML string.
      */
     protected void startEntity(Attributes attributes, String qName) throws SAXException {
-<span class="nc" id="L124">        String id = this.extractXmlAttribute(attributes, &quot;id&quot;, qName, true);</span>
-<span class="nc" id="L125">        this.getCurrentEntity().setId(id);</span>
-<span class="nc" id="L126">        String typecode = this.extractXmlAttribute(attributes, &quot;typecode&quot;, qName, true);</span>
-<span class="nc" id="L127">        this.getCurrentEntity().setTypeCode(typecode);</span>
-<span class="nc" id="L128">    }</span>
+<span class="nc" id="L118">        String id = this.extractXmlAttribute(attributes, &quot;id&quot;, qName, true);</span>
+<span class="nc" id="L119">        this.getCurrentEntity().setId(id);</span>
+<span class="nc" id="L120">        String typecode = this.extractXmlAttribute(attributes, &quot;typecode&quot;, qName, true);</span>
+<span class="nc" id="L121">        this.getCurrentEntity().setTypeCode(typecode);</span>
+<span class="nc" id="L122">    }</span>
 
     /**
-     * This method performs the operations not handled in the base handler. This method is triggered by the startElement event on those
-     * elements not recognized in the base handler. By default this method does not perform any action. This method must be extended to
-     * perform specific operations that depend on the structure of the Entity Type.
-     *
+     * This method performs the operations not handled in the base handler.
+     * This method is triggered by the startElement event on those elements
+     * not recognized in the base handler.
+     * By default this method does not perform any action.
+     * This method must be extended to perform specific operations that depend
+     * on the structure of the Entity Type.
      * @param uri The URI.
      * @param localName The localName.
      * @param qName The name of the XML attribute.
@@ -141,195 +137,199 @@ import org.xml.sax.helpers.DefaultHandler;
     protected void startEntityElement(String uri, String localName,
             String qName, Attributes attributes) throws SAXException {
         //default: do nothing
-<span class="nc" id="L144">    }</span>
-
-    @Override
+<span class="nc" id="L140">    }</span>
+    
+	@Override
     public void endElement(String uri, String localName, String qName) throws SAXException {
         try {
-<span class="nc bnc" id="L149" title="All 2 branches missed.">            if (this.isIntoAttributes()) {</span>
-<span class="nc bnc" id="L150" title="All 2 branches missed.">                if (qName.equals(&quot;attributes&quot;)) {</span>
-<span class="nc" id="L151">                    this.endAttributes();</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">            if (this.isIntoAttributes()) {</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">                if (qName.equals(&quot;attributes&quot;)) {</span>
+<span class="nc" id="L147">                    this.endAttributes();</span>
                 } else {
-<span class="nc" id="L153">                    this.endAttribute(qName);</span>
+<span class="nc" id="L149">                    this.endAttribute(qName);</span>
                 }
             } else {
-<span class="nc bnc" id="L156" title="All 2 branches missed.">                if (qName.equals(this._xmlAttributeRootElementName)) {</span>
-<span class="nc" id="L157">                    this.endEntity();</span>
-<span class="nc bnc" id="L158" title="All 2 branches missed.">                } else if (qName.equals(&quot;descr&quot;)) {</span>
-<span class="nc" id="L159">                    this.endDescr();</span>
-<span class="nc bnc" id="L160" title="All 2 branches missed.">                } else if (qName.equals(&quot;groups&quot;)) {</span>
-<span class="nc" id="L161">                    this.endGroups();</span>
-<span class="nc bnc" id="L162" title="All 2 branches missed.">                } else if (qName.equals(&quot;group&quot;)) {</span>
-<span class="nc" id="L163">                    this.endGroup();</span>
-<span class="nc bnc" id="L164" title="All 2 branches missed.">                } else if (qName.equals(&quot;categories&quot;)) {</span>
-<span class="nc" id="L165">                    this.endCategories();</span>
-<span class="nc bnc" id="L166" title="All 2 branches missed.">                } else if (qName.equals(&quot;category&quot;)) {</span>
-<span class="nc" id="L167">                    this.endCategory();</span>
+<span class="nc bnc" id="L152" title="All 2 branches missed.">                if (qName.equals(this._xmlAttributeRootElementName)) {</span>
+<span class="nc" id="L153">                    this.endEntity();</span>
+<span class="nc bnc" id="L154" title="All 2 branches missed.">                } else if (qName.equals(&quot;descr&quot;)) {</span>
+<span class="nc" id="L155">                    this.endDescr();</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">                } else if (qName.equals(&quot;groups&quot;)) {</span>
+<span class="nc" id="L157">                    this.endGroups();</span>
+<span class="nc bnc" id="L158" title="All 2 branches missed.">                } else if (qName.equals(&quot;group&quot;)) {</span>
+<span class="nc" id="L159">                    this.endGroup();</span>
+<span class="nc bnc" id="L160" title="All 2 branches missed.">                } else if (qName.equals(&quot;categories&quot;)) {</span>
+<span class="nc" id="L161">                    this.endCategories();</span>
+<span class="nc bnc" id="L162" title="All 2 branches missed.">                } else if (qName.equals(&quot;category&quot;)) {</span>
+<span class="nc" id="L163">                    this.endCategory();</span>
                 } else {
-<span class="nc" id="L169">                    this.endEntityElement(uri, localName, qName);</span>
+<span class="nc" id="L165">                    this.endEntityElement(uri, localName, qName);</span>
                 }
             }
-<span class="nc" id="L172">        } catch (Throwable t) {</span>
-<span class="nc" id="L173">            _logger.error(&quot;error in endElement&quot;, t);</span>
-<span class="nc" id="L174">            throw new SAXException(t.getMessage(), new Exception(t));</span>
-<span class="nc" id="L175">        }</span>
-<span class="nc" id="L176">    }</span>
+<span class="nc" id="L168">        } catch (Throwable t) {</span>
+<span class="nc" id="L169">        	_logger.error(&quot;error in endElement&quot;, t);</span>
+<span class="nc" id="L170">            throw new SAXException(t.getMessage(), new Exception(t));</span>
+<span class="nc" id="L171">        }</span>
+<span class="nc" id="L172">    }</span>
 
     /**
-     * This is the last step in the interpretation process of the XML entity. This method is triggered by the endElement event on the root
-     * element of the XML string. By default this method does not perform any action. This method must be extended to perform specific
-     * operations that depend on the structure of the Entity Type.
+     * This is the last step in the interpretation process of the XML entity.
+     * This method is triggered by the endElement event on the root element of the XML 
+     * string.
+     * By default this method does not perform any action.
+     * This method must be extended to perform specific operations that depend
+     * on the structure of the Entity Type.
      */
     private void endEntity() {
         // nothing to do
-<span class="nc" id="L185">    }</span>
+<span class="nc" id="L184">    }</span>
 
     /**
-     * Perform the operations for those attributes not handled in the base handler. This method is triggered by the endElement event on
-     * elements unknown to the base handler. By default this method does not perform any action. This method must be extended to perform
-     * specific operations that depend on the structure of the Entity Type.
-     *
+     * Perform the operations for those attributes not handled in the base handler.
+     * This method is triggered by the endElement event on elements unknown to the
+     * base handler.
+     * By default this method does not perform any action.
+     * This method must be extended to perform specific operations that depend
+     * on the structure of the Entity Type.
      * @param uri The URI.
      * @param localName The localName.
      * @param qName The name of the XML attribute.
-     * @throws SAXException If errors are detected while parsing the XML code
+     * @throws SAXException If errors are detected while parsing the XML code 
      */
     protected void endEntityElement(String uri, String localName, String qName) throws SAXException {
         // default: nothing to do
-<span class="nc" id="L199">    }</span>
-
+<span class="nc" id="L200">    }</span>
+    
     private void startAttributes(Attributes attributes, String qName) throws SAXException {
-<span class="nc" id="L202">        this.setIntoAttributes(true);</span>
-<span class="nc" id="L203">    }</span>
-
+<span class="nc" id="L203">        this.setIntoAttributes(true);</span>
+<span class="nc" id="L204">    }</span>
+    
     private void endAttributes() {
-<span class="nc" id="L206">        this.setIntoAttributes(false);</span>
-<span class="nc" id="L207">    }</span>
-
+<span class="nc" id="L207">        this.setIntoAttributes(false);</span>
+<span class="nc" id="L208">    }</span>
+    
     private void startDescr(Attributes attributes, String qName) throws SAXException {
         // nothing to do
-<span class="nc" id="L211">    }</span>
-
+<span class="nc" id="L212">    }</span>
+    
     private void endDescr() {
-<span class="nc bnc" id="L214" title="All 2 branches missed.">        if (null != this._textBuffer) {</span>
-<span class="nc" id="L215">            this._currentEntity.setDescription(this._textBuffer.toString());</span>
+<span class="nc bnc" id="L215" title="All 2 branches missed.">        if (null != this._textBuffer) {</span>
+<span class="nc" id="L216">            this._currentEntity.setDescription(this._textBuffer.toString());</span>
         }
-<span class="nc" id="L217">    }</span>
-
+<span class="nc" id="L218">    }</span>
+    
     private void startGroups(Attributes attributes, String qName) throws SAXException {
-<span class="nc" id="L220">        String mainGroup = extractXmlAttribute(attributes, &quot;mainGroup&quot;, qName, false);</span>
-<span class="nc" id="L221">        this._currentEntity.setMainGroup(mainGroup);</span>
-<span class="nc" id="L222">    }</span>
-
+<span class="nc" id="L221">        String mainGroup = extractXmlAttribute(attributes, &quot;mainGroup&quot;, qName, false);</span>
+<span class="nc" id="L222">        this._currentEntity.setMainGroup(mainGroup);</span>
+<span class="nc" id="L223">    }</span>
+    
     private void endGroups() {
         // nothing to do
-<span class="nc" id="L226">    }</span>
-
+<span class="nc" id="L227">    }</span>
+    
     private void startGroup(Attributes attributes, String qName) throws SAXException {
-<span class="nc" id="L229">        String groupName = extractXmlAttribute(attributes, &quot;name&quot;, qName, false);</span>
-<span class="nc" id="L230">        this._currentEntity.addGroup(groupName);</span>
-<span class="nc" id="L231">    }</span>
+<span class="nc" id="L230">        String groupName = extractXmlAttribute(attributes, &quot;name&quot;, qName, false);</span>
+<span class="nc" id="L231">        this._currentEntity.addGroup(groupName);</span>
+<span class="nc" id="L232">    }</span>
 
     private void endGroup() {
         // nothing to do
-<span class="nc" id="L235">    }</span>
-
+<span class="nc" id="L236">    }</span>
+    
     private void startCategories(Attributes attributes, String qName) throws SAXException {
         // nothing to do
-<span class="nc" id="L239">    }</span>
-
+<span class="nc" id="L240">    }</span>
+    
     private void endCategories() {
         // nothing to do
-<span class="nc" id="L243">    }</span>
-
+<span class="nc" id="L244">    }</span>
+    
     private void startCategory(Attributes attributes, String qName) throws SAXException {
-<span class="nc bnc" id="L246" title="All 2 branches missed.">        if (this._categoryManager != null) {</span>
-<span class="nc" id="L247">            String categoryCode = extractXmlAttribute(attributes, &quot;id&quot;, qName, true);</span>
-<span class="nc" id="L248">            Category category = this._categoryManager.getCategory(categoryCode);</span>
-<span class="nc bnc" id="L249" title="All 2 branches missed.">            if (null != category) {</span>
-<span class="nc" id="L250">                this._currentEntity.addCategory(category);</span>
+<span class="nc bnc" id="L247" title="All 2 branches missed.">        if (this._categoryManager != null) {</span>
+<span class="nc" id="L248">            String categoryCode = extractXmlAttribute(attributes, &quot;id&quot;, qName, true);</span>
+<span class="nc" id="L249">            Category category = this._categoryManager.getCategory(categoryCode);</span>
+<span class="nc bnc" id="L250" title="All 2 branches missed.">            if (null != category) {</span>
+<span class="nc" id="L251">                this._currentEntity.addCategory(category);</span>
             }
         }
-<span class="nc" id="L253">    }</span>
-
+<span class="nc" id="L254">    }</span>
+    
     private void endCategory() {
         // nothing to do
-<span class="nc" id="L257">    }</span>
-
+<span class="nc" id="L258">    }</span>
+    
     private void startAttribute(Attributes attributes, String qName) throws SAXException {
-<span class="nc bnc" id="L260" title="All 2 branches missed.">        if (null == this._currentAttr) {</span>
-<span class="nc" id="L261">            String attributeName = this.extractXmlAttribute(attributes, &quot;name&quot;, qName, false);</span>
-<span class="nc bnc" id="L262" title="All 2 branches missed.">            if (null != attributeName) {</span>
-<span class="nc" id="L263">                String attributeType = this.extractXmlAttribute(attributes, &quot;attributetype&quot;, qName, false);</span>
-<span class="nc" id="L264">                this._currentAttr = this._currentEntity.getAttribute(attributeName);</span>
-<span class="nc bnc" id="L265" title="All 4 branches missed.">                if (null != this._currentAttr &amp;&amp; this._currentAttr.getType().equals(attributeType)) {</span>
-<span class="nc" id="L266">                    this._parserModule = this._currentAttr.getHandler();</span>
-<span class="nc" id="L267">                    this._parserModule.setCurrentAttr(this._currentAttr);</span>
+<span class="nc bnc" id="L261" title="All 2 branches missed.">        if (null == this._currentAttr) {</span>
+<span class="nc" id="L262">            String attributeName = this.extractXmlAttribute(attributes, &quot;name&quot;, qName, false);</span>
+<span class="nc bnc" id="L263" title="All 2 branches missed.">            if (null != attributeName) {</span>
+<span class="nc" id="L264">				String attributeType = this.extractXmlAttribute(attributes, &quot;attributetype&quot;, qName, false);</span>
+<span class="nc" id="L265">                this._currentAttr = (AttributeInterface) this._currentEntity.getAttribute(attributeName);</span>
+<span class="nc bnc" id="L266" title="All 4 branches missed.">                if (null != this._currentAttr &amp;&amp; this._currentAttr.getType().equals(attributeType)) {</span>
+<span class="nc" id="L267">                    this._parserModule = this._currentAttr.getHandler();</span>
+<span class="nc" id="L268">                    this._parserModule.setCurrentAttr(this._currentAttr);</span>
                 } else {
-<span class="nc" id="L269">                    this._parserModule = null;</span>
-<span class="nc" id="L270">                    this._currentAttr = null;</span>
-                }
+<span class="nc" id="L270">					this._parserModule = null;</span>
+<span class="nc" id="L271">					this._currentAttr = null;</span>
+				}
             }
         }
-<span class="nc bnc" id="L274" title="All 2 branches missed.">        if (null != _parserModule) {</span>
-<span class="nc" id="L275">            this._parserModule.startAttribute(attributes, qName);</span>
+<span class="nc bnc" id="L275" title="All 2 branches missed.">        if (null != _parserModule) {</span>
+<span class="nc" id="L276">            this._parserModule.startAttribute(attributes, qName);</span>
         }
-<span class="nc" id="L277">    }</span>
+<span class="nc" id="L278">    }</span>
 
     private void endAttribute(String qName) {
-<span class="nc bnc" id="L280" title="All 2 branches missed.">        if (null != this._parserModule) {</span>
-<span class="nc" id="L281">            this._parserModule.endAttribute(qName, this._textBuffer);</span>
-<span class="nc bnc" id="L282" title="All 2 branches missed.">            if (this._parserModule.isEndAttribute(qName)) {</span>
-<span class="nc" id="L283">                this._parserModule = null;</span>
-<span class="nc" id="L284">                this._currentAttr = null;</span>
+<span class="nc bnc" id="L281" title="All 2 branches missed.">        if (null != this._parserModule) {</span>
+<span class="nc" id="L282">            this._parserModule.endAttribute(qName, this._textBuffer);</span>
+<span class="nc bnc" id="L283" title="All 2 branches missed.">            if (this._parserModule.isEndAttribute(qName)) {</span>
+<span class="nc" id="L284">                this._parserModule = null;</span>
+<span class="nc" id="L285">				this._currentAttr = null;</span>
             }
         }
-<span class="nc" id="L287">    }</span>
+<span class="nc" id="L288">    }</span>
 
     /**
-     * Recupera in modo controllato un attributo di un tag xml dall'insieme degli attributi.
-     *
+     * Recupera in modo controllato un attributo di un tag xml dall'insieme
+     * degli attributi.
      * @param attrs Attributi del tag xml.
      * @param attributeName Nome dell'attributo richiesto.
      * @param qName Nome del tag xml.
      * @param required Se true, l'attributo è considerato obbligatorio.
      * @return Il valore dell'attributo richiesto.
-     * @throws SAXException Nel caso l'attributo sia dichiarato obbligatorio e risulti assente.
+     * @throws SAXException Nel caso l'attributo sia dichiarato obbligatorio e
+     * risulti assente.
      */
     protected String extractXmlAttribute(Attributes attrs, String attributeName,
             String qName, boolean required) throws SAXException {
-<span class="nc" id="L301">        int index = attrs.getIndex(attributeName);</span>
-<span class="nc" id="L302">        String value = attrs.getValue(index);</span>
-<span class="nc bnc" id="L303" title="All 4 branches missed.">        if (required &amp;&amp; value == null) {</span>
-<span class="nc" id="L304">            throw new SAXException(&quot;Xml Attribute '&quot; + attributeName + &quot;' not found in tag &lt;&quot; + qName + &quot;&gt;&quot;);</span>
+<span class="nc" id="L303">        int index = attrs.getIndex(attributeName);</span>
+<span class="nc" id="L304">        String value = attrs.getValue(index);</span>
+<span class="nc bnc" id="L305" title="All 4 branches missed.">        if (required &amp;&amp; value == null) {</span>
+<span class="nc" id="L306">            throw new SAXException(&quot;Xml Attribute '&quot; + attributeName + &quot;' not found in tag &lt;&quot; + qName + &quot;&gt;&quot;);</span>
         }
-<span class="nc" id="L306">        return value;</span>
+<span class="nc" id="L308">        return value;</span>
     }
 
     /**
-     * Verifica se, nell'istante in cui il metodo è richiamato, ci si trova all'interno della definizione della lista di attributi
-     * componenti l'entità.
-     *
-     * @return True se ci si trova all'interno della definizione della lista di attributi componenti l'entità, false in caso contrario.
+     * Verifica se, nell'istante in cui il metodo è richiamato, ci si trova 
+     * all'interno della definizione della lista di attributi componenti l'entità.
+     * @return True se ci si trova all'interno della definizione della lista di attributi 
+     * componenti l'entità, false in caso contrario.
      */
     protected boolean isIntoAttributes() {
-<span class="nc" id="L316">        return _intoAttributes;</span>
+<span class="nc" id="L318">        return _intoAttributes;</span>
     }
 
     /**
-     * Setta se, nell'istante in cui il metodo è richiamato, ci si trova all'interno della definizione della lista di attributi componenti
-     * l'entità.
-     *
-     * @param intoAttributes True se ci si trova all'interno della definizione della lista di attributi componenti l'entità, false in caso
-     * contrario.
+     * Setta se, nell'istante in cui il metodo è richiamato, ci si trova 
+     * all'interno della definizione della lista di attributi componenti l'entità.
+     * @param intoAttributes True se ci si trova all'interno della definizione della 
+     * lista di attributi componenti l'entità, false in caso contrario.
      */
     protected void setIntoAttributes(boolean intoAttributes) {
-<span class="nc" id="L327">        this._intoAttributes = intoAttributes;</span>
-<span class="nc" id="L328">    }</span>
+<span class="nc" id="L328">        this._intoAttributes = intoAttributes;</span>
+<span class="nc" id="L329">    }</span>
 
     /**
      * Resituisce il buffer relativo al testo incluso.
-     *
      * @return Il buffer relativo al testo incluso.
      */
     protected StringBuffer getTextBuffer() {
@@ -338,16 +338,16 @@ import org.xml.sax.helpers.DefaultHandler;
 
     /**
      * Restituisce l'entità gestita dall'handler.
-     *
      * @return L'entità gestita dall'handler.
      */
     protected IApsEntity getCurrentEntity() {
-<span class="nc" id="L345">        return _currentEntity;</span>
+<span class="nc" id="L344">        return _currentEntity;</span>
     }
 
     /**
-     * Effettua il reset delle variabili di istanza dell'handler. Il metodo viene richiamato in fase di inizializzazione degli elementi
-     * dell'handler, prima di effettuare la scanzìsione del documento.
+     * Effettua il reset delle variabili di istanza dell'handler.
+     * Il metodo viene richiamato in fase di inizializzazione degli 
+     * elementi dell'handler, prima di effettuare la scanzìsione del documento.
      */
     protected void reset() {
 <span class="nc" id="L353">        this._categoryManager = null;</span>
@@ -358,6 +358,14 @@ import org.xml.sax.helpers.DefaultHandler;
 <span class="nc" id="L358">        this._xmlAttributeRootElementName = null;</span>
 <span class="nc" id="L359">        this._currentAttr = null;</span>
 <span class="nc" id="L360">    }</span>
-
+    
+    private boolean _intoAttributes;
+    private IApsEntity _currentEntity;
+    private AttributeHandlerInterface _parserModule;
+    private StringBuffer _textBuffer;
+    private AttributeInterface _currentAttr;
+    private ICategoryManager _categoryManager;
+    private String _xmlAttributeRootElementName;
+    
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

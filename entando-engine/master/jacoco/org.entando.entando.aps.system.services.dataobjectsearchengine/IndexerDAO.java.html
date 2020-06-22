@@ -11,7 +11,6 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package org.entando.entando.aps.system.services.dataobjectsearchengine;
 
 import com.agiletec.aps.system.common.entity.model.AttributeSearchInfo;
@@ -25,20 +24,9 @@ import com.agiletec.aps.system.services.category.Category;
 import com.agiletec.aps.system.services.category.ICategoryManager;
 import com.agiletec.aps.system.services.lang.ILangManager;
 import com.agiletec.aps.system.services.lang.Lang;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
-import org.apache.lucene.document.DateTools;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.IntPoint;
-import org.apache.lucene.document.StoredField;
-import org.apache.lucene.document.StringField;
-import org.apache.lucene.document.TextField;
+import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.Term;
@@ -48,14 +36,20 @@ import org.apache.lucene.store.SimpleFSLockFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 /**
  * Data Access Object dedita alla indicizzazione di documenti.
  *
  * @author E.Santoboni
  */
-<span class="nc" id="L56">public class IndexerDAO implements IIndexerDAO {</span>
+<span class="nc" id="L50">public class IndexerDAO implements IIndexerDAO {</span>
 
-<span class="nc" id="L58">    private static final Logger logger = LoggerFactory.getLogger(IndexerDAO.class);</span>
+<span class="nc" id="L52">    private static final Logger logger = LoggerFactory.getLogger(IndexerDAO.class);</span>
 
     private Directory dir;
 
@@ -72,184 +66,187 @@ import org.slf4j.LoggerFactory;
     @Override
     public void init(File dir) throws ApsSystemException {
         try {
-<span class="nc" id="L75">            this.dir = FSDirectory.open(dir.toPath(), SimpleFSLockFactory.INSTANCE);</span>
-<span class="nc" id="L76">        } catch (Throwable t) {</span>
-<span class="nc" id="L77">            logger.error(&quot;Error creating directory&quot;, t);</span>
-<span class="nc" id="L78">            throw new ApsSystemException(&quot;Error creating directory&quot;, t);</span>
-<span class="nc" id="L79">        }</span>
-<span class="nc" id="L80">        logger.debug(&quot;Indexer: search engine index ok.&quot;);</span>
-<span class="nc" id="L81">    }</span>
+<span class="nc" id="L69">            this.dir = FSDirectory.open(dir.toPath(), SimpleFSLockFactory.INSTANCE);</span>
+<span class="nc" id="L70">        } catch (Throwable t) {</span>
+<span class="nc" id="L71">            logger.error(&quot;Error creating directory&quot;, t);</span>
+<span class="nc" id="L72">            throw new ApsSystemException(&quot;Error creating directory&quot;, t);</span>
+<span class="nc" id="L73">        }</span>
+<span class="nc" id="L74">        logger.debug(&quot;Indexer: search engine index ok.&quot;);</span>
+<span class="nc" id="L75">    }</span>
 
     @Override
     public synchronized void add(IApsEntity entity) throws ApsSystemException {
-<span class="nc" id="L85">        IndexWriter writer = null;</span>
+<span class="nc" id="L79">        IndexWriter writer = null;</span>
         try {
-<span class="nc" id="L87">            writer = new IndexWriter(this.dir, this.getIndexWriterConfig());</span>
-<span class="nc" id="L88">            Document document = this.createDocument(entity);</span>
-<span class="nc" id="L89">            writer.addDocument(document);</span>
-<span class="nc" id="L90">        } catch (Throwable t) {</span>
-<span class="nc" id="L91">            logger.error(&quot;Errore saving entity {}&quot;, entity.getId(), t);</span>
-<span class="nc" id="L92">            throw new ApsSystemException(&quot;Error saving entity&quot;, t);</span>
+<span class="nc" id="L81">            writer = new IndexWriter(this.dir, this.getIndexWriterConfig());</span>
+<span class="nc" id="L82">            Document document = this.createDocument(entity);</span>
+<span class="nc" id="L83">            writer.addDocument(document);</span>
+<span class="nc" id="L84">        } catch (Throwable t) {</span>
+<span class="nc" id="L85">            logger.error(&quot;Errore saving entity {}&quot;, entity.getId(), t);</span>
+<span class="nc" id="L86">            throw new ApsSystemException(&quot;Error saving entity&quot;, t);</span>
         } finally {
-<span class="nc bnc" id="L94" title="All 2 branches missed.">            if (null != writer) {</span>
+<span class="nc bnc" id="L88" title="All 2 branches missed.">            if (null != writer) {</span>
                 try {
-<span class="nc" id="L96">                    writer.close();</span>
-<span class="nc" id="L97">                } catch (IOException ex) {</span>
-<span class="nc" id="L98">                    logger.error(&quot;Error closing IndexWriter&quot;, ex);</span>
-<span class="nc" id="L99">                }</span>
+<span class="nc" id="L90">                    writer.close();</span>
+<span class="nc" id="L91">                } catch (IOException ex) {</span>
+<span class="nc" id="L92">                    logger.error(&quot;Error closing IndexWriter&quot;, ex);</span>
+<span class="nc" id="L93">                }</span>
             }
         }
-<span class="nc" id="L102">    }</span>
+<span class="nc" id="L96">    }</span>
 
     /**
-     * Crea un oggetto Document pronto per l'indicizzazione da un oggetto Content.
+     * Crea un oggetto Document pronto per l'indicizzazione da un oggetto
+     * Content.
      *
      * @param entity Il dataobject dal quale ricavare il Document.
      * @return L'oggetto Document ricavato dal dataobject.
      * @throws ApsSystemException In caso di errore
      */
     protected Document createDocument(IApsEntity entity) throws ApsSystemException {
-<span class="nc" id="L112">        Document document = new Document();</span>
-<span class="nc" id="L113">        document.add(new StringField(DATAOBJECT_ID_FIELD_NAME,</span>
-<span class="nc" id="L114">                entity.getId(), Field.Store.YES));</span>
-<span class="nc" id="L115">        document.add(new TextField(DATAOBJECT_TYPE_FIELD_NAME,</span>
-<span class="nc" id="L116">                entity.getTypeCode(), Field.Store.YES));</span>
-<span class="nc" id="L117">        document.add(new StringField(DATAOBJECT_GROUP_FIELD_NAME,</span>
-<span class="nc" id="L118">                entity.getMainGroup(), Field.Store.YES));</span>
-<span class="nc" id="L119">        Iterator&lt;String&gt; iterGroups = entity.getGroups().iterator();</span>
-<span class="nc bnc" id="L120" title="All 2 branches missed.">        while (iterGroups.hasNext()) {</span>
-<span class="nc" id="L121">            String groupName = iterGroups.next();</span>
-<span class="nc" id="L122">            document.add(new StringField(DATAOBJECT_GROUP_FIELD_NAME,</span>
+<span class="nc" id="L107">        Document document = new Document();</span>
+<span class="nc" id="L108">        document.add(new StringField(DATAOBJECT_ID_FIELD_NAME,</span>
+<span class="nc" id="L109">                entity.getId(), Field.Store.YES));</span>
+<span class="nc" id="L110">        document.add(new TextField(DATAOBJECT_TYPE_FIELD_NAME,</span>
+<span class="nc" id="L111">                entity.getTypeCode(), Field.Store.YES));</span>
+<span class="nc" id="L112">        document.add(new StringField(DATAOBJECT_GROUP_FIELD_NAME,</span>
+<span class="nc" id="L113">                entity.getMainGroup(), Field.Store.YES));</span>
+<span class="nc" id="L114">        Iterator&lt;String&gt; iterGroups = entity.getGroups().iterator();</span>
+<span class="nc bnc" id="L115" title="All 2 branches missed.">        while (iterGroups.hasNext()) {</span>
+<span class="nc" id="L116">            String groupName = (String) iterGroups.next();</span>
+<span class="nc" id="L117">            document.add(new StringField(DATAOBJECT_GROUP_FIELD_NAME,</span>
                     groupName, Field.Store.YES));
-<span class="nc" id="L124">        }</span>
+<span class="nc" id="L119">        }</span>
         try {
-<span class="nc" id="L126">            EntityAttributeIterator attributesIter = new EntityAttributeIterator(entity);</span>
-<span class="nc bnc" id="L127" title="All 2 branches missed.">            while (attributesIter.hasNext()) {</span>
-<span class="nc" id="L128">                AttributeInterface currentAttribute = (AttributeInterface) attributesIter.next();</span>
-<span class="nc" id="L129">                List&lt;Lang&gt; langs = this.getLangManager().getLangs();</span>
-<span class="nc bnc" id="L130" title="All 2 branches missed.">                for (int i = 0; i &lt; langs.size(); i++) {</span>
-<span class="nc" id="L131">                    Lang currentLang = langs.get(i);</span>
-<span class="nc" id="L132">                    this.indexAttribute(document, currentAttribute, currentLang);</span>
+<span class="nc" id="L121">            EntityAttributeIterator attributesIter = new EntityAttributeIterator(entity);</span>
+<span class="nc bnc" id="L122" title="All 2 branches missed.">            while (attributesIter.hasNext()) {</span>
+<span class="nc" id="L123">                AttributeInterface currentAttribute = (AttributeInterface) attributesIter.next();</span>
+<span class="nc" id="L124">                List&lt;Lang&gt; langs = this.getLangManager().getLangs();</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">                for (int i = 0; i &lt; langs.size(); i++) {</span>
+<span class="nc" id="L126">                    Lang currentLang = (Lang) langs.get(i);</span>
+<span class="nc" id="L127">                    this.indexAttribute(document, currentAttribute, currentLang);</span>
                 }
-<span class="nc" id="L134">            }</span>
-<span class="nc" id="L135">            List&lt;Category&gt; categories = entity.getCategories();</span>
-<span class="nc bnc" id="L136" title="All 4 branches missed.">            if (null != categories &amp;&amp; !categories.isEmpty()) {</span>
-<span class="nc bnc" id="L137" title="All 2 branches missed.">                for (int i = 0; i &lt; categories.size(); i++) {</span>
-<span class="nc" id="L138">                    Category category = categories.get(i);</span>
-<span class="nc" id="L139">                    this.indexCategory(document, category);</span>
+<span class="nc" id="L129">            }</span>
+<span class="nc" id="L130">            List&lt;Category&gt; categories = entity.getCategories();</span>
+<span class="nc bnc" id="L131" title="All 4 branches missed.">            if (null != categories &amp;&amp; !categories.isEmpty()) {</span>
+<span class="nc bnc" id="L132" title="All 2 branches missed.">                for (int i = 0; i &lt; categories.size(); i++) {</span>
+<span class="nc" id="L133">                    Category category = categories.get(i);</span>
+<span class="nc" id="L134">                    this.indexCategory(document, category);</span>
                 }
             }
-<span class="nc" id="L142">        } catch (Throwable t) {</span>
-<span class="nc" id="L143">            logger.error(&quot;Error creating document&quot;, t);</span>
-<span class="nc" id="L144">            throw new ApsSystemException(&quot;Error creating document&quot;, t);</span>
-<span class="nc" id="L145">        }</span>
-<span class="nc" id="L146">        return document;</span>
+<span class="nc" id="L137">        } catch (Throwable t) {</span>
+<span class="nc" id="L138">            logger.error(&quot;Error creating document&quot;, t);</span>
+<span class="nc" id="L139">            throw new ApsSystemException(&quot;Error creating document&quot;, t);</span>
+<span class="nc" id="L140">        }</span>
+<span class="nc" id="L141">        return document;</span>
     }
 
     private void indexCategory(Document document, Category categoryToIndex) {
-<span class="nc bnc" id="L150" title="All 4 branches missed.">        if (null == categoryToIndex || categoryToIndex.isRoot()) {</span>
-<span class="nc" id="L151">            return;</span>
+<span class="nc bnc" id="L145" title="All 4 branches missed.">        if (null == categoryToIndex || categoryToIndex.isRoot()) {</span>
+<span class="nc" id="L146">            return;</span>
         }
-<span class="nc" id="L153">        document.add(new StringField(DATAOBJECT_CATEGORY_FIELD_NAME,</span>
-<span class="nc" id="L154">                categoryToIndex.getPath(DATAOBJECT_CATEGORY_SEPARATOR, false, this.getCategoryManager()), Field.Store.YES));</span>
-<span class="nc" id="L155">        Category parentCategory = this.getCategoryManager().getCategory(categoryToIndex.getParentCode());</span>
-<span class="nc" id="L156">        this.indexCategory(document, parentCategory);</span>
-<span class="nc" id="L157">    }</span>
+<span class="nc" id="L148">        document.add(new StringField(DATAOBJECT_CATEGORY_FIELD_NAME,</span>
+<span class="nc" id="L149">                categoryToIndex.getPath(DATAOBJECT_CATEGORY_SEPARATOR, false, this.getCategoryManager()), Field.Store.YES));</span>
+<span class="nc" id="L150">        Category parentCategory = this.getCategoryManager().getCategory(categoryToIndex.getParentCode());</span>
+<span class="nc" id="L151">        this.indexCategory(document, parentCategory);</span>
+<span class="nc" id="L152">    }</span>
 
     private void indexAttribute(Document document,
             AttributeInterface attribute, Lang lang) throws ApsSystemException {
-<span class="nc" id="L161">        attribute.setRenderingLang(lang.getCode());</span>
-<span class="nc bnc" id="L162" title="All 2 branches missed.">        if (attribute instanceof IndexableAttributeInterface) {</span>
-<span class="nc" id="L163">            String valueToIndex = ((IndexableAttributeInterface) attribute).getIndexeableFieldValue();</span>
-<span class="nc" id="L164">            String indexingType = attribute.getIndexingType();</span>
-<span class="nc" id="L165">            String fieldName = lang.getCode();</span>
-<span class="nc bnc" id="L166" title="All 2 branches missed.">            if (null != indexingType</span>
-<span class="nc bnc" id="L167" title="All 2 branches missed.">                    &amp;&amp; IndexableAttributeInterface.INDEXING_TYPE_UNSTORED.equalsIgnoreCase(indexingType)) {</span>
-<span class="nc" id="L168">                document.add(new TextField(fieldName, valueToIndex, Field.Store.NO));</span>
+<span class="nc" id="L156">        attribute.setRenderingLang(lang.getCode());</span>
+<span class="nc bnc" id="L157" title="All 2 branches missed.">        if (attribute instanceof IndexableAttributeInterface) {</span>
+<span class="nc" id="L158">            String valueToIndex = ((IndexableAttributeInterface) attribute).getIndexeableFieldValue();</span>
+<span class="nc" id="L159">            String indexingType = attribute.getIndexingType();</span>
+<span class="nc" id="L160">            String fieldName = lang.getCode();</span>
+<span class="nc bnc" id="L161" title="All 2 branches missed.">            if (null != indexingType</span>
+<span class="nc bnc" id="L162" title="All 2 branches missed.">                    &amp;&amp; IndexableAttributeInterface.INDEXING_TYPE_UNSTORED.equalsIgnoreCase(indexingType)) {</span>
+<span class="nc" id="L163">                document.add(new TextField(fieldName, valueToIndex, Field.Store.NO));</span>
             }
-<span class="nc bnc" id="L170" title="All 2 branches missed.">            if (null != indexingType</span>
-<span class="nc bnc" id="L171" title="All 2 branches missed.">                    &amp;&amp; IndexableAttributeInterface.INDEXING_TYPE_TEXT.equalsIgnoreCase(indexingType)) {</span>
-<span class="nc" id="L172">                document.add(new TextField(fieldName, valueToIndex, Field.Store.YES));</span>
+<span class="nc bnc" id="L165" title="All 2 branches missed.">            if (null != indexingType</span>
+<span class="nc bnc" id="L166" title="All 2 branches missed.">                    &amp;&amp; IndexableAttributeInterface.INDEXING_TYPE_TEXT.equalsIgnoreCase(indexingType)) {</span>
+<span class="nc" id="L167">                document.add(new TextField(fieldName, valueToIndex, Field.Store.YES));</span>
             }
         }
-<span class="nc bnc" id="L175" title="All 2 branches missed.">        if (attribute.isSearchable()) {</span>
-<span class="nc" id="L176">            List&lt;Lang&gt; langs = new ArrayList&lt;Lang&gt;();</span>
-<span class="nc" id="L177">            langs.add(lang);</span>
-<span class="nc" id="L178">            AttributeTracer tracer = new AttributeTracer();</span>
-<span class="nc" id="L179">            tracer.setLang(lang);</span>
-<span class="nc" id="L180">            String name = tracer.getFormFieldName(attribute);</span>
-<span class="nc" id="L181">            List&lt;AttributeSearchInfo&gt; searchInfos = attribute.getSearchInfos(langs);</span>
-<span class="nc bnc" id="L182" title="All 2 branches missed.">            if (null != searchInfos) {</span>
-<span class="nc bnc" id="L183" title="All 2 branches missed.">                for (int i = 0; i &lt; searchInfos.size(); i++) {</span>
-<span class="nc" id="L184">                    AttributeSearchInfo info = searchInfos.get(i);</span>
-<span class="nc" id="L185">                    Field field = null;</span>
-<span class="nc bnc" id="L186" title="All 2 branches missed.">                    if (null != info.getDate()) {</span>
-<span class="nc" id="L187">                        field = new TextField(name,</span>
-<span class="nc" id="L188">                                DateTools.timeToString(info.getDate().getTime(), DateTools.Resolution.MINUTE), Field.Store.YES);</span>
-<span class="nc bnc" id="L189" title="All 2 branches missed.">                    } else if (null != info.getBigDecimal()) {</span>
-<span class="nc" id="L190">                        int value = info.getBigDecimal().intValue();</span>
-<span class="nc" id="L191">                        field = new IntPoint(name, value);</span>
+<span class="nc bnc" id="L170" title="All 2 branches missed.">        if (attribute.isSearchable()) {</span>
+<span class="nc" id="L171">            List&lt;Lang&gt; langs = new ArrayList&lt;Lang&gt;();</span>
+<span class="nc" id="L172">            langs.add(lang);</span>
+<span class="nc" id="L173">            AttributeTracer tracer = new AttributeTracer();</span>
+<span class="nc" id="L174">            tracer.setLang(lang);</span>
+<span class="nc" id="L175">            String name = tracer.getFormFieldName(attribute);</span>
+<span class="nc" id="L176">            List&lt;AttributeSearchInfo&gt; searchInfos = attribute.getSearchInfos(langs);</span>
+<span class="nc bnc" id="L177" title="All 2 branches missed.">            if (null != searchInfos) {</span>
+<span class="nc bnc" id="L178" title="All 2 branches missed.">                for (int i = 0; i &lt; searchInfos.size(); i++) {</span>
+<span class="nc" id="L179">                    AttributeSearchInfo info = searchInfos.get(i);</span>
+<span class="nc" id="L180">                    Field field = null;</span>
+<span class="nc bnc" id="L181" title="All 2 branches missed.">                    if (null != info.getDate()) {</span>
+<span class="nc" id="L182">                        field = new TextField(name,</span>
+<span class="nc" id="L183">                                DateTools.timeToString(info.getDate().getTime(), DateTools.Resolution.MINUTE), Field.Store.YES);</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">                    } else if (null != info.getBigDecimal()) {</span>
+<span class="nc" id="L185">                        int value = info.getBigDecimal().intValue();</span>
+<span class="nc" id="L186">                        field = new IntPoint(name, value);</span>
 
                         //For int points a separate stored field must be added for future indexed search
-<span class="nc" id="L194">                        StoredField stored = new StoredField(name, value);</span>
-<span class="nc" id="L195">                        document.add(stored);</span>
-<span class="nc" id="L196">                    } else {</span>
-<span class="nc" id="L197">                        field = new TextField(name, info.getString(), Field.Store.YES);</span>
+<span class="nc" id="L189">                        StoredField stored = new StoredField(name, value);</span>
+<span class="nc" id="L190">                        document.add(stored);</span>
+<span class="nc" id="L191">                    } else {</span>
+<span class="nc" id="L192">                        field = new TextField(name, info.getString(), Field.Store.YES);</span>
                     }
-<span class="nc" id="L199">                    document.add(field);</span>
+<span class="nc" id="L194">                    document.add(field);</span>
                 }
             }
         }
-<span class="nc" id="L203">    }</span>
+<span class="nc" id="L198">    }</span>
 
     /**
      * Cancella un documento.
      *
-     * @param name Il nome del campo Field da utilizzare per recupero del documento.
-     * @param value La chiave mediante il quale è stato indicizzato il documento.
+     * @param name Il nome del campo Field da utilizzare per recupero del
+     * documento.
+     * @param value La chiave mediante il quale è stato indicizzato il
+     * documento.
      * @throws ApsSystemException In caso di errore
      */
     @Override
     public synchronized void delete(String name, String value) throws ApsSystemException {
         try {
-<span class="nc" id="L215">            IndexWriter writer = new IndexWriter(this.dir, this.getIndexWriterConfig());</span>
-<span class="nc" id="L216">            writer.deleteDocuments(new Term(name, value));</span>
-<span class="nc" id="L217">            writer.close();</span>
-<span class="nc" id="L218">        } catch (IOException e) {</span>
-<span class="nc" id="L219">            logger.error(&quot;Error deleting document&quot;, e);</span>
-<span class="nc" id="L220">            throw new ApsSystemException(&quot;Error deleting document&quot;, e);</span>
-<span class="nc" id="L221">        }</span>
-<span class="nc" id="L222">    }</span>
+<span class="nc" id="L212">            IndexWriter writer = new IndexWriter(this.dir, this.getIndexWriterConfig());</span>
+<span class="nc" id="L213">            writer.deleteDocuments(new Term(name, value));</span>
+<span class="nc" id="L214">            writer.close();</span>
+<span class="nc" id="L215">        } catch (IOException e) {</span>
+<span class="nc" id="L216">            logger.error(&quot;Error deleting document&quot;, e);</span>
+<span class="nc" id="L217">            throw new ApsSystemException(&quot;Error deleting document&quot;, e);</span>
+<span class="nc" id="L218">        }</span>
+<span class="nc" id="L219">    }</span>
 
     @Override
     public void close() {
         // nothing to do
-<span class="nc" id="L227">    }</span>
+<span class="nc" id="L224">    }</span>
 
     private Analyzer getAnalyzer() {
-<span class="nc" id="L230">        return new StandardAnalyzer();</span>
+<span class="nc" id="L227">        return new StandardAnalyzer();</span>
     }
 
     private IndexWriterConfig getIndexWriterConfig() {
-<span class="nc" id="L234">        return new IndexWriterConfig(this.getAnalyzer());</span>
+<span class="nc" id="L231">        return new IndexWriterConfig(this.getAnalyzer());</span>
     }
 
     protected ILangManager getLangManager() {
-<span class="nc" id="L238">        return langManager;</span>
+<span class="nc" id="L235">        return langManager;</span>
     }
 
     @Override
     public void setLangManager(ILangManager langManager) {
-<span class="nc" id="L243">        this.langManager = langManager;</span>
-<span class="nc" id="L244">    }</span>
+<span class="nc" id="L240">        this.langManager = langManager;</span>
+<span class="nc" id="L241">    }</span>
 
     public ICategoryManager getCategoryManager() {
-<span class="nc" id="L247">        return categoryManager;</span>
+<span class="nc" id="L244">        return categoryManager;</span>
     }
 
     public void setCategoryManager(ICategoryManager categoryManager) {
-<span class="nc" id="L251">        this.categoryManager = categoryManager;</span>
-<span class="nc" id="L252">    }</span>
+<span class="nc" id="L248">        this.categoryManager = categoryManager;</span>
+<span class="nc" id="L249">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

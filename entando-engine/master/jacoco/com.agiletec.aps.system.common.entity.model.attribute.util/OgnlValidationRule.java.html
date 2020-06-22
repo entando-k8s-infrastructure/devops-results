@@ -11,205 +11,200 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package com.agiletec.aps.system.common.entity.model.attribute.util;
+
+import java.io.Serializable;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import ognl.Ognl;
+import ognl.OgnlContext;
+import ognl.OgnlException;
+
+import org.jdom.CDATA;
+import org.jdom.Element;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.agiletec.aps.system.common.entity.model.AttributeFieldError;
 import com.agiletec.aps.system.common.entity.model.AttributeTracer;
 import com.agiletec.aps.system.common.entity.model.attribute.AttributeInterface;
 import com.agiletec.aps.system.services.lang.ILangManager;
 import com.agiletec.aps.system.services.lang.Lang;
-import java.io.Serializable;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import ognl.Ognl;
-import ognl.OgnlContext;
-import ognl.OgnlException;
-import org.jdom.CDATA;
-import org.jdom.Element;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * @author E.Santoboni
  */
 public class OgnlValidationRule implements Serializable {
 
-<span class="nc" id="L39">    private static final Logger _logger = LoggerFactory.getLogger(OgnlValidationRule.class);</span>
+<span class="nc" id="L41">	private static final Logger _logger =  LoggerFactory.getLogger(OgnlValidationRule.class);</span>
+	
+<span class="nc" id="L43">    public OgnlValidationRule() {}</span>
+    
+<span class="nc" id="L45">    public OgnlValidationRule(Element element) {</span>
+<span class="nc bnc" id="L46" title="All 2 branches missed.">        if (null == element) {</span>
+<span class="nc" id="L47">            throw new RuntimeException(&quot;null jdom element&quot;);</span>
+        }
+<span class="nc" id="L49">        String eval = element.getAttributeValue(&quot;evalOnValuedAttribute&quot;);</span>
+<span class="nc bnc" id="L50" title="All 4 branches missed.">        this.setEvalExpressionOnValuedAttribute(null != eval &amp;&amp; eval.equalsIgnoreCase(&quot;true&quot;));</span>
+<span class="nc" id="L51">        Element ognlExpressionElement = element.getChild(&quot;ognlexpression&quot;);</span>
+<span class="nc" id="L52">        this.setExpression(ognlExpressionElement.getText());</span>
+<span class="nc" id="L53">        Element errorMessageElement = element.getChild(&quot;errormessage&quot;);</span>
+<span class="nc bnc" id="L54" title="All 2 branches missed.">        if (null != errorMessageElement) {</span>
+<span class="nc" id="L55">            this.setErrorMessage(errorMessageElement.getText());</span>
+<span class="nc" id="L56">            this.setErrorMessageKey(errorMessageElement.getAttributeValue(&quot;key&quot;));</span>
+        }
+<span class="nc" id="L58">        Element helpMessageElement = element.getChild(&quot;helpmessage&quot;);</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">        if (null != helpMessageElement) {</span>
+<span class="nc" id="L60">            this.setHelpMessage(helpMessageElement.getText());</span>
+<span class="nc" id="L61">            this.setHelpMessageKey(helpMessageElement.getAttributeValue(&quot;key&quot;));</span>
+        }
+<span class="nc" id="L63">    }</span>
+    
+	@Override
+    protected OgnlValidationRule clone() {
+<span class="nc" id="L67">        OgnlValidationRule clone = new OgnlValidationRule();</span>
+<span class="nc" id="L68">        clone.setErrorMessage(this.getErrorMessage());</span>
+<span class="nc" id="L69">        clone.setErrorMessageKey(this.getErrorMessageKey());</span>
+<span class="nc" id="L70">        clone.setEvalExpressionOnValuedAttribute(this.isEvalExpressionOnValuedAttribute());</span>
+<span class="nc" id="L71">        clone.setExpression(this.getExpression());</span>
+<span class="nc" id="L72">        clone.setHelpMessage(this.getHelpMessage());</span>
+<span class="nc" id="L73">        clone.setHelpMessageKey(this.getHelpMessageKey());</span>
+<span class="nc" id="L74">        return clone;</span>
+    }
+    
+    public Element getConfigElement() {
+<span class="nc bnc" id="L78" title="All 4 branches missed.">        if (null == this.getExpression() || this.getExpression().trim().length() == 0) {</span>
+<span class="nc" id="L79">            return null;</span>
+        }
+<span class="nc" id="L81">        Element exprElement = new Element(&quot;expression&quot;);</span>
+<span class="nc" id="L82">        exprElement.setAttribute(&quot;evalOnValuedAttribute&quot;, String.valueOf(this.isEvalExpressionOnValuedAttribute()));</span>
+<span class="nc" id="L83">        Element ognlExprElement = new Element(&quot;ognlexpression&quot;);</span>
+<span class="nc" id="L84">        CDATA cdata = new CDATA(this.getExpression());</span>
+<span class="nc" id="L85">        ognlExprElement.addContent(cdata);</span>
+<span class="nc" id="L86">        exprElement.addContent(ognlExprElement);</span>
+<span class="nc" id="L87">        Element errorMessageElement = new Element(&quot;errormessage&quot;);</span>
+<span class="nc bnc" id="L88" title="All 4 branches missed.">        if (null != this.getErrorMessageKey() &amp;&amp; this.getErrorMessageKey().trim().length() &gt; 0) {</span>
+<span class="nc" id="L89">            errorMessageElement.setAttribute(&quot;key&quot;, this.getErrorMessageKey());</span>
+        }
+<span class="nc bnc" id="L91" title="All 4 branches missed.">        if (null != this.getErrorMessage() &amp;&amp; this.getErrorMessage().trim().length() &gt; 0) {</span>
+<span class="nc" id="L92">            CDATA label = new CDATA(this.getErrorMessage());</span>
+<span class="nc" id="L93">            errorMessageElement.addContent(label);</span>
+        }
+<span class="nc" id="L95">        exprElement.addContent(errorMessageElement);</span>
+<span class="nc" id="L96">        Element helpMessageElement = new Element(&quot;helpmessage&quot;);</span>
+<span class="nc bnc" id="L97" title="All 4 branches missed.">        if (null != this.getHelpMessageKey() &amp;&amp; this.getHelpMessageKey().trim().length() &gt; 0) {</span>
+<span class="nc" id="L98">            helpMessageElement.setAttribute(&quot;key&quot;, this.getHelpMessageKey());</span>
+        }
+<span class="nc bnc" id="L100" title="All 4 branches missed.">        if (null != this.getHelpMessage() &amp;&amp; this.getHelpMessage().trim().length() &gt; 0) {</span>
+<span class="nc" id="L101">            CDATA label = new CDATA(this.getHelpMessage());</span>
+<span class="nc" id="L102">            helpMessageElement.addContent(label);</span>
+        }
+<span class="nc" id="L104">        exprElement.addContent(helpMessageElement);</span>
+<span class="nc" id="L105">        return exprElement;</span>
+    }
+    
+    public AttributeFieldError validate(AttributeInterface attribute, AttributeTracer tracer, ILangManager langManager) {
+<span class="nc" id="L109">        AttributeFieldError error = null;</span>
+<span class="nc" id="L110">        String expression = this.getExpression();</span>
+<span class="nc bnc" id="L111" title="All 4 branches missed.">        if (null == expression || expression.trim().length() == 0) {</span>
+<span class="nc" id="L112">            return null;</span>
+        }
+<span class="nc bnc" id="L114" title="All 4 branches missed.">        if (this.isEvalExpressionOnValuedAttribute() &amp;&amp; attribute.getStatus().equals(AttributeInterface.Status.EMPTY)) {</span>
+<span class="nc" id="L115">            return null;</span>
+        }
+        try {
+<span class="nc" id="L118">            Object expr = Ognl.parseExpression(expression);</span>
+<span class="nc" id="L119">            OgnlContext ctx = this.createContextForExpressionValidation(attribute, tracer, langManager);</span>
+<span class="nc" id="L120">            Boolean value = (Boolean) Ognl.getValue(expr, ctx, attribute, Boolean.class);</span>
+<span class="nc bnc" id="L121" title="All 2 branches missed.">            if (!value) {</span>
+<span class="nc" id="L122">                error = new AttributeFieldError(attribute, AttributeFieldError.OGNL_VALIDATION, tracer);</span>
+<span class="nc" id="L123">                error.setMessage(this.getErrorMessage());</span>
+<span class="nc" id="L124">                error.setMessageKey(this.getErrorMessageKey());</span>
+            }
+<span class="nc" id="L126">        } catch (OgnlException oe) {</span>
+<span class="nc" id="L127">            _logger.error(&quot;Error on evaluation of expression : {}&quot;, expression, oe);</span>
+<span class="nc" id="L128">        } catch (Throwable t) {</span>
+<span class="nc" id="L129">            _logger.error(&quot;Generic Error on evaluation Ognl Expression : {}&quot;, expression, t);</span>
+<span class="nc" id="L130">            throw new RuntimeException(&quot;Generic Error on evaluation Ognl Expression&quot;, t);</span>
+<span class="nc" id="L131">        }</span>
+<span class="nc" id="L132">        return error;</span>
+    }
+    
+    protected OgnlContext createContextForExpressionValidation(AttributeInterface attribute, AttributeTracer tracer, ILangManager langManager) {
+<span class="nc" id="L136">        OgnlContext context = new OgnlContext();</span>
+<span class="nc" id="L137">        Map&lt;String, Lang&gt; langs = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L138">        List&lt;Lang&gt; langList = langManager.getLangs();</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">        for (int i = 0; i &lt; langList.size(); i++) {</span>
+<span class="nc" id="L140">            Lang lang = langList.get(i);</span>
+<span class="nc" id="L141">            langs.put(lang.getCode(), lang);</span>
+        }
+<span class="nc" id="L143">        context.put(&quot;langs&quot;, langs);</span>
+<span class="nc" id="L144">        context.put(&quot;attribute&quot;, attribute);</span>
+<span class="nc" id="L145">        context.put(&quot;entity&quot;, attribute.getParentEntity());</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">        if (tracer.isCompositeElement()) {</span>
+<span class="nc" id="L147">            context.put(&quot;parent&quot;, tracer.getParentAttribute());</span>
+        } else {
+<span class="nc bnc" id="L149" title="All 4 branches missed.">            if (tracer.isListElement() || tracer.isMonoListElement()) {</span>
+<span class="nc" id="L150">                context.put(&quot;parent&quot;, attribute.getParentEntity().getAttribute(attribute.getName()));</span>
+<span class="nc" id="L151">                context.put(&quot;index&quot;, tracer.getListIndex());</span>
+            }
+<span class="nc bnc" id="L153" title="All 2 branches missed.">            if (tracer.isListElement()) {</span>
+<span class="nc" id="L154">                context.put(&quot;listLang&quot;, tracer.getListLang());</span>
+            }
+        }
+<span class="nc" id="L157">        return context;</span>
+    }
+    
+    public String getExpression() {
+<span class="nc" id="L161">        return _expression;</span>
+    }
+    public void setExpression(String expression) {
+<span class="nc" id="L164">        this._expression = expression;</span>
+<span class="nc" id="L165">    }</span>
+
+    public boolean isEvalExpressionOnValuedAttribute() {
+<span class="nc" id="L168">        return _evalExpressionOnValuedAttribute;</span>
+    }
+    public void setEvalExpressionOnValuedAttribute(boolean evalExpressionOnValuedAttribute) {
+<span class="nc" id="L171">        this._evalExpressionOnValuedAttribute = evalExpressionOnValuedAttribute;</span>
+<span class="nc" id="L172">    }</span>
+
+    public String getErrorMessage() {
+<span class="nc" id="L175">        return _errorMessage;</span>
+    }
+    public void setErrorMessage(String errorMessage) {
+<span class="nc" id="L178">        this._errorMessage = errorMessage;</span>
+<span class="nc" id="L179">    }</span>
+
+    public String getErrorMessageKey() {
+<span class="nc" id="L182">        return _errorMessageKey;</span>
+    }
+    public void setErrorMessageKey(String errorMessageKey) {
+<span class="nc" id="L185">        this._errorMessageKey = errorMessageKey;</span>
+<span class="nc" id="L186">    }</span>
+
+    public String getHelpMessage() {
+<span class="nc" id="L189">        return _helpMessage;</span>
+    }
+    public void setHelpMessage(String helpMessage) {
+<span class="nc" id="L192">        this._helpMessage = helpMessage;</span>
+<span class="nc" id="L193">    }</span>
+
+    public String getHelpMessageKey() {
+<span class="nc" id="L196">        return _helpMessageKey;</span>
+    }
+    public void setHelpMessageKey(String helpMessageKey) {
+<span class="nc" id="L199">        this._helpMessageKey = helpMessageKey;</span>
+<span class="nc" id="L200">    }</span>
+    
     private String _expression;
     private boolean _evalExpressionOnValuedAttribute;
     private String _errorMessage;
     private String _errorMessageKey;
     private String _helpMessage;
     private String _helpMessageKey;
-
-<span class="nc" id="L47">    public OgnlValidationRule() {</span>
-<span class="nc" id="L48">    }</span>
-
-<span class="nc" id="L50">    public OgnlValidationRule(Element element) {</span>
-<span class="nc bnc" id="L51" title="All 2 branches missed.">        if (null == element) {</span>
-<span class="nc" id="L52">            throw new RuntimeException(&quot;null jdom element&quot;);</span>
-        }
-<span class="nc" id="L54">        String eval = element.getAttributeValue(&quot;evalOnValuedAttribute&quot;);</span>
-<span class="nc bnc" id="L55" title="All 4 branches missed.">        this.setEvalExpressionOnValuedAttribute(null != eval &amp;&amp; eval.equalsIgnoreCase(&quot;true&quot;));</span>
-<span class="nc" id="L56">        Element ognlExpressionElement = element.getChild(&quot;ognlexpression&quot;);</span>
-<span class="nc" id="L57">        this.setExpression(ognlExpressionElement.getText());</span>
-<span class="nc" id="L58">        Element errorMessageElement = element.getChild(&quot;errormessage&quot;);</span>
-<span class="nc bnc" id="L59" title="All 2 branches missed.">        if (null != errorMessageElement) {</span>
-<span class="nc" id="L60">            this.setErrorMessage(errorMessageElement.getText());</span>
-<span class="nc" id="L61">            this.setErrorMessageKey(errorMessageElement.getAttributeValue(&quot;key&quot;));</span>
-        }
-<span class="nc" id="L63">        Element helpMessageElement = element.getChild(&quot;helpmessage&quot;);</span>
-<span class="nc bnc" id="L64" title="All 2 branches missed.">        if (null != helpMessageElement) {</span>
-<span class="nc" id="L65">            this.setHelpMessage(helpMessageElement.getText());</span>
-<span class="nc" id="L66">            this.setHelpMessageKey(helpMessageElement.getAttributeValue(&quot;key&quot;));</span>
-        }
-<span class="nc" id="L68">    }</span>
-
-    @Override
-    protected OgnlValidationRule clone() {
-<span class="nc" id="L72">        OgnlValidationRule clone = new OgnlValidationRule();</span>
-<span class="nc" id="L73">        clone.setErrorMessage(this.getErrorMessage());</span>
-<span class="nc" id="L74">        clone.setErrorMessageKey(this.getErrorMessageKey());</span>
-<span class="nc" id="L75">        clone.setEvalExpressionOnValuedAttribute(this.isEvalExpressionOnValuedAttribute());</span>
-<span class="nc" id="L76">        clone.setExpression(this.getExpression());</span>
-<span class="nc" id="L77">        clone.setHelpMessage(this.getHelpMessage());</span>
-<span class="nc" id="L78">        clone.setHelpMessageKey(this.getHelpMessageKey());</span>
-<span class="nc" id="L79">        return clone;</span>
-    }
-
-    public Element getConfigElement() {
-<span class="nc bnc" id="L83" title="All 4 branches missed.">        if (null == this.getExpression() || this.getExpression().trim().length() == 0) {</span>
-<span class="nc" id="L84">            return null;</span>
-        }
-<span class="nc" id="L86">        Element exprElement = new Element(&quot;expression&quot;);</span>
-<span class="nc" id="L87">        exprElement.setAttribute(&quot;evalOnValuedAttribute&quot;, String.valueOf(this.isEvalExpressionOnValuedAttribute()));</span>
-<span class="nc" id="L88">        Element ognlExprElement = new Element(&quot;ognlexpression&quot;);</span>
-<span class="nc" id="L89">        CDATA cdata = new CDATA(this.getExpression());</span>
-<span class="nc" id="L90">        ognlExprElement.addContent(cdata);</span>
-<span class="nc" id="L91">        exprElement.addContent(ognlExprElement);</span>
-<span class="nc" id="L92">        Element errorMessageElement = new Element(&quot;errormessage&quot;);</span>
-<span class="nc bnc" id="L93" title="All 4 branches missed.">        if (null != this.getErrorMessageKey() &amp;&amp; this.getErrorMessageKey().trim().length() &gt; 0) {</span>
-<span class="nc" id="L94">            errorMessageElement.setAttribute(&quot;key&quot;, this.getErrorMessageKey());</span>
-        }
-<span class="nc bnc" id="L96" title="All 4 branches missed.">        if (null != this.getErrorMessage() &amp;&amp; this.getErrorMessage().trim().length() &gt; 0) {</span>
-<span class="nc" id="L97">            CDATA label = new CDATA(this.getErrorMessage());</span>
-<span class="nc" id="L98">            errorMessageElement.addContent(label);</span>
-        }
-<span class="nc" id="L100">        exprElement.addContent(errorMessageElement);</span>
-<span class="nc" id="L101">        Element helpMessageElement = new Element(&quot;helpmessage&quot;);</span>
-<span class="nc bnc" id="L102" title="All 4 branches missed.">        if (null != this.getHelpMessageKey() &amp;&amp; this.getHelpMessageKey().trim().length() &gt; 0) {</span>
-<span class="nc" id="L103">            helpMessageElement.setAttribute(&quot;key&quot;, this.getHelpMessageKey());</span>
-        }
-<span class="nc bnc" id="L105" title="All 4 branches missed.">        if (null != this.getHelpMessage() &amp;&amp; this.getHelpMessage().trim().length() &gt; 0) {</span>
-<span class="nc" id="L106">            CDATA label = new CDATA(this.getHelpMessage());</span>
-<span class="nc" id="L107">            helpMessageElement.addContent(label);</span>
-        }
-<span class="nc" id="L109">        exprElement.addContent(helpMessageElement);</span>
-<span class="nc" id="L110">        return exprElement;</span>
-    }
-
-    public AttributeFieldError validate(AttributeInterface attribute, AttributeTracer tracer, ILangManager langManager) {
-<span class="nc" id="L114">        AttributeFieldError error = null;</span>
-<span class="nc" id="L115">        String expression = this.getExpression();</span>
-<span class="nc bnc" id="L116" title="All 4 branches missed.">        if (null == expression || expression.trim().length() == 0) {</span>
-<span class="nc" id="L117">            return null;</span>
-        }
-<span class="nc bnc" id="L119" title="All 4 branches missed.">        if (this.isEvalExpressionOnValuedAttribute() &amp;&amp; attribute.getStatus().equals(AttributeInterface.Status.EMPTY)) {</span>
-<span class="nc" id="L120">            return null;</span>
-        }
-        try {
-<span class="nc" id="L123">            Object expr = Ognl.parseExpression(expression);</span>
-<span class="nc" id="L124">            OgnlContext ctx = this.createContextForExpressionValidation(attribute, tracer, langManager);</span>
-<span class="nc" id="L125">            Boolean value = (Boolean) Ognl.getValue(expr, ctx, attribute, Boolean.class);</span>
-<span class="nc bnc" id="L126" title="All 2 branches missed.">            if (!value) {</span>
-<span class="nc" id="L127">                error = new AttributeFieldError(attribute, AttributeFieldError.OGNL_VALIDATION, tracer);</span>
-<span class="nc" id="L128">                error.setMessage(this.getErrorMessage());</span>
-<span class="nc" id="L129">                error.setMessageKey(this.getErrorMessageKey());</span>
-            }
-<span class="nc" id="L131">        } catch (OgnlException oe) {</span>
-<span class="nc" id="L132">            _logger.error(&quot;Error on evaluation of expression : {}&quot;, expression, oe);</span>
-<span class="nc" id="L133">        } catch (Throwable t) {</span>
-<span class="nc" id="L134">            _logger.error(&quot;Generic Error on evaluation Ognl Expression : {}&quot;, expression, t);</span>
-<span class="nc" id="L135">            throw new RuntimeException(&quot;Generic Error on evaluation Ognl Expression&quot;, t);</span>
-<span class="nc" id="L136">        }</span>
-<span class="nc" id="L137">        return error;</span>
-    }
-
-    protected OgnlContext createContextForExpressionValidation(AttributeInterface attribute, AttributeTracer tracer,
-            ILangManager langManager) {
-<span class="nc" id="L142">        OgnlContext context = new OgnlContext();</span>
-<span class="nc" id="L143">        Map&lt;String, Lang&gt; langs = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L144">        List&lt;Lang&gt; langList = langManager.getLangs();</span>
-<span class="nc bnc" id="L145" title="All 2 branches missed.">        for (int i = 0; i &lt; langList.size(); i++) {</span>
-<span class="nc" id="L146">            Lang lang = langList.get(i);</span>
-<span class="nc" id="L147">            langs.put(lang.getCode(), lang);</span>
-        }
-<span class="nc" id="L149">        context.put(&quot;langs&quot;, langs);</span>
-<span class="nc" id="L150">        context.put(&quot;attribute&quot;, attribute);</span>
-<span class="nc" id="L151">        context.put(&quot;entity&quot;, attribute.getParentEntity());</span>
-<span class="nc bnc" id="L152" title="All 2 branches missed.">        if (tracer.isCompositeElement()) {</span>
-<span class="nc" id="L153">            context.put(&quot;parent&quot;, tracer.getParentAttribute());</span>
-        } else {
-<span class="nc bnc" id="L155" title="All 4 branches missed.">            if (tracer.isListElement() || tracer.isMonoListElement()) {</span>
-<span class="nc" id="L156">                context.put(&quot;parent&quot;, attribute.getParentEntity().getAttribute(attribute.getName()));</span>
-<span class="nc" id="L157">                context.put(&quot;index&quot;, tracer.getListIndex());</span>
-            }
-<span class="nc bnc" id="L159" title="All 2 branches missed.">            if (tracer.isListElement()) {</span>
-<span class="nc" id="L160">                context.put(&quot;listLang&quot;, tracer.getListLang());</span>
-            }
-        }
-<span class="nc" id="L163">        return context;</span>
-    }
-
-    public String getExpression() {
-<span class="nc" id="L167">        return _expression;</span>
-    }
-
-    public void setExpression(String expression) {
-<span class="nc" id="L171">        this._expression = expression;</span>
-<span class="nc" id="L172">    }</span>
-
-    public boolean isEvalExpressionOnValuedAttribute() {
-<span class="nc" id="L175">        return _evalExpressionOnValuedAttribute;</span>
-    }
-
-    public void setEvalExpressionOnValuedAttribute(boolean evalExpressionOnValuedAttribute) {
-<span class="nc" id="L179">        this._evalExpressionOnValuedAttribute = evalExpressionOnValuedAttribute;</span>
-<span class="nc" id="L180">    }</span>
-
-    public String getErrorMessage() {
-<span class="nc" id="L183">        return _errorMessage;</span>
-    }
-
-    public void setErrorMessage(String errorMessage) {
-<span class="nc" id="L187">        this._errorMessage = errorMessage;</span>
-<span class="nc" id="L188">    }</span>
-
-    public String getErrorMessageKey() {
-<span class="nc" id="L191">        return _errorMessageKey;</span>
-    }
-
-    public void setErrorMessageKey(String errorMessageKey) {
-<span class="nc" id="L195">        this._errorMessageKey = errorMessageKey;</span>
-<span class="nc" id="L196">    }</span>
-
-    public String getHelpMessage() {
-<span class="nc" id="L199">        return _helpMessage;</span>
-    }
-
-    public void setHelpMessage(String helpMessage) {
-<span class="nc" id="L203">        this._helpMessage = helpMessage;</span>
-<span class="nc" id="L204">    }</span>
-
-    public String getHelpMessageKey() {
-<span class="nc" id="L207">        return _helpMessageKey;</span>
-    }
-
-    public void setHelpMessageKey(String helpMessageKey) {
-<span class="nc" id="L211">        this._helpMessageKey = helpMessageKey;</span>
-<span class="nc" id="L212">    }</span>
-
+    
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

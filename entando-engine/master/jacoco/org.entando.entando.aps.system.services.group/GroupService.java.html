@@ -11,7 +11,6 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package org.entando.entando.aps.system.services.group;
 
 import com.agiletec.aps.system.common.FieldSearchFilter;
@@ -20,11 +19,6 @@ import com.agiletec.aps.system.exception.ApsSystemException;
 import com.agiletec.aps.system.services.group.Group;
 import com.agiletec.aps.system.services.group.GroupUtilizer;
 import com.agiletec.aps.system.services.group.IGroupManager;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import org.entando.entando.aps.system.exception.ResourceNotFoundException;
 import org.entando.entando.aps.system.exception.RestServerError;
 import org.entando.entando.aps.system.services.IDtoBuilder;
@@ -42,9 +36,11 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.validation.BeanPropertyBindingResult;
 
-<span class="nc" id="L45">public class GroupService implements IGroupService, ApplicationContextAware {</span>
+import java.util.*;
 
-<span class="nc" id="L47">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+<span class="nc" id="L41">public class GroupService implements IGroupService, ApplicationContextAware {</span>
+
+<span class="nc" id="L43">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
 
     @Autowired
     private IGroupManager groupManager;
@@ -55,206 +51,204 @@ import org.springframework.validation.BeanPropertyBindingResult;
     private ApplicationContext applicationContext;
 
     protected IGroupManager getGroupManager() {
-<span class="nc" id="L58">        return groupManager;</span>
+<span class="nc" id="L54">        return groupManager;</span>
     }
 
     public void setGroupManager(IGroupManager groupManager) {
-<span class="nc" id="L62">        this.groupManager = groupManager;</span>
-<span class="nc" id="L63">    }</span>
+<span class="nc" id="L58">        this.groupManager = groupManager;</span>
+<span class="nc" id="L59">    }</span>
 
     protected IDtoBuilder&lt;Group, GroupDto&gt; getDtoBuilder() {
-<span class="nc" id="L66">        return dtoBuilder;</span>
+<span class="nc" id="L62">        return dtoBuilder;</span>
     }
 
     public void setDtoBuilder(IDtoBuilder&lt;Group, GroupDto&gt; dtoBuilder) {
-<span class="nc" id="L70">        this.dtoBuilder = dtoBuilder;</span>
-<span class="nc" id="L71">    }</span>
+<span class="nc" id="L66">        this.dtoBuilder = dtoBuilder;</span>
+<span class="nc" id="L67">    }</span>
 
     @Override
     public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-<span class="nc" id="L75">        this.applicationContext = applicationContext;</span>
-<span class="nc" id="L76">    }</span>
+<span class="nc" id="L71">        this.applicationContext = applicationContext;</span>
+<span class="nc" id="L72">    }</span>
 
     @SuppressWarnings(&quot;rawtypes&quot;)
     @Override
     public PagedMetadata&lt;GroupDto&gt; getGroups(RestListRequest restListReq) {
         try {
             //transforms the filters by overriding the key specified in the request with the correct one known by the dto
-<span class="nc" id="L83">            List&lt;FieldSearchFilter&gt; filters = new ArrayList&lt;FieldSearchFilter&gt;(restListReq.buildFieldSearchFilters());</span>
-<span class="nc" id="L84">            filters</span>
-<span class="nc" id="L85">                    .stream()</span>
-<span class="nc bnc" id="L86" title="All 2 branches missed.">                    .filter(i -&gt; i.getKey() != null)</span>
-<span class="nc" id="L87">                    .forEach(i -&gt; i.setKey(GroupDto.getEntityFieldName(i.getKey())));</span>
+<span class="nc" id="L79">            List&lt;FieldSearchFilter&gt; filters = new ArrayList&lt;FieldSearchFilter&gt;(restListReq.buildFieldSearchFilters());</span>
+<span class="nc" id="L80">            filters</span>
+<span class="nc" id="L81">                    .stream()</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">                    .filter(i -&gt; i.getKey() != null)</span>
+<span class="nc" id="L83">                    .forEach(i -&gt; i.setKey(GroupDto.getEntityFieldName(i.getKey())));</span>
 
-<span class="nc" id="L89">            SearcherDaoPaginatedResult&lt;Group&gt; groups = this.getGroupManager().getGroups(filters);</span>
-<span class="nc" id="L90">            List&lt;GroupDto&gt; dtoList = dtoBuilder.convert(groups.getList());</span>
+<span class="nc" id="L85">            SearcherDaoPaginatedResult&lt;Group&gt; groups = this.getGroupManager().getGroups(filters);</span>
+<span class="nc" id="L86">            List&lt;GroupDto&gt; dtoList = dtoBuilder.convert(groups.getList());</span>
 
-<span class="nc" id="L92">            PagedMetadata&lt;GroupDto&gt; pagedMetadata = new PagedMetadata&lt;&gt;(restListReq, groups);</span>
-<span class="nc" id="L93">            pagedMetadata.setBody(dtoList);</span>
+<span class="nc" id="L88">            PagedMetadata&lt;GroupDto&gt; pagedMetadata = new PagedMetadata&lt;&gt;(restListReq, groups);</span>
+<span class="nc" id="L89">            pagedMetadata.setBody(dtoList);</span>
 
-<span class="nc" id="L95">            return pagedMetadata;</span>
-<span class="nc" id="L96">        } catch (Throwable t) {</span>
-<span class="nc" id="L97">            logger.error(&quot;error in search groups&quot;, t);</span>
-<span class="nc" id="L98">            throw new RestServerError(&quot;error in search groups&quot;, t);</span>
+<span class="nc" id="L91">            return pagedMetadata;</span>
+<span class="nc" id="L92">        } catch (Throwable t) {</span>
+<span class="nc" id="L93">            logger.error(&quot;error in search groups&quot;, t);</span>
+<span class="nc" id="L94">            throw new RestServerError(&quot;error in search groups&quot;, t);</span>
         }
     }
 
     @Override
     public GroupDto getGroup(String groupCode) {
-<span class="nc" id="L104">        Group group = this.getGroupManager().getGroup(groupCode);</span>
-<span class="nc bnc" id="L105" title="All 2 branches missed.">        if (null == group) {</span>
-<span class="nc" id="L106">            logger.warn(&quot;no group found with code {}&quot;, groupCode);</span>
-<span class="nc" id="L107">            throw new ResourceNotFoundException(GroupValidator.ERRCODE_GROUP_NOT_FOUND, &quot;group&quot;, groupCode);</span>
+<span class="nc" id="L100">        Group group = this.getGroupManager().getGroup(groupCode);</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        if (null == group) {</span>
+<span class="nc" id="L102">            logger.warn(&quot;no group found with code {}&quot;, groupCode);</span>
+<span class="nc" id="L103">            throw new ResourceNotFoundException(GroupValidator.ERRCODE_GROUP_NOT_FOUND, &quot;group&quot;, groupCode);</span>
         }
-<span class="nc" id="L109">        GroupDto dto = this.getDtoBuilder().convert(group);</span>
-<span class="nc" id="L110">        dto.setReferences(this.getReferencesInfo(group));</span>
-<span class="nc" id="L111">        return dto;</span>
+<span class="nc" id="L105">        GroupDto dto = this.getDtoBuilder().convert(group);</span>
+<span class="nc" id="L106">        dto.setReferences(this.getReferencesInfo(group));</span>
+<span class="nc" id="L107">        return dto;</span>
     }
 
     @Override
     public PagedMetadata&lt;?&gt; getGroupReferences(String groupCode, String managerName, RestListRequest restRequest) {
-<span class="nc" id="L116">        Group group = this.getGroupManager().getGroup(groupCode);</span>
-<span class="nc bnc" id="L117" title="All 2 branches missed.">        if (null == group) {</span>
-<span class="nc" id="L118">            logger.warn(&quot;no group found with code {}&quot;, groupCode);</span>
-<span class="nc" id="L119">            throw new ResourceNotFoundException(GroupValidator.ERRCODE_GROUP_NOT_FOUND, &quot;group&quot;, groupCode);</span>
+<span class="nc" id="L112">        Group group = this.getGroupManager().getGroup(groupCode);</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">        if (null == group) {</span>
+<span class="nc" id="L114">            logger.warn(&quot;no group found with code {}&quot;, groupCode);</span>
+<span class="nc" id="L115">            throw new ResourceNotFoundException(GroupValidator.ERRCODE_GROUP_NOT_FOUND, &quot;group&quot;, groupCode);</span>
         }
-<span class="nc" id="L121">        GroupServiceUtilizer&lt;?&gt; utilizer = this.getGroupServiceUtilizer(managerName);</span>
-<span class="nc bnc" id="L122" title="All 2 branches missed.">        if (null == utilizer) {</span>
-<span class="nc" id="L123">            logger.warn(&quot;no references found for {}&quot;, managerName);</span>
+<span class="nc" id="L117">        GroupServiceUtilizer&lt;?&gt; utilizer = this.getGroupServiceUtilizer(managerName);</span>
+<span class="nc bnc" id="L118" title="All 2 branches missed.">        if (null == utilizer) {</span>
+<span class="nc" id="L119">            logger.warn(&quot;no references found for {}&quot;, managerName);</span>
 
-<span class="nc" id="L125">            throw new ResourceNotFoundException(GroupValidator.ERRCODE_GROUP_REFERENCES, &quot;reference&quot;, managerName);</span>
+<span class="nc" id="L121">            throw new ResourceNotFoundException(GroupValidator.ERRCODE_GROUP_REFERENCES, &quot;reference&quot;, managerName);</span>
         }
-<span class="nc" id="L127">        List&lt;?&gt; dtoList = utilizer.getGroupUtilizer(groupCode);</span>
-<span class="nc" id="L128">        List&lt;?&gt; subList = restRequest.getSublist(dtoList);</span>
-<span class="nc" id="L129">        int size = 0;</span>
-<span class="nc bnc" id="L130" title="All 2 branches missed.">        if (dtoList != null) {</span>
-<span class="nc" id="L131">            size = dtoList.size();</span>
+<span class="nc" id="L123">        List&lt;?&gt; dtoList = utilizer.getGroupUtilizer(groupCode);</span>
+<span class="nc" id="L124">        List&lt;?&gt; subList = restRequest.getSublist(dtoList);</span>
+<span class="nc" id="L125">        int size = 0;</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">        if (dtoList != null) {</span>
+<span class="nc" id="L127">            size = dtoList.size();</span>
         }
-<span class="nc" id="L133">        SearcherDaoPaginatedResult&lt;?&gt; pagedResult = new SearcherDaoPaginatedResult(size, subList);</span>
-<span class="nc" id="L134">        PagedMetadata&lt;Object&gt; pagedMetadata = new PagedMetadata&lt;&gt;(restRequest, pagedResult);</span>
-<span class="nc" id="L135">        pagedMetadata.setBody((List&lt;Object&gt;) subList);</span>
-<span class="nc" id="L136">        return pagedMetadata;</span>
+<span class="nc" id="L129">        SearcherDaoPaginatedResult&lt;?&gt; pagedResult = new SearcherDaoPaginatedResult(size, subList);</span>
+<span class="nc" id="L130">        PagedMetadata&lt;Object&gt; pagedMetadata = new PagedMetadata&lt;&gt;(restRequest, pagedResult);</span>
+<span class="nc" id="L131">        pagedMetadata.setBody((List&lt;Object&gt;) subList);</span>
+<span class="nc" id="L132">        return pagedMetadata;</span>
     }
 
     @Override
     public GroupDto updateGroup(String groupCode, String descr) {
-<span class="nc" id="L141">        Group group = this.getGroupManager().getGroup(groupCode);</span>
-<span class="nc bnc" id="L142" title="All 2 branches missed.">        if (null == group) {</span>
-<span class="nc" id="L143">            throw new ResourceNotFoundException(GroupValidator.ERRCODE_GROUP_NOT_FOUND, &quot;group&quot;, groupCode);</span>
+<span class="nc" id="L137">        Group group = this.getGroupManager().getGroup(groupCode);</span>
+<span class="nc bnc" id="L138" title="All 2 branches missed.">        if (null == group) {</span>
+<span class="nc" id="L139">            throw new ResourceNotFoundException(GroupValidator.ERRCODE_GROUP_NOT_FOUND, &quot;group&quot;, groupCode);</span>
         }
-<span class="nc" id="L145">        group.setDescription(descr);</span>
+<span class="nc" id="L141">        group.setDescription(descr);</span>
         try {
-<span class="nc" id="L147">            this.getGroupManager().updateGroup(group);</span>
-<span class="nc" id="L148">            return this.getDtoBuilder().convert(group);</span>
-<span class="nc" id="L149">        } catch (ApsSystemException e) {</span>
-<span class="nc" id="L150">            logger.error(&quot;Error updating group {}&quot;, groupCode, e);</span>
-<span class="nc" id="L151">            throw new RestServerError(&quot;error in update group&quot;, e);</span>
+<span class="nc" id="L143">            this.getGroupManager().updateGroup(group);</span>
+<span class="nc" id="L144">            return this.getDtoBuilder().convert(group);</span>
+<span class="nc" id="L145">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L146">            logger.error(&quot;Error updating group {}&quot;, groupCode, e);</span>
+<span class="nc" id="L147">            throw new RestServerError(&quot;error in update group&quot;, e);</span>
         }
     }
 
     @Override
     public GroupDto addGroup(GroupRequest groupRequest) {
         try {
-<span class="nc" id="L158">            Group group = this.createGroup(groupRequest);</span>
-<span class="nc" id="L159">            this.getGroupManager().addGroup(group);</span>
-<span class="nc" id="L160">            return this.getDtoBuilder().convert(group);</span>
-<span class="nc" id="L161">        } catch (ApsSystemException e) {</span>
-<span class="nc" id="L162">            logger.error(&quot;Error adding group&quot;, e);</span>
-<span class="nc" id="L163">            throw new RestServerError(&quot;error add group&quot;, e);</span>
+<span class="nc" id="L154">            Group group = this.createGroup(groupRequest);</span>
+<span class="nc" id="L155">            this.getGroupManager().addGroup(group);</span>
+<span class="nc" id="L156">            return this.getDtoBuilder().convert(group);</span>
+<span class="nc" id="L157">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L158">            logger.error(&quot;Error adding group&quot;, e);</span>
+<span class="nc" id="L159">            throw new RestServerError(&quot;error add group&quot;, e);</span>
         }
     }
 
     @Override
     public void removeGroup(String groupName) {
         try {
-<span class="nc" id="L170">            Group group = this.getGroupManager().getGroup(groupName);</span>
+<span class="nc" id="L166">            Group group = this.getGroupManager().getGroup(groupName);</span>
 
-<span class="nc" id="L172">            BeanPropertyBindingResult validationResult = this.checkGroupForDelete(group);</span>
-<span class="nc bnc" id="L173" title="All 2 branches missed.">            if (validationResult.hasErrors()) {</span>
-<span class="nc" id="L174">                throw new ValidationConflictException(validationResult);</span>
+<span class="nc" id="L168">            BeanPropertyBindingResult validationResult = this.checkGroupForDelete(group);</span>
+<span class="nc bnc" id="L169" title="All 2 branches missed.">            if (validationResult.hasErrors()) {</span>
+<span class="nc" id="L170">                throw new ValidationConflictException(validationResult);</span>
             }
 
-<span class="nc bnc" id="L177" title="All 2 branches missed.">            if (null != group) {</span>
-<span class="nc" id="L178">                this.getGroupManager().removeGroup(group);</span>
+<span class="nc bnc" id="L173" title="All 2 branches missed.">            if (null != group) {</span>
+<span class="nc" id="L174">                this.getGroupManager().removeGroup(group);</span>
             }
-<span class="nc" id="L180">        } catch (ApsSystemException e) {</span>
-<span class="nc" id="L181">            logger.error(&quot;Error in delete group {}&quot;, groupName, e);</span>
-<span class="nc" id="L182">            throw new RestServerError(&quot;error in delete group&quot;, e);</span>
-<span class="nc" id="L183">        }</span>
-<span class="nc" id="L184">    }</span>
+<span class="nc" id="L176">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L177">            logger.error(&quot;Error in delete group {}&quot;, groupName, e);</span>
+<span class="nc" id="L178">            throw new RestServerError(&quot;error in delete group&quot;, e);</span>
+<span class="nc" id="L179">        }</span>
+<span class="nc" id="L180">    }</span>
 
     protected Group createGroup(GroupRequest groupRequest) {
-<span class="nc" id="L187">        Group group = new Group();</span>
-<span class="nc" id="L188">        group.setName(groupRequest.getCode());</span>
-<span class="nc" id="L189">        group.setDescription(groupRequest.getName());</span>
-<span class="nc" id="L190">        return group;</span>
+<span class="nc" id="L183">        Group group = new Group();</span>
+<span class="nc" id="L184">        group.setName(groupRequest.getCode());</span>
+<span class="nc" id="L185">        group.setDescription(groupRequest.getName());</span>
+<span class="nc" id="L186">        return group;</span>
     }
 
     protected BeanPropertyBindingResult checkGroupForDelete(Group group) throws ApsSystemException {
-<span class="nc" id="L194">        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(group, &quot;group&quot;);</span>
+<span class="nc" id="L190">        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(group, &quot;group&quot;);</span>
 
-<span class="nc bnc" id="L196" title="All 2 branches missed.">        if (null == group) {</span>
-<span class="nc" id="L197">            return bindingResult;</span>
+<span class="nc bnc" id="L192" title="All 2 branches missed.">        if (null == group) {</span>
+<span class="nc" id="L193">            return bindingResult;</span>
         }
-<span class="nc bnc" id="L199" title="All 4 branches missed.">        if (Group.FREE_GROUP_NAME.equals(group.getName()) || Group.ADMINS_GROUP_NAME.equals(group.getName())) {</span>
-<span class="nc" id="L200">            bindingResult.reject(GroupValidator.ERRCODE_CANNOT_DELETE_RESERVED_GROUP, new String[]{group.getName()},</span>
-                    &quot;group.cannot.delete.reserved&quot;);
+<span class="nc bnc" id="L195" title="All 4 branches missed.">        if (Group.FREE_GROUP_NAME.equals(group.getName()) || Group.ADMINS_GROUP_NAME.equals(group.getName())) {</span>
+<span class="nc" id="L196">            bindingResult.reject(GroupValidator.ERRCODE_CANNOT_DELETE_RESERVED_GROUP, new String[]{group.getName()}, &quot;group.cannot.delete.reserved&quot;);</span>
         }
-<span class="nc bnc" id="L203" title="All 2 branches missed.">        if (!bindingResult.hasErrors()) {</span>
+<span class="nc bnc" id="L198" title="All 2 branches missed.">        if (!bindingResult.hasErrors()) {</span>
 
-<span class="nc" id="L205">            Map&lt;String, Boolean&gt; references = this.getReferencesInfo(group);</span>
-<span class="nc bnc" id="L206" title="All 2 branches missed.">            if (references.size() &gt; 0) {</span>
-<span class="nc bnc" id="L207" title="All 2 branches missed.">                for (Map.Entry&lt;String, Boolean&gt; entry : references.entrySet()) {</span>
-<span class="nc bnc" id="L208" title="All 2 branches missed.">                    if (true == entry.getValue().booleanValue()) {</span>
+<span class="nc" id="L200">            Map&lt;String, Boolean&gt; references = this.getReferencesInfo(group);</span>
+<span class="nc bnc" id="L201" title="All 2 branches missed.">            if (references.size() &gt; 0) {</span>
+<span class="nc bnc" id="L202" title="All 2 branches missed.">                for (Map.Entry&lt;String, Boolean&gt; entry : references.entrySet()) {</span>
+<span class="nc bnc" id="L203" title="All 2 branches missed.">                    if (true == entry.getValue().booleanValue()) {</span>
 
-<span class="nc" id="L210">                        bindingResult.reject(GroupValidator.ERRCODE_GROUP_REFERENCES, new Object[]{group.getName(), entry.getKey()},</span>
-                                &quot;group.cannot.delete.references&quot;);
+<span class="nc" id="L205">                        bindingResult.reject(GroupValidator.ERRCODE_GROUP_REFERENCES, new Object[]{group.getName(), entry.getKey()}, &quot;group.cannot.delete.references&quot;);</span>
                     }
-<span class="nc" id="L213">                }</span>
+<span class="nc" id="L207">                }</span>
             }
         }
 
-<span class="nc" id="L217">        return bindingResult;</span>
+<span class="nc" id="L211">        return bindingResult;</span>
     }
 
     public Map&lt;String, Boolean&gt; getReferencesInfo(Group group) {
-<span class="nc" id="L221">        Map&lt;String, Boolean&gt; references = new HashMap&lt;String, Boolean&gt;();</span>
+<span class="nc" id="L215">        Map&lt;String, Boolean&gt; references = new HashMap&lt;String, Boolean&gt;();</span>
         try {
-<span class="nc" id="L223">            String[] defNames = applicationContext.getBeanNamesForType(GroupUtilizer.class);</span>
-<span class="nc bnc" id="L224" title="All 2 branches missed.">            for (int i = 0; i &lt; defNames.length; i++) {</span>
-<span class="nc" id="L225">                Object service = null;</span>
+<span class="nc" id="L217">            String[] defNames = applicationContext.getBeanNamesForType(GroupUtilizer.class);</span>
+<span class="nc bnc" id="L218" title="All 2 branches missed.">            for (int i = 0; i &lt; defNames.length; i++) {</span>
+<span class="nc" id="L219">                Object service = null;</span>
                 try {
-<span class="nc" id="L227">                    service = applicationContext.getBean(defNames[i]);</span>
-<span class="nc" id="L228">                } catch (Throwable t) {</span>
-<span class="nc" id="L229">                    logger.error(&quot;error in hasReferencingObjects&quot;, t);</span>
-<span class="nc" id="L230">                    service = null;</span>
-<span class="nc" id="L231">                }</span>
-<span class="nc bnc" id="L232" title="All 2 branches missed.">                if (service != null) {</span>
-<span class="nc" id="L233">                    GroupUtilizer&lt;?&gt; groupUtilizer = (GroupUtilizer&lt;?&gt;) service;</span>
-<span class="nc" id="L234">                    List&lt;?&gt; utilizers = groupUtilizer.getGroupUtilizers(group.getName());</span>
-<span class="nc bnc" id="L235" title="All 4 branches missed.">                    if (utilizers != null &amp;&amp; !utilizers.isEmpty()) {</span>
-<span class="nc" id="L236">                        references.put(groupUtilizer.getName(), true);</span>
+<span class="nc" id="L221">                    service = applicationContext.getBean(defNames[i]);</span>
+<span class="nc" id="L222">                } catch (Throwable t) {</span>
+<span class="nc" id="L223">                    logger.error(&quot;error in hasReferencingObjects&quot;, t);</span>
+<span class="nc" id="L224">                    service = null;</span>
+<span class="nc" id="L225">                }</span>
+<span class="nc bnc" id="L226" title="All 2 branches missed.">                if (service != null) {</span>
+<span class="nc" id="L227">                    GroupUtilizer&lt;?&gt; groupUtilizer = (GroupUtilizer&lt;?&gt;) service;</span>
+<span class="nc" id="L228">                    List&lt;?&gt; utilizers = groupUtilizer.getGroupUtilizers(group.getName());</span>
+<span class="nc bnc" id="L229" title="All 4 branches missed.">                    if (utilizers != null &amp;&amp; !utilizers.isEmpty()) {</span>
+<span class="nc" id="L230">                        references.put(groupUtilizer.getName(), true);</span>
                     } else {
-<span class="nc" id="L238">                        references.put(groupUtilizer.getName(), false);</span>
+<span class="nc" id="L232">                        references.put(groupUtilizer.getName(), false);</span>
                     }
                 }
             }
-<span class="nc" id="L242">        } catch (ApsSystemException ex) {</span>
-<span class="nc" id="L243">            logger.error(&quot;error loading references for group {}&quot;, group.getName(), ex);</span>
-<span class="nc" id="L244">            throw new RestServerError(&quot;error in getReferencingObjects &quot;, ex);</span>
-<span class="nc" id="L245">        }</span>
-<span class="nc" id="L246">        return references;</span>
+<span class="nc" id="L236">        } catch (ApsSystemException ex) {</span>
+<span class="nc" id="L237">            logger.error(&quot;error loading references for group {}&quot;, group.getName(), ex);</span>
+<span class="nc" id="L238">            throw new RestServerError(&quot;error in getReferencingObjects &quot;, ex);</span>
+<span class="nc" id="L239">        }</span>
+<span class="nc" id="L240">        return references;</span>
     }
 
     private GroupServiceUtilizer&lt;?&gt; getGroupServiceUtilizer(String managerName) {
-<span class="nc" id="L250">        Map&lt;String, GroupServiceUtilizer&gt; beans = applicationContext.getBeansOfType(GroupServiceUtilizer.class);</span>
-<span class="nc" id="L251">        Optional&lt;GroupServiceUtilizer&gt; defName = beans.values().stream()</span>
-<span class="nc" id="L252">                .filter(service -&gt; service.getManagerName().equals(managerName))</span>
-<span class="nc" id="L253">                .findFirst();</span>
-<span class="nc bnc" id="L254" title="All 2 branches missed.">        if (defName.isPresent()) {</span>
-<span class="nc" id="L255">            return defName.get();</span>
+<span class="nc" id="L244">        Map&lt;String, GroupServiceUtilizer&gt; beans = applicationContext.getBeansOfType(GroupServiceUtilizer.class);</span>
+<span class="nc" id="L245">        Optional&lt;GroupServiceUtilizer&gt; defName = beans.values().stream()</span>
+<span class="nc" id="L246">                .filter(service -&gt; service.getManagerName().equals(managerName))</span>
+<span class="nc" id="L247">                .findFirst();</span>
+<span class="nc bnc" id="L248" title="All 2 branches missed.">        if (defName.isPresent()) {</span>
+<span class="nc" id="L249">            return defName.get();</span>
         }
-<span class="nc" id="L257">        return null;</span>
+<span class="nc" id="L251">        return null;</span>
     }
 
 }

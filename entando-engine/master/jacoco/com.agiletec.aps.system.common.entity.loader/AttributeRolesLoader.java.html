@@ -11,103 +11,101 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package com.agiletec.aps.system.common.entity.loader;
+
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.Map;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.ListableBeanFactory;
 
 import com.agiletec.aps.system.common.entity.IEntityManager;
 import com.agiletec.aps.system.common.entity.model.attribute.AttributeRole;
 import com.agiletec.aps.system.common.entity.parse.AttributeRoleDOM;
 import com.agiletec.aps.system.exception.ApsSystemException;
 import com.agiletec.aps.util.FileTextReader;
-import java.io.InputStream;
-import java.util.HashMap;
-import java.util.Map;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeansException;
-import org.springframework.beans.factory.BeanFactory;
-import org.springframework.beans.factory.ListableBeanFactory;
 
 /**
  * The Class loader of the extra attribute roles.
- *
  * @author E.Santoboni
  */
 <span class="nc" id="L36">public class AttributeRolesLoader {</span>
 
-<span class="nc" id="L38">    private static final Logger _logger = LoggerFactory.getLogger(AttributeRolesLoader.class);</span>
-    private IEntityManager _entityManager;
-    private BeanFactory _beanFactory;
-
-    public Map&lt;String, AttributeRole&gt; extractAttributeRoles(String attributeRolesFileName, BeanFactory beanFactory,
-            IEntityManager entityManager) {
-<span class="nc" id="L44">        Map&lt;String, AttributeRole&gt; attributeRoles = new HashMap&lt;&gt;();</span>
-        try {
-<span class="nc" id="L46">            this.setEntityManager(entityManager);</span>
-<span class="nc" id="L47">            this.setBeanFactory(beanFactory);</span>
-<span class="nc" id="L48">            this.loadDefaultRoles(attributeRolesFileName, attributeRoles);</span>
-<span class="nc" id="L49">            this.loadExtraRoles(attributeRoles);</span>
-<span class="nc" id="L50">        } catch (Throwable t) {</span>
-<span class="nc" id="L51">            _logger.error(&quot;Error loading attribute Roles&quot;, t);</span>
-<span class="nc" id="L52">        }</span>
-<span class="nc" id="L53">        return attributeRoles;</span>
-    }
-
-    private void loadDefaultRoles(String attributeRolesFileName, Map&lt;String, AttributeRole&gt; attributeRoles) {
-        try {
-<span class="nc" id="L58">            String xml = this.extractConfigFile(attributeRolesFileName);</span>
-<span class="nc bnc" id="L59" title="All 2 branches missed.">            if (null != xml) {</span>
-<span class="nc" id="L60">                AttributeRoleDOM dom = new AttributeRoleDOM();</span>
-<span class="nc" id="L61">                attributeRoles.putAll(dom.extractRoles(xml, attributeRolesFileName));</span>
-            }
-<span class="nc" id="L63">        } catch (Throwable t) {</span>
-<span class="nc" id="L64">            _logger.error(&quot;Error loading attribute Roles : file {}&quot;, attributeRolesFileName, t);</span>
-<span class="nc" id="L65">        }</span>
-<span class="nc" id="L66">    }</span>
-
-    private void loadExtraRoles(Map&lt;String, AttributeRole&gt; attributeRoles) {
-        try {
-<span class="nc" id="L70">            ListableBeanFactory factory = (ListableBeanFactory) this.getBeanFactory();</span>
-<span class="nc" id="L71">            String[] defNames = factory.getBeanNamesForType(ExtraAttributeRolesWrapper.class);</span>
-<span class="nc bnc" id="L72" title="All 2 branches missed.">            for (int i = 0; i &lt; defNames.length; i++) {</span>
-                try {
-<span class="nc" id="L74">                    Object loader = this.getBeanFactory().getBean(defNames[i]);</span>
-<span class="nc bnc" id="L75" title="All 2 branches missed.">                    if (loader != null) {</span>
-<span class="nc" id="L76">                        ((ExtraAttributeRolesWrapper) loader).executeLoading(attributeRoles, this.getEntityManager());</span>
-                    }
-<span class="nc" id="L78">                } catch (BeansException | ApsSystemException t) {</span>
-<span class="nc" id="L79">                    _logger.error(&quot;Error extracting attribute support object : bean {}&quot;, defNames[i], t);</span>
-<span class="nc" id="L80">                }</span>
-            }
-<span class="nc" id="L82">        } catch (Throwable t) {</span>
-<span class="nc" id="L83">            _logger.error(&quot;Error loading attribute support object&quot;, t);</span>
-<span class="nc" id="L84">        }</span>
-<span class="nc" id="L85">    }</span>
-
-    private String extractConfigFile(String fileName) throws Throwable {
-<span class="nc" id="L88">        InputStream is = this.getEntityManager().getClass().getResourceAsStream(fileName);</span>
-<span class="nc bnc" id="L89" title="All 2 branches missed.">        if (null == is) {</span>
-<span class="nc" id="L90">            _logger.debug(&quot;{}: there isn't any object to load : file {}&quot;, this.getEntityManager().getClass().getName(), fileName);</span>
-<span class="nc" id="L91">            return null;</span>
-        }
-<span class="nc" id="L93">        return FileTextReader.getText(is);</span>
-    }
-
-    protected IEntityManager getEntityManager() {
-<span class="nc" id="L97">        return _entityManager;</span>
-    }
-
-    protected void setEntityManager(IEntityManager entityManager) {
-<span class="nc" id="L101">        this._entityManager = entityManager;</span>
-<span class="nc" id="L102">    }</span>
-
-    protected BeanFactory getBeanFactory() {
-<span class="nc" id="L105">        return _beanFactory;</span>
-    }
-
-    protected void setBeanFactory(BeanFactory beanFactory) {
-<span class="nc" id="L109">        this._beanFactory = beanFactory;</span>
-<span class="nc" id="L110">    }</span>
-
+<span class="nc" id="L38">	private static final Logger _logger =  LoggerFactory.getLogger(AttributeRolesLoader.class);</span>
+	
+	public Map&lt;String, AttributeRole&gt; extractAttributeRoles(String attributeRolesFileName, BeanFactory beanFactory, IEntityManager entityManager) {
+<span class="nc" id="L41">		Map&lt;String, AttributeRole&gt; attributeRoles = new HashMap&lt;&gt;();</span>
+		try {
+<span class="nc" id="L43">			this.setEntityManager(entityManager);</span>
+<span class="nc" id="L44">			this.setBeanFactory(beanFactory);</span>
+<span class="nc" id="L45">			this.loadDefaultRoles(attributeRolesFileName, attributeRoles);</span>
+<span class="nc" id="L46">			this.loadExtraRoles(attributeRoles);</span>
+<span class="nc" id="L47">		} catch (Throwable t) {</span>
+<span class="nc" id="L48">			_logger.error(&quot;Error loading attribute Roles&quot;, t);</span>
+<span class="nc" id="L49">		}</span>
+<span class="nc" id="L50">		return attributeRoles;</span>
+	}
+	
+	private void loadDefaultRoles(String attributeRolesFileName, Map&lt;String, AttributeRole&gt; attributeRoles) {
+		try {
+<span class="nc" id="L55">			String xml = this.extractConfigFile(attributeRolesFileName);</span>
+<span class="nc bnc" id="L56" title="All 2 branches missed.">			if (null != xml) {</span>
+<span class="nc" id="L57">				AttributeRoleDOM dom = new AttributeRoleDOM();</span>
+<span class="nc" id="L58">				attributeRoles.putAll(dom.extractRoles(xml, attributeRolesFileName));</span>
+			}
+<span class="nc" id="L60">		} catch (Throwable t) {</span>
+<span class="nc" id="L61">			_logger.error(&quot;Error loading attribute Roles : file {}&quot;, attributeRolesFileName, t);</span>
+<span class="nc" id="L62">		}</span>
+<span class="nc" id="L63">	}</span>
+	
+	private void loadExtraRoles(Map&lt;String, AttributeRole&gt; attributeRoles) {
+		try {
+<span class="nc" id="L67">			ListableBeanFactory factory = (ListableBeanFactory) this.getBeanFactory();</span>
+<span class="nc" id="L68">			String[] defNames = factory.getBeanNamesForType(ExtraAttributeRolesWrapper.class);</span>
+<span class="nc bnc" id="L69" title="All 2 branches missed.">			for (int i=0; i&lt;defNames.length; i++) {</span>
+				try {
+<span class="nc" id="L71">					Object loader = this.getBeanFactory().getBean(defNames[i]);</span>
+<span class="nc bnc" id="L72" title="All 2 branches missed.">					if (loader != null) {</span>
+<span class="nc" id="L73">						((ExtraAttributeRolesWrapper) loader).executeLoading(attributeRoles, this.getEntityManager());</span>
+					}
+<span class="nc" id="L75">				} catch (BeansException | ApsSystemException t) {</span>
+<span class="nc" id="L76">					_logger.error(&quot;Error extracting attribute support object : bean {}&quot;, defNames[i], t);</span>
+<span class="nc" id="L77">				}</span>
+			}
+<span class="nc" id="L79">		} catch (Throwable t) {</span>
+<span class="nc" id="L80">			_logger.error(&quot;Error loading attribute support object&quot;, t);</span>
+<span class="nc" id="L81">		}</span>
+<span class="nc" id="L82">	}</span>
+	
+	private String extractConfigFile(String fileName) throws Throwable {
+<span class="nc" id="L85">		InputStream is = this.getEntityManager().getClass().getResourceAsStream(fileName);</span>
+<span class="nc bnc" id="L86" title="All 2 branches missed.">		if (null == is) {</span>
+<span class="nc" id="L87">			_logger.debug(&quot;{}: there isn't any object to load : file {}&quot;, this.getEntityManager().getClass().getName(), fileName);</span>
+<span class="nc" id="L88">			return null;</span>
+		}
+<span class="nc" id="L90">		return FileTextReader.getText(is);</span>
+	}
+	
+	protected IEntityManager getEntityManager() {
+<span class="nc" id="L94">		return _entityManager;</span>
+	}
+	protected void setEntityManager(IEntityManager entityManager) {
+<span class="nc" id="L97">		this._entityManager = entityManager;</span>
+<span class="nc" id="L98">	}</span>
+	
+	protected BeanFactory getBeanFactory() {
+<span class="nc" id="L101">		return _beanFactory;</span>
+	}
+	protected void setBeanFactory(BeanFactory beanFactory) {
+<span class="nc" id="L104">		this._beanFactory = beanFactory;</span>
+<span class="nc" id="L105">	}</span>
+	
+	private IEntityManager _entityManager;
+	private BeanFactory _beanFactory;
+	
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

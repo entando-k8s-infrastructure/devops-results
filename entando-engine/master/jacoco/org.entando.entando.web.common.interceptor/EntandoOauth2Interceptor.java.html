@@ -11,15 +11,16 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package org.entando.entando.web.common.interceptor;
+
+import com.agiletec.aps.system.SystemConstants;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 import com.agiletec.aps.system.exception.ApsSystemException;
 import com.agiletec.aps.system.services.authorization.IAuthorizationManager;
 import com.agiletec.aps.system.services.user.IAuthenticationProviderManager;
 import com.agiletec.aps.system.services.user.UserDetails;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import org.apache.commons.lang3.StringUtils;
 import org.entando.entando.aps.system.services.oauth2.IApiOAuth2TokenManager;
 import org.entando.entando.aps.system.services.oauth2.model.OAuth2AccessTokenImpl;
@@ -38,9 +39,9 @@ import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 /**
  * @author P.Addeo - E.Santoboni
  */
-<span class="nc" id="L41">public class EntandoOauth2Interceptor extends HandlerInterceptorAdapter {</span>
+<span class="nc" id="L42">public class EntandoOauth2Interceptor extends HandlerInterceptorAdapter {</span>
 
-<span class="nc" id="L43">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+<span class="nc" id="L44">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
 
     @Autowired
     private IApiOAuth2TokenManager oAuth2TokenManager;
@@ -53,101 +54,109 @@ import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-<span class="nc bnc" id="L56" title="All 2 branches missed.">        if (handler instanceof HandlerMethod) {</span>
-<span class="nc" id="L57">            HandlerMethod method = (HandlerMethod) handler;</span>
-<span class="nc bnc" id="L58" title="All 2 branches missed.">            if (method.hasMethodAnnotation(RequestMapping.class)) {</span>
-<span class="nc" id="L59">                UserDetails user = this.extractOAuthParameters(request);</span>
-<span class="nc" id="L60">                RestAccessControl rqm = method.getMethodAnnotation(RestAccessControl.class);</span>
-<span class="nc bnc" id="L61" title="All 2 branches missed.">                if (null == rqm) {</span>
-<span class="nc" id="L62">                    return true;</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">        if (handler instanceof HandlerMethod) {</span>
+<span class="nc" id="L58">            HandlerMethod method = (HandlerMethod) handler;</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">            if (method.hasMethodAnnotation(RequestMapping.class)) {</span>
+<span class="nc" id="L60">                UserDetails user = this.extractOAuthParameters(request);</span>
+<span class="nc" id="L61">                RestAccessControl rqm = method.getMethodAnnotation(RestAccessControl.class);</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">                if (null == rqm) {</span>
+<span class="nc" id="L63">                    return true;</span>
                 }
 
-<span class="nc" id="L65">                this.checkAuthorization(user, rqm.permission(), request);</span>
+<span class="nc" id="L66">                this.checkAuthorization(user, rqm.permission(), request);</span>
             }
         }
-<span class="nc" id="L68">        return true;</span>
+<span class="nc" id="L69">        return true;</span>
     }
 
     protected UserDetails extractOAuthParameters(HttpServletRequest request) {
         try {
-<span class="nc" id="L73">            request.getSession().setAttribute(&quot;user&quot;, null); //Clear previous session</span>
+<span class="nc" id="L74">            request.getSession().setAttribute(&quot;user&quot;, null); //Clear previous session</span>
 
-<span class="nc" id="L75">            String accessToken = new EntandoBearerTokenExtractor().extractToken(request);</span>
-<span class="nc bnc" id="L76" title="All 2 branches missed.">            if (StringUtils.isBlank(accessToken)) {</span>
-<span class="nc" id="L77">                return null;</span>
+<span class="nc" id="L76">            String accessToken = new EntandoBearerTokenExtractor().extractToken(request);</span>
+<span class="nc bnc" id="L77" title="All 2 branches missed.">            if (StringUtils.isBlank(accessToken)) {</span>
+<span class="nc" id="L78">                return null;</span>
             }
 
-<span class="nc" id="L80">            final OAuth2AccessToken token = this.getoAuth2TokenManager().readAccessToken(accessToken);</span>
-<span class="nc" id="L81">            this.validateToken(request, accessToken, token);</span>
+<span class="nc" id="L81">            final OAuth2AccessToken token = this.getoAuth2TokenManager().readAccessToken(accessToken);</span>
+<span class="nc" id="L82">            this.validateToken(request, accessToken, token);</span>
             String username;
-<span class="nc bnc" id="L83" title="All 2 branches missed.">            if (token instanceof OAuth2AccessTokenImpl) {</span>
-<span class="nc" id="L84">                username = ((OAuth2AccessTokenImpl) token).getLocalUser();</span>
+<span class="nc bnc" id="L84" title="All 2 branches missed.">            if (token instanceof OAuth2AccessTokenImpl) {</span>
+<span class="nc" id="L85">                username = ((OAuth2AccessTokenImpl) token).getLocalUser();</span>
             } else {
-<span class="nc" id="L86">                Authentication auth = new EntandoBearerTokenExtractor().extract(request);</span>
-<span class="nc" id="L87">                username = auth.getPrincipal().toString();</span>
+<span class="nc" id="L87">                Authentication auth = new EntandoBearerTokenExtractor().extract(request);</span>
+<span class="nc" id="L88">                username = auth.getPrincipal().toString();</span>
             }
 
-<span class="nc" id="L90">            UserDetails user = this.getAuthenticationProviderManager().getUser(username);</span>
-<span class="nc bnc" id="L91" title="All 2 branches missed.">            if (user == null) {</span>
-<span class="nc" id="L92">                logger.warn(&quot;User {} not found &quot;, username);</span>
-<span class="nc" id="L93">                return null;</span>
+<span class="nc" id="L91">            UserDetails user = this.getAuthenticationProviderManager().getUser(username);</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">            if (user == null) {</span>
+<span class="nc" id="L93">                logger.warn(&quot;User {} not found &quot;, username);</span>
+<span class="nc" id="L94">                return null;</span>
             }
 
-<span class="nc" id="L96">            request.getSession().setAttribute(&quot;user&quot;, user);</span>
-<span class="nc" id="L97">            return user;</span>
-<span class="nc" id="L98">        } catch (ApsSystemException ex) {</span>
-<span class="nc" id="L99">            logger.error(&quot;System exception {}&quot;, ex.getMessage());</span>
-<span class="nc" id="L100">            throw new EntandoTokenException(&quot;error parsing OAuth parameters&quot;, request, &quot;guest&quot;);</span>
+<span class="nc" id="L97">            request.getSession().setAttribute(&quot;user&quot;, user);</span>
+<span class="nc" id="L98">            request.getSession().setAttribute(SystemConstants.SESSIONPARAM_CURRENT_USER, user);</span>
+<span class="nc" id="L99">            return user;</span>
+<span class="nc" id="L100">        } catch (ApsSystemException ex) {</span>
+<span class="nc" id="L101">            logger.error(&quot;System exception {}&quot;, ex.getMessage());</span>
+<span class="nc" id="L102">            throw new EntandoTokenException(&quot;error parsing OAuth parameters&quot;, request, &quot;guest&quot;);</span>
         }
     }
 
-    protected void checkAuthorization(UserDetails user, String permission, HttpServletRequest request) throws ApsSystemException {
-<span class="nc bnc" id="L105" title="All 2 branches missed.">        if (null == user) {</span>
-<span class="nc" id="L106">            throw new EntandoTokenException(&quot;no access token found&quot;, request, null);</span>
+    protected void checkAuthorization(UserDetails user, String[] permissions, HttpServletRequest request) throws ApsSystemException {
+<span class="nc bnc" id="L107" title="All 2 branches missed.">        if (null == user) {</span>
+<span class="nc" id="L108">            throw new EntandoTokenException(&quot;no access token found&quot;, request, null);</span>
         }
 
-<span class="nc" id="L109">        logger.debug(&quot;User {} requesting resource that requires {} permission &quot;, user.getUsername(), permission);</span>
-<span class="nc bnc" id="L110" title="All 2 branches missed.">        if (StringUtils.isNotBlank(permission)) {</span>
-<span class="nc bnc" id="L111" title="All 2 branches missed.">            if (!this.getAuthorizationManager().isAuthOnPermission(user, permission)) {</span>
-<span class="nc" id="L112">                logger.warn(&quot;User {} is missing the required permission {}&quot;, user.getUsername(), permission);</span>
-<span class="nc" id="L113">                throw new EntandoAuthorizationException(null, request, user.getUsername());</span>
+<span class="nc" id="L111">        logger.debug(&quot;User {} requesting resource that requires at least one of the permissions {}&quot;, user.getUsername(), permissions);</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">        if (permissions != null) {</span>
+<span class="nc" id="L113">            boolean hasPermission = false;</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">            for (String permission : permissions) {</span>
+<span class="nc bnc" id="L115" title="All 2 branches missed.">                if (this.getAuthorizationManager().isAuthOnPermission(user, permission)) {</span>
+<span class="nc" id="L116">                    hasPermission = true;</span>
+<span class="nc" id="L117">                    break;</span>
+                }
+            }
+<span class="nc bnc" id="L120" title="All 2 branches missed.">            if (!hasPermission) {</span>
+<span class="nc" id="L121">                logger.warn(&quot;User {} needs at least one of the required permissions {}&quot;, user.getUsername(), permissions);</span>
+<span class="nc" id="L122">                throw new EntandoAuthorizationException(null, request, user.getUsername());</span>
             }
         }
-<span class="nc" id="L116">    }</span>
+<span class="nc" id="L125">    }</span>
 
     protected void validateToken(HttpServletRequest request, String accessToken, final OAuth2AccessToken token) {
-<span class="nc bnc" id="L119" title="All 2 branches missed.">        if (null == token) {</span>
-<span class="nc" id="L120">            throw new EntandoTokenException(&quot;no token found&quot;, request, &quot;guest&quot;);</span>
-<span class="nc bnc" id="L121" title="All 2 branches missed.">        } else if (!token.getValue().equals(accessToken)) {</span>
-<span class="nc" id="L122">            throw new EntandoTokenException(&quot;invalid token&quot;, request, &quot;guest&quot;);</span>
-<span class="nc bnc" id="L123" title="All 2 branches missed.">        } else if (token.isExpired()) {</span>
-<span class="nc" id="L124">            throw new EntandoTokenException(&quot;expired token&quot;, request, &quot;guest&quot;);</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">        if (null == token) {</span>
+<span class="nc" id="L129">            throw new EntandoTokenException(&quot;no token found&quot;, request, &quot;guest&quot;);</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">        } else if (!token.getValue().equals(accessToken)) {</span>
+<span class="nc" id="L131">            throw new EntandoTokenException(&quot;invalid token&quot;, request, &quot;guest&quot;);</span>
+<span class="nc bnc" id="L132" title="All 2 branches missed.">        } else if (token.isExpired()) {</span>
+<span class="nc" id="L133">            throw new EntandoTokenException(&quot;expired token&quot;, request, &quot;guest&quot;);</span>
         }
-<span class="nc" id="L126">    }</span>
+<span class="nc" id="L135">    }</span>
 
     protected IApiOAuth2TokenManager getoAuth2TokenManager() {
-<span class="nc" id="L129">        return oAuth2TokenManager;</span>
+<span class="nc" id="L138">        return oAuth2TokenManager;</span>
     }
 
     public void setoAuth2TokenManager(IApiOAuth2TokenManager oAuth2TokenManager) {
-<span class="nc" id="L133">        this.oAuth2TokenManager = oAuth2TokenManager;</span>
-<span class="nc" id="L134">    }</span>
+<span class="nc" id="L142">        this.oAuth2TokenManager = oAuth2TokenManager;</span>
+<span class="nc" id="L143">    }</span>
 
     protected IAuthorizationManager getAuthorizationManager() {
-<span class="nc" id="L137">        return authorizationManager;</span>
+<span class="nc" id="L146">        return authorizationManager;</span>
     }
 
     public void setAuthorizationManager(IAuthorizationManager authorizationManager) {
-<span class="nc" id="L141">        this.authorizationManager = authorizationManager;</span>
-<span class="nc" id="L142">    }</span>
+<span class="nc" id="L150">        this.authorizationManager = authorizationManager;</span>
+<span class="nc" id="L151">    }</span>
 
     protected IAuthenticationProviderManager getAuthenticationProviderManager() {
-<span class="nc" id="L145">        return authenticationProviderManager;</span>
+<span class="nc" id="L154">        return authenticationProviderManager;</span>
     }
 
     public void setAuthenticationProviderManager(IAuthenticationProviderManager authenticationProviderManager) {
-<span class="nc" id="L149">        this.authenticationProviderManager = authenticationProviderManager;</span>
-<span class="nc" id="L150">    }</span>
+<span class="nc" id="L158">        this.authenticationProviderManager = authenticationProviderManager;</span>
+<span class="nc" id="L159">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

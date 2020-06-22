@@ -11,7 +11,6 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
-
 package org.entando.entando.web.user.validator;
 
 import com.agiletec.aps.system.exception.ApsSystemException;
@@ -45,188 +44,216 @@ import org.springframework.validation.Errors;
 import org.springframework.validation.MapBindingResult;
 
 @Component
-<span class="nc" id="L48">public class UserValidator extends AbstractPaginationValidator {</span>
+<span class="nc" id="L47">public class UserValidator extends AbstractPaginationValidator {</span>
+
+<span class="nc" id="L49">    private final org.slf4j.Logger logger = LoggerFactory.getLogger(getClass());</span>
+
+<span class="nc" id="L51">    private Pattern pattern = Pattern.compile(&quot;([a-zA-Z0-9_\\.])+&quot;);</span>
 
     public static final String ERRCODE_USER_ALREADY_EXISTS = &quot;1&quot;;
+
     public static final String ERRCODE_USER_NOT_FOUND = &quot;1&quot;;
+
     public static final String ERRCODE_USERNAME_FORMAT_INVALID = &quot;2&quot;;
+
     public static final String ERRCODE_PASSWORD_FORMAT_INVALID = &quot;3&quot;;
+
     public static final String ERRCODE_USERNAME_MISMATCH = &quot;2&quot;;
     public static final String ERRCODE_OLD_PASSWORD_FORMAT = &quot;4&quot;;
     public static final String ERRCODE_NEW_PASSWORD_EQUALS = &quot;5&quot;;
+
     public static final String ERRCODE_AUTHORITIES_INVALID_REQ = &quot;2&quot;;
+
     public static final String ERRCODE_SELF_UPDATE = &quot;6&quot;;
+
     public static final String ERRCODE_DELETE_ADMIN = &quot;7&quot;;
-<span class="nc" id="L60">    private final org.slf4j.Logger logger = LoggerFactory.getLogger(getClass());</span>
-    @Autowired
-    IUserManager userManager;
-    @Autowired
-    IGroupManager groupManager;
-    @Autowired
-    IRoleManager roleManager;
-<span class="nc" id="L67">    private Pattern pattern = Pattern.compile(&quot;([a-zA-Z0-9_\\.])+&quot;);</span>
+
+    public static final String ERRCODE_SELF_DELETE = &quot;8&quot;;
+
     @Autowired
     @Qualifier(&quot;compatiblePasswordEncoder&quot;)
     private PasswordEncoder passwordEncoder;
 
-    public static boolean isValidDeleteUser(String username) {
-<span class="nc bnc" id="L73" title="All 2 branches missed.">        return !StringUtils.equalsIgnoreCase(&quot;admin&quot;, username);</span>
-    }
+    @Autowired
+    IUserManager userManager;
 
-    public static BindingResult createDeleteAdminError() {
-<span class="nc" id="L77">        Map&lt;String, String&gt; map = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L78">        map.put(&quot;username&quot;, &quot;admin&quot;);</span>
-<span class="nc" id="L79">        BindingResult bindingResult = new MapBindingResult(map, &quot;username&quot;);</span>
-<span class="nc" id="L80">        bindingResult.reject(UserValidator.ERRCODE_DELETE_ADMIN, new String[]{}, &quot;user.admin.cant.delete&quot;);</span>
-<span class="nc" id="L81">        return bindingResult;</span>
-    }
+    @Autowired
+    IGroupManager groupManager;
+
+    @Autowired
+    IRoleManager roleManager;
 
     public IUserManager getUserManager() {
-<span class="nc" id="L85">        return userManager;</span>
+<span class="nc" id="L87">        return userManager;</span>
     }
 
     public void setUserManager(IUserManager userManager) {
-<span class="nc" id="L89">        this.userManager = userManager;</span>
-<span class="nc" id="L90">    }</span>
+<span class="nc" id="L91">        this.userManager = userManager;</span>
+<span class="nc" id="L92">    }</span>
 
     public IGroupManager getGroupManager() {
-<span class="nc" id="L93">        return groupManager;</span>
+<span class="nc" id="L95">        return groupManager;</span>
     }
 
     public void setGroupManager(IGroupManager groupManager) {
-<span class="nc" id="L97">        this.groupManager = groupManager;</span>
-<span class="nc" id="L98">    }</span>
+<span class="nc" id="L99">        this.groupManager = groupManager;</span>
+<span class="nc" id="L100">    }</span>
 
     public IRoleManager getRoleManager() {
-<span class="nc" id="L101">        return roleManager;</span>
+<span class="nc" id="L103">        return roleManager;</span>
     }
 
     public void setRoleManager(IRoleManager roleManager) {
-<span class="nc" id="L105">        this.roleManager = roleManager;</span>
-<span class="nc" id="L106">    }</span>
+<span class="nc" id="L107">        this.roleManager = roleManager;</span>
+<span class="nc" id="L108">    }</span>
 
     public PasswordEncoder getPasswordEncoder() {
-<span class="nc" id="L109">        return passwordEncoder;</span>
+<span class="nc" id="L111">        return passwordEncoder;</span>
     }
 
     public void setPasswordEncoder(PasswordEncoder passwordEncoder) {
-<span class="nc" id="L113">        this.passwordEncoder = passwordEncoder;</span>
-<span class="nc" id="L114">    }</span>
+<span class="nc" id="L115">        this.passwordEncoder = passwordEncoder;</span>
+<span class="nc" id="L116">    }</span>
 
     @Override
     public boolean supports(Class&lt;?&gt; paramClass) {
-<span class="nc bnc" id="L118" title="All 4 branches missed.">        return UserAuthoritiesRequest.class.equals(paramClass) || UserRequest.class.equals(paramClass);</span>
+<span class="nc bnc" id="L120" title="All 4 branches missed.">        return UserAuthoritiesRequest.class.equals(paramClass) || UserRequest.class.equals(paramClass);</span>
     }
 
     @Override
     public void validate(Object target, Errors errors) {
-<span class="nc bnc" id="L123" title="All 2 branches missed.">        if (target instanceof UserAuthoritiesRequest) {</span>
-<span class="nc" id="L124">            UserAuthoritiesRequest request = (UserAuthoritiesRequest) target;</span>
-<span class="nc" id="L125">            validateGroupsAndRoles(request, errors);</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">        if (target instanceof UserAuthoritiesRequest) {</span>
+<span class="nc" id="L126">            UserAuthoritiesRequest request = (UserAuthoritiesRequest) target;</span>
+<span class="nc" id="L127">            validateGroupsAndRoles(request, errors);</span>
         }
-<span class="nc" id="L127">    }</span>
+<span class="nc" id="L129">    }</span>
 
     public void validateUserPost(UserRequest request, BindingResult bindingResult) {
-<span class="nc" id="L130">        String username = request.getUsername();</span>
-<span class="nc" id="L131">        UserDetails user = this.extractUser(username);</span>
-<span class="nc bnc" id="L132" title="All 2 branches missed.">        if (null != user) {</span>
-<span class="nc" id="L133">            bindingResult.reject(UserValidator.ERRCODE_USER_ALREADY_EXISTS, new String[]{username}, &quot;user.exists&quot;);</span>
-<span class="nc" id="L134">            throw new ValidationConflictException(bindingResult);</span>
+<span class="nc" id="L132">        String username = request.getUsername();</span>
+<span class="nc" id="L133">        UserDetails user = this.extractUser(username);</span>
+<span class="nc bnc" id="L134" title="All 2 branches missed.">        if (null != user) {</span>
+<span class="nc" id="L135">            bindingResult.reject(UserValidator.ERRCODE_USER_ALREADY_EXISTS, new String[]{username}, &quot;user.exists&quot;);</span>
+<span class="nc" id="L136">            throw new ValidationConflictException(bindingResult);</span>
         }
-<span class="nc" id="L136">        Matcher matcherUsername = pattern.matcher(username);</span>
-<span class="nc" id="L137">        int usLength = username.length();</span>
-<span class="nc bnc" id="L138" title="All 6 branches missed.">        if (usLength &lt; 4 || usLength &gt; 80 || !matcherUsername.matches()) {</span>
-<span class="nc" id="L139">            bindingResult.reject(UserValidator.ERRCODE_USERNAME_FORMAT_INVALID, new String[]{username}, &quot;user.username.format.invalid&quot;);</span>
+<span class="nc" id="L138">        Matcher matcherUsername = pattern.matcher(username);</span>
+<span class="nc" id="L139">        int usLength = username.length();</span>
+<span class="nc bnc" id="L140" title="All 6 branches missed.">        if (usLength &lt; 4 || usLength &gt; 80 || !matcherUsername.matches()) {</span>
+<span class="nc" id="L141">            bindingResult.reject(UserValidator.ERRCODE_USERNAME_FORMAT_INVALID, new String[]{username}, &quot;user.username.format.invalid&quot;);</span>
         }
-<span class="nc" id="L141">        this.checkNewPassword(username, request.getPassword(), bindingResult);</span>
-<span class="nc" id="L142">    }</span>
+<span class="nc" id="L143">        this.checkNewPassword(username, request.getPassword(), bindingResult);</span>
+<span class="nc" id="L144">    }</span>
+
+    public static boolean isAdminUser(String username) {
+<span class="nc" id="L147">        return StringUtils.equalsIgnoreCase(&quot;admin&quot;, username);</span>
+    }
+
+    public static boolean isUserDeletingHimself(String username, String currentUser) {
+<span class="nc" id="L151">        return StringUtils.equalsIgnoreCase(currentUser, username);</span>
+    }
+
+    public static BindingResult createDeleteAdminError() {
+<span class="nc" id="L155">        Map&lt;String, String&gt; map = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L156">        map.put(&quot;username&quot;, &quot;admin&quot;);</span>
+<span class="nc" id="L157">        BindingResult bindingResult = new MapBindingResult(map, &quot;username&quot;);</span>
+<span class="nc" id="L158">        bindingResult.reject(UserValidator.ERRCODE_DELETE_ADMIN, new String[]{}, &quot;user.admin.cant.delete&quot;);</span>
+<span class="nc" id="L159">        return bindingResult;</span>
+    }
+    public static BindingResult createSelfDeleteUserError(BindingResult bindingResult) {
+<span class="nc" id="L162">        bindingResult.reject(UserValidator.ERRCODE_SELF_DELETE, new String[]{}, &quot;user.self.delete.error&quot;);</span>
+<span class="nc" id="L163">        return bindingResult;</span>
+    }
 
     public void validateGroupsAndRoles(UserAuthoritiesRequest request, Errors errors) {
-<span class="nc" id="L145">        List&lt;String&gt; invalidAuths = new ArrayList&lt;&gt;();</span>
-<span class="nc" id="L146">        request.forEach(authority -&gt; {</span>
-<span class="nc bnc" id="L147" title="All 4 branches missed.">            if (authority.getGroup() != null &amp;&amp; this.getGroupManager().getGroup(authority.getGroup()) == null) {</span>
-<span class="nc" id="L148">                invalidAuths.add(authority.getGroup());</span>
+<span class="nc" id="L167">        List&lt;String&gt; invalidAuths = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L168">        request.forEach(authority -&gt; {</span>
+<span class="nc bnc" id="L169" title="All 4 branches missed.">            if (authority.getGroup() != null &amp;&amp; this.getGroupManager().getGroup(authority.getGroup()) == null) {</span>
+<span class="nc" id="L170">                invalidAuths.add(authority.getGroup());</span>
             }
-<span class="nc bnc" id="L150" title="All 4 branches missed.">            if (authority.getRole() != null &amp;&amp; this.getRoleManager().getRole(authority.getRole()) == null) {</span>
-<span class="nc" id="L151">                invalidAuths.add(authority.getRole());</span>
+<span class="nc bnc" id="L172" title="All 4 branches missed.">            if (authority.getRole() != null &amp;&amp; this.getRoleManager().getRole(authority.getRole()) == null) {</span>
+<span class="nc" id="L173">                invalidAuths.add(authority.getRole());</span>
             }
-<span class="nc" id="L153">        });</span>
-<span class="nc bnc" id="L154" title="All 2 branches missed.">        if (!invalidAuths.isEmpty()) {</span>
-<span class="nc" id="L155">            errors.reject(ERRCODE_AUTHORITIES_INVALID_REQ, invalidAuths.toArray(), &quot;user.authorities.invalid.req&quot;);</span>
+<span class="nc" id="L175">        });</span>
+<span class="nc bnc" id="L176" title="All 2 branches missed.">        if (!invalidAuths.isEmpty()) {</span>
+<span class="nc" id="L177">            errors.reject(ERRCODE_AUTHORITIES_INVALID_REQ, invalidAuths.toArray(), &quot;user.authorities.invalid.req&quot;);</span>
         }
-<span class="nc" id="L157">    }</span>
+<span class="nc" id="L179">    }</span>
 
     public void validateUpdateSelf(String username, String currentUser, BindingResult bindingResult) {
-<span class="nc bnc" id="L160" title="All 2 branches missed.">        if (username.equals(currentUser)) {</span>
-<span class="nc" id="L161">            bindingResult.reject(ERRCODE_SELF_UPDATE, new String[]{username}, &quot;user.authorities.self.update&quot;);</span>
-<span class="nc" id="L162">            throw new ResourcePermissionsException(bindingResult);</span>
+<span class="nc bnc" id="L182" title="All 2 branches missed.">        if (username.equals(currentUser)) {</span>
+<span class="nc" id="L183">            bindingResult.reject(ERRCODE_SELF_UPDATE, new String[]{username}, &quot;user.authorities.self.update&quot;);</span>
+<span class="nc" id="L184">            throw new ResourcePermissionsException(bindingResult);</span>
         }
-<span class="nc" id="L164">    }</span>
+<span class="nc" id="L186">    }</span>
 
     public void validatePutBody(String username, UserRequest userRequest, BindingResult bindingResult) {
-<span class="nc bnc" id="L167" title="All 2 branches missed.">        if (!StringUtils.equals(username, userRequest.getUsername())) {</span>
-<span class="nc" id="L168">            bindingResult.rejectValue(&quot;username&quot;, ERRCODE_USERNAME_MISMATCH, new String[]{username, userRequest.getUsername()},</span>
-                    &quot;user.username.mismatch&quot;);
-<span class="nc" id="L170">            throw new ValidationConflictException(bindingResult);</span>
+<span class="nc bnc" id="L189" title="All 2 branches missed.">        if (!StringUtils.equals(username, userRequest.getUsername())) {</span>
+<span class="nc" id="L190">            bindingResult.rejectValue(&quot;username&quot;, ERRCODE_USERNAME_MISMATCH, new String[]{username, userRequest.getUsername()}, &quot;user.username.mismatch&quot;);</span>
+<span class="nc" id="L191">            throw new ValidationConflictException(bindingResult);</span>
         } else {
-<span class="nc" id="L172">            UserDetails user = this.extractUser(username);</span>
-<span class="nc bnc" id="L173" title="All 2 branches missed.">            if (null == user) {</span>
-<span class="nc" id="L174">                throw new ResourceNotFoundException(ERRCODE_USER_NOT_FOUND, &quot;username&quot;, username);</span>
+<span class="nc" id="L193">            UserDetails user = this.extractUser(username);</span>
+<span class="nc bnc" id="L194" title="All 2 branches missed.">            if (null == user) {</span>
+<span class="nc" id="L195">                throw new ResourceNotFoundException(ERRCODE_USER_NOT_FOUND, &quot;username&quot;, username);</span>
             }
-<span class="nc bnc" id="L176" title="All 2 branches missed.">            if (null != userRequest.getPassword()) {</span>
-<span class="nc" id="L177">                this.checkNewPassword(username, userRequest.getPassword(), bindingResult);</span>
+<span class="nc bnc" id="L197" title="All 2 branches missed.">            if (null != userRequest.getPassword()) {</span>
+<span class="nc" id="L198">                this.checkNewPassword(username, userRequest.getPassword(), bindingResult);</span>
             }
         }
-<span class="nc" id="L180">    }</span>
+<span class="nc" id="L201">    }</span>
 
     public void validateChangePasswords(String username, UserPasswordRequest passwordRequest, BindingResult bindingResult) {
-<span class="nc" id="L183">        UserDetails user = this.extractUser(username);</span>
-<span class="nc bnc" id="L184" title="All 2 branches missed.">        if (!StringUtils.equals(username, passwordRequest.getUsername())) {</span>
-<span class="nc" id="L185">            bindingResult.rejectValue(&quot;username&quot;, ERRCODE_USERNAME_MISMATCH, new String[]{username, passwordRequest.getUsername()},</span>
-                    &quot;user.username.mismatch&quot;);
-<span class="nc" id="L187">            throw new ValidationConflictException(bindingResult);</span>
-<span class="nc bnc" id="L188" title="All 2 branches missed.">        } else if (null == user) {</span>
-<span class="nc" id="L189">            throw new ResourceNotFoundException(ERRCODE_USER_NOT_FOUND, &quot;username&quot;, username);</span>
-<span class="nc bnc" id="L190" title="All 2 branches missed.">        } else if (StringUtils.equals(passwordRequest.getNewPassword(), passwordRequest.getOldPassword())) {</span>
-<span class="nc" id="L191">            bindingResult.rejectValue(&quot;newPassword&quot;, ERRCODE_NEW_PASSWORD_EQUALS, new String[]{}, &quot;user.passwords.same&quot;);</span>
-<span class="nc bnc" id="L192" title="All 2 branches missed.">        } else if (!this.verifyPassword(passwordRequest.getUsername(), passwordRequest.getOldPassword())) {</span>
-<span class="nc" id="L193">            bindingResult.rejectValue(&quot;oldPassword&quot;, ERRCODE_OLD_PASSWORD_FORMAT, new String[]{}, &quot;user.password.old.invalid&quot;);</span>
+<span class="nc" id="L204">        UserDetails user = this.extractUser(username);</span>
+<span class="nc bnc" id="L205" title="All 2 branches missed.">        if (!StringUtils.equals(username, passwordRequest.getUsername())) {</span>
+<span class="nc" id="L206">            bindingResult.rejectValue(&quot;username&quot;, ERRCODE_USERNAME_MISMATCH, new String[]{username, passwordRequest.getUsername()}, &quot;user.username.mismatch&quot;);</span>
+<span class="nc" id="L207">            throw new ValidationConflictException(bindingResult);</span>
+<span class="nc bnc" id="L208" title="All 2 branches missed.">        } else if (null == user) {</span>
+<span class="nc" id="L209">            throw new ResourceNotFoundException(ERRCODE_USER_NOT_FOUND, &quot;username&quot;, username);</span>
+<span class="nc bnc" id="L210" title="All 2 branches missed.">        } else if (StringUtils.equals(passwordRequest.getNewPassword(), passwordRequest.getOldPassword())) {</span>
+<span class="nc" id="L211">            bindingResult.rejectValue(&quot;newPassword&quot;, ERRCODE_NEW_PASSWORD_EQUALS, new String[]{}, &quot;user.passwords.same&quot;);</span>
+<span class="nc bnc" id="L212" title="All 2 branches missed.">        } else if (!this.verifyPassword(passwordRequest.getUsername(), passwordRequest.getOldPassword())) {</span>
+<span class="nc" id="L213">            bindingResult.rejectValue(&quot;oldPassword&quot;, ERRCODE_OLD_PASSWORD_FORMAT, new String[]{}, &quot;user.password.old.invalid&quot;);</span>
         } else {
-<span class="nc" id="L195">            this.checkNewPassword(username, passwordRequest.getNewPassword(), bindingResult);</span>
+<span class="nc" id="L215">            this.checkNewPassword(username, passwordRequest.getNewPassword(), bindingResult);</span>
         }
-<span class="nc" id="L197">    }</span>
+<span class="nc" id="L217">    }</span>
 
     private void checkNewPassword(String username, String password, BindingResult bindingResult) {
-<span class="nc bnc" id="L200" title="All 2 branches missed.">        if (null == password) {</span>
-<span class="nc" id="L201">            bindingResult.reject(RestErrorCodes.NOT_NULL, new String[]{username}, &quot;user.password.NotBlank&quot;);</span>
-<span class="nc" id="L202">            return;</span>
+<span class="nc bnc" id="L220" title="All 2 branches missed.">        if (null == password) {</span>
+<span class="nc" id="L221">            bindingResult.reject(RestErrorCodes.NOT_NULL, new String[]{username}, &quot;user.password.NotBlank&quot;);</span>
+<span class="nc" id="L222">            return;</span>
         }
-<span class="nc" id="L204">        int pwLength = password.length();</span>
-<span class="nc" id="L205">        Matcher matcherPassword = pattern.matcher(password);</span>
-<span class="nc bnc" id="L206" title="All 6 branches missed.">        if (pwLength &lt; 8 || pwLength &gt; 20 || !matcherPassword.matches()) {</span>
-<span class="nc" id="L207">            bindingResult.reject(UserValidator.ERRCODE_PASSWORD_FORMAT_INVALID, new String[]{username}, &quot;user.password.format.invalid&quot;);</span>
+<span class="nc" id="L224">        int pwLength = password.length();</span>
+<span class="nc" id="L225">        Matcher matcherPassword = pattern.matcher(password);</span>
+<span class="nc bnc" id="L226" title="All 6 branches missed.">        if (pwLength &lt; 8 || pwLength &gt; 20 || !matcherPassword.matches()) {</span>
+<span class="nc" id="L227">            bindingResult.reject(UserValidator.ERRCODE_PASSWORD_FORMAT_INVALID, new String[]{username}, &quot;user.password.format.invalid&quot;);</span>
         }
-<span class="nc" id="L209">    }</span>
+<span class="nc" id="L229">    }</span>
 
     private boolean verifyPassword(String username, String password) {
-<span class="nc" id="L212">        UserDetails user = this.extractUser(username);</span>
-<span class="nc" id="L213">        return passwordEncoder.matches(password, user.getPassword());</span>
+        try {
+<span class="nc" id="L233">            UserDetails user = this.getUserManager().getUser(username, password);</span>
+<span class="nc bnc" id="L234" title="All 2 branches missed.">            if (user != null) {</span>
+<span class="nc" id="L235">                return true;</span>
+            }
+<span class="nc" id="L237">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L238">            logger.error(&quot;Invalid password for username {}&quot;, username, e);</span>
+<span class="nc" id="L239">        }</span>
+<span class="nc" id="L240">        return false;</span>
     }
 
     private UserDetails extractUser(String username) {
-<span class="nc" id="L217">        UserDetails user = null;</span>
+<span class="nc" id="L244">        UserDetails user = null;</span>
         try {
-<span class="nc" id="L219">            user = this.getUserManager().getUser(username);</span>
-<span class="nc" id="L220">        } catch (ApsSystemException e) {</span>
-<span class="nc" id="L221">            logger.error(&quot;Error loading user {}&quot;, username, e);</span>
-<span class="nc" id="L222">            throw new RestServerError(&quot;Error loading user&quot;, e);</span>
-<span class="nc" id="L223">        }</span>
-<span class="nc" id="L224">        return user;</span>
+<span class="nc" id="L246">            user = this.getUserManager().getUser(username);</span>
+<span class="nc" id="L247">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L248">            logger.error(&quot;Error loading user {}&quot;, username, e);</span>
+<span class="nc" id="L249">            throw new RestServerError(&quot;Error loading user&quot;, e);</span>
+<span class="nc" id="L250">        }</span>
+<span class="nc" id="L251">        return user;</span>
     }
 
     @Override
     protected String getDefaultSortProperty() {
-<span class="nc" id="L229">        return &quot;username&quot;;</span>
+<span class="nc" id="L256">        return &quot;username&quot;;</span>
     }
 
 }
