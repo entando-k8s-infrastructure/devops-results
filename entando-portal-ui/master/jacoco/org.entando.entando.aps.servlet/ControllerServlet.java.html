@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ControllerServlet.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Portal UI</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.servlet</a> &gt; <span class="el_source">ControllerServlet.java</span></div><h1>ControllerServlet.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.entando.aps.servlet;
+
+import java.io.IOException;
+import java.util.List;
+
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.entando.entando.aps.system.services.controller.executor.ExecutorBeanContainer;
+import org.entando.entando.aps.system.services.controller.executor.ExecutorServiceInterface;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.agiletec.aps.system.RequestContext;
+import com.agiletec.aps.system.SystemConstants;
+import com.agiletec.aps.system.services.controller.ControllerManager;
+import com.agiletec.aps.util.ApsWebApplicationUtils;
+
+import freemarker.ext.jsp.TaglibFactory;
+import freemarker.ext.servlet.AllHttpScopesHashModel;
+import freemarker.ext.servlet.ServletContextHashModel;
+import freemarker.template.Configuration;
+import freemarker.template.DefaultObjectWrapper;
+import freemarker.template.ObjectWrapper;
+import freemarker.template.TemplateExceptionHandler;
+import freemarker.template.TemplateModel;
+import freemarker.template.TemplateModelException;
+
+/**
+ * Servlet di controllo, punto di ingresso per le richieste di pagine del portale.
+ * Predispone il contesto di richiesta, invoca il controller e ne gestisce lo stato di uscita.
+ * @author M.Diana - W.Ambu
+ */
+<span class="nc" id="L49">public class ControllerServlet extends freemarker.ext.servlet.FreemarkerServlet {</span>
+
+<span class="nc" id="L51">	private static final Logger _logger = LoggerFactory.getLogger(ControllerServlet.class);</span>
+
+	@Override
+	protected void service(HttpServletRequest request, HttpServletResponse response) 
+			throws ServletException, IOException {
+<span class="nc" id="L56">		request.setCharacterEncoding(&quot;UTF-8&quot;);</span>
+<span class="nc" id="L57">		RequestContext reqCtx = this.initRequestContext(request, response);</span>
+<span class="nc" id="L58">		int status = this.controlRequest(request, reqCtx);</span>
+<span class="nc bnc" id="L59" title="All 2 branches missed.">		if (status == ControllerManager.REDIRECT) {</span>
+<span class="nc" id="L60">			_logger.debug(&quot;Redirection&quot;);</span>
+<span class="nc" id="L61">			this.redirect(reqCtx, response);</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">		} else if (status == ControllerManager.OUTPUT) {</span>
+<span class="nc" id="L63">			_logger.debug(&quot;Output&quot;);</span>
+			try {
+<span class="nc" id="L65">				this.initFreemarker(request, response, reqCtx);</span>
+<span class="nc" id="L66">				this.executePage(request, reqCtx);</span>
+<span class="nc" id="L67">			} catch (Throwable t) {</span>
+<span class="nc" id="L68">				_logger.error(&quot;Error building response&quot;, t);</span>
+<span class="nc" id="L69">				throw new ServletException(&quot;Error building response&quot;, t);</span>
+<span class="nc" id="L70">			}</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">		} else if (status == ControllerManager.ERROR) {</span>
+<span class="nc" id="L72">			_logger.debug(&quot;Error&quot;);</span>
+<span class="nc" id="L73">			this.outputError(reqCtx, response);</span>
+		} else {
+<span class="nc" id="L75">			_logger.error(&quot;Error: final status = {} - request: {}&quot;,</span>
+<span class="nc" id="L76">					ControllerManager.getStatusDescription(status),</span>
+<span class="nc" id="L77">					request.getServletPath());</span>
+<span class="nc" id="L78">			throw new ServletException(&quot;Service not available&quot;);</span>
+		}
+<span class="nc" id="L80">		return;</span>
+	}
+
+	protected RequestContext initRequestContext(HttpServletRequest request,
+			HttpServletResponse response) {
+<span class="nc" id="L85">		RequestContext reqCtx = new RequestContext();</span>
+<span class="nc" id="L86">		_logger.debug(&quot;Request:&quot; + request.getServletPath());</span>
+<span class="nc" id="L87">		request.setAttribute(RequestContext.REQCTX, reqCtx);</span>
+<span class="nc" id="L88">		reqCtx.setRequest(request);</span>
+<span class="nc" id="L89">		reqCtx.setResponse(response);</span>
+<span class="nc" id="L90">		return reqCtx;</span>
+	}
+
+	protected int controlRequest(HttpServletRequest request,
+			RequestContext reqCtx) {
+<span class="nc" id="L95">		ControllerManager controller = (ControllerManager) ApsWebApplicationUtils.getBean(SystemConstants.CONTROLLER_MANAGER, request);</span>
+<span class="nc" id="L96">		int status = controller.service(reqCtx);</span>
+<span class="nc" id="L97">		return status;</span>
+	}
+
+	protected void initFreemarker(HttpServletRequest request,
+			HttpServletResponse response, RequestContext reqCtx)
+			throws TemplateModelException {
+<span class="nc" id="L103">		Configuration config = new Configuration();</span>
+<span class="nc" id="L104">		DefaultObjectWrapper wrapper = new DefaultObjectWrapper();</span>
+<span class="nc" id="L105">		config.setTemplateExceptionHandler(TemplateExceptionHandler.HTML_DEBUG_HANDLER);</span>
+<span class="nc" id="L106">		config.setObjectWrapper(wrapper);</span>
+<span class="nc" id="L107">		config.setTemplateExceptionHandler(TemplateExceptionHandler.DEBUG_HANDLER);</span>
+<span class="nc" id="L108">		TemplateModel templateModel = this.createModel(wrapper, this.getServletContext(), request, response);</span>
+<span class="nc" id="L109">		ExecutorBeanContainer ebc = new ExecutorBeanContainer(config, templateModel);</span>
+<span class="nc" id="L110">		reqCtx.addExtraParam(SystemConstants.EXTRAPAR_EXECUTOR_BEAN_CONTAINER, ebc);</span>
+<span class="nc" id="L111">	}</span>
+
+	protected void executePage(HttpServletRequest request, RequestContext reqCtx) {
+<span class="nc" id="L114">		List&lt;ExecutorServiceInterface&gt; executors = (List&lt;ExecutorServiceInterface&gt;) ApsWebApplicationUtils.getBean(&quot;ExecutorServices&quot;, request);</span>
+<span class="nc bnc" id="L115" title="All 2 branches missed.">		for (int i = 0; i &lt; executors.size(); i++) {</span>
+<span class="nc" id="L116">			ExecutorServiceInterface executor = executors.get(i);</span>
+<span class="nc" id="L117">			executor.service(reqCtx);</span>
+		}
+<span class="nc" id="L119">	}</span>
+
+	@Override
+	protected TemplateModel createModel(ObjectWrapper wrapper, ServletContext servletContext, 
+			HttpServletRequest request, HttpServletResponse response) throws TemplateModelException {
+<span class="nc" id="L124">		TemplateModel template = super.createModel(wrapper, servletContext, request, response);</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">		if (template instanceof AllHttpScopesHashModel) {</span>
+<span class="nc" id="L126">			AllHttpScopesHashModel hashModel = ((AllHttpScopesHashModel) template);</span>
+<span class="nc" id="L127">			ServletContextHashModel servletContextModel = (ServletContextHashModel) hashModel.get(KEY_APPLICATION);</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">			if (null == servletContextModel.getServlet()) {</span>
+<span class="nc" id="L129">				ServletContextHashModel newServletContextModel = new ServletContextHashModel(this, wrapper);</span>
+<span class="nc" id="L130">				servletContextModel = new ServletContextHashModel(this, wrapper);</span>
+<span class="nc" id="L131">				servletContext.setAttribute(ATTR_APPLICATION_MODEL, servletContextModel);</span>
+<span class="nc" id="L132">				TaglibFactory taglibs = new TaglibFactory(servletContext);</span>
+<span class="nc" id="L133">				servletContext.setAttribute(ATTR_JSP_TAGLIBS_MODEL, taglibs);</span>
+<span class="nc" id="L134">				hashModel.putUnlistedModel(KEY_APPLICATION, newServletContextModel);</span>
+<span class="nc" id="L135">				hashModel.putUnlistedModel(KEY_APPLICATION_PRIVATE, newServletContextModel);</span>
+			}
+		}
+<span class="nc" id="L138">		return template;</span>
+	}
+
+	protected void redirect(RequestContext reqCtx, HttpServletResponse response)
+			throws ServletException {
+		try {
+<span class="nc" id="L144">			String url = (String) reqCtx.getExtraParam(RequestContext.EXTRAPAR_REDIRECT_URL);</span>
+<span class="nc" id="L145">			response.sendRedirect(url);</span>
+<span class="nc" id="L146">		} catch (Exception e) {</span>
+<span class="nc" id="L147">			throw new ServletException(&quot;Service not available&quot;, e);</span>
+<span class="nc" id="L148">		}</span>
+<span class="nc" id="L149">	}</span>
+
+	protected void outputError(RequestContext reqCtx, HttpServletResponse response) throws ServletException {
+		try {
+<span class="nc bnc" id="L153" title="All 2 branches missed.">			if (!response.isCommitted()) {</span>
+<span class="nc" id="L154">				Integer httpErrorCode = (Integer) reqCtx.getExtraParam(&quot;errorCode&quot;);</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">				if (httpErrorCode == null) {</span>
+<span class="nc" id="L156">					httpErrorCode = new Integer(HttpServletResponse.SC_SERVICE_UNAVAILABLE);</span>
+				}
+<span class="nc" id="L158">				response.sendError(httpErrorCode.intValue());</span>
+			}
+<span class="nc" id="L160">		} catch (IOException e) {</span>
+<span class="nc" id="L161">			_logger.error(&quot;outputError&quot;, e);</span>
+<span class="nc" id="L162">			throw new ServletException(&quot;Service not available&quot;);</span>
+<span class="nc" id="L163">		}</span>
+<span class="nc" id="L164">	}</span>
+
+	private static final String ATTR_APPLICATION_MODEL = &quot;.freemarker.Application&quot;;
+	private static final String ATTR_JSP_TAGLIBS_MODEL = &quot;.freemarker.JspTaglibs&quot;;
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
