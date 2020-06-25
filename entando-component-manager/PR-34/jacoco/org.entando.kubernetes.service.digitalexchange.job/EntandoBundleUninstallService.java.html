@@ -42,7 +42,7 @@ public class EntandoBundleUninstallService implements ApplicationContextAware {
     private final @NonNull EntandoBundleJobRepository jobRepository;
     private final @NonNull EntandoBundleComponentJobRepository componentRepository;
     private final @NonNull InstalledEntandoBundleRepository installedComponentRepository;
-    private final @NonNull EntandoCoreClient coreClient;
+    private final @NonNull EntandoCoreClient engineService;
     private final @NonNull EntandoBundleComponentUsageService usageService;
     private final @NonNull KubernetesService k8sService;
     private final @NonNull BundleDownloader bundleDownloader;
@@ -129,92 +129,93 @@ public class EntandoBundleUninstallService implements ApplicationContextAware {
 <span class="fc" id="L129">        log.info(&quot;Processing uninstallation list for component &quot; + job.getComponentId());</span>
 
 <span class="fc" id="L131">        componentProcessors.stream()</span>
-<span class="fc bfc" id="L132" title="All 2 branches covered.">                .filter(processor -&gt; processor.getComponentType() != ComponentType.RESOURCE)</span>
-<span class="fc" id="L133">                .map(processor -&gt; processor.process(components))</span>
-<span class="fc" id="L134">                .flatMap(List::stream)</span>
-<span class="fc" id="L135">                .sorted(Comparator.comparingInt((Installable i) -&gt; i.getInstallPriority().getPriority()).reversed())</span>
-<span class="fc" id="L136">                .forEach(installable -&gt; {</span>
-<span class="fc" id="L137">                    persistComponent(job, installable, JobStatus.UNINSTALL_CREATED);</span>
-<span class="fc" id="L138">                    JobStatus result = uninstallInstallable(installable);</span>
+<span class="fc bfc" id="L132" title="All 2 branches covered.">                .filter(processor -&gt; processor.getComponentType() != ComponentType.ASSET</span>
+<span class="fc bfc" id="L133" title="All 2 branches covered.">                        &amp;&amp; processor.getComponentType() != ComponentType.DIRECTORY)</span>
+<span class="fc" id="L134">                .map(processor -&gt; processor.process(components))</span>
+<span class="fc" id="L135">                .flatMap(List::stream)</span>
+<span class="fc" id="L136">                .sorted(Comparator.comparingInt((Installable i) -&gt; i.getInstallPriority().getPriority()).reversed())</span>
+<span class="fc" id="L137">                .forEach(installable -&gt; {</span>
+<span class="fc" id="L138">                    persistComponent(job, installable, JobStatus.UNINSTALL_CREATED);</span>
+<span class="fc" id="L139">                    JobStatus result = uninstallInstallable(installable);</span>
 
-<span class="pc bpc" id="L140" title="1 of 2 branches missed.">                    if (result.equals(JobStatus.UNINSTALL_ERROR)) {</span>
-<span class="nc" id="L141">                        throw new EntandoComponentManagerException(job.getComponentId()</span>
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">                    if (result.equals(JobStatus.UNINSTALL_ERROR)) {</span>
+<span class="nc" id="L142">                        throw new EntandoComponentManagerException(job.getComponentId()</span>
                                 + &quot; uninstallation can't proceed due to an error with one of the installed components&quot;);
                     }
-<span class="fc" id="L144">                });</span>
+<span class="fc" id="L145">                });</span>
 
-<span class="fc" id="L146">        return JobStatus.UNINSTALL_COMPLETED;</span>
+<span class="fc" id="L147">        return JobStatus.UNINSTALL_COMPLETED;</span>
     }
 
     private JobStatus uninstallInstallable(Installable installable) {
-<span class="fc" id="L150">        EntandoBundleComponentJob installableComponent = installable.getComponent();</span>
-<span class="fc" id="L151">        componentRepository.updateJobStatus(installableComponent.getId(), JobStatus.UNINSTALL_IN_PROGRESS);</span>
+<span class="fc" id="L151">        EntandoBundleComponentJob installableComponent = installable.getComponent();</span>
+<span class="fc" id="L152">        componentRepository.updateJobStatus(installableComponent.getId(), JobStatus.UNINSTALL_IN_PROGRESS);</span>
 
-<span class="fc" id="L153">        CompletableFuture&lt;?&gt; future = installable.uninstall();</span>
-<span class="fc" id="L154">        CompletableFuture&lt;JobStatus&gt; uninstallResult = future.thenApply(vd -&gt; {</span>
-<span class="fc" id="L155">            log.debug(&quot;Uninstallation of installable '{}' finished successfully&quot;, installable.getName());</span>
-<span class="fc" id="L156">            componentRepository.updateJobStatus(installableComponent.getId(), JobStatus.UNINSTALL_COMPLETED);</span>
-<span class="fc" id="L157">            return JobStatus.UNINSTALL_COMPLETED;</span>
-<span class="fc" id="L158">        }).exceptionally(th -&gt; {</span>
-<span class="nc" id="L159">            log.error(&quot;Uninstallation of installable '{}' has errors&quot;, installable.getName(), th.getCause());</span>
+<span class="fc" id="L154">        CompletableFuture&lt;?&gt; future = installable.uninstall();</span>
+<span class="fc" id="L155">        CompletableFuture&lt;JobStatus&gt; uninstallResult = future.thenApply(vd -&gt; {</span>
+<span class="fc" id="L156">            log.debug(&quot;Uninstallation of installable '{}' finished successfully&quot;, installable.getName());</span>
+<span class="fc" id="L157">            componentRepository.updateJobStatus(installableComponent.getId(), JobStatus.UNINSTALL_COMPLETED);</span>
+<span class="fc" id="L158">            return JobStatus.UNINSTALL_COMPLETED;</span>
+<span class="fc" id="L159">        }).exceptionally(th -&gt; {</span>
+<span class="nc" id="L160">            log.error(&quot;Uninstallation of installable '{}' has errors&quot;, installable.getName(), th.getCause());</span>
 
-<span class="nc" id="L161">            installableComponent.setStatus(JobStatus.UNINSTALL_ERROR);</span>
-<span class="nc bnc" id="L162" title="All 2 branches missed.">            if (th.getCause() != null) {</span>
-<span class="nc" id="L163">                String message = th.getCause().getMessage();</span>
-<span class="nc bnc" id="L164" title="All 2 branches missed.">                if (th.getCause() instanceof HttpClientErrorException) {</span>
-<span class="nc" id="L165">                    HttpClientErrorException httpException = (HttpClientErrorException) th.getCause();</span>
-<span class="nc" id="L166">                    message =</span>
-<span class="nc" id="L167">                            httpException.getMessage() + &quot;\n&quot; + httpException.getResponseBodyAsString();</span>
+<span class="nc" id="L162">            installableComponent.setStatus(JobStatus.UNINSTALL_ERROR);</span>
+<span class="nc bnc" id="L163" title="All 2 branches missed.">            if (th.getCause() != null) {</span>
+<span class="nc" id="L164">                String message = th.getCause().getMessage();</span>
+<span class="nc bnc" id="L165" title="All 2 branches missed.">                if (th.getCause() instanceof HttpClientErrorException) {</span>
+<span class="nc" id="L166">                    HttpClientErrorException httpException = (HttpClientErrorException) th.getCause();</span>
+<span class="nc" id="L167">                    message =</span>
+<span class="nc" id="L168">                            httpException.getMessage() + &quot;\n&quot; + httpException.getResponseBodyAsString();</span>
                 }
-<span class="nc" id="L169">                componentRepository</span>
-<span class="nc" id="L170">                        .updateJobStatus(installableComponent.getId(), JobStatus.UNINSTALL_ERROR, message);</span>
-<span class="nc" id="L171">            } else {</span>
-<span class="nc" id="L172">                componentRepository</span>
-<span class="nc" id="L173">                        .updateJobStatus(installableComponent.getId(), JobStatus.UNINSTALL_ERROR, th.getMessage());</span>
+<span class="nc" id="L170">                componentRepository</span>
+<span class="nc" id="L171">                        .updateJobStatus(installableComponent.getId(), JobStatus.UNINSTALL_ERROR, message);</span>
+<span class="nc" id="L172">            } else {</span>
+<span class="nc" id="L173">                componentRepository</span>
+<span class="nc" id="L174">                        .updateJobStatus(installableComponent.getId(), JobStatus.UNINSTALL_ERROR, th.getMessage());</span>
             }
-<span class="nc" id="L175">            return JobStatus.UNINSTALL_ERROR;</span>
+<span class="nc" id="L176">            return JobStatus.UNINSTALL_ERROR;</span>
         });
-<span class="fc" id="L177">        return uninstallResult.join();</span>
+<span class="fc" id="L178">        return uninstallResult.join();</span>
     }
 
     private EntandoBundleComponentJob persistComponent(EntandoBundleJob job, Installable installable, JobStatus status) {
-<span class="fc" id="L181">        EntandoBundleComponentJob component = installable.getComponent();</span>
-<span class="fc" id="L182">        component.setJob(job);</span>
-<span class="fc" id="L183">        component.setStatus(status);</span>
+<span class="fc" id="L182">        EntandoBundleComponentJob component = installable.getComponent();</span>
+<span class="fc" id="L183">        component.setJob(job);</span>
+<span class="fc" id="L184">        component.setStatus(status);</span>
 
-<span class="fc" id="L185">        component = componentRepository.save(component);</span>
+<span class="fc" id="L186">        component = componentRepository.save(component);</span>
 
-<span class="fc" id="L187">        log.debug(&quot;New component uninstall job created &quot;</span>
-<span class="fc" id="L188">                + &quot;for component of type &quot; + installable.getComponentType() + &quot; with name &quot; + installable.getName());</span>
+<span class="fc" id="L188">        log.debug(&quot;New component uninstall job created &quot;</span>
+<span class="fc" id="L189">                + &quot;for component of type &quot; + installable.getComponentType() + &quot; with name &quot; + installable.getName());</span>
 
-<span class="fc" id="L190">        installable.setComponent(component);</span>
-<span class="fc" id="L191">        return component;</span>
+<span class="fc" id="L191">        installable.setComponent(component);</span>
+<span class="fc" id="L192">        return component;</span>
     }
 
     private void uninstallResources(EntandoBundleJob job, List&lt;EntandoBundleComponentJob&gt; components) {
-<span class="fc" id="L195">        List&lt;Installable&gt; resourceInstallables = componentProcessors.stream()</span>
-<span class="fc bfc" id="L196" title="All 2 branches covered.">                .filter(processor -&gt; processor.getComponentType() == ComponentType.RESOURCE)</span>
-<span class="fc" id="L197">                .map(processor -&gt; processor.process(components))</span>
-<span class="fc" id="L198">                .flatMap(List::stream)</span>
-<span class="fc" id="L199">                .sorted(Comparator.comparing(Installable::getName))</span>
-<span class="fc" id="L200">                .collect(Collectors.toList());</span>
+<span class="fc" id="L196">        List&lt;Installable&gt; resources = componentProcessors.stream()</span>
+<span class="fc bfc" id="L197" title="All 2 branches covered.">                .filter(processor -&gt; processor.getComponentType() == ComponentType.ASSET</span>
+<span class="fc bfc" id="L198" title="All 2 branches covered.">                        || processor.getComponentType() == ComponentType.DIRECTORY)</span>
+<span class="fc" id="L199">                .map(processor -&gt; processor.process(components))</span>
+<span class="fc" id="L200">                .flatMap(List::stream)</span>
+<span class="fc" id="L201">                .sorted(Comparator.comparing(Installable::getName))</span>
+<span class="fc" id="L202">                .peek(installable -&gt; persistComponent(job, installable, JobStatus.UNINSTALL_COMPLETED))</span>
+<span class="fc" id="L203">                .collect(Collectors.toList());</span>
 
-<span class="fc" id="L202">        resourceInstallables.stream()</span>
-<span class="fc" id="L203">                .findFirst()</span>
-<span class="fc" id="L204">                .ifPresent(rootResourceInstallable -&gt; {</span>
+<span class="fc" id="L205">        resources.stream()</span>
+<span class="pc bpc" id="L206" title="1 of 2 branches missed.">                .filter(installable -&gt; installable.getComponentType() == ComponentType.DIRECTORY)</span>
+<span class="fc" id="L207">                .findFirst()</span>
+<span class="fc" id="L208">                .ifPresent(rootResourceInstallable -&gt; {</span>
                     //Remove root folder
-<span class="fc" id="L206">                    log.info(&quot;Removing directory {}&quot;, rootResourceInstallable.getName());</span>
-<span class="fc" id="L207">                    coreClient.deleteFolder(rootResourceInstallable.getName());</span>
-
-                    //Mark all resources as uninstalled
-<span class="fc" id="L210">                    resourceInstallables.forEach(i -&gt; persistComponent(job, i, JobStatus.UNINSTALL_COMPLETED));</span>
-<span class="fc" id="L211">                });</span>
-<span class="fc" id="L212">    }</span>
+<span class="fc" id="L210">                    log.info(&quot;Removing directory {}&quot;, rootResourceInstallable.getName());</span>
+<span class="fc" id="L211">                    engineService.deleteFolder(rootResourceInstallable.getName());</span>
+<span class="fc" id="L212">                });</span>
+<span class="fc" id="L213">    }</span>
 
     @Override
     public void setApplicationContext(final ApplicationContext applicationContext) {
-<span class="fc" id="L216">        componentProcessors = applicationContext.getBeansOfType(ComponentProcessor.class).values();</span>
-<span class="fc" id="L217">    }</span>
+<span class="fc" id="L217">        componentProcessors = applicationContext.getBeansOfType(ComponentProcessor.class).values();</span>
+<span class="fc" id="L218">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
