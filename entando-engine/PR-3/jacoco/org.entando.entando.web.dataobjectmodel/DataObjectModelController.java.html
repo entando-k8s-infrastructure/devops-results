@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DataObjectModelController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.web.dataobjectmodel</a> &gt; <span class="el_source">DataObjectModelController.java</span></div><h1>DataObjectModelController.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.entando.web.dataobjectmodel;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.validation.Valid;
+
+import com.agiletec.aps.system.exception.ApsSystemException;
+import com.agiletec.aps.system.services.role.Permission;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import org.entando.entando.aps.system.exception.ResourceNotFoundException;
+import org.entando.entando.aps.system.services.dataobjectmodel.IDataObjectModelService;
+import org.entando.entando.aps.system.services.dataobjectmodel.model.DataModelDto;
+import org.entando.entando.aps.system.services.dataobjectmodel.model.IEntityModelDictionary;
+import org.entando.entando.web.common.annotation.RestAccessControl;
+import org.entando.entando.web.common.exceptions.ValidationGenericException;
+import org.entando.entando.web.common.model.PagedMetadata;
+import org.entando.entando.web.common.model.PagedRestResponse;
+import org.entando.entando.web.common.model.RestListRequest;
+import org.entando.entando.web.common.model.SimpleRestResponse;
+import org.entando.entando.web.dataobjectmodel.model.DataObjectModelRequest;
+import org.entando.entando.web.dataobjectmodel.validator.DataObjectModelValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.rest.webmvc.json.patch.JsonPatchPatchConverter;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.MapBindingResult;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping(value = &quot;/dataModels&quot;)
+<span class="fc" id="L55">public class DataObjectModelController {</span>
+
+<span class="fc" id="L57">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+
+    @Autowired
+    JsonPatchPatchConverter jsonPatchPatchConverter;
+
+    @Autowired
+    DataModelDtoToRequestConverter dataModelDtoToRequestConverter;
+
+    @Autowired
+    private IDataObjectModelService dataObjectModelService;
+
+    @Autowired
+    private DataObjectModelValidator dataObjectModelValidator;
+
+    public IDataObjectModelService getDataObjectModelService() {
+<span class="fc" id="L72">        return dataObjectModelService;</span>
+    }
+
+    public void setDataObjectModelService(IDataObjectModelService dataObjectModelService) {
+<span class="fc" id="L76">        this.dataObjectModelService = dataObjectModelService;</span>
+<span class="fc" id="L77">    }</span>
+
+    public DataObjectModelValidator getDataObjectModelValidator() {
+<span class="fc" id="L80">        return dataObjectModelValidator;</span>
+    }
+
+    public void setDataObjectModelValidator(DataObjectModelValidator dataObjectModelValidator) {
+<span class="fc" id="L84">        this.dataObjectModelValidator = dataObjectModelValidator;</span>
+<span class="fc" id="L85">    }</span>
+
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @RequestMapping(method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;PagedRestResponse&lt;DataModelDto&gt;&gt; getDataObjectModels(RestListRequest requestList) {
+<span class="fc" id="L90">        this.getDataObjectModelValidator().validateRestListRequest(requestList, DataModelDto.class);</span>
+<span class="fc" id="L91">        PagedMetadata&lt;DataModelDto&gt; result = this.getDataObjectModelService().getDataObjectModels(requestList);</span>
+<span class="fc" id="L92">        this.getDataObjectModelValidator().validateRestListResult(requestList, result);</span>
+<span class="fc" id="L93">        logger.debug(&quot;Main Response -&gt; {}&quot;, result);</span>
+<span class="fc" id="L94">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+    }
+
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @RequestMapping(value = &quot;/{dataModelId}&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;SimpleRestResponse&lt;DataModelDto&gt;&gt; getDataObjectModel(@PathVariable String dataModelId) {
+<span class="nc" id="L100">        logger.debug(&quot;Requested data object model -&gt; {}&quot;, dataModelId);</span>
+<span class="nc" id="L101">        MapBindingResult bindingResult = new MapBindingResult(new HashMap&lt;&gt;(), &quot;dataModels&quot;);</span>
+<span class="nc" id="L102">        int result = this.getDataObjectModelValidator().checkModelId(dataModelId, bindingResult);</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc bnc" id="L104" title="All 2 branches missed.">            if (404 == result) {</span>
+<span class="nc" id="L105">                throw new ResourceNotFoundException(DataObjectModelValidator.ERRCODE_DATAOBJECTMODEL_DOES_NOT_EXIST, &quot;dataObjectModel&quot;, dataModelId);</span>
+            } else {
+<span class="nc" id="L107">                throw new ValidationGenericException(bindingResult);</span>
+            }
+        }
+<span class="nc" id="L110">        DataModelDto dataModelDto = this.getDataObjectModelService().getDataObjectModel(Long.parseLong(dataModelId));</span>
+<span class="nc" id="L111">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(dataModelDto), HttpStatus.OK);</span>
+    }
+
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @RequestMapping(method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;SimpleRestResponse&lt;DataModelDto&gt;&gt; addDataObjectModel(@Valid @RequestBody DataObjectModelRequest dataObjectModelRequest,
+            BindingResult bindingResult) throws JsonProcessingException {
+<span class="nc" id="L118">        logger.debug(&quot;Adding data object model -&gt; {}&quot;, dataObjectModelRequest.getModelId());</span>
+        //field validations
+<span class="nc bnc" id="L120" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L121">            throw new ValidationGenericException(bindingResult);</span>
+        }
+        //business validations
+<span class="nc" id="L124">        this.getDataObjectModelValidator().validate(dataObjectModelRequest, bindingResult);</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L126">            throw new ValidationGenericException(bindingResult);</span>
+        }
+<span class="nc" id="L128">        int result = this.getDataObjectModelValidator().validateBody(dataObjectModelRequest, false, bindingResult);</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc bnc" id="L130" title="All 2 branches missed.">            if (404 == result) {</span>
+<span class="nc" id="L131">                throw new ResourceNotFoundException(DataObjectModelValidator.ERRCODE_POST_DATAOBJECTTYPE_DOES_NOT_EXIST, &quot;type&quot;, dataObjectModelRequest.getType());</span>
+            } else {
+<span class="nc" id="L133">                throw new ValidationGenericException(bindingResult);</span>
+            }
+        }
+<span class="nc" id="L136">        DataModelDto dataModelDto = this.getDataObjectModelService().addDataObjectModel(dataObjectModelRequest);</span>
+<span class="nc" id="L137">        logger.debug(&quot;Main Response -&gt; {}&quot;, dataModelDto);</span>
+<span class="nc" id="L138">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(dataModelDto), HttpStatus.OK);</span>
+    }
+
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @RequestMapping(value = &quot;/{dataModelId}&quot;, method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;SimpleRestResponse&lt;DataModelDto&gt;&gt; updateDataObjectModel(@PathVariable String dataModelId,
+            @Valid @RequestBody DataObjectModelRequest dataObjectModelRequest, BindingResult bindingResult) throws JsonProcessingException {
+<span class="fc" id="L145">        logger.debug(&quot;Updating data object model -&gt; {}&quot;, dataObjectModelRequest.getModelId());</span>
+        //field validations
+<span class="pc bpc" id="L147" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L148">            throw new ValidationGenericException(bindingResult);</span>
+        }
+<span class="fc" id="L150">        this.getDataObjectModelValidator().validateBodyName(dataModelId, dataObjectModelRequest, bindingResult);</span>
+<span class="pc bpc" id="L151" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L152">            throw new ValidationGenericException(bindingResult);</span>
+        }
+<span class="nc" id="L154">        int result = this.getDataObjectModelValidator().validateBody(dataObjectModelRequest, true, bindingResult);</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">            if (404 == result) {</span>
+<span class="nc bnc" id="L157" title="All 2 branches missed.">                if (1 == bindingResult.getFieldErrorCount(&quot;type&quot;)) {</span>
+<span class="nc" id="L158">                    throw new ResourceNotFoundException(DataObjectModelValidator.ERRCODE_PUT_DATAOBJECTTYPE_DOES_NOT_EXIST, &quot;type&quot;, dataObjectModelRequest.getType());</span>
+                } else {
+<span class="nc" id="L160">                    throw new ResourceNotFoundException(DataObjectModelValidator.ERRCODE_DATAOBJECTMODEL_ALREADY_EXISTS, &quot;modelId&quot;, dataObjectModelRequest.getModelId());</span>
+                }
+            } else {
+<span class="nc" id="L163">                throw new ValidationGenericException(bindingResult);</span>
+            }
+        }
+<span class="nc" id="L166">        DataModelDto dataModelDto = this.getDataObjectModelService().updateDataObjectModel(dataObjectModelRequest);</span>
+<span class="nc" id="L167">        logger.debug(&quot;Main Response -&gt; {}&quot;, dataModelDto);</span>
+<span class="nc" id="L168">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(dataModelDto), HttpStatus.OK);</span>
+
+    }
+
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @RequestMapping(value = &quot;/{dataModelId}&quot;, method = RequestMethod.PATCH, produces = MediaType.APPLICATION_JSON_VALUE, consumes=&quot;application/json-patch+json&quot;)
+    public ResponseEntity&lt;SimpleRestResponse&lt;DataModelDto&gt;&gt; patchDataObjectModel(@PathVariable Long dataModelId,
+                                                                                 @RequestBody JsonNode jsonPatch,
+                                                                                 BindingResult bindingResult) throws JsonProcessingException {
+<span class="nc" id="L177">        logger.debug(&quot;Patching data object model -&gt; {}&quot;, dataModelId);</span>
+
+<span class="nc" id="L179">        this.getDataObjectModelValidator().validateDataObjectModelJsonPatch(jsonPatch, bindingResult);</span>
+<span class="nc bnc" id="L180" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L181">            throw new ValidationGenericException(bindingResult);</span>
+        }
+
+<span class="nc" id="L184">        DataModelDto patchedDataModelDto = this.getDataObjectModelService().getPatchedDataObjectModel(dataModelId, jsonPatch);</span>
+<span class="nc" id="L185">        DataObjectModelRequest dataObjectModelRequest = this.dataModelDtoToRequestConverter.convert(patchedDataModelDto);</span>
+
+<span class="nc" id="L187">        return this.updateDataObjectModel(Long.toString(dataModelId), dataObjectModelRequest, bindingResult);</span>
+
+    }
+
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @RequestMapping(value = &quot;/{dataModelId}&quot;, method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;SimpleRestResponse&lt;Map&gt;&gt; deleteDataObjectModel(@PathVariable String dataModelId) throws ApsSystemException {
+<span class="nc" id="L194">        logger.info(&quot;deleting data object model -&gt; {}&quot;, dataModelId);</span>
+<span class="nc" id="L195">        MapBindingResult bindingResult = new MapBindingResult(new HashMap&lt;&gt;(), &quot;dataModels&quot;);</span>
+<span class="nc" id="L196">        Long dataId = this.getDataObjectModelValidator().checkValidModelId(dataModelId, bindingResult);</span>
+<span class="nc bnc" id="L197" title="All 2 branches missed.">        if (null == dataId) {</span>
+<span class="nc" id="L198">            throw new ValidationGenericException(bindingResult);</span>
+        }
+<span class="nc" id="L200">        this.getDataObjectModelService().removeDataObjectModel(Long.parseLong(dataModelId));</span>
+<span class="nc" id="L201">        Map&lt;String, String&gt; payload = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L202">        payload.put(&quot;modelId&quot;, dataModelId);</span>
+<span class="nc" id="L203">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(payload), HttpStatus.OK);</span>
+    }
+
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @RequestMapping(value = &quot;/dictionary&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;SimpleRestResponse&lt;IEntityModelDictionary&gt;&gt; getDictionary(@RequestParam(value = &quot;typeCode&quot;, required = false) String typeCode) {
+<span class="nc" id="L209">        logger.debug(&quot;loading data model dictionary {}&quot;, typeCode);</span>
+<span class="nc" id="L210">        IEntityModelDictionary dictionary = this.getDataObjectModelService().getDataModelDictionary(typeCode);</span>
+<span class="nc" id="L211">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(dictionary), HttpStatus.OK);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

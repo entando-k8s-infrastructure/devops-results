@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NavigatorParser.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.services.page.widget</a> &gt; <span class="el_source">NavigatorParser.java</span></div><h1>NavigatorParser.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package com.agiletec.aps.system.services.page.widget;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.agiletec.aps.system.RequestContext;
+import com.agiletec.aps.system.SystemConstants;
+import com.agiletec.aps.system.services.authorization.IAuthorizationManager;
+import com.agiletec.aps.system.services.page.IPage;
+import com.agiletec.aps.system.services.page.IPageManager;
+import com.agiletec.aps.system.services.user.UserDetails;
+
+/**
+ * Classe di supporto per l'interpretazione delle espressioni che specificano
+ * sottoinsiemi di pagine. Utilizzata dal tag per la generazione di navigatori;
+ * il risultato dell'interpretazione è una lista di oggetti NavigatorTarget, che
+ * wrappano pagine del portale e possono essere utilizzati dai sub-tag. Le
+ * espressioni per la specificazione delle pagine da selezionare possono essere
+ * assolute o relative o miste, in riferimento alla pagina visualizzata (pagina
+ * corrente) e sono definite in base alla struttura ad albero delle pagine del
+ * portale (ogni pagina è un nodo).&lt;BR&gt;
+ * Le &lt;b&gt;espressioni&lt;/b&gt; supportate seguono la seguente sintassi:&lt;br&gt;
+ * &lt;code&gt;expr1+expr2+ ... +exprn&lt;/code&gt;&lt;br&gt;
+ * dove ogni espressione rappresenta un insieme di pagine e il segno + è
+ * l'operatore di unione di insiemi.&lt;br&gt;
+ * Ogni espressione in forma di stringa ha la forma:&lt;br&gt;
+ * &lt;code&gt;page_spec&lt;/code&gt;&lt;br&gt;
+ * oppure:&lt;br&gt;
+ * &lt;code&gt;page_spec.operator&lt;/code&gt;&lt;br&gt;
+ * dove &lt;code&gt;page_spec&lt;/code&gt; è una funzione di selezione di una singola pagina
+ * e &lt;code&gt;.operator&lt;/code&gt; è un operatore che seleziona un sottoinsieme di
+ * pagine correlate alla pagina cui è applicato.&lt;br&gt;
+ * &lt;br&gt;
+ * Solo nel caso dell'operatore &quot;Subtree&quot; gli oggetti NavigatorTarget restituiti
+ * hanno associato un valore significativo del livello nel sottoalbero; in tutti
+ * gli altri casi il livello ha valore zero.
+ *
+ * @author M.Diana
+ */
+<span class="nc" id="L57">public class NavigatorParser implements INavigatorParser {</span>
+
+<span class="nc" id="L59">    private static final Logger _logger = LoggerFactory.getLogger(NavigatorParser.class);</span>
+
+    @Override
+    public List&lt;NavigatorExpression&gt; getExpressions(String spec) {
+<span class="nc" id="L63">        List&lt;NavigatorExpression&gt; navExpressions = new ArrayList&lt;NavigatorExpression&gt;();</span>
+<span class="nc bnc" id="L64" title="All 4 branches missed.">        if (null != spec &amp;&amp; spec.length() &gt; 0) {</span>
+<span class="nc" id="L65">            String[] expressions = spec.split(&quot;\\+&quot;);</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">            for (int i = 0; i &lt; expressions.length; i++) {</span>
+<span class="nc" id="L67">                String expression = expressions[i].trim();</span>
+<span class="nc bnc" id="L68" title="All 2 branches missed.">                if (expression.length() &gt; 0) {</span>
+<span class="nc" id="L69">                    NavigatorExpression navExpression = new NavigatorExpression(expression);</span>
+<span class="nc" id="L70">                    navExpressions.add(navExpression);</span>
+                }
+            }
+        }
+<span class="nc" id="L74">        return navExpressions;</span>
+    }
+
+    @Override
+    public String getSpec(List&lt;NavigatorExpression&gt; expressions) {
+<span class="nc bnc" id="L79" title="All 4 branches missed.">        if (null == expressions || expressions.size() == 0) {</span>
+<span class="nc" id="L80">            return &quot;&quot;;</span>
+        }
+<span class="nc" id="L82">        StringBuilder buffer = new StringBuilder();</span>
+<span class="nc" id="L83">        boolean first = true;</span>
+<span class="nc" id="L84">        Iterator&lt;NavigatorExpression&gt; iter = expressions.iterator();</span>
+<span class="nc bnc" id="L85" title="All 2 branches missed.">        while (iter.hasNext()) {</span>
+<span class="nc" id="L86">            NavigatorExpression navigatorExpression = iter.next();</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">            if (!first) {</span>
+<span class="nc" id="L88">                buffer.append(&quot; &quot;).append(EXPRESSION_SEPARATOR).append(&quot; &quot;);</span>
+            }
+<span class="nc" id="L90">            buffer.append(navigatorExpression.toString());</span>
+<span class="nc" id="L91">            first = false;</span>
+<span class="nc" id="L92">        }</span>
+<span class="nc" id="L93">        return buffer.toString();</span>
+    }
+
+    /**
+     * Crea e restituisce una lista di oggetti NavigatorTarget, che wrappano
+     * pagine del portale e possono essere utilizzati dai sub-tag.
+     *
+     * @param spec L'espressione usata la specificazione delle pagine da
+     * selezionare; possono essere assolute o relative o miste.
+     * @param reqCtx Il contesto della richiesta corrente.
+     * @return La lista di oggetti NavigatorTarget.
+     */
+    @Override
+    public List&lt;NavigatorTarget&gt; parseSpec(String spec, RequestContext reqCtx) {
+<span class="nc" id="L107">        IPage currentPage = (IPage) reqCtx.getExtraParam(SystemConstants.EXTRAPAR_CURRENT_PAGE);</span>
+<span class="nc" id="L108">        UserDetails currentUser = (UserDetails) reqCtx.getRequest().getSession().getAttribute(SystemConstants.SESSIONPARAM_CURRENT_USER);</span>
+<span class="nc" id="L109">        return this.parseSpec(spec, currentPage, currentUser);</span>
+    }
+
+    /**
+     * Crea e restituisce una lista di oggetti NavigatorTarget, che wrappano
+     * pagine del portale e possono essere utilizzati dai sub-tag.
+     *
+     * @param spec L'espressione usata la specificazione delle pagine da
+     * selezionare; possono essere assolute o relative o miste.
+     * @param currentPage La pagina corrente dove il tag è inserito.
+     * @param currentUser L'utente corrente.
+     * @return La lista di oggetti NavigatorTarget.
+     */
+    @Override
+    public List&lt;NavigatorTarget&gt; parseSpec(String spec, IPage currentPage, UserDetails currentUser) {
+<span class="nc" id="L124">        List&lt;NavigatorTarget&gt; targets = new ArrayList&lt;NavigatorTarget&gt;();</span>
+<span class="nc bnc" id="L125" title="All 4 branches missed.">        if (null != spec &amp;&amp; spec.length() &gt; 0) {</span>
+<span class="nc" id="L126">            String[] expressions = spec.split(&quot;\\&quot; + EXPRESSION_SEPARATOR);</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">            for (int i = 0; i &lt; expressions.length; i++) {</span>
+<span class="nc" id="L128">                String expression = expressions[i].trim();</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">                if (expression.length() &gt; 0) {</span>
+<span class="nc" id="L130">                    NavigatorExpression navExpression = new NavigatorExpression(expression);</span>
+<span class="nc" id="L131">                    targets = this.parseSubSpec(navExpression, currentPage, targets, currentUser);</span>
+                }
+            }
+        }
+<span class="nc" id="L135">        return targets;</span>
+    }
+
+    private List&lt;NavigatorTarget&gt; parseSubSpec(NavigatorExpression navExpression, IPage page, List&lt;NavigatorTarget&gt; targets,
+            UserDetails user) {
+<span class="nc" id="L140">        int specId = navExpression.getSpecId();</span>
+<span class="nc" id="L141">        IPage basePage = null;</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">        if (specId == NavigatorExpression.SPEC_CURRENT_PAGE_ID) {</span>
+<span class="nc" id="L143">            basePage = page;</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">        } else if (specId == NavigatorExpression.SPEC_PARENT_PAGE_ID) {</span>
+<span class="nc" id="L145">            int limit = 0;</span>
+            do {
+<span class="nc" id="L147">                basePage = this.getPageManager().getOnlinePage(page.getParentCode());</span>
+<span class="nc" id="L148">                limit++;</span>
+<span class="nc bnc" id="L149" title="All 6 branches missed.">            } while ((!basePage.isShowable() || !this.isUserAllowed(user, basePage)) &amp;&amp; limit &lt; 20);</span>
+<span class="nc bnc" id="L150" title="All 2 branches missed.">        } else if (specId == NavigatorExpression.SPEC_SUPER_ID) {</span>
+<span class="nc bnc" id="L151" title="All 2 branches missed.">            if (navExpression.getSpecSuperLevel() &lt; 0) {</span>
+<span class="nc" id="L152">                throw new RuntimeException(&quot;Level 'SUPER' not specified : Page &quot; + page.getCode());</span>
+            }
+<span class="nc" id="L154">            basePage = page;</span>
+<span class="nc bnc" id="L155" title="All 2 branches missed.">            for (int i = 1; i &lt;= navExpression.getSpecSuperLevel(); i++) {</span>
+<span class="nc" id="L156">                basePage = this.getPageManager().getOnlinePage(basePage.getParentCode());</span>
+            }
+<span class="nc" id="L158">            int limit = 0;</span>
+<span class="nc bnc" id="L159" title="All 6 branches missed.">            while ((!basePage.isShowable() || !this.isUserAllowed(user, basePage)) &amp;&amp; limit &lt; 20) {</span>
+<span class="nc" id="L160">                basePage = this.getPageManager().getOnlinePage(basePage.getParentCode());</span>
+<span class="nc" id="L161">                limit++;</span>
+            }
+<span class="nc bnc" id="L163" title="All 2 branches missed.">        } else if (specId == NavigatorExpression.SPEC_ABS_ID) {</span>
+<span class="nc" id="L164">            basePage = page;</span>
+<span class="nc bnc" id="L165" title="All 2 branches missed.">            if (navExpression.getSpecAbsLevel() &lt; 0) {</span>
+<span class="nc" id="L166">                throw new RuntimeException(&quot;Level 'ABS' not specified : Page &quot; + page.getCode());</span>
+            }
+<span class="nc" id="L168">            int absLevel = navExpression.getSpecAbsLevel();</span>
+<span class="nc" id="L169">            List&lt;IPage&gt; candidates = new ArrayList&lt;IPage&gt;();</span>
+<span class="nc" id="L170">            int limit = 0;</span>
+<span class="nc bnc" id="L171" title="All 4 branches missed.">            if (basePage.isShowable() &amp;&amp; isUserAllowed(user, basePage)) {</span>
+<span class="nc" id="L172">                candidates.add(0, basePage);</span>
+            }
+<span class="nc bnc" id="L174" title="All 4 branches missed.">            while (basePage != this.getPageManager().getOnlinePage(basePage.getParentCode()) &amp;&amp; limit &lt; 20) {</span>
+<span class="nc" id="L175">                basePage = this.getPageManager().getOnlinePage(basePage.getParentCode());</span>
+<span class="nc bnc" id="L176" title="All 4 branches missed.">                if (basePage.isShowable() &amp;&amp; isUserAllowed(user, basePage)) {</span>
+<span class="nc" id="L177">                    candidates.add(0, basePage);</span>
+                }
+<span class="nc" id="L179">                limit++;</span>
+            }
+<span class="nc bnc" id="L181" title="All 2 branches missed.">            if (absLevel &gt;= candidates.size()) {</span>
+<span class="nc" id="L182">                absLevel = candidates.size() - 1;</span>
+            }
+<span class="nc" id="L184">            basePage = (IPage) candidates.get(absLevel);</span>
+<span class="nc bnc" id="L185" title="All 2 branches missed.">        } else if (specId == NavigatorExpression.SPEC_PAGE_ID) {</span>
+<span class="nc bnc" id="L186" title="All 2 branches missed.">            if (null == navExpression.getSpecCode()) {</span>
+<span class="nc" id="L187">                throw new RuntimeException(&quot;Page Code not specified : Page &quot; + page.getCode());</span>
+            }
+<span class="nc" id="L189">            String code = navExpression.getSpecCode();</span>
+<span class="nc" id="L190">            IPage basePageTemp = this.getPageManager().getOnlinePage(code);</span>
+<span class="nc bnc" id="L191" title="All 2 branches missed.">            if (null == basePageTemp) {</span>
+<span class="nc" id="L192">                _logger.error(&quot;Invalid Page Specification (null): Code {} - Page: {}&quot;, code, page.getCode());</span>
+<span class="nc" id="L193">                return targets;</span>
+            }
+<span class="nc bnc" id="L195" title="All 4 branches missed.">            if (basePageTemp.isShowable() &amp;&amp; this.isUserAllowed(user, basePageTemp)) {</span>
+<span class="nc" id="L196">                basePage = basePageTemp;</span>
+            }
+        }
+<span class="nc bnc" id="L199" title="All 2 branches missed.">        if (null == basePage) {</span>
+<span class="nc" id="L200">            return targets;</span>
+        }
+<span class="nc" id="L202">        targets = this.processBasePage(navExpression, basePage, targets, user);</span>
+<span class="nc" id="L203">        return targets;</span>
+    }
+
+    private List&lt;NavigatorTarget&gt; processBasePage(NavigatorExpression navExpression, IPage basePage, List&lt;NavigatorTarget&gt; targets,
+            UserDetails user) {
+<span class="nc" id="L208">        int operatorId = navExpression.getOperatorId();</span>
+<span class="nc bnc" id="L209" title="All 2 branches missed.">        if (operatorId &lt; 0) {</span>
+<span class="nc" id="L210">            targets.add(new NavigatorTarget(basePage, 0));</span>
+<span class="nc bnc" id="L211" title="All 2 branches missed.">        } else if (operatorId == NavigatorExpression.OPERATOR_CHILDREN_ID) {</span>
+<span class="nc" id="L212">            boolean isOnline = basePage.isOnline();</span>
+<span class="nc" id="L213">            String[] childrenCodes = basePage.getChildrenCodes();</span>
+<span class="nc bnc" id="L214" title="All 2 branches missed.">            for (int i = 0; i &lt; childrenCodes.length; i++) {</span>
+<span class="nc bnc" id="L215" title="All 2 branches missed.">                IPage child = (isOnline)</span>
+<span class="nc" id="L216">                        ? this.getPageManager().getOnlinePage(childrenCodes[i])</span>
+<span class="nc" id="L217">                        : this.getPageManager().getDraftPage(childrenCodes[i]);</span>
+<span class="nc bnc" id="L218" title="All 6 branches missed.">                if (null != child &amp;&amp; child.isShowable() &amp;&amp; isUserAllowed(user, child)) {</span>
+<span class="nc" id="L219">                    targets.add(new NavigatorTarget(child, 0));</span>
+                }
+            }
+<span class="nc bnc" id="L222" title="All 2 branches missed.">        } else if (operatorId == NavigatorExpression.OPERATOR_PATH_ID) {</span>
+<span class="nc" id="L223">            IPage page = basePage;</span>
+<span class="nc" id="L224">            int index = targets.size();</span>
+<span class="nc" id="L225">            int limit = 0;</span>
+<span class="nc bnc" id="L226" title="All 4 branches missed.">            if (page.isShowable() &amp;&amp; this.isUserAllowed(user, page)) {</span>
+<span class="nc" id="L227">                targets.add(index, new NavigatorTarget(page, 0));</span>
+            }
+<span class="nc bnc" id="L229" title="All 4 branches missed.">            while (!page.isRoot() &amp;&amp; limit &lt; 20) {</span>
+<span class="nc" id="L230">                page = this.getPageManager().getOnlinePage(page.getParentCode());</span>
+<span class="nc bnc" id="L231" title="All 4 branches missed.">                if (page.isShowable() &amp;&amp; this.isUserAllowed(user, page)) {</span>
+<span class="nc" id="L232">                    targets.add(index, new NavigatorTarget(page, 0));</span>
+                }
+<span class="nc" id="L234">                limit++;</span>
+            }
+<span class="nc bnc" id="L236" title="All 2 branches missed.">        } else if (operatorId == NavigatorExpression.OPERATOR_SUBTREE_ID) {</span>
+<span class="nc" id="L237">            int depth = navExpression.getOperatorSubtreeLevel();</span>
+<span class="nc bnc" id="L238" title="All 2 branches missed.">            if (depth &lt; 0) {</span>
+<span class="nc" id="L239">                throw new RuntimeException(&quot;Operator level 'SUBTREE' not specified&quot;);</span>
+            }
+<span class="nc" id="L241">            targets = this.putSubTree(basePage, 0, depth, targets, user);</span>
+<span class="nc" id="L242">        } else {</span>
+<span class="nc" id="L243">            targets = null;</span>
+        }
+<span class="nc" id="L245">        return targets;</span>
+    }
+
+    private List&lt;NavigatorTarget&gt; putSubTree(IPage page, int level, int depth, List&lt;NavigatorTarget&gt; targets, UserDetails currentUser) {
+<span class="nc bnc" id="L249" title="All 6 branches missed.">        if (null != page &amp;&amp; page.isShowable() &amp;&amp; this.isUserAllowed(currentUser, page)) {</span>
+<span class="nc" id="L250">            targets.add(new NavigatorTarget(page, level));</span>
+<span class="nc bnc" id="L251" title="All 2 branches missed.">            if (level &lt; depth) {</span>
+<span class="nc" id="L252">                boolean isOnline = page.isOnline();</span>
+<span class="nc" id="L253">                String[] childrenCodes = page.getChildrenCodes();</span>
+<span class="nc bnc" id="L254" title="All 2 branches missed.">                for (int i = 0; i &lt; childrenCodes.length; i++) {</span>
+<span class="nc bnc" id="L255" title="All 2 branches missed.">                    IPage child = (isOnline)</span>
+<span class="nc" id="L256">                            ? this.getPageManager().getOnlinePage(childrenCodes[i])</span>
+<span class="nc" id="L257">                            : this.getPageManager().getDraftPage(childrenCodes[i]);</span>
+<span class="nc" id="L258">                    targets = this.putSubTree(child, level + 1, depth, targets, currentUser);</span>
+                }
+            }
+        }
+<span class="nc" id="L262">        return targets;</span>
+    }
+
+    private boolean isUserAllowed(UserDetails user, IPage page) {
+<span class="nc" id="L266">        return this.getAuthManager().isAuth(user, page);</span>
+    }
+
+    protected IPageManager getPageManager() {
+<span class="nc" id="L270">        return _pageManager;</span>
+    }
+
+    public void setPageManager(IPageManager pageManager) {
+<span class="nc" id="L274">        this._pageManager = pageManager;</span>
+<span class="nc" id="L275">    }</span>
+
+    protected IAuthorizationManager getAuthManager() {
+<span class="nc" id="L278">        return _authManager;</span>
+    }
+
+    public void setAuthManager(IAuthorizationManager authManager) {
+<span class="nc" id="L282">        this._authManager = authManager;</span>
+<span class="nc" id="L283">    }</span>
+
+    private IPageManager _pageManager;
+    private IAuthorizationManager _authManager;
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

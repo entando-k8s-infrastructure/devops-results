@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CategoryValidator.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.web.category.validator</a> &gt; <span class="el_source">CategoryValidator.java</span></div><h1>CategoryValidator.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.entando.web.category.validator;
+
+import com.agiletec.aps.system.services.category.Category;
+import com.agiletec.aps.system.services.category.ICategoryManager;
+import org.apache.commons.lang3.StringUtils;
+import org.entando.entando.aps.system.exception.ResourceNotFoundException;
+import org.entando.entando.aps.system.services.category.model.CategoryDto;
+import org.entando.entando.web.common.exceptions.ValidationGenericException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.Errors;
+import org.springframework.validation.Validator;
+
+/**
+ * @author E.Santoboni
+ */
+@Component
+<span class="fc" id="L32">public class CategoryValidator implements Validator {</span>
+
+    public static final String ERRCODE_PARENT_CATEGORY_NOT_FOUND = &quot;1&quot;;
+    public static final String ERRCODE_CATEGORY_NOT_FOUND = &quot;2&quot;;
+    public static final String ERRCODE_CATEGORY_ALREADY_EXISTS = &quot;3&quot;;
+    public static final String ERRCODE_URINAME_MISMATCH = &quot;4&quot;;
+    public static final String ERRCODE_PARENT_CATEGORY_CANNOT_BE_CHANGED = &quot;5&quot;;
+    public static final String ERRCODE_CATEGORY_REFERENCES = &quot;6&quot;;
+    public static final String ERRCODE_CATEGORY_HAS_CHILDREN = &quot;7&quot;;
+    public static final String ERRCODE_CATEGORY_NO_REFERENCES = &quot;8&quot;;
+
+    @Autowired
+    private ICategoryManager categoryManager;
+
+    @Override
+    public boolean supports(Class&lt;?&gt; paramClass) {
+<span class="nc" id="L48">        return CategoryDto.class.equals(paramClass);</span>
+    }
+
+    @Override
+    public void validate(Object target, Errors errors) {
+<span class="nc" id="L53">    }</span>
+
+    public void validatePutReferences(String categoryCode, CategoryDto request, BindingResult bindingResult) {
+<span class="nc bnc" id="L56" title="All 2 branches missed.">        if (!StringUtils.equals(categoryCode, request.getCode())) {</span>
+<span class="nc" id="L57">            bindingResult.rejectValue(&quot;code&quot;, ERRCODE_URINAME_MISMATCH, new String[]{categoryCode, request.getCode()}, &quot;category.code.mismatch&quot;);</span>
+<span class="nc" id="L58">            throw new ValidationGenericException(bindingResult);</span>
+        }
+<span class="nc" id="L60">        Category category = this.getCategoryManager().getCategory(request.getCode());</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">        if (null == category) {</span>
+<span class="nc" id="L62">            bindingResult.reject(ERRCODE_CATEGORY_NOT_FOUND, new String[]{request.getCode()}, &quot;category.notexists&quot;);</span>
+<span class="nc" id="L63">            throw new ResourceNotFoundException(bindingResult);</span>
+        }
+<span class="nc" id="L65">        Category parent = this.getCategoryManager().getCategory(request.getParentCode());</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">        if (null == parent) {</span>
+<span class="nc" id="L67">            bindingResult.reject(ERRCODE_PARENT_CATEGORY_NOT_FOUND, new String[]{request.getCode()}, &quot;category.parent.notexists&quot;);</span>
+<span class="nc" id="L68">            throw new ResourceNotFoundException(bindingResult);</span>
+<span class="nc bnc" id="L69" title="All 2 branches missed.">        } else if (!parent.getCode().equals(category.getParentCode())) {</span>
+<span class="nc" id="L70">            bindingResult.reject(ERRCODE_PARENT_CATEGORY_CANNOT_BE_CHANGED, new String[]{}, &quot;category.parent.cannotBeChanged&quot;);</span>
+        }
+<span class="nc" id="L72">    }</span>
+
+    public void validatePostReferences(CategoryDto request, BindingResult bindingResult) {
+<span class="nc bnc" id="L75" title="All 2 branches missed.">        if (null != this.getCategoryManager().getCategory(request.getCode())) {</span>
+<span class="nc" id="L76">            bindingResult.reject(ERRCODE_CATEGORY_ALREADY_EXISTS, new String[]{request.getCode()}, &quot;category.exists&quot;);</span>
+<span class="nc" id="L77">            throw new ValidationGenericException(bindingResult);</span>
+        }
+<span class="nc bnc" id="L79" title="All 2 branches missed.">        if (null == this.getCategoryManager().getCategory(request.getParentCode())) {</span>
+<span class="nc" id="L80">            bindingResult.reject(ERRCODE_PARENT_CATEGORY_NOT_FOUND, new String[]{request.getCode()}, &quot;category.parent.notexists&quot;);</span>
+<span class="nc" id="L81">            throw new ResourceNotFoundException(bindingResult);</span>
+        }
+<span class="nc" id="L83">    }</span>
+
+    public ICategoryManager getCategoryManager() {
+<span class="nc" id="L86">        return categoryManager;</span>
+    }
+
+    public void setCategoryManager(ICategoryManager categoryManager) {
+<span class="fc" id="L90">        this.categoryManager = categoryManager;</span>
+<span class="fc" id="L91">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
