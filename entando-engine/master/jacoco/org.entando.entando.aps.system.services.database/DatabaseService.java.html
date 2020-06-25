@@ -39,154 +39,154 @@ import java.util.Random;
 /**
  * @author E.Santoboni
  */
-<span class="nc" id="L42">public class DatabaseService implements IDatabaseService {</span>
+<span class="fc" id="L42">public class DatabaseService implements IDatabaseService {</span>
 
-<span class="nc" id="L44">    private final Logger logger = LoggerFactory.getLogger(this.getClass());</span>
+<span class="fc" id="L44">    private final Logger logger = LoggerFactory.getLogger(this.getClass());</span>
 
     private IDatabaseManager databaseManager;
     private IComponentManager componentManager;
 
     @Override
     public int getStatus() {
-<span class="nc" id="L51">        return this.getDatabaseManager().getStatus();</span>
+<span class="fc" id="L51">        return this.getDatabaseManager().getStatus();</span>
     }
 
     @Override
     public PagedMetadata&lt;ShortDumpReportDto&gt; getShortDumpReportDtos(RestListRequest requestList) {
-<span class="nc" id="L56">        PagedMetadata&lt;ShortDumpReportDto&gt; result = null;</span>
-<span class="nc" id="L57">        List&lt;ShortDumpReportDto&gt; dtos = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L56">        PagedMetadata&lt;ShortDumpReportDto&gt; result = null;</span>
+<span class="fc" id="L57">        List&lt;ShortDumpReportDto&gt; dtos = new ArrayList&lt;&gt;();</span>
         try {
-<span class="nc" id="L59">            List&lt;DataSourceDumpReport&gt; reports = this.getDatabaseManager().getBackupReports();</span>
-<span class="nc bnc" id="L60" title="All 2 branches missed.">            if (null != reports) {</span>
-<span class="nc" id="L61">                reports.stream().forEach(report -&gt; dtos.add(new ShortDumpReportDto(report)));</span>
+<span class="fc" id="L59">            List&lt;DataSourceDumpReport&gt; reports = this.getDatabaseManager().getBackupReports();</span>
+<span class="fc bfc" id="L60" title="All 2 branches covered.">            if (null != reports) {</span>
+<span class="pc" id="L61">                reports.stream().forEach(report -&gt; dtos.add(new ShortDumpReportDto(report)));</span>
             }
-<span class="nc" id="L63">            List&lt;ShortDumpReportDto&gt; sublist = requestList.getSublist(dtos);</span>
-<span class="nc bnc" id="L64" title="All 2 branches missed.">            int size = (null != reports) ? reports.size() : 0;</span>
-<span class="nc" id="L65">            SearcherDaoPaginatedResult searchResult = new SearcherDaoPaginatedResult(size, sublist);</span>
-<span class="nc" id="L66">            result = new PagedMetadata&lt;&gt;(requestList, searchResult);</span>
-<span class="nc" id="L67">            result.setBody(sublist);</span>
+<span class="fc" id="L63">            List&lt;ShortDumpReportDto&gt; sublist = requestList.getSublist(dtos);</span>
+<span class="fc bfc" id="L64" title="All 2 branches covered.">            int size = (null != reports) ? reports.size() : 0;</span>
+<span class="fc" id="L65">            SearcherDaoPaginatedResult searchResult = new SearcherDaoPaginatedResult(size, sublist);</span>
+<span class="fc" id="L66">            result = new PagedMetadata&lt;&gt;(requestList, searchResult);</span>
+<span class="fc" id="L67">            result.setBody(sublist);</span>
 <span class="nc" id="L68">        } catch (Throwable t) {</span>
 <span class="nc" id="L69">            logger.error(&quot;error extracting database reports&quot;, t);</span>
 <span class="nc" id="L70">            throw new RestServerError(&quot;error extracting database reports&quot;, t);</span>
-<span class="nc" id="L71">        }</span>
-<span class="nc" id="L72">        return result;</span>
+<span class="fc" id="L71">        }</span>
+<span class="fc" id="L72">        return result;</span>
     }
 
     @Override
     public DumpReportDto getDumpReportDto(String reportCode) {
-<span class="nc" id="L77">        DumpReportDto dtos = null;</span>
+<span class="fc" id="L77">        DumpReportDto dtos = null;</span>
         try {
-<span class="nc" id="L79">            DataSourceDumpReport report = this.getDatabaseManager().getBackupReport(reportCode);</span>
-<span class="nc bnc" id="L80" title="All 2 branches missed.">            if (null == report) {</span>
-<span class="nc" id="L81">                logger.warn(&quot;no dump found with code {}&quot;, reportCode);</span>
-<span class="nc" id="L82">                throw new ResourceNotFoundException(DatabaseValidator.ERRCODE_NO_DUMP_FOUND, &quot;reportCode&quot;, reportCode);</span>
+<span class="fc" id="L79">            DataSourceDumpReport report = this.getDatabaseManager().getBackupReport(reportCode);</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">            if (null == report) {</span>
+<span class="fc" id="L81">                logger.warn(&quot;no dump found with code {}&quot;, reportCode);</span>
+<span class="fc" id="L82">                throw new ResourceNotFoundException(DatabaseValidator.ERRCODE_NO_DUMP_FOUND, &quot;reportCode&quot;, reportCode);</span>
             }
-<span class="nc" id="L84">            dtos = new DumpReportDto(report, this.getComponentManager());</span>
-<span class="nc" id="L85">        } catch (ResourceNotFoundException r) {</span>
-<span class="nc" id="L86">            throw r;</span>
+<span class="fc" id="L84">            dtos = new DumpReportDto(report, this.getComponentManager());</span>
+<span class="fc" id="L85">        } catch (ResourceNotFoundException r) {</span>
+<span class="fc" id="L86">            throw r;</span>
 <span class="nc" id="L87">        } catch (Throwable t) {</span>
 <span class="nc" id="L88">            logger.error(&quot;error extracting database report {}&quot;, reportCode, t);</span>
 <span class="nc" id="L89">            throw new RestServerError(&quot;error extracting database report &quot; + reportCode, t);</span>
-<span class="nc" id="L90">        }</span>
-<span class="nc" id="L91">        return dtos;</span>
+<span class="fc" id="L90">        }</span>
+<span class="fc" id="L91">        return dtos;</span>
     }
 
     @Override
     public void deleteDumpReport(String reportCode) {
         try {
-<span class="nc" id="L97">            this.getDatabaseManager().deleteBackup(reportCode);</span>
+<span class="fc" id="L97">            this.getDatabaseManager().deleteBackup(reportCode);</span>
 <span class="nc" id="L98">        } catch (Throwable t) {</span>
 <span class="nc" id="L99">            logger.error(&quot;error deleting database report {}&quot;, reportCode, t);</span>
 <span class="nc" id="L100">            throw new RestServerError(&quot;error deleting database report &quot; + reportCode, t);</span>
-<span class="nc" id="L101">        }</span>
-<span class="nc" id="L102">    }</span>
+<span class="fc" id="L101">        }</span>
+<span class="fc" id="L102">    }</span>
 
     @Override
     public List&lt;ComponentDto&gt; getCurrentComponents() {
-<span class="nc" id="L106">        ComponentDto mainDto = new ComponentDto();</span>
-<span class="nc" id="L107">        mainDto.setCode(&quot;core&quot;);</span>
-<span class="nc" id="L108">        mainDto.setDescription(&quot;Core&quot;);</span>
-<span class="nc" id="L109">        mainDto.buildTableMapping(this.getDatabaseManager().getEntandoTableMapping());</span>
-<span class="nc" id="L110">        List&lt;ComponentDto&gt; dtos = new ArrayList&lt;&gt;();</span>
-<span class="nc" id="L111">        this.getComponentManager().getCurrentComponents()</span>
-<span class="nc" id="L112">                .stream().forEach(component -&gt; dtos.add(new ComponentDto(component)));</span>
-<span class="nc" id="L113">        dtos.add(0, mainDto);</span>
-<span class="nc" id="L114">        return dtos;</span>
+<span class="fc" id="L106">        ComponentDto mainDto = new ComponentDto();</span>
+<span class="fc" id="L107">        mainDto.setCode(&quot;core&quot;);</span>
+<span class="fc" id="L108">        mainDto.setDescription(&quot;Core&quot;);</span>
+<span class="fc" id="L109">        mainDto.buildTableMapping(this.getDatabaseManager().getEntandoTableMapping());</span>
+<span class="fc" id="L110">        List&lt;ComponentDto&gt; dtos = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L111">        this.getComponentManager().getCurrentComponents()</span>
+<span class="pc" id="L112">                .stream().forEach(component -&gt; dtos.add(new ComponentDto(component)));</span>
+<span class="fc" id="L113">        dtos.add(0, mainDto);</span>
+<span class="fc" id="L114">        return dtos;</span>
     }
 
     @Override
     public void startDatabaseBackup() {
         try {
-<span class="nc" id="L120">            this.getDatabaseManager().createBackup();</span>
+<span class="fc" id="L120">            this.getDatabaseManager().createBackup();</span>
 <span class="nc" id="L121">        } catch (Throwable t) {</span>
 <span class="nc" id="L122">            logger.error(&quot;error starting backup&quot;, t);</span>
 <span class="nc" id="L123">            throw new RestServerError(&quot;error starting backup&quot;, t);</span>
-<span class="nc" id="L124">        }</span>
-<span class="nc" id="L125">    }</span>
+<span class="fc" id="L124">        }</span>
+<span class="fc" id="L125">    }</span>
 
     @Override
     public void startDatabaseRestore(String reportCode) {
         try {
-<span class="nc" id="L130">            DataSourceDumpReport report = this.getDatabaseManager().getBackupReport(reportCode);</span>
-<span class="nc bnc" id="L131" title="All 2 branches missed.">            if (null == report) {</span>
-<span class="nc" id="L132">                logger.warn(&quot;no dump found with code {}&quot;, reportCode);</span>
-<span class="nc" id="L133">                throw new ResourceNotFoundException(DatabaseValidator.ERRCODE_NO_DUMP_FOUND, &quot;reportCode&quot;, reportCode);</span>
+<span class="fc" id="L130">            DataSourceDumpReport report = this.getDatabaseManager().getBackupReport(reportCode);</span>
+<span class="fc bfc" id="L131" title="All 2 branches covered.">            if (null == report) {</span>
+<span class="fc" id="L132">                logger.warn(&quot;no dump found with code {}&quot;, reportCode);</span>
+<span class="fc" id="L133">                throw new ResourceNotFoundException(DatabaseValidator.ERRCODE_NO_DUMP_FOUND, &quot;reportCode&quot;, reportCode);</span>
             }
-<span class="nc" id="L135">            this.getDatabaseManager().dropAndRestoreBackup(reportCode);</span>
-<span class="nc" id="L136">        } catch (ResourceNotFoundException r) {</span>
-<span class="nc" id="L137">            throw r;</span>
+<span class="fc" id="L135">            this.getDatabaseManager().dropAndRestoreBackup(reportCode);</span>
+<span class="fc" id="L136">        } catch (ResourceNotFoundException r) {</span>
+<span class="fc" id="L137">            throw r;</span>
 <span class="nc" id="L138">        } catch (Throwable t) {</span>
 <span class="nc" id="L139">            logger.error(&quot;error starting restore&quot;, t);</span>
 <span class="nc" id="L140">            throw new RestServerError(&quot;error starting restore&quot;, t);</span>
-<span class="nc" id="L141">        }</span>
-<span class="nc" id="L142">    }</span>
+<span class="fc" id="L141">        }</span>
+<span class="fc" id="L142">    }</span>
 
     @Override
     public byte[] getTableDump(String reportCode, String dataSource, String tableName) {
-<span class="nc" id="L146">        File tempFile = null;</span>
-<span class="nc" id="L147">        byte[] bytes = null;</span>
+<span class="fc" id="L146">        File tempFile = null;</span>
+<span class="fc" id="L147">        byte[] bytes = null;</span>
         try {
-<span class="nc" id="L149">            InputStream stream = this.getDatabaseManager().getTableDump(tableName, dataSource, reportCode);</span>
-<span class="nc bnc" id="L150" title="All 2 branches missed.">            if (null == stream) {</span>
-<span class="nc" id="L151">                logger.warn(&quot;no dump found with code {}, dataSource {}, table {}&quot;, reportCode, dataSource, tableName);</span>
-<span class="nc" id="L152">                BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(tableName, &quot;tableName&quot;);</span>
-<span class="nc" id="L153">                bindingResult.reject(DatabaseValidator.ERRCODE_NO_TABLE_DUMP_FOUND, new Object[]{reportCode, dataSource, tableName}, &quot;database.dump.table.notFound&quot;);</span>
-<span class="nc" id="L154">                throw new ResourceNotFoundException(&quot;code - dataSource - table&quot;,</span>
+<span class="fc" id="L149">            InputStream stream = this.getDatabaseManager().getTableDump(tableName, dataSource, reportCode);</span>
+<span class="fc bfc" id="L150" title="All 2 branches covered.">            if (null == stream) {</span>
+<span class="fc" id="L151">                logger.warn(&quot;no dump found with code {}, dataSource {}, table {}&quot;, reportCode, dataSource, tableName);</span>
+<span class="fc" id="L152">                BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(tableName, &quot;tableName&quot;);</span>
+<span class="fc" id="L153">                bindingResult.reject(DatabaseValidator.ERRCODE_NO_TABLE_DUMP_FOUND, new Object[]{reportCode, dataSource, tableName}, &quot;database.dump.table.notFound&quot;);</span>
+<span class="fc" id="L154">                throw new ResourceNotFoundException(&quot;code - dataSource - table&quot;,</span>
                         &quot;'&quot; + reportCode + &quot;' - '&quot; + dataSource + &quot;' - '&quot; + tableName + &quot;'&quot;);
             }
-<span class="nc" id="L157">            tempFile = FileTextReader.createTempFile(new Random().nextInt(100) + reportCode + &quot;_&quot; + dataSource + &quot;_&quot; + tableName, stream);</span>
-<span class="nc" id="L158">            bytes = FileTextReader.fileToByteArray(tempFile);</span>
-<span class="nc" id="L159">        } catch (ResourceNotFoundException r) {</span>
-<span class="nc" id="L160">            throw r;</span>
-<span class="nc" id="L161">        } catch (Throwable t) {</span>
-<span class="nc" id="L162">            logger.error(&quot;error extracting database dump with code {}, dataSource {}, table {}&quot;, reportCode, dataSource, tableName, t);</span>
-<span class="nc" id="L163">            throw new RestServerError(&quot;error extracting database dump&quot;, t);</span>
+<span class="fc" id="L157">            tempFile = FileTextReader.createTempFile(new Random().nextInt(100) + reportCode + &quot;_&quot; + dataSource + &quot;_&quot; + tableName, stream);</span>
+<span class="fc" id="L158">            bytes = FileTextReader.fileToByteArray(tempFile);</span>
+<span class="fc" id="L159">        } catch (ResourceNotFoundException r) {</span>
+<span class="fc" id="L160">            throw r;</span>
+<span class="fc" id="L161">        } catch (Throwable t) {</span>
+<span class="fc" id="L162">            logger.error(&quot;error extracting database dump with code {}, dataSource {}, table {}&quot;, reportCode, dataSource, tableName, t);</span>
+<span class="fc" id="L163">            throw new RestServerError(&quot;error extracting database dump&quot;, t);</span>
         } finally {
-<span class="nc bnc" id="L165" title="All 2 branches missed.">            if (null != tempFile) {</span>
-<span class="nc" id="L166">                boolean deleted = tempFile.delete();</span>
-<span class="nc bnc" id="L167" title="All 2 branches missed.">                if (!deleted) {</span>
+<span class="fc bfc" id="L165" title="All 2 branches covered.">            if (null != tempFile) {</span>
+<span class="fc" id="L166">                boolean deleted = tempFile.delete();</span>
+<span class="pc bpc" id="L167" title="1 of 2 branches missed.">                if (!deleted) {</span>
 <span class="nc" id="L168">                    logger.warn(&quot;Failed to create temp file {}&quot;, tempFile.getAbsolutePath());</span>
                 }
             }
         }
-<span class="nc" id="L172">        return bytes;</span>
+<span class="fc" id="L172">        return bytes;</span>
     }
 
     public IDatabaseManager getDatabaseManager() {
-<span class="nc" id="L176">        return databaseManager;</span>
+<span class="fc" id="L176">        return databaseManager;</span>
     }
 
     public void setDatabaseManager(IDatabaseManager databaseManager) {
-<span class="nc" id="L180">        this.databaseManager = databaseManager;</span>
-<span class="nc" id="L181">    }</span>
+<span class="fc" id="L180">        this.databaseManager = databaseManager;</span>
+<span class="fc" id="L181">    }</span>
 
     public IComponentManager getComponentManager() {
-<span class="nc" id="L184">        return componentManager;</span>
+<span class="fc" id="L184">        return componentManager;</span>
     }
 
     public void setComponentManager(IComponentManager componentManager) {
-<span class="nc" id="L188">        this.componentManager = componentManager;</span>
-<span class="nc" id="L189">    }</span>
+<span class="fc" id="L188">        this.componentManager = componentManager;</span>
+<span class="fc" id="L189">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
