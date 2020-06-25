@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AssetInstallable.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.model.bundle.installable</a> &gt; <span class="el_source">AssetInstallable.java</span></div><h1>AssetInstallable.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.model.bundle.installable;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import lombok.extern.slf4j.Slf4j;
+import org.entando.kubernetes.client.core.EntandoCoreClient;
+import org.entando.kubernetes.model.bundle.descriptor.FileDescriptor;
+import org.entando.kubernetes.model.digitalexchange.ComponentType;
+import org.entando.kubernetes.model.digitalexchange.EntandoBundleComponentJob;
+
+<span class="fc" id="L12">@Slf4j</span>
+public class AssetInstallable extends Installable&lt;FileDescriptor&gt; {
+    private final EntandoCoreClient engineService;
+
+    public AssetInstallable(EntandoCoreClient engineService, FileDescriptor fileDescriptor) {
+<span class="fc" id="L17">        super(fileDescriptor);</span>
+<span class="fc" id="L18">        this.engineService = engineService;</span>
+<span class="fc" id="L19">    }</span>
+
+    public AssetInstallable(EntandoCoreClient engineService, EntandoBundleComponentJob component) {
+<span class="fc" id="L22">        super(component);</span>
+<span class="fc" id="L23">        this.engineService = engineService;</span>
+<span class="fc" id="L24">    }</span>
+
+    @Override
+    public CompletableFuture&lt;Void&gt; install() {
+<span class="fc" id="L28">        return CompletableFuture.runAsync(() -&gt; {</span>
+<span class="fc" id="L29">            log.info(&quot;Uploading file {}&quot;, representation.getFilename());</span>
+<span class="fc" id="L30">            engineService.uploadFile(representation);</span>
+<span class="fc" id="L31">        });</span>
+    }
+
+    @Override
+    public CompletableFuture&lt;Void&gt; uninstall() {
+<span class="nc" id="L36">        return CompletableFuture.runAsync(() -&gt; {</span>
+            //Do nothing since Assets shouldn't be removed during uninstall
+<span class="nc" id="L38">        });</span>
+    }
+
+    @Override
+    public ComponentType getComponentType() {
+<span class="fc" id="L43">        return ComponentType.RESOURCE;</span>
+    }
+
+    @Override
+    public String getName() {
+<span class="fc" id="L48">        return representation.getFolder() + &quot;/&quot; + representation.getFilename();</span>
+    }
+
+    @Override
+    public FileDescriptor representationFromComponent(EntandoBundleComponentJob component) {
+<span class="fc" id="L53">        List&lt;String&gt; split = Arrays.asList(component.getName().split(&quot;/&quot;));</span>
+<span class="fc" id="L54">        String folder = String.join(&quot;/&quot;, split.subList(0, split.size() - 1)); //all others except last</span>
+<span class="fc" id="L55">        String filename = String.join(&quot;/&quot;, split.subList(split.size() -1, split.size())); //last</span>
+
+<span class="fc" id="L57">        return FileDescriptor.builder()</span>
+<span class="fc" id="L58">                .folder(folder)</span>
+<span class="fc" id="L59">                .filename(filename)</span>
+<span class="fc" id="L60">                .build();</span>
+    }
+
+    @Override
+    public InstallPriority getInstallPriority() {
+<span class="fc" id="L65">        return InstallPriority.ASSET;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

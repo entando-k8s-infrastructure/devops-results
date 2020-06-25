@@ -1,0 +1,306 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EntandoBundleInstallService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.service.digitalexchange.job</a> &gt; <span class="el_source">EntandoBundleInstallService.java</span></div><h1>EntandoBundleInstallService.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.service.digitalexchange.job;
+
+import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.entando.kubernetes.client.core.EntandoCoreClient;
+import org.entando.kubernetes.exception.EntandoComponentManagerException;
+import org.entando.kubernetes.exception.digitalexchange.InvalidBundleException;
+import org.entando.kubernetes.exception.job.JobConflictException;
+import org.entando.kubernetes.exception.k8ssvc.K8SServiceClientException;
+import org.entando.kubernetes.model.bundle.BundleReader;
+import org.entando.kubernetes.model.bundle.downloader.BundleDownloader;
+import org.entando.kubernetes.model.bundle.installable.Installable;
+import org.entando.kubernetes.model.bundle.processor.ComponentProcessor;
+import org.entando.kubernetes.model.debundle.EntandoDeBundle;
+import org.entando.kubernetes.model.debundle.EntandoDeBundleTag;
+import org.entando.kubernetes.model.digitalexchange.ComponentType;
+import org.entando.kubernetes.model.digitalexchange.EntandoBundle;
+import org.entando.kubernetes.model.digitalexchange.EntandoBundleComponentJob;
+import org.entando.kubernetes.model.digitalexchange.EntandoBundleJob;
+import org.entando.kubernetes.model.digitalexchange.JobStatus;
+import org.entando.kubernetes.model.digitalexchange.JobType;
+import org.entando.kubernetes.repository.EntandoBundleComponentJobRepository;
+import org.entando.kubernetes.repository.EntandoBundleJobRepository;
+import org.entando.kubernetes.repository.InstalledEntandoBundleRepository;
+import org.entando.kubernetes.service.KubernetesService;
+import org.entando.kubernetes.service.digitalexchange.BundleUtilities;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+
+<span class="fc" id="L43">@Slf4j</span>
+@Service
+@RequiredArgsConstructor
+public class EntandoBundleInstallService implements ApplicationContextAware {
+
+    private final @NonNull KubernetesService k8sService;
+    private final @NonNull EntandoBundleJobService jobService;
+    private final @NonNull EntandoCoreClient engineService;
+    private final @NonNull BundleDownloader bundleDownloader;
+    private final @NonNull EntandoBundleJobRepository jobRepo;
+    private final @NonNull EntandoBundleComponentJobRepository jobComponentRepo;
+    private final @NonNull InstalledEntandoBundleRepository installedComponentRepo;
+    private Collection&lt;ComponentProcessor&gt; componentProcessors = new ArrayList&lt;&gt;();
+
+    public EntandoBundleJob install(String componentId, String version) {
+<span class="fc" id="L58">        EntandoDeBundle bundle = k8sService.getBundleByName(componentId)</span>
+<span class="fc" id="L59">                .orElseThrow(() -&gt; new K8SServiceClientException(&quot;Bundle with name &quot; + componentId + &quot; not found&quot;));</span>
+
+<span class="fc" id="L61">        Optional&lt;EntandoBundleJob&gt; j = searchForCompletedOrConflictingJob(bundle);</span>
+
+<span class="fc" id="L63">        return j.orElseGet(() -&gt; createAndSubmitNewInstallJob(bundle, version));</span>
+    }
+
+    private EntandoBundleJob createAndSubmitNewInstallJob(EntandoDeBundle bundle, String version) {
+<span class="fc" id="L67">        EntandoDeBundleTag versionToInstall = getBundleTag(bundle, version);</span>
+<span class="fc" id="L68">        EntandoBundleJob job = createInstallJob(bundle, versionToInstall);</span>
+
+<span class="fc" id="L70">        submitInstallAsync(job, bundle, versionToInstall);</span>
+<span class="fc" id="L71">        return job;</span>
+    }
+
+    private Optional&lt;EntandoBundleJob&gt; searchForCompletedOrConflictingJob(EntandoDeBundle bundle) {
+
+<span class="fc" id="L76">        log.info(&quot;Verify validity of a new install job for component &quot; + bundle.getMetadata().getName());</span>
+
+<span class="fc" id="L78">        EntandoBundleJob installCompletedJob = null;</span>
+
+<span class="fc" id="L80">        Optional&lt;EntandoBundleJob&gt; optionalExistingJob = getExistingJob(bundle);</span>
+<span class="fc bfc" id="L81" title="All 2 branches covered.">        if (optionalExistingJob.isPresent()) {</span>
+<span class="fc" id="L82">            EntandoBundleJob j = optionalExistingJob.get();</span>
+<span class="fc" id="L83">            JobStatus js = j.getStatus();</span>
+<span class="fc bfc" id="L84" title="All 2 branches covered.">            if (js.equals(JobStatus.INSTALL_COMPLETED)) {</span>
+<span class="fc" id="L85">                installCompletedJob = j;</span>
+            }
+<span class="fc bfc" id="L87" title="All 2 branches covered.">            if (js.isOfType(JobType.UNFINISHED)) {</span>
+<span class="fc" id="L88">                throw new JobConflictException(&quot;Conflict with another job for the component &quot; + j.getComponentId()</span>
+<span class="fc" id="L89">                        + &quot; - JOB ID: &quot; + j.getId());</span>
+            }
+        }
+<span class="fc" id="L92">        return Optional.ofNullable(installCompletedJob);</span>
+    }
+
+    private Optional&lt;EntandoBundleJob&gt; getExistingJob(EntandoDeBundle bundle) {
+<span class="fc" id="L96">        String componentId = bundle.getSpec().getDetails().getName();</span>
+<span class="fc" id="L97">        Optional&lt;EntandoBundleJob&gt; lastJobStarted = jobRepo.findFirstByComponentIdOrderByStartedAtDesc(componentId);</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">        if (lastJobStarted.isPresent()) {</span>
+            // To be an existing job it should be Running or completed
+<span class="fc bfc" id="L100" title="All 2 branches covered.">            if (lastJobStarted.get().getStatus() == JobStatus.UNINSTALL_COMPLETED) {</span>
+<span class="fc" id="L101">                return Optional.empty();</span>
+            }
+<span class="fc" id="L103">            return lastJobStarted;</span>
+        }
+<span class="fc" id="L105">        return Optional.empty();</span>
+    }
+
+    private EntandoDeBundleTag getBundleTag(EntandoDeBundle bundle, String version) {
+<span class="fc" id="L109">        log.info(&quot;Extracting version &quot; + version + &quot; from bundle&quot;);</span>
+<span class="fc" id="L110">        String versionToFind = BundleUtilities.getBundleVersionOrFail(bundle, version);</span>
+<span class="fc" id="L111">        return bundle.getSpec().getTags().stream().filter(t -&gt; t.getVersion().equals(versionToFind)).findAny()</span>
+<span class="fc" id="L112">                .orElseThrow(</span>
+<span class="nc" id="L113">                        () -&gt; new InvalidBundleException(&quot;Version &quot; + version + &quot; not defined in bundle versions&quot;));</span>
+    }
+
+    private EntandoBundleJob createInstallJob(EntandoDeBundle bundle, EntandoDeBundleTag tag) {
+<span class="fc" id="L117">        final EntandoBundleJob job = new EntandoBundleJob();</span>
+
+<span class="fc" id="L119">        job.setComponentId(bundle.getMetadata().getName());</span>
+<span class="fc" id="L120">        job.setComponentName(bundle.getSpec().getDetails().getName());</span>
+<span class="fc" id="L121">        job.setComponentVersion(tag.getVersion());</span>
+<span class="fc" id="L122">        job.setProgress(0);</span>
+<span class="fc" id="L123">        job.setStartedAt(LocalDateTime.now());</span>
+<span class="fc" id="L124">        job.setStatus(JobStatus.INSTALL_CREATED);</span>
+
+<span class="fc" id="L126">        EntandoBundleJob createdJob = jobRepo.save(job);</span>
+<span class="fc" id="L127">        log.debug(&quot;New installation job created &quot; + job.toString());</span>
+<span class="fc" id="L128">        return createdJob;</span>
+    }
+
+    public List&lt;EntandoBundleJob&gt; getAllJobs(String componentId) {
+<span class="fc" id="L132">        return jobService.getJobs(componentId);</span>
+    }
+
+    private void submitInstallAsync(EntandoBundleJob job, EntandoDeBundle bundle, EntandoDeBundleTag tag) {
+<span class="fc" id="L136">        CompletableFuture.runAsync(() -&gt; {</span>
+<span class="fc" id="L137">            log.info(&quot;Started new install job for component &quot; + job.getComponentId() + &quot;@&quot; + tag.getVersion());</span>
+
+<span class="fc" id="L139">            JobStatus pipelineStatus = JobStatus.INSTALL_IN_PROGRESS;</span>
+<span class="fc" id="L140">            jobRepo.updateJobStatus(job.getId(), pipelineStatus);</span>
+
+            try {
+<span class="fc" id="L143">                bundleDownloader.createTargetDirectory();</span>
+<span class="fc" id="L144">                Path pathToDownloadedBundle = bundleDownloader.saveBundleLocally(bundle, tag);</span>
+<span class="fc" id="L145">                pipelineStatus = installInstallables(job, new BundleReader(pathToDownloadedBundle));</span>
+
+<span class="fc" id="L147">                log.info(&quot;All installables have been processed correctly&quot;);</span>
+<span class="fc" id="L148">                EntandoBundle installedComponent = EntandoBundle.newFrom(bundle);</span>
+<span class="fc" id="L149">                installedComponent.setInstalled(true);</span>
+<span class="fc" id="L150">                installedComponent.setJob(job);</span>
+<span class="fc" id="L151">                installedComponentRepo.save(installedComponent);</span>
+<span class="fc" id="L152">                log.info(&quot;Component &quot; + job.getComponentId() + &quot; registered as installed in the system&quot;);</span>
+
+<span class="fc" id="L154">            } catch (Exception e) {</span>
+<span class="fc" id="L155">                log.error(&quot;An error occurred during component installation&quot;, e);</span>
+<span class="fc" id="L156">                pipelineStatus = rollback(job);</span>
+<span class="fc" id="L157">            }</span>
+
+<span class="fc" id="L159">            jobRepo.updateJobStatus(job.getId(), pipelineStatus);</span>
+<span class="fc" id="L160">            bundleDownloader.cleanTargetDirectory();</span>
+<span class="fc" id="L161">        });</span>
+<span class="fc" id="L162">    }</span>
+
+    private JobStatus rollback(EntandoBundleJob job) {
+        JobStatus rollbackResult;
+        // Get all the installed components for the job
+<span class="fc" id="L167">        List&lt;EntandoBundleComponentJob&gt; jobRelatedComponents = jobComponentRepo.findAllByJob(job);</span>
+
+        // Filter jobs that are &quot;uninstallable&quot;
+<span class="fc" id="L170">        List&lt;EntandoBundleComponentJob&gt; jobsToRollback = jobRelatedComponents.stream()</span>
+<span class="fc" id="L171">                .filter(this::isUninstallable)</span>
+<span class="fc" id="L172">                .map(EntandoBundleComponentJob::duplicate)</span>
+<span class="fc" id="L173">                .collect(Collectors.toList());</span>
+
+        try {
+            // Cleanup resource folder
+<span class="fc" id="L177">            uninstallResources(job, jobRelatedComponents);</span>
+
+            // For each installed component, get the installable and call uninstall in it
+<span class="fc" id="L180">            componentProcessors.stream()</span>
+<span class="fc" id="L181">                    .map(processor -&gt; processor.process(jobsToRollback))</span>
+<span class="fc" id="L182">                    .flatMap(Collection::stream)</span>
+<span class="fc" id="L183">                    .forEach(installable -&gt; {</span>
+                        try {
+<span class="fc" id="L185">                            installable.uninstall().get(); // In case of the plugin, that would mean delete the link</span>
+<span class="fc" id="L186">                            installable.getComponent().setStatus(JobStatus.INSTALL_ROLLBACK);</span>
+<span class="nc" id="L187">                        } catch (InterruptedException | ExecutionException e) {</span>
+<span class="nc" id="L188">                            log.error(&quot;Error rollbacking installed component&quot;, e);</span>
+<span class="nc" id="L189">                            installable.getComponent().setStatus(JobStatus.INSTALL_ROLLBACK_ERROR);</span>
+<span class="fc" id="L190">                        }</span>
+
+<span class="fc" id="L192">                        jobComponentRepo.save(installable.getComponent());</span>
+<span class="fc" id="L193">                    });</span>
+
+<span class="fc" id="L195">            rollbackResult = JobStatus.INSTALL_ROLLBACK;</span>
+<span class="nc" id="L196">        } catch (Exception e) {</span>
+<span class="nc" id="L197">            rollbackResult = JobStatus.INSTALL_ERROR;</span>
+<span class="fc" id="L198">        }</span>
+
+<span class="fc" id="L200">        return rollbackResult;</span>
+    }
+
+    private boolean isUninstallable(EntandoBundleComponentJob component) {
+        /* TODO: related to ENG-415 (https://jira.entando.org/browse/ENG-415)
+          Except for IN_PROGRESS, everything should be uninstallable
+          Uninstall operations should be idempotent to be able to provide this
+         */
+<span class="fc bfc" id="L208" title="All 2 branches covered.">        return component.getComponentType() != ComponentType.RESOURCE</span>
+<span class="fc bfc" id="L209" title="All 2 branches covered.">                &amp;&amp; (component.getStatus().equals(JobStatus.INSTALL_COMPLETED)</span>
+<span class="pc bpc" id="L210" title="1 of 4 branches missed.">                || (component.getStatus().equals(JobStatus.INSTALL_ERROR) &amp;&amp; component.getComponentType() == ComponentType.PLUGIN));</span>
+    }
+
+    private void uninstallResources(EntandoBundleJob job, List&lt;EntandoBundleComponentJob&gt; components) {
+<span class="fc" id="L214">        componentProcessors.stream()</span>
+<span class="fc bfc" id="L215" title="All 2 branches covered.">                .filter(processor -&gt; processor.getComponentType() == ComponentType.RESOURCE)</span>
+<span class="fc" id="L216">                .map(processor -&gt; processor.process(components))</span>
+<span class="fc" id="L217">                .flatMap(List::stream)</span>
+<span class="fc" id="L218">                .sorted(Comparator.comparing(Installable::getName))</span>
+<span class="fc" id="L219">                .peek(installable -&gt; { //Mark all resources as uninstalled</span>
+<span class="fc" id="L220">                    EntandoBundleComponentJob uninstalledJobComponent = installable.getComponent();</span>
+<span class="fc" id="L221">                    uninstalledJobComponent.setJob(job);</span>
+<span class="fc" id="L222">                    uninstalledJobComponent.setStatus(JobStatus.INSTALL_ROLLBACK);</span>
+<span class="fc" id="L223">                    installable.setComponent(jobComponentRepo.save(uninstalledJobComponent));</span>
+<span class="fc" id="L224">                })</span>
+<span class="fc" id="L225">                .findFirst()</span>
+<span class="fc" id="L226">                .ifPresent(rootResourceInstallable -&gt; {</span>
+                    //Remove root folder
+<span class="fc" id="L228">                    log.info(&quot;Removing directory {}&quot;, rootResourceInstallable.getName());</span>
+<span class="fc" id="L229">                    engineService.deleteFolder(rootResourceInstallable.getName());</span>
+<span class="fc" id="L230">                });</span>
+<span class="fc" id="L231">    }</span>
+
+    private JobStatus installInstallables(EntandoBundleJob job, BundleReader bundleReader) {
+<span class="fc" id="L234">        log.info(&quot;Processing installable list for component &quot; + job.getComponentId());</span>
+
+<span class="fc" id="L236">        componentProcessors.stream()</span>
+<span class="fc" id="L237">                .map(processor -&gt; processor.process(job, bundleReader))</span>
+<span class="fc" id="L238">                .flatMap(List::stream)</span>
+<span class="fc" id="L239">                .sorted(Comparator.comparingInt(i -&gt; i.getInstallPriority().getPriority()))</span>
+<span class="fc" id="L240">                .peek(installable -&gt; persistComponent(job, installable))</span>
+<span class="fc" id="L241">                .forEach(installable -&gt; {</span>
+<span class="fc" id="L242">                    JobStatus result = installInstallable(installable);</span>
+
+<span class="fc bfc" id="L244" title="All 2 branches covered.">                    if (result.equals(JobStatus.INSTALL_ERROR)) {</span>
+<span class="fc" id="L245">                        throw new EntandoComponentManagerException(job.getComponentId()</span>
+                                + &quot; uninstallation can't proceed due to an error with one of the installed components&quot;);
+                    }
+<span class="fc" id="L248">                });</span>
+
+<span class="fc" id="L250">        return JobStatus.INSTALL_COMPLETED;</span>
+    }
+
+    private JobStatus installInstallable(Installable installable) {
+<span class="fc" id="L254">        EntandoBundleComponentJob installableComponent = installable.getComponent();</span>
+<span class="fc" id="L255">        jobComponentRepo.updateJobStatus(installableComponent.getId(), JobStatus.INSTALL_IN_PROGRESS);</span>
+
+<span class="fc" id="L257">        CompletableFuture&lt;?&gt; future = installable.install();</span>
+<span class="fc" id="L258">        CompletableFuture&lt;JobStatus&gt; installResult = future.thenApply(vd -&gt; {</span>
+<span class="fc" id="L259">            log.debug(&quot;Installable '{}' finished successfully&quot;, installable.getName());</span>
+<span class="fc" id="L260">            jobComponentRepo.updateJobStatus(installableComponent.getId(), JobStatus.INSTALL_COMPLETED);</span>
+<span class="fc" id="L261">            return JobStatus.INSTALL_COMPLETED;</span>
+<span class="fc" id="L262">        }).exceptionally(th -&gt; {</span>
+<span class="fc" id="L263">            log.error(&quot;Installable '{}' has errors&quot;, installable.getName(), th.getCause());</span>
+
+<span class="fc" id="L265">            installableComponent.setStatus(JobStatus.INSTALL_ERROR);</span>
+<span class="pc bpc" id="L266" title="1 of 2 branches missed.">            if (th.getCause() != null) {</span>
+<span class="fc" id="L267">                String message = th.getCause().getMessage();</span>
+<span class="pc bpc" id="L268" title="1 of 2 branches missed.">                if (th.getCause() instanceof HttpClientErrorException) {</span>
+<span class="nc" id="L269">                    HttpClientErrorException httpException = (HttpClientErrorException) th.getCause();</span>
+<span class="nc" id="L270">                    message =</span>
+<span class="nc" id="L271">                            httpException.getMessage() + &quot;\n&quot; + httpException.getResponseBodyAsString();</span>
+                }
+<span class="fc" id="L273">                jobComponentRepo</span>
+<span class="fc" id="L274">                        .updateJobStatus(installableComponent.getId(), JobStatus.INSTALL_ERROR, message);</span>
+<span class="fc" id="L275">            } else {</span>
+<span class="nc" id="L276">                jobComponentRepo</span>
+<span class="nc" id="L277">                        .updateJobStatus(installableComponent.getId(), JobStatus.INSTALL_ERROR, th.getMessage());</span>
+            }
+<span class="fc" id="L279">            return JobStatus.INSTALL_ERROR;</span>
+        });
+
+<span class="fc" id="L282">        return installResult.join();</span>
+    }
+
+    private void persistComponent(EntandoBundleJob job, Installable installable) {
+<span class="fc" id="L286">        EntandoBundleComponentJob component = new EntandoBundleComponentJob();</span>
+<span class="fc" id="L287">        component.setJob(job);</span>
+<span class="fc" id="L288">        component.setComponentType(installable.getComponentType());</span>
+<span class="fc" id="L289">        component.setName(installable.getName());</span>
+<span class="fc" id="L290">        component.setChecksum(installable.getChecksum());</span>
+<span class="fc" id="L291">        component.setStatus(JobStatus.INSTALL_CREATED);</span>
+
+<span class="fc" id="L293">        installable.setComponent(jobComponentRepo.save(component));</span>
+
+<span class="fc" id="L295">        log.debug(&quot;New component job created &quot;</span>
+<span class="fc" id="L296">                + &quot;for component of type &quot; + installable.getComponentType() + &quot; with name &quot; + installable.getName());</span>
+<span class="fc" id="L297">    }</span>
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) {
+<span class="fc" id="L301">        componentProcessors = applicationContext.getBeansOfType(ComponentProcessor.class).values();</span>
+<span class="fc" id="L302">    }</span>
+
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
