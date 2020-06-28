@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AssetProcessor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.model.bundle.processor</a> &gt; <span class="el_source">AssetProcessor.java</span></div><h1>AssetProcessor.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.model.bundle.processor;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.io.FileUtils;
+import org.entando.kubernetes.client.core.EntandoCoreClient;
+import org.entando.kubernetes.exception.EntandoComponentManagerException;
+import org.entando.kubernetes.model.bundle.BundleProperty;
+import org.entando.kubernetes.model.bundle.BundleReader;
+import org.entando.kubernetes.model.bundle.descriptor.FileDescriptor;
+import org.entando.kubernetes.model.bundle.installable.AssetInstallable;
+import org.entando.kubernetes.model.bundle.installable.DirectoryInstallable;
+import org.entando.kubernetes.model.bundle.installable.Installable;
+import org.entando.kubernetes.model.digitalexchange.ComponentType;
+import org.entando.kubernetes.model.digitalexchange.EntandoBundleComponentJob;
+import org.entando.kubernetes.model.digitalexchange.EntandoBundleJob;
+import org.springframework.stereotype.Service;
+
+/**
+ * Processor to handle Static files to be stored by Entando. Commonly used for js, images and css.
+ * &lt;p&gt;
+ * This processor will also create the folders.
+ *
+ * @author Sergio Marcelino
+ */
+<span class="fc" id="L33">@Slf4j</span>
+@Service
+@RequiredArgsConstructor
+public class AssetProcessor implements ComponentProcessor {
+
+    private final EntandoCoreClient engineService;
+
+    @Override
+    public ComponentType getSupportedComponentType() {
+<span class="fc" id="L42">        return ComponentType.ASSET;</span>
+    }
+
+    @Override
+    public List&lt;Installable&gt; process(EntandoBundleJob job, BundleReader npr) {
+<span class="fc" id="L47">        final List&lt;Installable&gt; installables = new LinkedList&lt;&gt;();</span>
+
+        try {
+<span class="pc bpc" id="L50" title="1 of 2 branches missed.">            if (npr.containsResourceFolder()) {</span>
+<span class="fc" id="L51">                final String componentFolder = &quot;/&quot; + npr.getBundleCode();</span>
+
+<span class="fc" id="L53">                List&lt;String&gt; resourceFiles = npr.getResourceFiles().stream().sorted().collect(Collectors.toList());</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">                for (final String resourceFile : resourceFiles) {</span>
+<span class="fc" id="L55">                    final FileDescriptor fileDescriptor = npr.getResourceFileAsDescriptor(resourceFile);</span>
+
+<span class="fc" id="L57">                    Path fileFolder = Paths.get(BundleProperty.RESOURCES_FOLDER_PATH.getValue())</span>
+<span class="fc" id="L58">                            .relativize(Paths.get(fileDescriptor.getFolder()));</span>
+<span class="fc" id="L59">                    String folder = Paths.get(componentFolder).resolve(fileFolder).toString();</span>
+<span class="fc" id="L60">                    fileDescriptor.setFolder(folder);</span>
+<span class="fc" id="L61">                    installables.add(new AssetInstallable(engineService, fileDescriptor));</span>
+<span class="fc" id="L62">                }</span>
+            }
+<span class="nc" id="L64">        } catch (IOException e) {</span>
+<span class="nc" id="L65">            throw new EntandoComponentManagerException(&quot;Error reading bundle&quot;, e);</span>
+<span class="fc" id="L66">        }</span>
+
+<span class="fc" id="L68">        return installables;</span>
+    }
+
+    @Override
+    public List&lt;Installable&gt; process(List&lt;EntandoBundleComponentJob&gt; components) {
+<span class="fc" id="L73">        return components.stream()</span>
+<span class="pc bpc" id="L74" title="1 of 2 branches missed.">                .filter(c -&gt; c.getComponentType() == ComponentType.ASSET)</span>
+<span class="fc" id="L75">                .map(c -&gt;  new AssetInstallable(engineService, this.buildDescriptorFromComponentJob(c)))</span>
+<span class="fc" id="L76">                .collect(Collectors.toList());</span>
+    }
+
+    @Override
+    public FileDescriptor buildDescriptorFromComponentJob(EntandoBundleComponentJob component) {
+<span class="fc" id="L81">        File file = FileUtils.getFile(component.getName());</span>
+<span class="fc" id="L82">        return FileDescriptor.builder()</span>
+<span class="fc" id="L83">                .folder(file.getParent())</span>
+<span class="fc" id="L84">                .filename(file.getName())</span>
+<span class="fc" id="L85">                .build();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
