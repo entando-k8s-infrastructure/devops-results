@@ -1,12 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PageTemplateProcessor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.model.bundle.processor</a> &gt; <span class="el_source">PageTemplateProcessor.java</span></div><h1>PageTemplateProcessor.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.model.bundle.processor;
 
-import static java.util.Optional.ofNullable;
-
-import java.io.IOException;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.entando.kubernetes.client.core.EntandoCoreClient;
@@ -14,68 +7,74 @@ import org.entando.kubernetes.exception.EntandoComponentManagerException;
 import org.entando.kubernetes.model.bundle.BundleReader;
 import org.entando.kubernetes.model.bundle.descriptor.ComponentDescriptor;
 import org.entando.kubernetes.model.bundle.descriptor.ComponentSpecDescriptor;
-import org.entando.kubernetes.model.bundle.descriptor.Descriptor;
 import org.entando.kubernetes.model.bundle.descriptor.PageTemplateDescriptor;
 import org.entando.kubernetes.model.bundle.installable.Installable;
 import org.entando.kubernetes.model.bundle.installable.PageTemplateInstallable;
 import org.entando.kubernetes.model.digitalexchange.ComponentType;
 import org.entando.kubernetes.model.digitalexchange.EntandoBundleComponentJob;
-import org.entando.kubernetes.model.digitalexchange.EntandoBundleJob;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.Collections;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import static java.util.Optional.ofNullable;
 
 /**
  * Processor to handle Page Templates
  */
-<span class="fc" id="L29">@Slf4j</span>
+<span class="fc" id="L28">@Slf4j</span>
 @Service
 @RequiredArgsConstructor
-public class PageTemplateProcessor implements ComponentProcessor {
+public class PageTemplateProcessor implements ComponentProcessor&lt;PageTemplateDescriptor&gt; {
 
     private final EntandoCoreClient engineService;
 
     @Override
     public ComponentType getSupportedComponentType() {
-<span class="fc" id="L38">        return ComponentType.PAGE_TEMPLATE;</span>
+<span class="fc" id="L37">        return ComponentType.PAGE_TEMPLATE;</span>
     }
 
     @Override
-    public List&lt;Installable&gt; process(EntandoBundleJob job, BundleReader npr) {
+    public List&lt;Installable&lt;PageTemplateDescriptor&gt;&gt; process(BundleReader npr) {
         try {
-<span class="fc" id="L44">            ComponentDescriptor descriptor = npr.readBundleDescriptor();</span>
-<span class="fc" id="L45">            List&lt;String&gt; pageTemplatesDescriptor = ofNullable(descriptor.getComponents())</span>
-<span class="fc" id="L46">                    .map(ComponentSpecDescriptor::getPageModels)</span>
-<span class="fc" id="L47">                    .orElse(Collections.emptyList());</span>
+<span class="fc" id="L43">            ComponentDescriptor descriptor = npr.readBundleDescriptor();</span>
+<span class="fc" id="L44">            List&lt;String&gt; pageTemplatesDescriptor = ofNullable(descriptor.getComponents())</span>
+<span class="fc" id="L45">                    .map(ComponentSpecDescriptor::getPageModels)</span>
+<span class="fc" id="L46">                    .orElse(Collections.emptyList());</span>
 
-<span class="fc" id="L49">            List&lt;Installable&gt; installables = new LinkedList&lt;&gt;();</span>
+<span class="fc" id="L48">            List&lt;Installable&lt;PageTemplateDescriptor&gt;&gt; installables = new LinkedList&lt;&gt;();</span>
 
-<span class="fc bfc" id="L51" title="All 2 branches covered.">            for (String fileName : pageTemplatesDescriptor) {</span>
-<span class="fc" id="L52">                PageTemplateDescriptor pageTemplateDescriptor = npr.readDescriptorFile(fileName, PageTemplateDescriptor.class);</span>
-<span class="fc bfc" id="L53" title="All 2 branches covered.">                if (pageTemplateDescriptor.getTemplatePath() != null) {</span>
-<span class="fc" id="L54">                    String tp = getRelativePath(fileName, pageTemplateDescriptor.getTemplatePath());</span>
-<span class="fc" id="L55">                    pageTemplateDescriptor.setTemplate(npr.readFileAsString(tp));</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">            for (String fileName : pageTemplatesDescriptor) {</span>
+<span class="fc" id="L51">                PageTemplateDescriptor pageTemplateDescriptor = npr.readDescriptorFile(fileName, PageTemplateDescriptor.class);</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">                if (pageTemplateDescriptor.getTemplatePath() != null) {</span>
+<span class="fc" id="L53">                    String tp = getRelativePath(fileName, pageTemplateDescriptor.getTemplatePath());</span>
+<span class="fc" id="L54">                    pageTemplateDescriptor.setTemplate(npr.readFileAsString(tp));</span>
                 }
-<span class="fc" id="L57">                installables.add(new PageTemplateInstallable(engineService, pageTemplateDescriptor));</span>
-<span class="fc" id="L58">            }</span>
+<span class="fc" id="L56">                installables.add(new PageTemplateInstallable(engineService, pageTemplateDescriptor));</span>
+<span class="fc" id="L57">            }</span>
 
-<span class="fc" id="L60">            return installables;</span>
-<span class="nc" id="L61">        } catch (IOException e) {</span>
-<span class="nc" id="L62">            throw new EntandoComponentManagerException(&quot;Error reading bundle&quot;, e);</span>
+<span class="fc" id="L59">            return installables;</span>
+<span class="nc" id="L60">        } catch (IOException e) {</span>
+<span class="nc" id="L61">            throw new EntandoComponentManagerException(&quot;Error reading bundle&quot;, e);</span>
         }
     }
 
     @Override
-    public List&lt;Installable&gt; process(List&lt;EntandoBundleComponentJob&gt; components) {
-<span class="fc" id="L68">        return components.stream()</span>
-<span class="pc bpc" id="L69" title="1 of 2 branches missed.">                .filter(c -&gt; c.getComponentType() == ComponentType.PAGE_TEMPLATE)</span>
-<span class="fc" id="L70">                .map(c -&gt; new PageTemplateInstallable(engineService, this.buildDescriptorFromComponentJob(c)))</span>
-<span class="fc" id="L71">                .collect(Collectors.toList());</span>
+    public List&lt;Installable&lt;PageTemplateDescriptor&gt;&gt; process(List&lt;EntandoBundleComponentJob&gt; components) {
+<span class="fc" id="L67">        return components.stream()</span>
+<span class="pc bpc" id="L68" title="1 of 2 branches missed.">                .filter(c -&gt; c.getComponentType() == ComponentType.PAGE_TEMPLATE)</span>
+<span class="fc" id="L69">                .map(c -&gt; new PageTemplateInstallable(engineService, this.buildDescriptorFromComponentJob(c)))</span>
+<span class="fc" id="L70">                .collect(Collectors.toList());</span>
     }
 
     @Override
     public PageTemplateDescriptor buildDescriptorFromComponentJob(EntandoBundleComponentJob component) {
-<span class="fc" id="L76">        return PageTemplateDescriptor.builder()</span>
-<span class="fc" id="L77">                .code(component.getName())</span>
-<span class="fc" id="L78">                .build();</span>
+<span class="fc" id="L75">        return PageTemplateDescriptor.builder()</span>
+<span class="fc" id="L76">                .code(component.getName())</span>
+<span class="fc" id="L77">                .build();</span>
     }
 
 }
