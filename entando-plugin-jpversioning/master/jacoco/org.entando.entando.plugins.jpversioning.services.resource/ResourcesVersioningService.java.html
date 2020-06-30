@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ResourcesVersioningService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Plugin: Content Versioning</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.plugins.jpversioning.services.resource</a> &gt; <span class="el_source">ResourcesVersioningService.java</span></div><h1>ResourcesVersioningService.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.entando.plugins.jpversioning.services.resource;
+
+import static org.entando.entando.plugins.jacms.web.resource.ResourcesController.ERRCODE_INVALID_RESOURCE_TYPE;
+
+import com.agiletec.aps.system.exception.ApsSystemException;
+import com.agiletec.aps.system.services.authorization.AuthorizationManager;
+import com.agiletec.aps.system.services.category.Category;
+import com.agiletec.aps.system.services.group.Group;
+import com.agiletec.aps.system.services.user.UserDetails;
+import com.agiletec.plugins.jacms.aps.system.services.resource.model.AbstractMonoInstanceResource;
+import com.agiletec.plugins.jacms.aps.system.services.resource.model.AbstractMultiInstanceResource;
+import com.agiletec.plugins.jacms.aps.system.services.resource.model.AbstractResource;
+import com.agiletec.plugins.jacms.aps.system.services.resource.model.AttachResource;
+import com.agiletec.plugins.jacms.aps.system.services.resource.model.ImageResource;
+import com.agiletec.plugins.jacms.aps.system.services.resource.model.ImageResourceDimension;
+import com.agiletec.plugins.jacms.aps.system.services.resource.model.ResourceInstance;
+import com.agiletec.plugins.jacms.aps.system.services.resource.model.ResourceInterface;
+import com.agiletec.plugins.jacms.aps.system.services.resource.model.util.IImageDimensionReader;
+import com.agiletec.plugins.jpversioning.aps.system.services.resource.TrashedResourceManager;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import org.apache.commons.beanutils.BeanComparator;
+import org.entando.entando.aps.system.exception.ResourceNotFoundException;
+import org.entando.entando.aps.system.exception.RestServerError;
+import org.entando.entando.plugins.jpversioning.web.content.validator.VersioningValidatorErrorCodes;
+import org.entando.entando.plugins.jpversioning.web.resource.model.FileResourceDTO;
+import org.entando.entando.plugins.jpversioning.web.resource.model.ImageResourceDTO;
+import org.entando.entando.plugins.jpversioning.web.resource.model.ImageVersionDTO;
+import org.entando.entando.plugins.jpversioning.web.resource.model.ResourceDTO;
+import org.entando.entando.web.common.exceptions.ValidationGenericException;
+import org.entando.entando.web.common.model.Filter;
+import org.entando.entando.web.common.model.PagedMetadata;
+import org.entando.entando.web.common.model.RestListRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.validation.BeanPropertyBindingResult;
+
+@Service
+<span class="fc" id="L57">public class ResourcesVersioningService {</span>
+
+<span class="fc" id="L59">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+
+    @Autowired
+    private TrashedResourceManager trashedResourceManager;
+
+    @Autowired
+    private AuthorizationManager authorizationManager;
+
+    @Autowired
+    private IImageDimensionReader imageDimensionManager;
+
+    public PagedMetadata&lt;ResourceDTO&gt; getTrashedResources(String resourceTypeCode, RestListRequest requestList, UserDetails user) {
+
+        try {
+<span class="nc" id="L73">            logger.debug(&quot;GET getTrashedResources type {} and req {}&quot;, resourceTypeCode, requestList);</span>
+
+<span class="nc" id="L75">            String description = extractAttributeValue(requestList.getFilters(), &quot;description&quot;);</span>
+
+<span class="nc" id="L77">            List&lt;String&gt; allowedGroups = getAllowedGroups(user);</span>
+
+<span class="nc" id="L79">            List&lt;String&gt; resourcesId = trashedResourceManager</span>
+<span class="nc" id="L80">                    .searchTrashedResourceIds(resourceTypeCode, description, allowedGroups);</span>
+
+<span class="nc" id="L82">            List&lt;ResourceDTO&gt; result = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L84" title="All 2 branches missed.">            for (String id : resourcesId) {</span>
+                try {
+<span class="nc" id="L86">                    result.add(convertResourceToDto(trashedResourceManager.loadTrashedResource(id)));</span>
+<span class="nc" id="L87">                } catch (ApsSystemException e) {</span>
+<span class="nc" id="L88">                    logger.error(&quot;Error loading trashedResource with id: {}&quot;, id);</span>
+<span class="nc" id="L89">                }</span>
+<span class="nc" id="L90">            }</span>
+
+<span class="nc" id="L92">            final List&lt;ResourceDTO&gt; sublist = requestList.getSublist(result);</span>
+
+<span class="nc" id="L94">            PagedMetadata&lt;ResourceDTO&gt; pagedResults = new PagedMetadata&lt;&gt;(requestList, resourcesId.size());</span>
+<span class="nc" id="L95">            pagedResults.setBody(sublist);</span>
+
+<span class="nc" id="L97">            return pagedResults;</span>
+<span class="nc" id="L98">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L99">            logger.error(&quot;Error while getting trashed resources with request {}&quot;, requestList, e);</span>
+<span class="nc" id="L100">            throw new RestServerError(String.format(&quot;Error while getting trashed resources with request %s&quot;, requestList),</span>
+                    e);
+        }
+    }
+
+    public ResourceDTO recoverResource(String resourceId) {
+
+        try {
+<span class="nc" id="L108">            logger.debug(&quot;POST recover resource {}&quot;, resourceId);</span>
+
+<span class="nc" id="L110">            ResourceInterface resource = trashedResourceManager.loadTrashedResource(resourceId);</span>
+
+<span class="nc bnc" id="L112" title="All 2 branches missed.">            if (resource != null) {</span>
+<span class="nc" id="L113">                trashedResourceManager.restoreResource(resourceId);</span>
+<span class="nc" id="L114">                return convertResourceToDto(resource);</span>
+            } else {
+<span class="nc" id="L116">                throw new ResourceNotFoundException(</span>
+                        VersioningValidatorErrorCodes.ERRCODE_TRASHED_RESOURCE_DOES_NOT_EXIST.value,
+                        &quot;Trashed resource: &quot;, resourceId);
+            }
+<span class="nc" id="L120">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L121">            logger.error(&quot;Error while recovering trashed resources with id {}&quot;, resourceId, e);</span>
+<span class="nc" id="L122">            throw new RestServerError(String.format(&quot;Error while recovering trashed resources with id %s&quot;, resourceId),</span>
+                    e);
+        }
+    }
+
+    private List&lt;String&gt; getAllowedGroups(UserDetails user) {
+<span class="nc" id="L128">        List&lt;String&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L129">        List&lt;Group&gt; userGroups = authorizationManager.getUserGroups(user);</span>
+
+<span class="nc bnc" id="L131" title="All 2 branches missed.">        for (int i = 0; i &lt; userGroups.size(); i++) {</span>
+<span class="nc" id="L132">            Group group = userGroups.get(i);</span>
+<span class="nc bnc" id="L133" title="All 2 branches missed.">            if (group.getName().equals(Group.ADMINS_GROUP_NAME)) {</span>
+<span class="nc" id="L134">                result.clear();</span>
+<span class="nc" id="L135">                break;</span>
+            } else {
+<span class="nc" id="L137">                result.add(group.getName());</span>
+            }
+        }
+
+<span class="nc" id="L141">        return result;</span>
+    }
+
+    private String extractAttributeValue(Filter[] filters, String attributeName) {
+<span class="nc bnc" id="L145" title="All 2 branches missed.">        if (filters != null) {</span>
+<span class="nc bnc" id="L146" title="All 2 branches missed.">            for (Filter filter : filters) {</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">                if (filter.getAttribute().equals(attributeName)) {</span>
+<span class="nc" id="L148">                    return filter.getValue();</span>
+                }
+            }
+        }
+<span class="nc" id="L152">        return null;</span>
+    }
+
+    public ResourceDTO convertResourceToDto(ResourceInterface resource) {
+
+<span class="nc" id="L157">        String type = extractTypeFromResource(resource.getType());</span>
+
+<span class="nc bnc" id="L159" title="All 2 branches missed.">        if (FileResourceDTO.RESOURCE_TYPE.equals(type)) {</span>
+<span class="nc" id="L160">            return convertResourceToFileResourceDto((AttachResource) resource);</span>
+<span class="nc bnc" id="L161" title="All 2 branches missed.">        } else if (ImageResourceDTO.RESOURCE_TYPE.equals(type)) {</span>
+<span class="nc" id="L162">            return convertResourceToImageResourceDto((ImageResource) resource);</span>
+        } else {
+<span class="nc" id="L164">            logger.error(&quot;Resource type not supported&quot;);</span>
+<span class="nc" id="L165">            BeanPropertyBindingResult errors = new BeanPropertyBindingResult(type, &quot;resources.file.type&quot;);</span>
+<span class="nc" id="L166">            errors.reject(ERRCODE_INVALID_RESOURCE_TYPE, &quot;plugins.jacms.resources.invalidResourceType&quot;);</span>
+<span class="nc" id="L167">            throw new ValidationGenericException(errors);</span>
+        }
+    }
+
+    private FileResourceDTO convertResourceToFileResourceDto(AttachResource resource) {
+<span class="nc" id="L172">        String path = trashedResourceManager.getSubfolder(resource) + resource.getInstance().getFileName();</span>
+<span class="nc" id="L173">        return new FileResourceDTO(resource.getId(), resource.getMasterFileName(), resource.getDescription(),</span>
+<span class="nc" id="L174">                resource.getCreationDate(), resource.getLastModified(), resource.getMainGroup(),</span>
+<span class="nc" id="L175">                getCategories(resource), resource.getDefaultInstance().getFileLength(), path,</span>
+<span class="nc" id="L176">                resource.getOwner(), resource.getFolderPath());</span>
+    }
+
+    private ImageResourceDTO convertResourceToImageResourceDto(ImageResource resource) {
+<span class="nc" id="L180">        List&lt;ImageVersionDTO&gt; versions = new ArrayList&lt;&gt;();</span>
+
+<span class="nc bnc" id="L182" title="All 2 branches missed.">        for (ImageResourceDimension dimensions : getImageDimensions()) {</span>
+<span class="nc" id="L183">            ResourceInstance instance = resource.getInstance(dimensions.getIdDim(), null);</span>
+
+<span class="nc bnc" id="L185" title="All 2 branches missed.">            if (instance == null) {</span>
+<span class="nc" id="L186">                logger.warn(&quot;ResourceInstance not found for dimensions id {} and image id {}&quot;, dimensions.getIdDim(), resource.getId());</span>
+<span class="nc" id="L187">                continue;</span>
+            }
+
+<span class="nc" id="L190">            String dimension = String.format(&quot;%dx%d px&quot;, dimensions.getDimx(), dimensions.getDimy());</span>
+<span class="nc" id="L191">            String path = trashedResourceManager.getSubfolder(resource) + instance.getFileName();</span>
+<span class="nc" id="L192">            String size = instance.getFileLength();</span>
+
+<span class="nc" id="L194">            versions.add(new ImageVersionDTO(dimension, path, size));</span>
+<span class="nc" id="L195">        }</span>
+
+<span class="nc" id="L197">        return new ImageResourceDTO(resource.getId(), resource.getMasterFileName(), resource.getDescription(),</span>
+<span class="nc" id="L198">                resource.getCreationDate(), resource.getLastModified(), versions, resource.getMainGroup(),</span>
+<span class="nc" id="L199">                getCategories(resource), resource.getOwner(), resource.getFolderPath());</span>
+    }
+
+    private List&lt;ImageResourceDimension&gt; getImageDimensions() {
+<span class="nc" id="L203">        Map&lt;Integer, ImageResourceDimension&gt; master = imageDimensionManager.getImageDimensions();</span>
+<span class="nc" id="L204">        List&lt;ImageResourceDimension&gt; dimensions = new ArrayList&lt;&gt;(master.values());</span>
+<span class="nc" id="L205">        BeanComparator comparator = new BeanComparator(&quot;dimx&quot;);</span>
+<span class="nc" id="L206">        Collections.sort(dimensions, comparator);</span>
+<span class="nc" id="L207">        return dimensions;</span>
+    }
+
+    private List&lt;String&gt; getCategories(AbstractResource resource) {
+<span class="nc" id="L211">        return resource.getCategories().stream()</span>
+<span class="nc" id="L212">                .map(Category::getCode).collect(Collectors.toList());</span>
+    }
+
+    public String extractTypeFromResource(String resourceType) {
+<span class="nc bnc" id="L216" title="All 2 branches missed.">        if (&quot;Attach&quot;.equals(resourceType)) {</span>
+<span class="nc" id="L217">            return FileResourceDTO.RESOURCE_TYPE;</span>
+<span class="nc bnc" id="L218" title="All 2 branches missed.">        } else if (&quot;Image&quot;.equals(resourceType)) {</span>
+<span class="nc" id="L219">            return ImageResourceDTO.RESOURCE_TYPE;</span>
+        } else {
+<span class="nc" id="L221">            throw new RestServerError(String.format(&quot;Invalid resource type: %s&quot;, resourceType), null);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
