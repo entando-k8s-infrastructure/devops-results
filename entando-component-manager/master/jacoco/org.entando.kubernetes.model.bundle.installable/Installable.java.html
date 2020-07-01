@@ -6,7 +6,7 @@ import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.entando.kubernetes.model.digitalexchange.ComponentType;
-import org.entando.kubernetes.model.digitalexchange.EntandoBundleComponentJob;
+import org.entando.kubernetes.model.job.EntandoBundleComponentJob;
 
 /**
  * This class will represent something that can be installed on Entando architecture.
@@ -18,12 +18,15 @@ import org.entando.kubernetes.model.digitalexchange.EntandoBundleComponentJob;
 public abstract class Installable&lt;T&gt; {
 
     protected final T representation;
-<span class="fc" id="L21">    private final ObjectMapper objectMapper = new ObjectMapper();</span>
-    private EntandoBundleComponentJob component;
 
-<span class="fc" id="L24">    public Installable(T representation) {</span>
-<span class="fc" id="L25">        this.representation = representation;</span>
-<span class="fc" id="L26">    }</span>
+    protected EntandoBundleComponentJob job;
+
+<span class="fc" id="L24">    private final ObjectMapper objectMapper = new ObjectMapper();</span>
+
+<span class="fc" id="L26">    public Installable(T representation) {</span>
+<span class="fc" id="L27">        this.representation = representation;</span>
+<span class="fc" id="L28">    }</span>
+
 
     /**
      * This method will be called when every component was validated on the Digital Exchange bundle file
@@ -31,6 +34,13 @@ public abstract class Installable&lt;T&gt; {
      * @return should return a CompletableFuture with its processing inside. It can be run asynchronously or not.
      */
     public abstract CompletableFuture&lt;Void&gt; install();
+
+    /**
+     * This method will be called when every component was validated on the Digital Exchange bundle file
+     *
+     * @return should return a CompletableFuture with its processing inside. It can be run asynchronously or not.
+     */
+    public abstract CompletableFuture&lt;Void&gt; uninstall();
 
     /**
      * Should return the component type to understand what to do in case of a rollback
@@ -41,6 +51,7 @@ public abstract class Installable&lt;T&gt; {
 
     public abstract String getName();
 
+
     /**
      * Important to understand if something has changed in case of an updated If the checksum didn't change, we don't
      * need to modify this component
@@ -49,19 +60,28 @@ public abstract class Installable&lt;T&gt; {
      */
     public String getChecksum() {
         try {
-<span class="fc" id="L52">            return DigestUtils.md5Hex(objectMapper.writeValueAsString(representation));</span>
-<span class="nc" id="L53">        } catch (JsonProcessingException e) {</span>
-<span class="nc" id="L54">            log.error(&quot;Problem while processing checksum&quot;, e);</span>
+<span class="fc" id="L63">            return DigestUtils.md5Hex(objectMapper.writeValueAsString(representation));</span>
+<span class="nc" id="L64">        } catch (JsonProcessingException e) {</span>
+<span class="nc" id="L65">            log.error(&quot;Problem while processing checksum&quot;, e);</span>
         }
-<span class="nc" id="L56">        return null;</span>
+<span class="nc" id="L67">        return null;</span>
     }
 
-    public EntandoBundleComponentJob getComponent() {
-<span class="fc" id="L60">        return component;</span>
+    public T getRepresentation() {
+<span class="fc" id="L71">       return this.representation;</span>
     }
 
-    public void setComponent(final EntandoBundleComponentJob component) {
-<span class="fc" id="L64">        this.component = component;</span>
-<span class="fc" id="L65">    }</span>
+    public int getPriority() {
+<span class="fc" id="L75">        return this.getComponentType().getInstallPriority();</span>
+    }
+
+    public EntandoBundleComponentJob getJob() {
+<span class="nc" id="L79">       return this.job;</span>
+    }
+
+    public void setJob(EntandoBundleComponentJob job) {
+<span class="nc" id="L83">        this.job = job;</span>
+<span class="nc" id="L84">    }</span>
+
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

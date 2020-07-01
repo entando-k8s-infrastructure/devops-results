@@ -2,13 +2,12 @@
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.List;
 import org.entando.kubernetes.model.bundle.BundleReader;
-import org.entando.kubernetes.model.bundle.descriptor.ComponentDescriptor;
 import org.entando.kubernetes.model.bundle.installable.Installable;
 import org.entando.kubernetes.model.digitalexchange.ComponentType;
-import org.entando.kubernetes.model.digitalexchange.EntandoBundleComponentJob;
-import org.entando.kubernetes.model.digitalexchange.EntandoBundleJob;
+import org.entando.kubernetes.model.job.EntandoBundleComponentJob;
 
 /**
  * Any classes that is called a Component Processor will be found automatically on the context to process the Zip File
@@ -16,38 +15,43 @@ import org.entando.kubernetes.model.digitalexchange.EntandoBundleJob;
  *
  * @author Sergio Marcelino
  */
-public interface ComponentProcessor {
+public interface ComponentProcessor&lt;T&gt; {
 
     /**
      * This method will process the component descriptor and should return an empty list or a list of all components
      * that should be installed
      *
-     * @param job          the job being executed in this processing
+     *
      * @param bundleReader npm package reader zip file being processed
-     * @param descriptor   The component descriptor being processed
      * @return Should return a list of Installables
      * @throws IOException in case of any error while reading any the file from the Zip package
      */
-    List&lt;Installable&gt; process(EntandoBundleJob job, BundleReader bundleReader,
-            ComponentDescriptor descriptor) throws IOException;
+    List&lt;Installable&lt;T&gt;&gt; process(BundleReader bundleReader);
 
     /**
-     * This method will be executed on the uninstallation or modification of a component.
-     *
-     * @param componentType The component type being processed
-     * @return true if this ComponentType can be processed by this processor
+     * This method extracts a list of installable components from a list of {@class EntandoBundleComponentJob}
+     * @param components
+     * @return List of installable components
      */
-    boolean shouldProcess(ComponentType componentType);
+    List&lt;Installable&lt;T&gt;&gt; process(List&lt;EntandoBundleComponentJob&gt; components);
 
-    /**
-     * Performs the uninstallation of this component
-     *
-     * @param component the component to be uninstalled
-     */
-    void uninstall(EntandoBundleComponentJob component);
+    default Installable&lt;T&gt; process(EntandoBundleComponentJob componentJob) {
+<span class="pc bpc" id="L39" title="1 of 2 branches missed.">        if (supportComponent(componentJob.getComponentType())) {</span>
+<span class="fc" id="L40">            return process(Collections.singletonList(componentJob)).get(0);</span>
+        }
+<span class="nc" id="L42">        return null;</span>
+    }
+
+    T buildDescriptorFromComponentJob(EntandoBundleComponentJob component);
+
+    ComponentType getSupportedComponentType();
+
+    default boolean supportComponent(ComponentType ct) {
+<span class="fc" id="L50">        return this.getSupportedComponentType().equals(ct);</span>
+    }
 
     default String getRelativePath(String referenceFile, String fileName) {
-<span class="fc" id="L50">        return Paths.get(referenceFile).resolveSibling(fileName).toString();</span>
+<span class="fc" id="L54">        return Paths.get(referenceFile).resolveSibling(fileName).toString();</span>
     }
 
 }

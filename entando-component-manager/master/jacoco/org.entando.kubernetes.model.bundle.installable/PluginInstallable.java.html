@@ -3,41 +3,43 @@
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 import org.entando.kubernetes.model.digitalexchange.ComponentType;
-import org.entando.kubernetes.model.digitalexchange.EntandoBundleJob;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
 import org.entando.kubernetes.service.KubernetesService;
 
-<span class="fc" id="L10">@Slf4j</span>
+<span class="fc" id="L9">@Slf4j</span>
 public class PluginInstallable extends Installable&lt;EntandoPlugin&gt; {
 
-    private final EntandoBundleJob job;
     private final KubernetesService kubernetesService;
 
-    public PluginInstallable(
-            KubernetesService kubernetesService,
-            EntandoPlugin plugin,
-            EntandoBundleJob job) {
-<span class="fc" id="L20">        super(plugin);</span>
-<span class="fc" id="L21">        this.job = job;</span>
-<span class="fc" id="L22">        this.kubernetesService = kubernetesService;</span>
-<span class="fc" id="L23">    }</span>
+    public PluginInstallable(KubernetesService kubernetesService, EntandoPlugin plugin) {
+<span class="fc" id="L15">        super(plugin);</span>
+<span class="fc" id="L16">        this.kubernetesService = kubernetesService;</span>
+<span class="fc" id="L17">    }</span>
 
     @Override
     public CompletableFuture&lt;Void&gt; install() {
-<span class="fc" id="L27">        return CompletableFuture.runAsync(() -&gt; {</span>
-<span class="fc" id="L28">            log.info(&quot;Deploying plugin {}&quot;, representation.getMetadata().getName());</span>
-<span class="fc" id="L29">            kubernetesService.linkPluginAndWaitForSuccess(representation);</span>
-<span class="fc" id="L30">        });</span>
+<span class="fc" id="L21">        return CompletableFuture.runAsync(() -&gt; {</span>
+<span class="fc" id="L22">            log.info(&quot;Deploying plugin {}&quot;, getName());</span>
+<span class="fc" id="L23">            kubernetesService.linkPluginAndWaitForSuccess(representation);</span>
+<span class="fc" id="L24">        });</span>
+    }
+
+    @Override
+    public CompletableFuture&lt;Void&gt; uninstall() {
+<span class="fc" id="L29">        return CompletableFuture.runAsync(() -&gt; {</span>
+<span class="fc" id="L30">            log.info(&quot;Removing link to plugin {}&quot;, getName());</span>
+<span class="fc" id="L31">            kubernetesService.unlinkPlugin(getName());</span>
+<span class="fc" id="L32">        });</span>
     }
 
     @Override
     public ComponentType getComponentType() {
-<span class="fc" id="L35">        return ComponentType.PLUGIN;</span>
+<span class="fc" id="L37">        return ComponentType.PLUGIN;</span>
     }
 
     @Override
     public String getName() {
-<span class="fc" id="L40">        return this.representation.getMetadata().getName();</span>
+<span class="fc" id="L42">        return this.representation.getMetadata().getName();</span>
     }
 
 }

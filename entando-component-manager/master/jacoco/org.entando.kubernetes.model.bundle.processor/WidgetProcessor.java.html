@@ -6,9 +6,11 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.entando.kubernetes.client.core.EntandoCoreClient;
+import org.entando.kubernetes.exception.EntandoComponentManagerException;
 import org.entando.kubernetes.model.bundle.BundleReader;
 import org.entando.kubernetes.model.bundle.descriptor.ComponentDescriptor;
 import org.entando.kubernetes.model.bundle.descriptor.ComponentSpecDescriptor;
@@ -16,8 +18,7 @@ import org.entando.kubernetes.model.bundle.descriptor.WidgetDescriptor;
 import org.entando.kubernetes.model.bundle.installable.Installable;
 import org.entando.kubernetes.model.bundle.installable.WidgetInstallable;
 import org.entando.kubernetes.model.digitalexchange.ComponentType;
-import org.entando.kubernetes.model.digitalexchange.EntandoBundleComponentJob;
-import org.entando.kubernetes.model.digitalexchange.EntandoBundleJob;
+import org.entando.kubernetes.model.job.EntandoBundleComponentJob;
 import org.springframework.stereotype.Service;
 
 /**
@@ -25,46 +26,59 @@ import org.springframework.stereotype.Service;
  *
  * @author Sergio Marcelino
  */
-<span class="fc" id="L28">@Slf4j</span>
+<span class="fc" id="L29">@Slf4j</span>
 @Service
 @RequiredArgsConstructor
-public class WidgetProcessor implements ComponentProcessor {
+public class WidgetProcessor implements ComponentProcessor&lt;WidgetDescriptor&gt; {
 
     private final EntandoCoreClient engineService;
 
     @Override
-    public List&lt;Installable&gt; process(final EntandoBundleJob job, final BundleReader npr,
-            final ComponentDescriptor descriptor) throws IOException {
+    public ComponentType getSupportedComponentType() {
+<span class="fc" id="L38">        return ComponentType.WIDGET;</span>
+    }
 
-<span class="fc" id="L39">        final Optional&lt;List&lt;String&gt;&gt; widgetsDescriptor = ofNullable(descriptor.getComponents())</span>
-<span class="fc" id="L40">                .map(ComponentSpecDescriptor::getWidgets);</span>
-<span class="fc" id="L41">        final List&lt;Installable&gt; installables = new LinkedList&lt;&gt;();</span>
+    @Override
+    public List&lt;Installable&lt;WidgetDescriptor&gt;&gt; process(BundleReader npr) {
+        try {
+<span class="fc" id="L44">            ComponentDescriptor descriptor = npr.readBundleDescriptor();</span>
 
-<span class="pc bpc" id="L43" title="1 of 2 branches missed.">        if (widgetsDescriptor.isPresent()) {</span>
-<span class="fc bfc" id="L44" title="All 2 branches covered.">            for (final String fileName : widgetsDescriptor.get()) {</span>
-<span class="fc" id="L45">                final WidgetDescriptor widgetDescriptor = npr.readDescriptorFile(fileName, WidgetDescriptor.class);</span>
-<span class="fc bfc" id="L46" title="All 2 branches covered.">                if (widgetDescriptor.getCustomUiPath() != null) {</span>
-<span class="fc" id="L47">                    String widgetUiPath = getRelativePath(fileName, widgetDescriptor.getCustomUiPath());</span>
-<span class="fc" id="L48">                    widgetDescriptor.setCustomUi(npr.readFileAsString(widgetUiPath));</span>
-                }
-<span class="fc" id="L50">                widgetDescriptor.setBundleId(descriptor.getCode());</span>
-<span class="fc" id="L51">                installables.add(new WidgetInstallable(engineService, widgetDescriptor));</span>
-<span class="fc" id="L52">            }</span>
+<span class="fc" id="L46">            final Optional&lt;List&lt;String&gt;&gt; widgetsDescriptor = ofNullable(descriptor.getComponents())</span>
+<span class="fc" id="L47">                    .map(ComponentSpecDescriptor::getWidgets);</span>
+<span class="fc" id="L48">            final List&lt;Installable&lt;WidgetDescriptor&gt;&gt; installables = new LinkedList&lt;&gt;();</span>
+
+<span class="pc bpc" id="L50" title="1 of 2 branches missed.">            if (widgetsDescriptor.isPresent()) {</span>
+<span class="fc bfc" id="L51" title="All 2 branches covered.">                for (final String fileName : widgetsDescriptor.get()) {</span>
+<span class="fc" id="L52">                    final WidgetDescriptor widgetDescriptor = npr.readDescriptorFile(fileName, WidgetDescriptor.class);</span>
+<span class="fc bfc" id="L53" title="All 2 branches covered.">                    if (widgetDescriptor.getCustomUiPath() != null) {</span>
+<span class="fc" id="L54">                        String widgetUiPath = getRelativePath(fileName, widgetDescriptor.getCustomUiPath());</span>
+<span class="fc" id="L55">                        widgetDescriptor.setCustomUi(npr.readFileAsString(widgetUiPath));</span>
+                    }
+<span class="fc" id="L57">                    widgetDescriptor.setBundleId(descriptor.getCode());</span>
+<span class="fc" id="L58">                    installables.add(new WidgetInstallable(engineService, widgetDescriptor));</span>
+<span class="fc" id="L59">                }</span>
+            }
+
+<span class="fc" id="L62">            return installables;</span>
+<span class="nc" id="L63">        } catch (IOException e) {</span>
+<span class="nc" id="L64">            throw new EntandoComponentManagerException(&quot;Error reading bundle&quot;, e);</span>
         }
-
-<span class="fc" id="L55">        return installables;</span>
     }
 
     @Override
-    public boolean shouldProcess(final ComponentType componentType) {
-<span class="fc bfc" id="L60" title="All 2 branches covered.">        return componentType == ComponentType.WIDGET;</span>
+    public List&lt;Installable&lt;WidgetDescriptor&gt;&gt; process(List&lt;EntandoBundleComponentJob&gt; components) {
+<span class="fc" id="L70">        return components.stream()</span>
+<span class="pc bpc" id="L71" title="1 of 2 branches missed.">                .filter(c -&gt; c.getComponentType() == ComponentType.WIDGET)</span>
+<span class="fc" id="L72">                .map(c -&gt; new WidgetInstallable(engineService, this.buildDescriptorFromComponentJob(c)))</span>
+<span class="fc" id="L73">                .collect(Collectors.toList());</span>
     }
 
     @Override
-    public void uninstall(final EntandoBundleComponentJob component) {
-<span class="fc" id="L65">        log.info(&quot;Removing Widget {}&quot;, component.getName());</span>
-<span class="fc" id="L66">        engineService.deleteWidget(component.getName());</span>
-<span class="fc" id="L67">    }</span>
+    public WidgetDescriptor buildDescriptorFromComponentJob(EntandoBundleComponentJob component) {
+<span class="fc" id="L78">        return WidgetDescriptor.builder()</span>
+<span class="fc" id="L79">                .code(component.getComponentId())</span>
+<span class="fc" id="L80">                .build();</span>
+    }
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
