@@ -39,85 +39,86 @@ public class EntandoAppDeployableContainer extends EntandoDatabaseConsumingConta
 
     public static final String INGRESS_WEB_CONTEXT = &quot;/entando-de-app&quot;;
     public static final int PORT = 8080;
+    public static final String HEALTH_CHECK = &quot;/api/health&quot;;
     private final EntandoApp entandoApp;
     private final KeycloakConnectionConfig keycloakConnectionConfig;
 
-<span class="fc" id="L45">    public EntandoAppDeployableContainer(EntandoApp entandoApp, KeycloakConnectionConfig keycloakConnectionConfig) {</span>
-<span class="fc" id="L46">        this.entandoApp = entandoApp;</span>
-<span class="fc" id="L47">        this.keycloakConnectionConfig = keycloakConnectionConfig;</span>
-<span class="fc" id="L48">    }</span>
+<span class="fc" id="L46">    public EntandoAppDeployableContainer(EntandoApp entandoApp, KeycloakConnectionConfig keycloakConnectionConfig) {</span>
+<span class="fc" id="L47">        this.entandoApp = entandoApp;</span>
+<span class="fc" id="L48">        this.keycloakConnectionConfig = keycloakConnectionConfig;</span>
+<span class="fc" id="L49">    }</span>
 
     public static String clientIdOf(EntandoApp entandoApp) {
         //TOOD may have to prefix namespace
-<span class="fc" id="L52">        return entandoApp.getMetadata().getName() + &quot;-&quot; + KubeUtils.DEFAULT_SERVER_QUALIFIER;</span>
+<span class="fc" id="L53">        return entandoApp.getMetadata().getName() + &quot;-&quot; + KubeUtils.DEFAULT_SERVER_QUALIFIER;</span>
     }
 
     @Override
     public String determineImageToUse() {
-<span class="fc" id="L57">        EntandoAppSpec spec = entandoApp.getSpec();</span>
-<span class="fc" id="L58">        return spec.getCustomServerImage().orElse(spec.getStandardServerImage().orElse(JeeServer.WILDFLY).getImageName());</span>
+<span class="fc" id="L58">        EntandoAppSpec spec = entandoApp.getSpec();</span>
+<span class="fc" id="L59">        return spec.getCustomServerImage().orElse(spec.getStandardServerImage().orElse(JeeServer.WILDFLY).getImageName());</span>
     }
 
     @Override
     public int getMemoryLimitMebibytes() {
-<span class="fc" id="L63">        return 1024 + 768;</span>
+<span class="fc" id="L64">        return 1024 + 768;</span>
     }
 
     @Override
     public int getCpuLimitMillicores() {
-<span class="fc" id="L68">        return 1500;</span>
+<span class="fc" id="L69">        return 1500;</span>
     }
 
     @Override
     public String getNameQualifier() {
-<span class="fc" id="L73">        return KubeUtils.DEFAULT_SERVER_QUALIFIER;</span>
+<span class="fc" id="L74">        return KubeUtils.DEFAULT_SERVER_QUALIFIER;</span>
     }
 
     @Override
     public int getPort() {
-<span class="fc" id="L78">        return PORT;</span>
+<span class="fc" id="L79">        return PORT;</span>
     }
 
     public KeycloakConnectionConfig getKeycloakConnectionConfig() {
-<span class="fc" id="L82">        return keycloakConnectionConfig;</span>
+<span class="fc" id="L83">        return keycloakConnectionConfig;</span>
     }
 
     @Override
     public KeycloakClientConfig getKeycloakClientConfig() {
-<span class="fc" id="L87">        String clientId = clientIdOf(this.entandoApp);</span>
-<span class="fc" id="L88">        return new KeycloakClientConfig(KubeUtils.ENTANDO_KEYCLOAK_REALM,</span>
+<span class="fc" id="L88">        String clientId = clientIdOf(this.entandoApp);</span>
+<span class="fc" id="L89">        return new KeycloakClientConfig(KubeUtils.ENTANDO_KEYCLOAK_REALM,</span>
                 clientId,
-<span class="fc" id="L90">                clientId).withRole(&quot;superuser&quot;).withPermission(&quot;realm-management&quot;, &quot;realm-admin&quot;);</span>
+<span class="fc" id="L91">                clientId).withRole(&quot;superuser&quot;).withPermission(&quot;realm-management&quot;, &quot;realm-admin&quot;);</span>
     }
 
     @Override
     public String getWebContextPath() {
-<span class="fc" id="L95">        return entandoApp.getSpec().getIngressPath().orElse(INGRESS_WEB_CONTEXT);</span>
+<span class="fc" id="L96">        return entandoApp.getSpec().getIngressPath().orElse(INGRESS_WEB_CONTEXT);</span>
     }
 
     @Override
     public Optional&lt;String&gt; getHealthCheckPath() {
-<span class="fc" id="L100">        return Optional.of(getWebContextPath());</span>
+<span class="fc" id="L101">        return Optional.of(getWebContextPath() + HEALTH_CHECK);</span>
     }
 
     @Override
     public String getVolumeMountPath() {
-<span class="fc" id="L105">        return &quot;/entando-data&quot;;</span>
+<span class="fc" id="L106">        return &quot;/entando-data&quot;;</span>
     }
 
     @Override
     protected DatabasePopulator buildDatabasePopulator() {
-<span class="fc" id="L110">        return new EntandoAppDatabasePopulator(this);</span>
+<span class="fc" id="L111">        return new EntandoAppDatabasePopulator(this);</span>
     }
 
     @Override
     public void addDatabaseConnectionVariables(List&lt;EnvVar&gt; list) {
         //Done in superclass. One day we will implement this method in the superclass
-<span class="fc" id="L116">    }</span>
+<span class="fc" id="L117">    }</span>
 
     @Override
     public EntandoDeploymentSpec getCustomResourceSpec() {
-<span class="fc" id="L120">        return this.entandoApp.getSpec();</span>
+<span class="fc" id="L121">        return this.entandoApp.getSpec();</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
