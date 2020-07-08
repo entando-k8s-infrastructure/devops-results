@@ -23,6 +23,7 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.apache.commons.lang3.StringUtils;
 import org.entando.entando.aps.servlet.IProtectedResourceProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,9 +54,9 @@ import com.agiletec.plugins.jacms.aps.system.services.resource.model.ResourceInt
  *
  * @author E.Santoboni
  */
-<span class="fc" id="L56">public class ProtectedResourceProvider implements IProtectedResourceProvider {</span>
+<span class="fc" id="L57">public class ProtectedResourceProvider implements IProtectedResourceProvider {</span>
 
-<span class="fc" id="L58">    private static final Logger logger = LoggerFactory.getLogger(ProtectedResourceProvider.class);</span>
+<span class="fc" id="L59">    private static final Logger logger = LoggerFactory.getLogger(ProtectedResourceProvider.class);</span>
 
     private IUserManager userManager;
     private IAuthorizationManager authorizationManager;
@@ -69,176 +70,179 @@ import com.agiletec.plugins.jacms.aps.system.services.resource.model.ResourceInt
     @Override
     public boolean provideProtectedResource(HttpServletRequest request, HttpServletResponse response) throws ApsSystemException {
         try {
-<span class="nc" id="L72">            String[] uriSegments = request.getRequestURI().split(&quot;/&quot;);</span>
-<span class="nc" id="L73">            int segments = uriSegments.length;</span>
+<span class="nc" id="L73">            String[] uriSegments = request.getRequestURI().split(&quot;/&quot;);</span>
+<span class="nc" id="L74">            int segments = uriSegments.length;</span>
             //CONTROLLO ASSOCIAZIONE RISORSA A CONTENUTO
-<span class="nc" id="L75">            int indexGuardian = 0;</span>
-<span class="nc" id="L76">            String checkContentAssociation = uriSegments[segments - 2];</span>
-<span class="nc bnc" id="L77" title="All 2 branches missed.">            if (checkContentAssociation.equals(AbstractResourceAttribute.REFERENCED_RESOURCE_INDICATOR)) {</span>
+<span class="nc" id="L76">            int indexGuardian = 0;</span>
+<span class="nc" id="L77">            String checkContentAssociation = uriSegments[segments - 2];</span>
+<span class="nc bnc" id="L78" title="All 2 branches missed.">            if (checkContentAssociation.equals(AbstractResourceAttribute.REFERENCED_RESOURCE_INDICATOR)) {</span>
                 // LA Sintassi /&lt;RES_ID&gt;/&lt;SIZE&gt;/&lt;LANG_CODE&gt;/&lt;REFERENCED_RESOURCE_INDICATOR&gt;/&lt;CONTENT_ID&gt;
-<span class="nc" id="L79">                indexGuardian = 2;</span>
+<span class="nc" id="L80">                indexGuardian = 2;</span>
             }
-<span class="nc" id="L81">            String resId = uriSegments[segments - 3 - indexGuardian];</span>
-<span class="nc" id="L82">            UserDetails currentUser = (UserDetails) request.getSession().getAttribute(SystemConstants.SESSIONPARAM_CURRENT_USER);</span>
-<span class="nc bnc" id="L83" title="All 2 branches missed.">            if (currentUser == null) {</span>
-<span class="nc" id="L84">                currentUser = this.getUserManager().getGuestUser();</span>
+<span class="nc" id="L82">            String resId = uriSegments[segments - 3 - indexGuardian];</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">            if (!StringUtils.isNumeric(resId)) {</span>
+<span class="nc" id="L84">                return false;</span>
             }
-<span class="nc" id="L86">            boolean isAuthForProtectedRes = false;</span>
-<span class="nc bnc" id="L87" title="All 2 branches missed.">            if (indexGuardian != 0) {</span>
-<span class="nc bnc" id="L88" title="All 2 branches missed.">                if (this.isAuthOnProtectedRes(currentUser, resId, uriSegments[segments - 1])) {</span>
-<span class="nc" id="L89">                    isAuthForProtectedRes = true;</span>
+<span class="nc" id="L86">            UserDetails currentUser = (UserDetails) request.getSession().getAttribute(SystemConstants.SESSIONPARAM_CURRENT_USER);</span>
+<span class="nc bnc" id="L87" title="All 2 branches missed.">            if (currentUser == null) {</span>
+<span class="nc" id="L88">                currentUser = this.getUserManager().getGuestUser();</span>
+            }
+<span class="nc" id="L90">            boolean isAuthForProtectedRes = false;</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">            if (indexGuardian != 0) {</span>
+<span class="nc bnc" id="L92" title="All 2 branches missed.">                if (this.isAuthOnProtectedRes(currentUser, resId, uriSegments[segments - 1])) {</span>
+<span class="nc" id="L93">                    isAuthForProtectedRes = true;</span>
                 } else {
-<span class="nc" id="L91">                    this.executeLoginRedirect(request, response);</span>
-<span class="nc" id="L92">                    return true;</span>
+<span class="nc" id="L95">                    this.executeLoginRedirect(request, response);</span>
+<span class="nc" id="L96">                    return true;</span>
                 }
             }
-<span class="nc" id="L95">            ResourceInterface resource = this.getResourceManager().loadResource(resId);</span>
-<span class="nc bnc" id="L96" title="All 2 branches missed.">            if (resource == null) {</span>
-<span class="nc" id="L97">                return false;</span>
+<span class="nc" id="L99">            ResourceInterface resource = this.getResourceManager().loadResource(resId);</span>
+<span class="nc bnc" id="L100" title="All 2 branches missed.">            if (resource == null) {</span>
+<span class="nc" id="L101">                return false;</span>
             }
-<span class="nc" id="L99">            IAuthorizationManager authManager = this.getAuthorizationManager();</span>
-<span class="nc bnc" id="L100" title="All 2 branches missed.">            if (isAuthForProtectedRes</span>
-<span class="nc bnc" id="L101" title="All 2 branches missed.">                    || authManager.isAuthOnGroup(currentUser, resource.getMainGroup())</span>
-<span class="nc bnc" id="L102" title="All 2 branches missed.">                    || authManager.isAuthOnGroup(currentUser, Group.ADMINS_GROUP_NAME)) {</span>
-<span class="nc" id="L103">                ResourceInstance instance = null;</span>
-<span class="nc bnc" id="L104" title="All 2 branches missed.">                if (resource.isMultiInstance()) {</span>
-<span class="nc" id="L105">                    String sizeStr = uriSegments[segments - 2 - indexGuardian];</span>
-<span class="nc bnc" id="L106" title="All 2 branches missed.">                    if (!this.isValidNumericString(sizeStr)) {</span>
-<span class="nc" id="L107">                        return false;</span>
+<span class="nc" id="L103">            IAuthorizationManager authManager = this.getAuthorizationManager();</span>
+<span class="nc bnc" id="L104" title="All 2 branches missed.">            if (isAuthForProtectedRes</span>
+<span class="nc bnc" id="L105" title="All 2 branches missed.">                    || authManager.isAuthOnGroup(currentUser, resource.getMainGroup())</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">                    || authManager.isAuthOnGroup(currentUser, Group.ADMINS_GROUP_NAME)) {</span>
+<span class="nc" id="L107">                ResourceInstance instance = null;</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">                if (resource.isMultiInstance()) {</span>
+<span class="nc" id="L109">                    String sizeStr = uriSegments[segments - 2 - indexGuardian];</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">                    if (!this.isValidNumericString(sizeStr)) {</span>
+<span class="nc" id="L111">                        return false;</span>
                     }
-<span class="nc" id="L109">                    int size = Integer.parseInt(sizeStr);</span>
-<span class="nc" id="L110">                    String langCode = uriSegments[segments - 1 - indexGuardian];</span>
-<span class="nc" id="L111">                    instance = ((AbstractMultiInstanceResource) resource).getInstance(size, langCode);</span>
-<span class="nc" id="L112">                } else {</span>
-<span class="nc" id="L113">                    instance = ((AbstractMonoInstanceResource) resource).getInstance();</span>
+<span class="nc" id="L113">                    int size = Integer.parseInt(sizeStr);</span>
+<span class="nc" id="L114">                    String langCode = uriSegments[segments - 1 - indexGuardian];</span>
+<span class="nc" id="L115">                    instance = ((AbstractMultiInstanceResource) resource).getInstance(size, langCode);</span>
+<span class="nc" id="L116">                } else {</span>
+<span class="nc" id="L117">                    instance = ((AbstractMonoInstanceResource) resource).getInstance();</span>
                 }
-<span class="nc" id="L115">                this.createResponse(response, resource, instance);</span>
-<span class="nc" id="L116">                return true;</span>
+<span class="nc" id="L119">                this.createResponse(response, resource, instance);</span>
+<span class="nc" id="L120">                return true;</span>
             }
-<span class="nc" id="L118">        } catch (Throwable t) {</span>
-<span class="nc" id="L119">            logger.error(&quot;Error extracting protected resource&quot;, t);</span>
-<span class="nc" id="L120">            throw new ApsSystemException(&quot;Error extracting protected resource&quot;, t);</span>
-<span class="nc" id="L121">        }</span>
-<span class="nc" id="L122">        return false;</span>
+<span class="nc" id="L122">        } catch (Throwable t) {</span>
+<span class="nc" id="L123">            logger.error(&quot;Error extracting protected resource&quot;, t);</span>
+<span class="nc" id="L124">            throw new ApsSystemException(&quot;Error extracting protected resource&quot;, t);</span>
+<span class="nc" id="L125">        }</span>
+<span class="nc" id="L126">        return false;</span>
     }
 
     protected boolean isAuthOnProtectedRes(UserDetails currentUser, String resourceId, String contentId) {
-<span class="nc" id="L126">        PublicContentAuthorizationInfo authInfo = this.getContentAuthorizationHelper().getAuthorizationInfo(contentId);</span>
-<span class="nc" id="L127">        IAuthorizationManager authManager = this.getAuthorizationManager();</span>
-<span class="nc bnc" id="L128" title="All 2 branches missed.">        if (null == authInfo) {</span>
-<span class="nc" id="L129">            return false;</span>
+<span class="nc" id="L130">        PublicContentAuthorizationInfo authInfo = this.getContentAuthorizationHelper().getAuthorizationInfo(contentId);</span>
+<span class="nc" id="L131">        IAuthorizationManager authManager = this.getAuthorizationManager();</span>
+<span class="nc bnc" id="L132" title="All 2 branches missed.">        if (null == authInfo) {</span>
+<span class="nc" id="L133">            return false;</span>
         }
-<span class="nc bnc" id="L131" title="All 4 branches missed.">        return (authInfo.isProtectedResourceReference(resourceId) &amp;&amp; authInfo.isUserAllowed(authManager.getUserGroups(currentUser)));</span>
+<span class="nc bnc" id="L135" title="All 4 branches missed.">        return (authInfo.isProtectedResourceReference(resourceId) &amp;&amp; authInfo.isUserAllowed(authManager.getUserGroups(currentUser)));</span>
     }
 
     protected void createResponse(HttpServletResponse resp, ResourceInterface resource,
             ResourceInstance instance) throws IOException, ServletException {
-<span class="nc" id="L136">        resp.setContentType(instance.getMimeType());</span>
-<span class="nc" id="L137">        resp.setHeader(&quot;Content-Disposition&quot;, &quot;inline; filename=&quot; + instance.getFileName());</span>
-<span class="nc" id="L138">        ServletOutputStream out = resp.getOutputStream();</span>
+<span class="nc" id="L140">        resp.setContentType(instance.getMimeType());</span>
+<span class="nc" id="L141">        resp.setHeader(&quot;Content-Disposition&quot;, &quot;inline; filename=&quot; + instance.getFileName());</span>
+<span class="nc" id="L142">        ServletOutputStream out = resp.getOutputStream();</span>
         try {
-<span class="nc" id="L140">            InputStream is = resource.getResourceStream(instance);</span>
-<span class="nc bnc" id="L141" title="All 2 branches missed.">            if (null != is) {</span>
-<span class="nc" id="L142">                byte[] buffer = new byte[2048];</span>
-<span class="nc" id="L143">                int length = -1;</span>
+<span class="nc" id="L144">            InputStream is = resource.getResourceStream(instance);</span>
+<span class="nc bnc" id="L145" title="All 2 branches missed.">            if (null != is) {</span>
+<span class="nc" id="L146">                byte[] buffer = new byte[2048];</span>
+<span class="nc" id="L147">                int length = -1;</span>
                 // Transfer the data
-<span class="nc bnc" id="L145" title="All 2 branches missed.">                while ((length = is.read(buffer)) != -1) {</span>
-<span class="nc" id="L146">                    out.write(buffer, 0, length);</span>
-<span class="nc" id="L147">                    out.flush();</span>
+<span class="nc bnc" id="L149" title="All 2 branches missed.">                while ((length = is.read(buffer)) != -1) {</span>
+<span class="nc" id="L150">                    out.write(buffer, 0, length);</span>
+<span class="nc" id="L151">                    out.flush();</span>
                 }
-<span class="nc" id="L149">                is.close();</span>
+<span class="nc" id="L153">                is.close();</span>
             }
-<span class="nc" id="L151">        } catch (Throwable t) {</span>
-<span class="nc" id="L152">            logger.error(&quot;Error extracting protected resource&quot;, t);</span>
-<span class="nc" id="L153">            throw new ServletException(&quot;Error extracting protected resource&quot;, t);</span>
+<span class="nc" id="L155">        } catch (Throwable t) {</span>
+<span class="nc" id="L156">            logger.error(&quot;Error extracting protected resource&quot;, t);</span>
+<span class="nc" id="L157">            throw new ServletException(&quot;Error extracting protected resource&quot;, t);</span>
         } finally {
-<span class="nc" id="L155">            out.close();</span>
+<span class="nc" id="L159">            out.close();</span>
         }
-<span class="nc" id="L157">    }</span>
+<span class="nc" id="L161">    }</span>
 
     protected void executeLoginRedirect(HttpServletRequest request, HttpServletResponse response) throws ServletException {
         try {
-<span class="nc" id="L161">            StringBuilder targetUrl = new StringBuilder(request.getRequestURL());</span>
-<span class="nc" id="L162">            Map&lt;String, String&gt; params = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L163">            params.put(&quot;returnUrl&quot;, targetUrl.toString());</span>
-<span class="nc" id="L164">            String loginPageCode = this.getConfigManager().getParam(SystemConstants.CONFIG_PARAM_LOGIN_PAGE_CODE);</span>
-<span class="nc" id="L165">            IPage page = this.getPageManager().getOnlinePage(loginPageCode);</span>
-<span class="nc" id="L166">            Lang defaultLang = this.getLangManager().getDefaultLang();</span>
-<span class="nc" id="L167">            String url = this.getUrlManager().createURL(page, defaultLang, params);</span>
-<span class="nc" id="L168">            response.sendRedirect(url);</span>
-<span class="nc" id="L169">        } catch (Throwable t) {</span>
-<span class="nc" id="L170">            logger.error(&quot;Error executing redirect login page&quot;, t);</span>
-<span class="nc" id="L171">            throw new ServletException(&quot;Error executing redirect login page&quot;, t);</span>
-<span class="nc" id="L172">        }</span>
-<span class="nc" id="L173">    }</span>
+<span class="nc" id="L165">            StringBuilder targetUrl = new StringBuilder(request.getRequestURL());</span>
+<span class="nc" id="L166">            Map&lt;String, String&gt; params = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L167">            params.put(&quot;returnUrl&quot;, targetUrl.toString());</span>
+<span class="nc" id="L168">            String loginPageCode = this.getConfigManager().getParam(SystemConstants.CONFIG_PARAM_LOGIN_PAGE_CODE);</span>
+<span class="nc" id="L169">            IPage page = this.getPageManager().getOnlinePage(loginPageCode);</span>
+<span class="nc" id="L170">            Lang defaultLang = this.getLangManager().getDefaultLang();</span>
+<span class="nc" id="L171">            String url = this.getUrlManager().createURL(page, defaultLang, params);</span>
+<span class="nc" id="L172">            response.sendRedirect(url);</span>
+<span class="nc" id="L173">        } catch (Throwable t) {</span>
+<span class="nc" id="L174">            logger.error(&quot;Error executing redirect login page&quot;, t);</span>
+<span class="nc" id="L175">            throw new ServletException(&quot;Error executing redirect login page&quot;, t);</span>
+<span class="nc" id="L176">        }</span>
+<span class="nc" id="L177">    }</span>
 
     protected boolean isValidNumericString(String integerNumber) {
-<span class="nc bnc" id="L176" title="All 4 branches missed.">        return (integerNumber.trim().length() &gt; 0 &amp;&amp; integerNumber.matches(&quot;\\d+&quot;));</span>
+<span class="nc bnc" id="L180" title="All 4 branches missed.">        return (integerNumber.trim().length() &gt; 0 &amp;&amp; integerNumber.matches(&quot;\\d+&quot;));</span>
     }
 
     protected IResourceManager getResourceManager() {
-<span class="nc" id="L180">        return resourceManager;</span>
+<span class="nc" id="L184">        return resourceManager;</span>
     }
 
     public void setResourceManager(IResourceManager resourceManager) {
-<span class="fc" id="L184">        this.resourceManager = resourceManager;</span>
-<span class="fc" id="L185">    }</span>
+<span class="fc" id="L188">        this.resourceManager = resourceManager;</span>
+<span class="fc" id="L189">    }</span>
 
     protected IContentAuthorizationHelper getContentAuthorizationHelper() {
-<span class="nc" id="L188">        return contentAuthorizationHelper;</span>
+<span class="nc" id="L192">        return contentAuthorizationHelper;</span>
     }
 
     public void setContentAuthorizationHelper(IContentAuthorizationHelper contentAuthorizationHelper) {
-<span class="fc" id="L192">        this.contentAuthorizationHelper = contentAuthorizationHelper;</span>
-<span class="fc" id="L193">    }</span>
+<span class="fc" id="L196">        this.contentAuthorizationHelper = contentAuthorizationHelper;</span>
+<span class="fc" id="L197">    }</span>
 
     protected IUserManager getUserManager() {
-<span class="nc" id="L196">        return userManager;</span>
+<span class="nc" id="L200">        return userManager;</span>
     }
 
     public void setUserManager(IUserManager userManager) {
-<span class="fc" id="L200">        this.userManager = userManager;</span>
-<span class="fc" id="L201">    }</span>
+<span class="fc" id="L204">        this.userManager = userManager;</span>
+<span class="fc" id="L205">    }</span>
 
     protected IAuthorizationManager getAuthorizationManager() {
-<span class="nc" id="L204">        return authorizationManager;</span>
+<span class="nc" id="L208">        return authorizationManager;</span>
     }
 
     public void setAuthorizationManager(IAuthorizationManager authorizationManager) {
-<span class="fc" id="L208">        this.authorizationManager = authorizationManager;</span>
-<span class="fc" id="L209">    }</span>
+<span class="fc" id="L212">        this.authorizationManager = authorizationManager;</span>
+<span class="fc" id="L213">    }</span>
 
     protected IURLManager getUrlManager() {
-<span class="nc" id="L212">        return urlManager;</span>
+<span class="nc" id="L216">        return urlManager;</span>
     }
 
     public void setUrlManager(IURLManager urlManager) {
-<span class="fc" id="L216">        this.urlManager = urlManager;</span>
-<span class="fc" id="L217">    }</span>
+<span class="fc" id="L220">        this.urlManager = urlManager;</span>
+<span class="fc" id="L221">    }</span>
 
     protected IPageManager getPageManager() {
-<span class="nc" id="L220">        return pageManager;</span>
+<span class="nc" id="L224">        return pageManager;</span>
     }
 
     public void setPageManager(IPageManager pageManager) {
-<span class="fc" id="L224">        this.pageManager = pageManager;</span>
-<span class="fc" id="L225">    }</span>
+<span class="fc" id="L228">        this.pageManager = pageManager;</span>
+<span class="fc" id="L229">    }</span>
 
     protected ILangManager getLangManager() {
-<span class="nc" id="L228">        return langManager;</span>
+<span class="nc" id="L232">        return langManager;</span>
     }
 
     public void setLangManager(ILangManager langManager) {
-<span class="fc" id="L232">        this.langManager = langManager;</span>
-<span class="fc" id="L233">    }</span>
+<span class="fc" id="L236">        this.langManager = langManager;</span>
+<span class="fc" id="L237">    }</span>
 
     protected ConfigInterface getConfigManager() {
-<span class="nc" id="L236">        return configManager;</span>
+<span class="nc" id="L240">        return configManager;</span>
     }
 
     public void setConfigManager(ConfigInterface configManager) {
-<span class="fc" id="L240">        this.configManager = configManager;</span>
-<span class="fc" id="L241">    }</span>
+<span class="fc" id="L244">        this.configManager = configManager;</span>
+<span class="fc" id="L245">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
