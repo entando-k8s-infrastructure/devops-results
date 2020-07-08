@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CurrentPageTag.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Plugin: SEO</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.plugins.jpseo.aps.tags</a> &gt; <span class="el_source">CurrentPageTag.java</span></div><h1>CurrentPageTag.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+package org.entando.entando.plugins.jpseo.aps.tags;
+
+import java.util.Map;
+
+import javax.servlet.ServletRequest;
+import javax.servlet.jsp.JspException;
+
+import org.entando.entando.plugins.jpseo.aps.system.JpseoSystemConstants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.agiletec.aps.system.RequestContext;
+import com.agiletec.aps.system.SystemConstants;
+import com.agiletec.aps.system.services.lang.ILangManager;
+import com.agiletec.aps.system.services.lang.Lang;
+import com.agiletec.aps.system.services.page.IPage;
+import com.agiletec.aps.system.services.page.IPageManager;
+import com.agiletec.aps.system.services.page.PageMetadata;
+import com.agiletec.aps.util.ApsProperties;
+import com.agiletec.aps.util.ApsWebApplicationUtils;
+import org.entando.entando.plugins.jpseo.aps.system.services.page.PageMetatag;
+import org.entando.entando.plugins.jpseo.aps.system.services.page.SeoPageMetadata;
+
+/**
+ * @author E.Santoboni
+ */
+<span class="nc" id="L48">public class CurrentPageTag extends com.agiletec.aps.tags.CurrentPageTag {</span>
+
+<span class="nc" id="L50">    private static final Logger _logger = LoggerFactory.getLogger(CurrentPageTag.class);</span>
+
+    public static final String DESCRIPTION_INFO = &quot;description&quot;;
+
+    @Override
+    public int doEndTag() throws JspException {
+<span class="nc" id="L56">        ServletRequest request = this.pageContext.getRequest();</span>
+<span class="nc" id="L57">        RequestContext reqCtx = (RequestContext) request.getAttribute(RequestContext.REQCTX);</span>
+<span class="nc" id="L58">        Lang currentLang = (Lang) reqCtx.getExtraParam(SystemConstants.EXTRAPAR_CURRENT_LANG);</span>
+        try {
+<span class="nc" id="L60">            IPage page = (IPage) reqCtx.getExtraParam(SystemConstants.EXTRAPAR_CURRENT_PAGE);</span>
+<span class="nc" id="L61">            IPageManager pageManager = (IPageManager) ApsWebApplicationUtils.getBean(SystemConstants.PAGE_MANAGER, this.pageContext);</span>
+<span class="nc bnc" id="L62" title="All 4 branches missed.">            if (this.getParam() == null || this.getParam().equals(TITLE_INFO)) {</span>
+<span class="nc" id="L63">                this.extractPageTitle(page, currentLang, reqCtx);</span>
+<span class="nc bnc" id="L64" title="All 2 branches missed.">            } else if (this.getParam().equals(DESCRIPTION_INFO)) {</span>
+<span class="nc" id="L65">                this.extractPageDescription(page, currentLang, reqCtx);</span>
+<span class="nc bnc" id="L66" title="All 2 branches missed.">            } else if (this.getParam().equals(CODE_INFO)) {</span>
+<span class="nc" id="L67">                this.setValue(page.getCode());</span>
+<span class="nc bnc" id="L68" title="All 2 branches missed.">            } else if (this.getParam().equals(OWNER_INFO)) {</span>
+<span class="nc" id="L69">                this.extractPageOwner(page, reqCtx);</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">            } else if (this.getInfo().equals(CHILD_OF_INFO)) {</span>
+<span class="nc" id="L71">                this.extractIsChildOfTarget(page, pageManager);</span>
+<span class="nc bnc" id="L72" title="All 2 branches missed.">            } else if (this.getInfo().equals(HAS_CHILD)) {</span>
+<span class="nc" id="L73">                boolean hasChild = false;</span>
+<span class="nc" id="L74">                String[] childrenCodes = page.getChildrenCodes();</span>
+<span class="nc bnc" id="L75" title="All 2 branches missed.">                if (null != page.getChildrenCodes()) {</span>
+<span class="nc bnc" id="L76" title="All 2 branches missed.">                    for (String childrenCode : childrenCodes) {</span>
+<span class="nc" id="L77">                        IPage child = pageManager.getOnlinePage(childrenCode);</span>
+<span class="nc bnc" id="L78" title="All 2 branches missed.">                        if (null != child) {</span>
+<span class="nc" id="L79">                            hasChild = true;</span>
+<span class="nc" id="L80">                            break;</span>
+                        }
+                    }
+                }
+<span class="nc" id="L84">                this.setValue(Boolean.toString(hasChild));</span>
+            }
+<span class="nc bnc" id="L86" title="All 2 branches missed.">            if (null == this.getValue()) {</span>
+<span class="nc" id="L87">                this.setValue(&quot;&quot;);</span>
+            }
+<span class="nc" id="L89">            this.evalValue();</span>
+<span class="nc" id="L90">        } catch (Throwable t) {</span>
+<span class="nc" id="L91">            _logger.error(&quot;error in doStartTag&quot;, t);</span>
+<span class="nc" id="L92">            throw new JspException(&quot;Error during tag initialization &quot;, t);</span>
+<span class="nc" id="L93">        }</span>
+<span class="nc" id="L94">        return EVAL_PAGE;</span>
+    }
+
+    protected void extractPageDescription(IPage page, Lang currentLang, RequestContext reqCtx) {
+<span class="nc" id="L98">        PageMetadata pageMetadata = page.getMetadata();</span>
+<span class="nc bnc" id="L99" title="All 4 branches missed.">        if (!(pageMetadata instanceof SeoPageMetadata) || !((SeoPageMetadata) pageMetadata).isUseExtraDescriptions()) {</span>
+<span class="nc" id="L100">            this.extractPageDescription(page, currentLang);</span>
+<span class="nc" id="L101">            return;</span>
+        }
+<span class="nc" id="L103">        Object extraDescriptionObject = reqCtx.getExtraParam(JpseoSystemConstants.EXTRAPAR_EXTRA_PAGE_DESCRIPTIONS);</span>
+<span class="nc bnc" id="L104" title="All 2 branches missed.">        if (null == extraDescriptionObject) {</span>
+<span class="nc" id="L105">            this.extractPageDescription(page, currentLang);</span>
+<span class="nc" id="L106">            return;</span>
+        }
+<span class="nc bnc" id="L108" title="All 2 branches missed.">        if (extraDescriptionObject instanceof String) {</span>
+<span class="nc" id="L109">            String extraDescriptionString = (String) extraDescriptionObject;</span>
+<span class="nc bnc" id="L110" title="All 2 branches missed.">            if (extraDescriptionString.trim().length() &gt; 0) {</span>
+<span class="nc" id="L111">                this.setValue(extraDescriptionString);</span>
+            } else {
+<span class="nc" id="L113">                this.extractPageDescription(page, currentLang);</span>
+            }
+<span class="nc bnc" id="L115" title="All 2 branches missed.">        } else if (extraDescriptionObject instanceof Map&lt;?, ?&gt;) {</span>
+<span class="nc" id="L116">            this.extractPageDescriptionFromMap(currentLang, (Map) extraDescriptionObject);</span>
+<span class="nc bnc" id="L117" title="All 2 branches missed.">            if (null == this.getValue()) {</span>
+<span class="nc" id="L118">                this.extractPageDescription(page, currentLang);</span>
+            }
+        } else {
+<span class="nc" id="L121">            this.extractPageDescription(page, currentLang);</span>
+        }
+<span class="nc" id="L123">    }</span>
+
+    // METODO UGUALE
+    //method equals than tag PageInfoTag
+    protected void extractPageDescription(IPage page, Lang currentLang) {
+<span class="nc" id="L128">        PageMetadata pageMetadata = page.getMetadata();</span>
+<span class="nc bnc" id="L129" title="All 4 branches missed.">        if (!(pageMetadata instanceof SeoPageMetadata) || null == ((SeoPageMetadata) pageMetadata).getDescriptions()) {</span>
+<span class="nc" id="L130">            return;</span>
+        }
+<span class="nc" id="L132">        ApsProperties descriptions = ((SeoPageMetadata) pageMetadata).getDescriptions();</span>
+<span class="nc" id="L133">        PageMetatag metatag = null;</span>
+<span class="nc bnc" id="L134" title="All 4 branches missed.">        if ((this.getLangCode() == null) || (this.getLangCode().equals(&quot;&quot;))</span>
+<span class="nc bnc" id="L135" title="All 2 branches missed.">                || (currentLang.getCode().equalsIgnoreCase(this.getLangCode()))) {</span>
+<span class="nc" id="L136">            metatag = (PageMetatag) descriptions.get(currentLang.getCode());</span>
+        } else {
+<span class="nc" id="L138">            metatag = (PageMetatag) descriptions.get(this.getLangCode());</span>
+        }
+<span class="nc bnc" id="L140" title="All 4 branches missed.">        if (metatag == null || null == metatag.getValue()) {</span>
+<span class="nc" id="L141">            ILangManager langManager</span>
+<span class="nc" id="L142">                    = (ILangManager) ApsWebApplicationUtils.getBean(SystemConstants.LANGUAGE_MANAGER, this.pageContext);</span>
+<span class="nc" id="L143">            metatag = (PageMetatag) descriptions.get(langManager.getDefaultLang().getCode());</span>
+        }
+<span class="nc bnc" id="L145" title="All 2 branches missed.">        if (null != metatag) {</span>
+<span class="nc" id="L146">            this.setValue(metatag.getValue());</span>
+        }
+<span class="nc" id="L148">    }</span>
+
+    private void extractPageDescriptionFromMap(Lang currentLang, Map extraDescriptionsMap) {
+<span class="nc" id="L151">        Object value = null;</span>
+<span class="nc bnc" id="L152" title="All 4 branches missed.">        if ((this.getLangCode() == null) || (this.getLangCode().equals(&quot;&quot;))</span>
+<span class="nc bnc" id="L153" title="All 2 branches missed.">                || (currentLang.getCode().equalsIgnoreCase(this.getLangCode()))) {</span>
+<span class="nc" id="L154">            value = extraDescriptionsMap.get(currentLang.getCode());</span>
+        } else {
+<span class="nc" id="L156">            value = extraDescriptionsMap.get(this.getLangCode());</span>
+        }
+<span class="nc bnc" id="L158" title="All 4 branches missed.">        if (value == null || value.toString().trim().equals(&quot;&quot;)) {</span>
+<span class="nc" id="L159">            ILangManager langManager</span>
+<span class="nc" id="L160">                    = (ILangManager) ApsWebApplicationUtils.getBean(SystemConstants.LANGUAGE_MANAGER, this.pageContext);</span>
+<span class="nc" id="L161">            value = extraDescriptionsMap.get(langManager.getDefaultLang().getCode());</span>
+        }
+<span class="nc bnc" id="L163" title="All 4 branches missed.">        if (null != value &amp;&amp; value.toString().trim().length() &gt; 0) {</span>
+<span class="nc" id="L164">            this.setValue(value.toString());</span>
+        }
+<span class="nc" id="L166">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
