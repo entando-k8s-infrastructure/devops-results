@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ResourcesController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Plugin: CMS</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.plugins.jacms.web.resource</a> &gt; <span class="el_source">ResourcesController.java</span></div><h1>ResourcesController.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.entando.plugins.jacms.web.resource;
+
+import com.agiletec.aps.system.services.role.Permission;
+import com.agiletec.aps.system.services.user.UserDetails;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
+import org.entando.entando.aps.util.HttpSessionHelper;
+import org.entando.entando.plugins.jacms.aps.system.services.resource.ResourcesService;
+import org.entando.entando.plugins.jacms.web.resource.model.AssetDto;
+import org.entando.entando.plugins.jacms.web.resource.model.ListAssetsFolderResponse;
+import org.entando.entando.plugins.jacms.web.resource.request.CreateResourceRequest;
+import org.entando.entando.plugins.jacms.web.resource.request.UpdateResourceRequest;
+import org.entando.entando.plugins.jacms.web.resource.validator.ResourcesValidator;
+import org.entando.entando.web.common.annotation.RestAccessControl;
+import org.entando.entando.web.common.model.PagedMetadata;
+import org.entando.entando.web.common.model.PagedRestResponse;
+import org.entando.entando.web.common.model.RestListRequest;
+import org.entando.entando.web.common.model.RestResponse;
+import org.entando.entando.web.common.model.SimpleRestResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import javax.servlet.http.HttpSession;
+import java.util.*;
+import java.util.stream.Collectors;
+
+<span class="pc bpc" id="L51" title="3 of 6 branches missed.">@RequiredArgsConstructor</span>
+@RestController
+public class ResourcesController {
+    public static final String ERRCODE_RESOURCE_NOT_FOUND = &quot;1&quot;;
+    public static final String ERRCODE_CATEGORY_NOT_FOUND = &quot;2&quot;;
+    public static final String ERRCODE_GROUP_NOT_FOUND = &quot;3&quot;;
+    public static final String ERRCODE_INVALID_FILE_TYPE = &quot;4&quot;;
+    public static final String ERRCODE_INVALID_RESOURCE_TYPE = &quot;5&quot;;
+
+<span class="fc" id="L60">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+
+    @NonNull private final ResourcesService service;
+    @NonNull private final ResourcesValidator resourceValidator;
+    @NonNull private final HttpSession httpSession;
+
+    @ApiOperation(value = &quot;LIST Resources&quot;, nickname = &quot;listResources&quot;, tags = {&quot;resources-controller&quot;})
+    @ApiResponses(value = {
+            @ApiResponse(code = 201, message = &quot;Created&quot;),
+            @ApiResponse(code = 401, message = &quot;Unauthorized&quot;)})
+    @GetMapping(&quot;/plugins/cms/assets&quot;)
+    @RestAccessControl(permission = Permission.MANAGE_RESOURCES)
+    public ResponseEntity&lt;PagedRestResponse&lt;AssetDto&gt;&gt; listAssets(@RequestParam(value = &quot;type&quot;, required = false) String type,
+            RestListRequest requestList) {
+<span class="nc" id="L74">        logger.debug(&quot;REST request - list image resources&quot;);</span>
+
+<span class="nc" id="L76">        resourceValidator.validateRestListRequest(requestList, AssetDto.class);</span>
+<span class="nc" id="L77">        PagedMetadata&lt;AssetDto&gt; result = service.listAssets(type, requestList);</span>
+<span class="nc" id="L78">        resourceValidator.validateRestListResult(requestList, result);</span>
+<span class="nc" id="L79">        return ResponseEntity.ok(new PagedRestResponse&lt;&gt;(result));</span>
+    }
+
+    @ApiOperation(value = &quot;LIST Resources&quot;, nickname = &quot;listResources&quot;, tags = {&quot;resources-controller&quot;})
+    @ApiResponses(value = {
+            @ApiResponse(code = 201, message = &quot;Created&quot;),
+            @ApiResponse(code = 401, message = &quot;Unauthorized&quot;)})
+    @GetMapping(&quot;/plugins/cms/assets/folder&quot;)
+    @RestAccessControl(permission = Permission.MANAGE_RESOURCES)
+    public ResponseEntity&lt;RestResponse&lt;List&lt;AssetDto&gt;, Map&lt;String, Object&gt;&gt;&gt; listAssetsFolder(
+            @RequestParam(value = &quot;folderPath&quot;, required = false) String folderPath) {
+<span class="nc" id="L90">        logger.debug(&quot;REST request - list resources folder&quot;);</span>
+
+<span class="nc" id="L92">        folderPath = sanitizeFolderPath(folderPath);</span>
+
+<span class="nc" id="L94">        ListAssetsFolderResponse result = service.listAssetsFolder(folderPath);</span>
+
+<span class="nc" id="L96">        Map&lt;String, Object&gt; metadata = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L97">        metadata.put(&quot;folderPath&quot;, result.getFolderPath());</span>
+<span class="nc" id="L98">        metadata.put(&quot;subfolders&quot;, result.getSubfolders());</span>
+
+<span class="nc" id="L100">        return ResponseEntity.ok(new RestResponse&lt;&gt;(result.getAssets(), metadata));</span>
+    }
+
+    private String sanitizeFolderPath(String folderPath) {
+
+<span class="nc bnc" id="L105" title="All 2 branches missed.">        if (folderPath == null) {</span>
+<span class="nc" id="L106">            return null;</span>
+        }
+
+<span class="nc" id="L109">        String result = folderPath.trim().replaceAll(&quot;/+&quot;, &quot;/&quot;);</span>
+
+<span class="nc bnc" id="L111" title="All 4 branches missed.">        if (result.equals(&quot;/&quot;) || result.equals(&quot;&quot;)) {</span>
+<span class="nc" id="L112">            return null;</span>
+        }
+
+<span class="nc bnc" id="L115" title="All 2 branches missed.">        if (result.startsWith(&quot;/&quot;)) {</span>
+<span class="nc" id="L116">            result = result.substring(1);</span>
+        }
+
+<span class="nc bnc" id="L119" title="All 2 branches missed.">        if (result.endsWith(&quot;/&quot;)) {</span>
+<span class="nc" id="L120">            result = result.substring(0, result.length()-1);</span>
+        }
+
+<span class="nc" id="L123">        return result;</span>
+    }
+
+    @ApiOperation(value = &quot;CREATE Resource&quot;, nickname = &quot;createResource&quot;, tags = {&quot;resources-controller&quot;})
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = &quot;OK&quot;),
+            @ApiResponse(code = 401, message = &quot;Unauthorized&quot;)})
+    @PostMapping(value = &quot;/plugins/cms/assets&quot;)
+    @RestAccessControl(permission = Permission.MANAGE_RESOURCES)
+    public ResponseEntity&lt;SimpleRestResponse&lt;AssetDto&gt;&gt; createAsset(
+            @RequestParam(value = &quot;metadata&quot;) String request,
+            @RequestParam(value = &quot;file&quot;) MultipartFile file) throws JsonProcessingException {
+<span class="fc" id="L135">        logger.debug(&quot;REST request - create new resource&quot;);</span>
+
+<span class="fc" id="L137">        CreateResourceRequest resourceRequest = new ObjectMapper().readValue(request, CreateResourceRequest.class);</span>
+
+<span class="fc" id="L139">        List&lt;String&gt; categoriesList = Optional.ofNullable(resourceRequest.getCategories()).orElse(Collections.emptyList())</span>
+<span class="fc" id="L140">                .stream()</span>
+<span class="fc" id="L141">                .map(String::trim)</span>
+<span class="pc bnc" id="L142" title="All 2 branches missed.">                .filter(c -&gt; c.length() &gt; 0)</span>
+<span class="fc" id="L143">                .collect(Collectors.toList());</span>
+
+<span class="fc" id="L145">        AssetDto result = service</span>
+<span class="fc" id="L146">                .createAsset(resourceRequest.getType(), file, resourceRequest.getGroup(), categoriesList, resourceRequest.getFolderPath(),</span>
+<span class="fc" id="L147">                        HttpSessionHelper.extractCurrentUser(httpSession));</span>
+<span class="fc" id="L148">        return ResponseEntity.ok(new SimpleRestResponse&lt;&gt;(result));</span>
+    }
+
+    @ApiOperation(value = &quot;CLONE Resource&quot;, nickname = &quot;cloneResource&quot;, tags = {&quot;resources-controller&quot;})
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = &quot;OK&quot;),
+            @ApiResponse(code = 401, message = &quot;Unauthorized&quot;)})
+    @PostMapping(&quot;/plugins/cms/assets/{resourceId}/clone&quot;)
+    @RestAccessControl(permission = Permission.MANAGE_RESOURCES)
+    public ResponseEntity&lt;SimpleRestResponse&lt;AssetDto&gt;&gt; cloneAsset(@PathVariable(&quot;resourceId&quot;) String resourceId) {
+<span class="nc" id="L158">        logger.debug(&quot;REST request - clone resource&quot;);</span>
+<span class="nc" id="L159">        AssetDto result = service.cloneAsset(resourceId);</span>
+<span class="nc" id="L160">        return ResponseEntity.ok(new SimpleRestResponse&lt;&gt;(result));</span>
+    }
+
+    @ApiOperation(value = &quot;EDIT Resource&quot;, nickname = &quot;editResource&quot;, tags = {&quot;resources-controller&quot;})
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = &quot;OK&quot;),
+            @ApiResponse(code = 401, message = &quot;Unauthorized&quot;)})
+    @PostMapping(value = &quot;/plugins/cms/assets/{resourceId}&quot;, consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @RestAccessControl(permission = Permission.MANAGE_RESOURCES)
+    public ResponseEntity&lt;SimpleRestResponse&lt;AssetDto&gt;&gt; editAsset(@PathVariable(&quot;resourceId&quot;) String resourceId,
+            @RequestParam(value = &quot;metadata&quot;) String request,
+            @RequestParam(value = &quot;file&quot;, required = false) MultipartFile file) throws JsonProcessingException {
+<span class="nc" id="L172">        logger.debug(&quot;REST request - edit image resource with id {}&quot;, resourceId);</span>
+
+<span class="nc" id="L174">        UpdateResourceRequest resourceRequest = new ObjectMapper().readValue(request, UpdateResourceRequest.class);</span>
+
+<span class="nc" id="L176">        List&lt;String&gt; categoriesList = Optional.ofNullable(resourceRequest.getCategories()).orElse(Collections.emptyList())</span>
+<span class="nc" id="L177">                .stream()</span>
+<span class="nc" id="L178">                .map(String::trim)</span>
+<span class="nc bnc" id="L179" title="All 2 branches missed.">                .filter(c -&gt; c.length() &gt; 0)</span>
+<span class="nc" id="L180">                .collect(Collectors.toList());</span>
+
+<span class="nc" id="L182">        AssetDto result = service.editAsset(resourceId, file, resourceRequest.getDescription(), categoriesList, sanitizeFolderPath(resourceRequest.getFolderPath()));</span>
+<span class="nc" id="L183">        return ResponseEntity.ok(new SimpleRestResponse&lt;&gt;(result));</span>
+    }
+
+    @ApiOperation(value = &quot;DELETE Resource&quot;, nickname = &quot;deleteResource&quot;, tags = {&quot;resources-controller&quot;})
+    @ApiResponses(value = {
+            @ApiResponse(code = 200, message = &quot;OK&quot;),
+            @ApiResponse(code = 401, message = &quot;Unauthorized&quot;)})
+    @DeleteMapping(&quot;/plugins/cms/assets/{resourceId}&quot;)
+    @RestAccessControl(permission = Permission.MANAGE_RESOURCES)
+    public ResponseEntity&lt;SimpleRestResponse&lt;Map&gt;&gt; deleteAsset(@PathVariable(&quot;resourceId&quot;) String resourceId) {
+<span class="fc" id="L193">        logger.debug(&quot;REST request - delete resource with id {}&quot;, resourceId);</span>
+<span class="fc" id="L194">        service.deleteAsset(resourceId);</span>
+<span class="fc" id="L195">        return ResponseEntity.ok(new SimpleRestResponse&lt;&gt;(new HashMap()));</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
