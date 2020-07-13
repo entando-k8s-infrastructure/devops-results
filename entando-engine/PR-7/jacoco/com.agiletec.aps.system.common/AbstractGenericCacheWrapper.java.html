@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractGenericCacheWrapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.common</a> &gt; <span class="el_source">AbstractGenericCacheWrapper.java</span></div><h1>AbstractGenericCacheWrapper.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package com.agiletec.aps.system.common;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import org.entando.entando.aps.system.exception.CacheItemNotFoundException;
+import org.springframework.cache.Cache;
+
+/**
+ * @author E.Santoboni
+ * @param &lt;O&gt; The object to manage
+ */
+<span class="fc" id="L28">public abstract class AbstractGenericCacheWrapper&lt;O extends Object&gt; extends AbstractCacheWrapper {</span>
+
+<span class="fc" id="L30">    protected static enum Action {</span>
+<span class="fc" id="L31">        ADD, UPDATE, DELETE</span>
+    }
+
+    protected void releaseCachedObjects(Cache cache) {
+<span class="fc" id="L35">        List&lt;String&gt; codes = (List&lt;String&gt;) this.get(cache, this.getCodesCacheKey(), List.class);</span>
+<span class="fc" id="L36">        this.releaseObjects(cache, codes);</span>
+<span class="pc bpc" id="L37" title="1 of 2 branches missed.">        if (null != codes) {</span>
+<span class="nc" id="L38">            cache.evict(this.getCodesCacheKey());</span>
+        }
+<span class="fc" id="L40">    }</span>
+
+    protected void insertObjectsOnCache(Cache cache, Map&lt;String, O&gt; objects) {
+<span class="fc" id="L43">        List&lt;String&gt; codes = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L44">        Iterator&lt;String&gt; iter = objects.keySet().iterator();</span>
+<span class="fc bfc" id="L45" title="All 2 branches covered.">        while (iter.hasNext()) {</span>
+<span class="fc" id="L46">            String key = iter.next();</span>
+<span class="fc" id="L47">            cache.put(this.getCacheKeyPrefix() + key, objects.get(key));</span>
+<span class="fc" id="L48">            codes.add(key);</span>
+<span class="fc" id="L49">        }</span>
+<span class="fc" id="L50">        cache.put(this.getCodesCacheKey(), codes);</span>
+<span class="fc" id="L51">    }</span>
+
+    protected void insertAndCleanCache(Cache cache, Map&lt;String, O&gt; objects) {
+<span class="nc" id="L54">        List&lt;String&gt; oldCodes = (List&lt;String&gt;) this.get(cache, this.getCodesCacheKey(), List.class);</span>
+<span class="nc" id="L55">        List&lt;String&gt; codes = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L56">        Iterator&lt;String&gt; iter = objects.keySet().iterator();</span>
+<span class="nc bnc" id="L57" title="All 2 branches missed.">        while (iter.hasNext()) {</span>
+<span class="nc" id="L58">            String key = iter.next();</span>
+<span class="nc" id="L59">            cache.put(this.getCacheKeyPrefix() + key, objects.get(key));</span>
+<span class="nc bnc" id="L60" title="All 2 branches missed.">            if (null != oldCodes) {</span>
+<span class="nc" id="L61">                oldCodes.remove(key);</span>
+            }
+<span class="nc" id="L63">            codes.add(key);</span>
+<span class="nc" id="L64">        }</span>
+<span class="nc" id="L65">        cache.put(this.getCodesCacheKey(), codes);</span>
+<span class="nc" id="L66">        this.releaseObjects(cache, oldCodes);</span>
+<span class="nc" id="L67">    }</span>
+
+    private void releaseObjects(Cache cache, List&lt;String&gt; keysToRelease) {
+<span class="pc bpc" id="L70" title="1 of 2 branches missed.">        if (null != keysToRelease) {</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">            for (String code : keysToRelease) {</span>
+<span class="nc" id="L72">                cache.evict(this.getCacheKeyPrefix() + code);</span>
+<span class="nc" id="L73">            }</span>
+        }
+<span class="fc" id="L75">    }</span>
+
+    protected &lt;O&gt; Map&lt;String, O&gt; getObjectMap() {
+<span class="nc" id="L78">        Map&lt;String, O&gt; map = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L79">        Cache cache = this.getCache();</span>
+<span class="nc" id="L80">        List&lt;String&gt; codes = (List&lt;String&gt;) this.get(cache, this.getCodesCacheKey(), List.class);</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">        if (null != codes) {</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">            for (String code : codes) {</span>
+<span class="nc" id="L83">                map.put(code, (O) this.get(cache, this.getCacheKeyPrefix() + code, Object.class));</span>
+<span class="nc" id="L84">            }</span>
+        }
+<span class="nc" id="L86">        return map;</span>
+    }
+
+    protected void add(String key, O object) {
+<span class="nc" id="L90">        this.manage(key, object, Action.ADD);</span>
+<span class="nc" id="L91">    }</span>
+
+    protected void update(String key, O object) {
+<span class="nc" id="L94">        this.manage(key, object, Action.UPDATE);</span>
+<span class="nc" id="L95">    }</span>
+
+    protected void remove(String key, O object) {
+<span class="nc" id="L98">        this.manage(key, object, Action.DELETE);</span>
+<span class="nc" id="L99">    }</span>
+
+    protected &lt;O&gt; void manage(String key, O object, Action operation) {
+<span class="pc bpc" id="L102" title="1 of 2 branches missed.">        if (null == object) {</span>
+<span class="nc" id="L103">            return;</span>
+        }
+<span class="fc" id="L105">        Cache cache = this.getCache();</span>
+<span class="fc" id="L106">        List&lt;String&gt; codes = (List&lt;String&gt;) this.get(cache, this.getCodesCacheKey(), List.class);</span>
+<span class="pc bpc" id="L107" title="1 of 2 branches missed.">        if (Action.ADD.equals(operation)) {</span>
+<span class="nc bnc" id="L108" title="All 2 branches missed.">            if (!codes.contains(key)) {</span>
+<span class="nc" id="L109">                codes.add(key);</span>
+<span class="nc" id="L110">                cache.put(this.getCodesCacheKey(), codes);</span>
+            }
+<span class="nc" id="L112">            cache.put(this.getCacheKeyPrefix() + key, object);</span>
+<span class="fc bfc" id="L113" title="All 2 branches covered.">        } else if (Action.UPDATE.equals(operation)) {</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">            if (!codes.contains(key)) {</span>
+<span class="fc" id="L115">                throw new CacheItemNotFoundException(key, cache.getName());</span>
+            }
+<span class="fc" id="L117">            cache.put(this.getCacheKeyPrefix() + key, object);</span>
+<span class="pc bpc" id="L118" title="1 of 2 branches missed.">        } else if (Action.DELETE.equals(operation)) {</span>
+<span class="fc" id="L119">            codes.remove(key);</span>
+<span class="fc" id="L120">            cache.evict(this.getCacheKeyPrefix() + key);</span>
+<span class="fc" id="L121">            cache.put(this.getCodesCacheKey(), codes);</span>
+        }
+<span class="fc" id="L123">    }</span>
+
+    protected abstract String getCodesCacheKey();
+
+    protected abstract String getCacheKeyPrefix();
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

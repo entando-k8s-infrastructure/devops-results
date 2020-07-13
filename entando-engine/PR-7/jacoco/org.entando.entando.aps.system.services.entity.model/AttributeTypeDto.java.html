@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AttributeTypeDto.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.system.services.entity.model</a> &gt; <span class="el_source">AttributeTypeDto.java</span></div><h1>AttributeTypeDto.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.entando.aps.system.services.entity.model;
+
+import com.agiletec.aps.system.common.entity.IEntityManager;
+import com.agiletec.aps.system.common.entity.model.attribute.AbstractListAttribute;
+import com.agiletec.aps.system.common.entity.model.attribute.AttributeInterface;
+import com.agiletec.aps.system.common.entity.model.attribute.AttributeRole;
+import com.agiletec.aps.system.common.entity.model.attribute.DateAttribute;
+import com.agiletec.aps.system.common.entity.model.attribute.EnumeratorAttribute;
+import com.agiletec.aps.system.common.entity.model.attribute.NumberAttribute;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import com.agiletec.aps.system.common.searchengine.IndexableAttributeInterface;
+import org.entando.entando.aps.system.common.entity.model.attribute.EnumeratorMapAttribute;
+
+/**
+ * @author E.Santoboni
+ */
+public class AttributeTypeDto implements Serializable {
+
+    private String code;
+    private boolean multilingual;
+    private boolean textAttribute;
+    private boolean simple;
+    private boolean searchableOptionSupported;
+    private boolean indexableOptionSupported;
+    private boolean textFilterSupported;
+    private boolean dateFilterSupported;
+    private boolean numberFilterSupported;
+    private boolean enumeratorOptionsSupported;
+    private boolean enumeratorMapOptionsSupported;
+    private boolean listAttribute;
+<span class="nc" id="L48">    private List&lt;String&gt; enumeratorExtractorBeans = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L49">    private List&lt;String&gt; enumeratorMapExtractorBeans = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L50">    private List&lt;AttributePropertyDto&gt; allowedRoles = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L51">    private List&lt;AttributePropertyDto&gt; allowedDisablingCodes = new ArrayList&lt;&gt;();</span>
+
+<span class="nc" id="L53">    public AttributeTypeDto() {</span>
+<span class="nc" id="L54">    }</span>
+
+<span class="nc" id="L56">    public AttributeTypeDto(AttributeInterface attribute, IEntityManager entityManager) {</span>
+<span class="nc" id="L57">        this.setCode(attribute.getType());</span>
+<span class="nc" id="L58">        this.setMultilingual(attribute.isMultilingual());</span>
+<span class="nc" id="L59">        this.setSimple(attribute.isSimple());</span>
+<span class="nc" id="L60">        this.setTextAttribute(attribute.isTextAttribute());</span>
+<span class="nc" id="L61">        Map&lt;String, String&gt; disablingCodes = entityManager.getAttributeDisablingCodes();</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">        if (null != disablingCodes) {</span>
+<span class="nc" id="L63">            disablingCodes.keySet().stream()</span>
+<span class="nc" id="L64">                    .forEach(i -&gt; this.allowedDisablingCodes.add(new AttributePropertyDto(i, disablingCodes.get(i))));</span>
+        }
+<span class="nc" id="L66">        List&lt;AttributeRole&gt; roles = entityManager.getAttributeRoles();</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">        if (null != roles) {</span>
+<span class="nc" id="L68">            roles.stream().filter(i -&gt; i.getAllowedAttributeTypes().contains(attribute.getType()))</span>
+<span class="nc" id="L69">                    .forEach(i -&gt; this.allowedRoles.add(new AttributePropertyDto(i.getName(), i.getDescription())));</span>
+        }
+<span class="nc" id="L71">        this.setSearchableOptionSupported(attribute.isSearchableOptionSupported());</span>
+<span class="nc" id="L72">        this.setTextFilterSupported(attribute.isTextAttribute());</span>
+<span class="nc" id="L73">        this.setDateFilterSupported(attribute instanceof DateAttribute);</span>
+<span class="nc" id="L74">        this.setNumberFilterSupported(attribute instanceof NumberAttribute);</span>
+<span class="nc bnc" id="L75" title="All 2 branches missed.">        if (attribute instanceof EnumeratorMapAttribute) {</span>
+<span class="nc" id="L76">            this.setEnumeratorMapOptionsSupported(true);</span>
+        } else {
+<span class="nc" id="L78">            this.setEnumeratorOptionsSupported(attribute instanceof EnumeratorAttribute);</span>
+        }
+<span class="nc" id="L80">        this.setListAttribute(attribute instanceof AbstractListAttribute);</span>
+<span class="nc" id="L81">        this.setIndexableOptionSupported(attribute instanceof IndexableAttributeInterface);</span>
+<span class="nc" id="L82">    }</span>
+
+    public String getCode() {
+<span class="nc" id="L85">        return code;</span>
+    }
+
+    public void setCode(String code) {
+<span class="nc" id="L89">        this.code = code;</span>
+<span class="nc" id="L90">    }</span>
+
+    public boolean isMultilingual() {
+<span class="nc" id="L93">        return multilingual;</span>
+    }
+
+    public void setMultilingual(boolean multilingual) {
+<span class="nc" id="L97">        this.multilingual = multilingual;</span>
+<span class="nc" id="L98">    }</span>
+
+    public boolean isTextAttribute() {
+<span class="nc" id="L101">        return textAttribute;</span>
+    }
+
+    public void setTextAttribute(boolean textAttribute) {
+<span class="nc" id="L105">        this.textAttribute = textAttribute;</span>
+<span class="nc" id="L106">    }</span>
+
+    public boolean isSimple() {
+<span class="nc" id="L109">        return simple;</span>
+    }
+
+    public void setSimple(boolean simple) {
+<span class="nc" id="L113">        this.simple = simple;</span>
+<span class="nc" id="L114">    }</span>
+
+    public boolean isSearchableOptionSupported() {
+<span class="nc" id="L117">        return searchableOptionSupported;</span>
+    }
+
+    public void setSearchableOptionSupported(boolean searchableOptionSupported) {
+<span class="nc" id="L121">        this.searchableOptionSupported = searchableOptionSupported;</span>
+<span class="nc" id="L122">    }</span>
+
+    public boolean isIndexableOptionSupported() {
+<span class="nc" id="L125">        return indexableOptionSupported;</span>
+    }
+
+    public void setIndexableOptionSupported(boolean indexableOptionSupported) {
+<span class="nc" id="L129">        this.indexableOptionSupported = indexableOptionSupported;</span>
+<span class="nc" id="L130">    }</span>
+
+    public boolean isTextFilterSupported() {
+<span class="nc" id="L133">        return textFilterSupported;</span>
+    }
+
+    public void setTextFilterSupported(boolean textFilterSupported) {
+<span class="nc" id="L137">        this.textFilterSupported = textFilterSupported;</span>
+<span class="nc" id="L138">    }</span>
+
+    public boolean isDateFilterSupported() {
+<span class="nc" id="L141">        return dateFilterSupported;</span>
+    }
+
+    public void setDateFilterSupported(boolean dateFilterSupported) {
+<span class="nc" id="L145">        this.dateFilterSupported = dateFilterSupported;</span>
+<span class="nc" id="L146">    }</span>
+
+    public boolean isNumberFilterSupported() {
+<span class="nc" id="L149">        return numberFilterSupported;</span>
+    }
+
+    public void setNumberFilterSupported(boolean numberFilterSupported) {
+<span class="nc" id="L153">        this.numberFilterSupported = numberFilterSupported;</span>
+<span class="nc" id="L154">    }</span>
+
+    public boolean isEnumeratorOptionsSupported() {
+<span class="nc" id="L157">        return enumeratorOptionsSupported;</span>
+    }
+
+    public void setEnumeratorOptionsSupported(boolean enumeratorOptionsSupported) {
+<span class="nc" id="L161">        this.enumeratorOptionsSupported = enumeratorOptionsSupported;</span>
+<span class="nc" id="L162">    }</span>
+
+    public boolean isEnumeratorMapOptionsSupported() {
+<span class="nc" id="L165">        return enumeratorMapOptionsSupported;</span>
+    }
+
+    public void setEnumeratorMapOptionsSupported(boolean enumeratorMapOptionsSupported) {
+<span class="nc" id="L169">        this.enumeratorMapOptionsSupported = enumeratorMapOptionsSupported;</span>
+<span class="nc" id="L170">    }</span>
+
+    public List&lt;String&gt; getEnumeratorExtractorBeans() {
+<span class="nc" id="L173">        return enumeratorExtractorBeans;</span>
+    }
+
+    public void setEnumeratorExtractorBeans(List&lt;String&gt; enumeratorExtractorBeans) {
+<span class="nc" id="L177">        this.enumeratorExtractorBeans = enumeratorExtractorBeans;</span>
+<span class="nc" id="L178">    }</span>
+
+    public List&lt;String&gt; getEnumeratorMapExtractorBeans() {
+<span class="nc" id="L181">        return enumeratorMapExtractorBeans;</span>
+    }
+
+    public void setEnumeratorMapExtractorBeans(List&lt;String&gt; enumeratorMapExtractorBeans) {
+<span class="nc" id="L185">        this.enumeratorMapExtractorBeans = enumeratorMapExtractorBeans;</span>
+<span class="nc" id="L186">    }</span>
+
+    public List&lt;AttributePropertyDto&gt; getAllowedRoles() {
+<span class="nc" id="L189">        return allowedRoles;</span>
+    }
+
+    public void setAllowedRoles(List&lt;AttributePropertyDto&gt; allowedRoles) {
+<span class="nc" id="L193">        this.allowedRoles = allowedRoles;</span>
+<span class="nc" id="L194">    }</span>
+
+    public List&lt;AttributePropertyDto&gt; getAllowedDisablingCodes() {
+<span class="nc" id="L197">        return allowedDisablingCodes;</span>
+    }
+
+    public void setAllowedDisablingCodes(List&lt;AttributePropertyDto&gt; allowedDisablingCodes) {
+<span class="nc" id="L201">        this.allowedDisablingCodes = allowedDisablingCodes;</span>
+<span class="nc" id="L202">    }</span>
+
+    public boolean isListAttribute() {
+<span class="nc" id="L205">        return listAttribute;</span>
+    }
+
+    public void setListAttribute(boolean listAttribute) {
+<span class="nc" id="L209">        this.listAttribute = listAttribute;</span>
+<span class="nc" id="L210">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
