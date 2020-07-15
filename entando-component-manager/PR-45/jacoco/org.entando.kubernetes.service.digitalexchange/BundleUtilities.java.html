@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BundleUtilities.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.service.digitalexchange</a> &gt; <span class="el_source">BundleUtilities.java</span></div><h1>BundleUtilities.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.service.digitalexchange;
+
+import java.text.DateFormat;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.Locale;
+import lombok.SneakyThrows;
+import org.entando.kubernetes.exception.EntandoComponentManagerException;
+import org.entando.kubernetes.model.bundle.EntandoComponentBundle;
+import org.entando.kubernetes.model.bundle.EntandoComponentBundleVersion;
+
+public class BundleUtilities {
+
+<span class="fc" id="L14">    private static DateFormat dateFormat = DateFormat.getDateInstance(DateFormat.DEFAULT, Locale.getDefault());</span>
+
+    private BundleUtilities() { }
+
+    public static EntandoComponentBundleVersion getBundleVersionOrFail(EntandoComponentBundle bundle, String version) {
+<span class="fc bfc" id="L19" title="All 2 branches covered.">        if (isLatestVersion(version)) {</span>
+<span class="fc" id="L20">            return getBundleLatestVersion(bundle);</span>
+        }
+
+<span class="fc bfc" id="L23" title="All 2 branches covered.">        if (!isSemanticVersion(version)) {</span>
+<span class="fc" id="L24">            throw new EntandoComponentManagerException(</span>
+<span class="fc" id="L25">                    &quot;Invalid version '&quot; + version + &quot;' for bundle '&quot; + bundle.getSpec().getCode() + &quot;'&quot;);</span>
+        }
+
+<span class="fc" id="L28">        return bundle.getSpec().getVersions().stream()</span>
+<span class="fc" id="L29">                .filter(v -&gt; v.getVersion().equals(version))</span>
+<span class="fc" id="L30">                .findFirst()</span>
+<span class="pc" id="L31">                .orElseThrow(() -&gt; new EntandoComponentManagerException(</span>
+<span class="nc" id="L32">                        &quot;Invalid version '&quot; + version + &quot;' for bundle '&quot; + bundle.getSpec().getCode() + &quot;'&quot;));</span>
+    }
+
+    public static EntandoComponentBundleVersion getBundleLatestVersion(EntandoComponentBundle bundle) {
+<span class="fc" id="L36">        return bundle.getSpec().getVersions().stream()</span>
+<span class="fc" id="L37">                .max(Comparator.comparing(BundleUtilities::parseDate)) //Find latest version</span>
+<span class="pc" id="L38">                .orElseThrow(() -&gt; new EntandoComponentManagerException(</span>
+<span class="nc" id="L39">                        &quot;No versions found for Bundle '&quot; + bundle.getSpec().getCode() + &quot;'&quot;));</span>
+    }
+
+<span class="nc" id="L42">    @SneakyThrows</span>
+    private static Date parseDate(EntandoComponentBundleVersion version) {
+<span class="nc" id="L44">        return dateFormat.parse(version.getTimestamp());</span>
+    }
+
+    public static boolean isLatestVersion(String version) {
+<span class="fc bfc" id="L48" title="All 4 branches covered.">        return version == null || version.equals(&quot;latest&quot;);</span>
+    }
+
+    public static boolean isSemanticVersion(String versionToFind) {
+<span class="fc bfc" id="L52" title="All 2 branches covered.">        String possibleSemVer = versionToFind.startsWith(&quot;v&quot;) ? versionToFind.substring(1) : versionToFind;</span>
+<span class="fc" id="L53">        return possibleSemVer.matches(getOfficialSemanticVersionRegex());</span>
+    }
+
+    /**
+     * Check semantic version definition: https://semver.org/#is-v123-a-semantic-version
+     * @return The semantic version PCRE compatible regular expression
+     */
+    public static String getOfficialSemanticVersionRegex() {
+<span class="fc" id="L61">        return &quot;^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>

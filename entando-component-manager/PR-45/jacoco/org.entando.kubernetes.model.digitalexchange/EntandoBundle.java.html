@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EntandoBundle.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.model.digitalexchange</a> &gt; <span class="el_source">EntandoBundle.java</span></div><h1>EntandoBundle.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.kubernetes.model.digitalexchange;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
+import java.util.Date;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+import javax.persistence.Column;
+import javax.persistence.Convert;
+import javax.persistence.Entity;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.Lob;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import lombok.Data;
+import org.apache.commons.compress.utils.Sets;
+import org.entando.kubernetes.model.bundle.EntandoComponentBundle;
+import org.entando.kubernetes.model.bundle.EntandoComponentBundleSpec;
+import org.entando.kubernetes.model.job.EntandoBundleJob;
+import org.entando.kubernetes.model.web.SystemConstants;
+import org.entando.kubernetes.service.digitalexchange.BundleUtilities;
+import org.springframework.validation.annotation.Validated;
+
+@Data
+@Validated
+@Entity
+@Table(name = &quot;installed_entando_bundles&quot;)
+public class EntandoBundle {
+
+
+    @Id
+    @NotNull
+    @Size(min = 1, max = 255)
+    @Column(name = &quot;id&quot;, unique = true, nullable = false)
+    private String id;
+
+    @NotNull
+    @Size(min = 1, max = 255)
+    @Column(name = &quot;name&quot;, nullable = false)
+    private String name;
+
+    @NotNull
+    @Size(min = 1, max = 255)
+    @Column(name = &quot;type&quot;)
+    @Convert(converter = BundleComponentTypesConverter.class)
+    private Set&lt;String&gt; type;
+
+    @OneToOne
+    @JoinColumn(name = &quot;job_id&quot;)
+    private EntandoBundleJob job;
+
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = SystemConstants.API_DATE_FORMAT)
+    @Column(name = &quot;last_update&quot;)
+    private Date lastUpdate;
+
+    @Column(name = &quot;version&quot;, nullable = false)
+    private String version;
+
+    @Column(name = &quot;description&quot;)
+    private String description;
+
+    @Lob
+    @Column(name = &quot;image&quot;)
+    @Convert(converter = ImageConverter.class)
+    private String image;
+
+    @Column(name = &quot;rating&quot;)
+    private double rating;
+
+    @Column(name = &quot;installed&quot;)
+    private boolean installed;
+
+    @Column(name = &quot;signature&quot;)
+    private String signature;
+
+    @Convert(converter = HashMapConverter.class)
+    @Column(name = &quot;metadata&quot;)
+    private Map&lt;String, String&gt; metadata;
+
+    public static EntandoBundle newFrom(EntandoComponentBundle bundle) {
+<span class="fc" id="L97">        EntandoBundle dec = new EntandoBundle();</span>
+<span class="fc" id="L98">        String bundleId = bundle.getMetadata().getName();</span>
+<span class="fc" id="L99">        EntandoComponentBundleSpec bd = bundle.getSpec();</span>
+<span class="fc" id="L100">        Set&lt;String&gt; bundleComponentTypes = Sets.newHashSet(&quot;bundle&quot;);</span>
+<span class="fc bfc" id="L101" title="All 2 branches covered.">        if (bundle.getMetadata().getLabels() != null) {</span>
+<span class="fc" id="L102">            bundle.getMetadata().getLabels()</span>
+<span class="fc" id="L103">                    .entrySet().stream()</span>
+<span class="fc" id="L104">                    .filter(e -&gt; ComponentType.isValidType(e.getKey()))</span>
+<span class="fc" id="L105">                    .map(Entry::getKey)</span>
+<span class="fc" id="L106">                    .forEach(bundleComponentTypes::add);</span>
+        }
+<span class="fc" id="L108">        dec.setId(bundleId);</span>
+<span class="fc" id="L109">        dec.setName(bundle.getSpec().getTitle());</span>
+<span class="fc" id="L110">        dec.setDescription(bd.getDescription());</span>
+<span class="fc" id="L111">        dec.setRating(5);</span>
+<span class="fc" id="L112">        dec.setType(bundleComponentTypes);</span>
+<span class="fc" id="L113">        dec.setLastUpdate(new Date());</span>
+<span class="fc" id="L114">        dec.setSignature(&quot;&quot;);</span>
+<span class="fc" id="L115">        dec.setInstalled(false);</span>
+<span class="fc" id="L116">        dec.setVersion(BundleUtilities.getBundleLatestVersion(bundle).getVersion()); //TODO @luca.cherubin Please check if this shouls always point to latest as was before this refactor!!</span>
+<span class="fc" id="L117">        dec.setImage(bd.getThumbnail());</span>
+<span class="fc" id="L118">        return dec;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
