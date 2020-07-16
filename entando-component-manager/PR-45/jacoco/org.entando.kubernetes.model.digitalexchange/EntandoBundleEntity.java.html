@@ -15,9 +15,9 @@ package org.entando.kubernetes.model.digitalexchange;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import java.util.Date;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.UUID;
 import javax.persistence.Column;
 import javax.persistence.Convert;
 import javax.persistence.Entity;
@@ -25,6 +25,7 @@ import javax.persistence.Id;
 import javax.persistence.JoinColumn;
 import javax.persistence.Lob;
 import javax.persistence.OneToOne;
+import javax.persistence.PrePersist;
 import javax.persistence.Table;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
@@ -33,8 +34,6 @@ import org.apache.commons.compress.utils.Sets;
 import org.entando.kubernetes.model.bundle.EntandoComponentBundle;
 import org.entando.kubernetes.model.bundle.EntandoComponentBundleSpec;
 import org.entando.kubernetes.model.job.EntandoBundleJob;
-import org.entando.kubernetes.model.web.SystemConstants;
-import org.entando.kubernetes.service.digitalexchange.BundleUtilities;
 import org.springframework.validation.annotation.Validated;
 
 @Data
@@ -43,17 +42,40 @@ import org.springframework.validation.annotation.Validated;
 @Table(name = &quot;installed_entando_bundles&quot;)
 public class EntandoBundleEntity {
 
-
     @Id
     @NotNull
-    @Size(min = 1, max = 255)
     @Column(name = &quot;id&quot;, unique = true, nullable = false)
-    private String id;
+    private UUID id;
+
 
     @NotNull
     @Size(min = 1, max = 255)
-    @Column(name = &quot;name&quot;, nullable = false)
-    private String name;
+    @Column(name = &quot;ecrId&quot;, nullable = false )
+    private String ecrId;
+
+    @NotNull
+    @Size(min = 1, max = 255)
+    @Column(name = &quot;code&quot;, nullable = false)
+    private String code;
+
+    @NotNull
+    @Size(min = 1, max = 255)
+    @Column(name = &quot;title&quot;)
+    private String title;
+
+    @NotNull
+    @Size(min = 1, max = 255)
+    @Column(name = &quot;organization&quot;, nullable = false)
+    private String organization;
+
+    @Column(name = &quot;description&quot;)
+    private String description;
+
+    @Lob
+    @Column(name = &quot;thumbnail&quot;)
+    @Convert(converter = ImageConverter.class)
+    private String thumbnail;
+
 
     @NotNull
     @Size(min = 1, max = 255)
@@ -62,59 +84,37 @@ public class EntandoBundleEntity {
     private Set&lt;String&gt; type;
 
     @OneToOne
-    @JoinColumn(name = &quot;job_id&quot;)
-    private EntandoBundleJob job;
+    @JoinColumn(name = &quot;last_job_id&quot;)
+    private EntandoBundleJob lastJob;
 
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = SystemConstants.API_DATE_FORMAT)
-    @Column(name = &quot;last_update&quot;)
-    private Date lastUpdate;
+    @OneToOne
+    @JoinColumn(name = &quot;installed_job_id&quot;)
+    private EntandoBundleJob installedJob;
 
-    @Column(name = &quot;version&quot;, nullable = false)
-    private String version;
+    @PrePersist
+    public void generateId() {
+<span class="fc" id="L96">        this.id = UUID.randomUUID();</span>
+<span class="fc" id="L97">    }</span>
 
-    @Column(name = &quot;description&quot;)
-    private String description;
-
-    @Lob
-    @Column(name = &quot;image&quot;)
-    @Convert(converter = ImageConverter.class)
-    private String image;
-
-    @Column(name = &quot;rating&quot;)
-    private double rating;
-
-    @Column(name = &quot;installed&quot;)
-    private boolean installed;
-
-    @Column(name = &quot;signature&quot;)
-    private String signature;
-
-    @Convert(converter = HashMapConverter.class)
-    @Column(name = &quot;metadata&quot;)
-    private Map&lt;String, String&gt; metadata;
 
     public static EntandoBundleEntity newFrom(EntandoComponentBundle bundle) {
-<span class="fc" id="L97">        EntandoBundleEntity dec = new EntandoBundleEntity();</span>
-<span class="fc" id="L98">        String bundleId = bundle.getMetadata().getName();</span>
-<span class="fc" id="L99">        EntandoComponentBundleSpec bd = bundle.getSpec();</span>
-<span class="fc" id="L100">        Set&lt;String&gt; bundleComponentTypes = Sets.newHashSet(&quot;bundle&quot;);</span>
-<span class="fc bfc" id="L101" title="All 2 branches covered.">        if (bundle.getMetadata().getLabels() != null) {</span>
-<span class="fc" id="L102">            bundle.getMetadata().getLabels()</span>
-<span class="fc" id="L103">                    .entrySet().stream()</span>
-<span class="fc" id="L104">                    .filter(e -&gt; ComponentType.isValidType(e.getKey()))</span>
-<span class="fc" id="L105">                    .map(Entry::getKey)</span>
-<span class="fc" id="L106">                    .forEach(bundleComponentTypes::add);</span>
+<span class="fc" id="L101">        EntandoBundleEntity dec = new EntandoBundleEntity();</span>
+<span class="fc" id="L102">        EntandoComponentBundleSpec bspc = bundle.getSpec();</span>
+<span class="fc" id="L103">        Set&lt;String&gt; bundleComponentTypes = Sets.newHashSet(&quot;bundle&quot;);</span>
+<span class="pc bpc" id="L104" title="1 of 2 branches missed.">        if (bundle.getMetadata().getLabels() != null) {</span>
+<span class="nc" id="L105">            bundle.getMetadata().getLabels()</span>
+<span class="nc" id="L106">                    .entrySet().stream()</span>
+<span class="nc" id="L107">                    .filter(e -&gt; ComponentType.isValidType(e.getKey()))</span>
+<span class="nc" id="L108">                    .map(Entry::getKey)</span>
+<span class="nc" id="L109">                    .forEach(bundleComponentTypes::add);</span>
         }
-<span class="fc" id="L108">        dec.setId(bundleId);</span>
-<span class="fc" id="L109">        dec.setName(bundle.getSpec().getTitle());</span>
-<span class="fc" id="L110">        dec.setDescription(bd.getDescription());</span>
-<span class="fc" id="L111">        dec.setRating(5);</span>
-<span class="fc" id="L112">        dec.setType(bundleComponentTypes);</span>
-<span class="fc" id="L113">        dec.setLastUpdate(new Date());</span>
-<span class="fc" id="L114">        dec.setSignature(&quot;&quot;);</span>
-<span class="fc" id="L115">        dec.setInstalled(false);</span>
-<span class="fc" id="L116">        dec.setVersion(BundleUtilities.getBundleLatestVersion(bundle).getVersion()); //TODO @luca.cherubin Please check if this shouls always point to latest as was before this refactor!!</span>
-<span class="fc" id="L117">        dec.setImage(bd.getThumbnail());</span>
+<span class="fc" id="L111">        dec.setEcrId(bundle.getMetadata().getName());</span>
+<span class="fc" id="L112">        dec.setCode(bspc.getCode());</span>
+<span class="fc" id="L113">        dec.setTitle(bspc.getTitle());</span>
+<span class="fc" id="L114">        dec.setDescription(bspc.getDescription());</span>
+<span class="fc" id="L115">        dec.setThumbnail(bspc.getThumbnail());</span>
+<span class="fc" id="L116">        dec.setOrganization(bspc.getOrganization());</span>
+<span class="fc" id="L117">        dec.setType(bundleComponentTypes);</span>
 <span class="fc" id="L118">        return dec;</span>
     }
 }
