@@ -16,7 +16,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.entando.kubernetes.exception.EntandoComponentManagerException;
 import org.entando.kubernetes.exception.digitalexchange.BundleNotInstalledException;
 import org.entando.kubernetes.exception.job.JobConflictException;
-import org.entando.kubernetes.model.bundle.EntandoBundle;
 import org.entando.kubernetes.model.bundle.installable.Installable;
 import org.entando.kubernetes.model.bundle.processor.ComponentProcessor;
 import org.entando.kubernetes.model.digitalexchange.ComponentType;
@@ -30,11 +29,10 @@ import org.entando.kubernetes.model.job.JobTracker;
 import org.entando.kubernetes.repository.EntandoBundleComponentJobRepository;
 import org.entando.kubernetes.repository.EntandoBundleJobRepository;
 import org.entando.kubernetes.repository.InstalledEntandoBundleRepository;
-import org.entando.kubernetes.service.ModelConverter;
 import org.entando.kubernetes.service.digitalexchange.component.EntandoBundleComponentUsageService;
 import org.springframework.stereotype.Service;
 
-<span class="fc" id="L37">@Slf4j</span>
+<span class="fc" id="L35">@Slf4j</span>
 @Service
 @RequiredArgsConstructor
 public class EntandoBundleUninstallService implements EntandoBundleJobExecutor {
@@ -46,148 +44,147 @@ public class EntandoBundleUninstallService implements EntandoBundleJobExecutor {
     private final @NonNull Map&lt;ComponentType, ComponentProcessor&gt; processorMap;
 
     public EntandoBundleJob uninstall(String componentId) {
-<span class="nc" id="L49">        EntandoBundle installedBundle = findInstalledBundleOrFail(componentId);</span>
+<span class="nc" id="L47">        EntandoBundleEntity installedBundle = findInstalledBundleOrFail(componentId);</span>
 
-<span class="nc" id="L51">        verifyBundleUninstallIsPossibleOrThrow(installedBundle);</span>
+<span class="nc" id="L49">        verifyBundleUninstallIsPossibleOrThrow(installedBundle);</span>
 
-<span class="nc" id="L53">        return createAndSubmitUninstallJob(installedBundle);</span>
+<span class="nc" id="L51">        return createAndSubmitUninstallJob(installedBundle);</span>
     }
 
-    private EntandoBundle findInstalledBundleOrFail(String componentId) {
-<span class="nc" id="L57">        return ModelConverter.fromEntity(installedComponentRepository.findById(componentId)</span>
-<span class="nc" id="L58">                    .orElseThrow(() -&gt; new BundleNotInstalledException(&quot;Bundle &quot; + componentId + &quot; is not installed&quot;)));</span>
+    private EntandoBundleEntity findInstalledBundleOrFail(String ecrId) {
+<span class="nc" id="L55">        return installedComponentRepository.findByEcrId(ecrId)</span>
+<span class="nc" id="L56">                    .orElseThrow(() -&gt; new BundleNotInstalledException(&quot;Bundle &quot; + ecrId + &quot; is not installed&quot;));</span>
     }
 
-    private void verifyBundleUninstallIsPossibleOrThrow(EntandoBundle bundle) {
-<span class="nc bnc" id="L62" title="All 4 branches missed.">        if (bundle.getInstalledJob() != null &amp;&amp; bundle.getInstalledJob().getStatus().equals(JobStatus.INSTALL_COMPLETED)) {</span>
-<span class="nc" id="L63">            verifyNoComponentInUseOrThrow(bundle);</span>
-<span class="nc" id="L64">            verifyNoConcurrentUninstallOrThrow(bundle);</span>
+    private void verifyBundleUninstallIsPossibleOrThrow(EntandoBundleEntity bundle) {
+<span class="nc bnc" id="L60" title="All 4 branches missed.">        if (bundle.getInstalledJob() != null &amp;&amp; bundle.getInstalledJob().getStatus().equals(JobStatus.INSTALL_COMPLETED)) {</span>
+<span class="nc" id="L61">            verifyNoComponentInUseOrThrow(bundle);</span>
+<span class="nc" id="L62">            verifyNoConcurrentUninstallOrThrow(bundle);</span>
         } else {
-<span class="nc" id="L66">            throw new EntandoComponentManagerException(</span>
-<span class="nc" id="L67">                    &quot;Installed bundle &quot; + bundle.getId() + &quot; associated with invalid job&quot;);</span>
+<span class="nc" id="L64">            throw new EntandoComponentManagerException(</span>
+<span class="nc" id="L65">                    &quot;Installed bundle &quot; + bundle.getId() + &quot; associated with invalid job&quot;);</span>
         }
-<span class="nc" id="L69">    }</span>
+<span class="nc" id="L67">    }</span>
 
-    private void verifyNoConcurrentUninstallOrThrow(EntandoBundle bundle) {
-<span class="nc" id="L72">        Optional&lt;EntandoBundleJob&gt; lastJob = jobRepo.findFirstByComponentIdOrderByStartedAtDesc(bundle.getCode());</span>
-<span class="nc" id="L73">        EnumSet&lt;JobStatus&gt; concurrentUninstallJobStatus = EnumSet</span>
-<span class="nc" id="L74">                .of(JobStatus.UNINSTALL_IN_PROGRESS, JobStatus.UNINSTALL_CREATED);</span>
-<span class="nc bnc" id="L75" title="All 4 branches missed.">        if (lastJob.isPresent() &amp;&amp; lastJob.get().getStatus().isAny(concurrentUninstallJobStatus)) {</span>
-<span class="nc" id="L76">            throw new JobConflictException(</span>
-<span class="nc" id="L77">                    &quot;A concurrent uninstall process for bundle &quot; + bundle.getId() + &quot; is running&quot;);</span>
+    private void verifyNoConcurrentUninstallOrThrow(EntandoBundleEntity bundle) {
+<span class="nc" id="L70">        Optional&lt;EntandoBundleJob&gt; lastJob = jobRepo.findFirstByComponentIdOrderByStartedAtDesc(bundle.getCode());</span>
+<span class="nc" id="L71">        EnumSet&lt;JobStatus&gt; concurrentUninstallJobStatus = EnumSet</span>
+<span class="nc" id="L72">                .of(JobStatus.UNINSTALL_IN_PROGRESS, JobStatus.UNINSTALL_CREATED);</span>
+<span class="nc bnc" id="L73" title="All 4 branches missed.">        if (lastJob.isPresent() &amp;&amp; lastJob.get().getStatus().isAny(concurrentUninstallJobStatus)) {</span>
+<span class="nc" id="L74">            throw new JobConflictException(</span>
+<span class="nc" id="L75">                    &quot;A concurrent uninstall process for bundle &quot; + bundle.getId() + &quot; is running&quot;);</span>
         }
-<span class="nc" id="L79">    }</span>
+<span class="nc" id="L77">    }</span>
 
-    private void verifyNoComponentInUseOrThrow(EntandoBundle bundle) {
-<span class="nc" id="L82">        List&lt;EntandoBundleComponentJob&gt; bundleComponentJobs = compJobRepo.findAllByParentJob(bundle.getInstalledJob());</span>
-<span class="nc" id="L83">        if (bundleComponentJobs.stream()</span>
-<span class="nc bnc" id="L84" title="All 4 branches missed.">                .anyMatch(e -&gt; usageService.getUsage(e.getComponentType(), e.getComponentId()).getUsage() &gt; 0)) {</span>
-<span class="nc" id="L85">            throw new JobConflictException(</span>
-<span class="nc" id="L86">                    &quot;Some of bundle &quot; + bundle.getId() + &quot; components are in use and bundle can't be uninstalled&quot;);</span>
+    private void verifyNoComponentInUseOrThrow(EntandoBundleEntity bundle) {
+<span class="nc" id="L80">        List&lt;EntandoBundleComponentJob&gt; bundleComponentJobs = compJobRepo.findAllByParentJob(bundle.getInstalledJob());</span>
+<span class="nc" id="L81">        if (bundleComponentJobs.stream()</span>
+<span class="nc bnc" id="L82" title="All 4 branches missed.">                .anyMatch(e -&gt; usageService.getUsage(e.getComponentType(), e.getComponentId()).getUsage() &gt; 0)) {</span>
+<span class="nc" id="L83">            throw new JobConflictException(</span>
+<span class="nc" id="L84">                    &quot;Some of bundle &quot; + bundle.getId() + &quot; components are in use and bundle can't be uninstalled&quot;);</span>
         }
-<span class="nc" id="L88">    }</span>
+<span class="nc" id="L86">    }</span>
 
-    private EntandoBundleJob createAndSubmitUninstallJob(EntandoBundle installedBundle) {
+    private EntandoBundleJob createAndSubmitUninstallJob(EntandoBundleEntity installedBundle) {
 
-<span class="nc" id="L92">        EntandoBundleJob installJob = installedBundle.getInstalledJob();</span>
+<span class="nc" id="L90">        EntandoBundleJob installJob = installedBundle.getInstalledJob();</span>
 
-<span class="nc" id="L94">        EntandoBundleJob uninstallJob = new EntandoBundleJob();</span>
-<span class="nc" id="L95">        uninstallJob.setComponentId(installJob.getComponentId());</span>
-<span class="nc" id="L96">        uninstallJob.setComponentName(installJob.getComponentName());</span>
-<span class="nc" id="L97">        uninstallJob.setComponentVersion(installJob.getComponentVersion());</span>
-<span class="nc" id="L98">        uninstallJob.setStatus(JobStatus.UNINSTALL_CREATED);</span>
-<span class="nc" id="L99">        uninstallJob.setProgress(0.0);</span>
-<span class="nc" id="L100">        EntandoBundleJob savedJob = jobRepo.save(uninstallJob);</span>
+<span class="nc" id="L92">        EntandoBundleJob uninstallJob = new EntandoBundleJob();</span>
+<span class="nc" id="L93">        uninstallJob.setComponentId(installJob.getComponentId());</span>
+<span class="nc" id="L94">        uninstallJob.setComponentName(installJob.getComponentName());</span>
+<span class="nc" id="L95">        uninstallJob.setComponentVersion(installJob.getComponentVersion());</span>
+<span class="nc" id="L96">        uninstallJob.setStatus(JobStatus.UNINSTALL_CREATED);</span>
+<span class="nc" id="L97">        uninstallJob.setProgress(0.0);</span>
+<span class="nc" id="L98">        EntandoBundleJob savedJob = jobRepo.save(uninstallJob);</span>
 
-<span class="nc" id="L102">        EntandoBundleEntity installEntity = installedComponentRepository.getOne(installedBundle.getId());</span>
-<span class="nc" id="L103">        installEntity.setLastJob(savedJob);</span>
-<span class="nc" id="L104">        installedComponentRepository.save(installEntity);</span>
+<span class="nc" id="L100">        installedBundle.setLastJob(savedJob);</span>
+<span class="nc" id="L101">        installedComponentRepository.save(installedBundle);</span>
 
-<span class="nc" id="L106">        submitUninstallAsync(uninstallJob, installJob);</span>
+<span class="nc" id="L103">        submitUninstallAsync(uninstallJob, installJob);</span>
 
-<span class="nc" id="L108">        return savedJob;</span>
+<span class="nc" id="L105">        return savedJob;</span>
     }
 
     private void submitUninstallAsync(EntandoBundleJob parentJob, EntandoBundleJob referenceJob) {
-<span class="nc" id="L112">        CompletableFuture.runAsync(() -&gt; {</span>
-<span class="nc" id="L113">            JobTracker&lt;EntandoBundleJob&gt; parentJobTracker = new JobTracker&lt;&gt;(parentJob, jobRepo);</span>
-<span class="nc" id="L114">            JobScheduler scheduler = new JobScheduler();</span>
+<span class="nc" id="L109">        CompletableFuture.runAsync(() -&gt; {</span>
+<span class="nc" id="L110">            JobTracker&lt;EntandoBundleJob&gt; parentJobTracker = new JobTracker&lt;&gt;(parentJob, jobRepo);</span>
+<span class="nc" id="L111">            JobScheduler scheduler = new JobScheduler();</span>
 
-<span class="nc" id="L116">            JobResult parentJobResult = JobResult.builder().status(JobStatus.UNINSTALL_IN_PROGRESS).build();</span>
-<span class="nc" id="L117">            parentJobTracker.startTracking(parentJobResult.getStatus());</span>
+<span class="nc" id="L113">            JobResult parentJobResult = JobResult.builder().status(JobStatus.UNINSTALL_IN_PROGRESS).build();</span>
+<span class="nc" id="L114">            parentJobTracker.startTracking(parentJobResult.getStatus());</span>
 
             try {
-<span class="nc" id="L120">                Queue&lt;EntandoBundleComponentJob&gt; uninstallJobs = createUninstallComponentJobs(parentJob, referenceJob);</span>
-<span class="nc" id="L121">                scheduler.queueAll(uninstallJobs);</span>
+<span class="nc" id="L117">                Queue&lt;EntandoBundleComponentJob&gt; uninstallJobs = createUninstallComponentJobs(parentJob, referenceJob);</span>
+<span class="nc" id="L118">                scheduler.queueAll(uninstallJobs);</span>
 
-<span class="nc" id="L123">                Optional&lt;EntandoBundleComponentJob&gt; optCompJob = scheduler.extractFromQueue();</span>
-<span class="nc bnc" id="L124" title="All 2 branches missed.">                while(optCompJob.isPresent()) {</span>
-<span class="nc" id="L125">                    EntandoBundleComponentJob uninstallJob = optCompJob.get();</span>
-<span class="nc" id="L126">                    JobTracker&lt;EntandoBundleComponentJob&gt; cjt = trackExecution(uninstallJob, this::executeUninstall);</span>
-<span class="nc bnc" id="L127" title="All 2 branches missed.">                    if (cjt.getJob().getStatus().equals(JobStatus.UNINSTALL_ERROR)) {</span>
-<span class="nc" id="L128">                        throw new EntandoComponentManagerException(parentJob.getComponentId()</span>
+<span class="nc" id="L120">                Optional&lt;EntandoBundleComponentJob&gt; optCompJob = scheduler.extractFromQueue();</span>
+<span class="nc bnc" id="L121" title="All 2 branches missed.">                while(optCompJob.isPresent()) {</span>
+<span class="nc" id="L122">                    EntandoBundleComponentJob uninstallJob = optCompJob.get();</span>
+<span class="nc" id="L123">                    JobTracker&lt;EntandoBundleComponentJob&gt; cjt = trackExecution(uninstallJob, this::executeUninstall);</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">                    if (cjt.getJob().getStatus().equals(JobStatus.UNINSTALL_ERROR)) {</span>
+<span class="nc" id="L125">                        throw new EntandoComponentManagerException(parentJob.getComponentId()</span>
                                 + &quot; uninstall can't proceed due to an error with one of the components&quot;);
                     }
-<span class="nc" id="L131">                    scheduler.recordProcessedComponentJob(cjt.getJob());</span>
-<span class="nc" id="L132">                    optCompJob = scheduler.extractFromQueue();</span>
-<span class="nc" id="L133">                }</span>
+<span class="nc" id="L128">                    scheduler.recordProcessedComponentJob(cjt.getJob());</span>
+<span class="nc" id="L129">                    optCompJob = scheduler.extractFromQueue();</span>
+<span class="nc" id="L130">                }</span>
 
-<span class="nc" id="L135">                installedComponentRepository.deleteById(parentJob.getComponentId());</span>
-<span class="nc" id="L136">                parentJobResult.setStatus(JobStatus.UNINSTALL_COMPLETED);</span>
-<span class="nc" id="L137">                parentJobResult.clearException();</span>
-<span class="nc" id="L138">                log.info(&quot;Component &quot; + parentJob.getComponentId() + &quot; uninstalled successfully&quot;);</span>
+<span class="nc" id="L132">                installedComponentRepository.deleteById(parentJob.getComponentId());</span>
+<span class="nc" id="L133">                parentJobResult.setStatus(JobStatus.UNINSTALL_COMPLETED);</span>
+<span class="nc" id="L134">                parentJobResult.clearException();</span>
+<span class="nc" id="L135">                log.info(&quot;Component &quot; + parentJob.getComponentId() + &quot; uninstalled successfully&quot;);</span>
 
-<span class="nc" id="L140">            } catch (Exception ex) {</span>
+<span class="nc" id="L137">            } catch (Exception ex) {</span>
 
-<span class="nc" id="L142">                log.error(&quot;An error occurred while uninstalling component &quot; + parentJob.getComponentId(), ex);</span>
-<span class="nc" id="L143">                parentJobResult.setStatus(JobStatus.UNINSTALL_ERROR);</span>
-<span class="nc" id="L144">                parentJobResult.setException(ex);</span>
-<span class="nc" id="L145">            }</span>
+<span class="nc" id="L139">                log.error(&quot;An error occurred while uninstalling component &quot; + parentJob.getComponentId(), ex);</span>
+<span class="nc" id="L140">                parentJobResult.setStatus(JobStatus.UNINSTALL_ERROR);</span>
+<span class="nc" id="L141">                parentJobResult.setException(ex);</span>
+<span class="nc" id="L142">            }</span>
 
-<span class="nc" id="L147">            parentJobTracker.stopTrackingTime(parentJobResult);</span>
-<span class="nc" id="L148">        });</span>
-<span class="nc" id="L149">    }</span>
+<span class="nc" id="L144">            parentJobTracker.stopTrackingTime(parentJobResult);</span>
+<span class="nc" id="L145">        });</span>
+<span class="nc" id="L146">    }</span>
 
     private JobTracker&lt;EntandoBundleComponentJob&gt; trackExecution(EntandoBundleComponentJob cj, Function&lt;Installable, JobResult&gt; action) {
-<span class="nc" id="L152">        JobTracker&lt;EntandoBundleComponentJob&gt; cjt = new JobTracker&lt;&gt;(cj, compJobRepo);</span>
-<span class="nc" id="L153">        cjt.startTracking(JobStatus.UNINSTALL_IN_PROGRESS);</span>
-<span class="nc" id="L154">        JobResult result = action.apply(cj.getInstallable());</span>
-<span class="nc" id="L155">        cjt.stopTrackingTime(result);</span>
-<span class="nc" id="L156">        return cjt;</span>
+<span class="nc" id="L149">        JobTracker&lt;EntandoBundleComponentJob&gt; cjt = new JobTracker&lt;&gt;(cj, compJobRepo);</span>
+<span class="nc" id="L150">        cjt.startTracking(JobStatus.UNINSTALL_IN_PROGRESS);</span>
+<span class="nc" id="L151">        JobResult result = action.apply(cj.getInstallable());</span>
+<span class="nc" id="L152">        cjt.stopTrackingTime(result);</span>
+<span class="nc" id="L153">        return cjt;</span>
     }
 
     private Queue&lt;EntandoBundleComponentJob&gt; createUninstallComponentJobs(EntandoBundleJob parentJob, EntandoBundleJob referenceJob) {
-<span class="nc" id="L160">        List&lt;EntandoBundleComponentJob&gt; installJobs = compJobRepo.findAllByParentJob(referenceJob);</span>
-<span class="nc" id="L161">        return installJobs.stream()</span>
-<span class="nc" id="L162">                .map(cj -&gt; {</span>
-<span class="nc" id="L163">                    Installable&lt;?&gt; i = processorMap.get(cj.getComponentType()).process(cj);</span>
-<span class="nc" id="L164">                    EntandoBundleComponentJob uninstallCopy = EntandoBundleComponentJob.getNewCopy(cj);</span>
-<span class="nc" id="L165">                    uninstallCopy.setParentJob(parentJob);</span>
-<span class="nc" id="L166">                    uninstallCopy.setStatus(JobStatus.UNINSTALL_CREATED);</span>
-<span class="nc" id="L167">                    uninstallCopy.setInstallable(i);</span>
-<span class="nc" id="L168">                    return uninstallCopy;</span>
+<span class="nc" id="L157">        List&lt;EntandoBundleComponentJob&gt; installJobs = compJobRepo.findAllByParentJob(referenceJob);</span>
+<span class="nc" id="L158">        return installJobs.stream()</span>
+<span class="nc" id="L159">                .map(cj -&gt; {</span>
+<span class="nc" id="L160">                    Installable&lt;?&gt; i = processorMap.get(cj.getComponentType()).process(cj);</span>
+<span class="nc" id="L161">                    EntandoBundleComponentJob uninstallCopy = EntandoBundleComponentJob.getNewCopy(cj);</span>
+<span class="nc" id="L162">                    uninstallCopy.setParentJob(parentJob);</span>
+<span class="nc" id="L163">                    uninstallCopy.setStatus(JobStatus.UNINSTALL_CREATED);</span>
+<span class="nc" id="L164">                    uninstallCopy.setInstallable(i);</span>
+<span class="nc" id="L165">                    return uninstallCopy;</span>
                 })
-<span class="nc" id="L170">                .sorted(Comparator.comparingInt(cj -&gt; ((EntandoBundleComponentJob) cj).getInstallable().getPriority()).reversed())</span>
-<span class="nc" id="L171">                .collect(Collectors.toCollection(ArrayDeque::new));</span>
+<span class="nc" id="L167">                .sorted(Comparator.comparingInt(cj -&gt; ((EntandoBundleComponentJob) cj).getInstallable().getPriority()).reversed())</span>
+<span class="nc" id="L168">                .collect(Collectors.toCollection(ArrayDeque::new));</span>
     }
 
     private JobResult executeUninstall(Installable&lt;?&gt; installable) {
 
-<span class="nc" id="L176">        CompletableFuture&lt;?&gt; future = installable.uninstall();</span>
-<span class="nc" id="L177">        CompletableFuture&lt;JobResult&gt; uninstallResult = future</span>
-<span class="nc" id="L178">                .thenApply(vd -&gt; {</span>
-<span class="nc" id="L179">                    log.debug(&quot;Installable '{}' uninstalled successfully&quot;, installable.getName());</span>
-<span class="nc" id="L180">                    return JobResult.builder().status(JobStatus.UNINSTALL_COMPLETED).build();</span>
-<span class="nc" id="L181">                }).exceptionally(th -&gt; {</span>
-<span class="nc" id="L182">                    log.error(&quot;Installable '{}' had errors during uninstall&quot;, installable.getName(), th.getCause());</span>
-<span class="nc" id="L183">                    String message = getMeaningfulErrorMessage(th);</span>
-<span class="nc" id="L184">                    return JobResult.builder()</span>
-<span class="nc" id="L185">                            .status(JobStatus.UNINSTALL_ERROR)</span>
-<span class="nc" id="L186">                            .exception(new Exception(message))</span>
-<span class="nc" id="L187">                            .build();</span>
+<span class="nc" id="L173">        CompletableFuture&lt;?&gt; future = installable.uninstall();</span>
+<span class="nc" id="L174">        CompletableFuture&lt;JobResult&gt; uninstallResult = future</span>
+<span class="nc" id="L175">                .thenApply(vd -&gt; {</span>
+<span class="nc" id="L176">                    log.debug(&quot;Installable '{}' uninstalled successfully&quot;, installable.getName());</span>
+<span class="nc" id="L177">                    return JobResult.builder().status(JobStatus.UNINSTALL_COMPLETED).build();</span>
+<span class="nc" id="L178">                }).exceptionally(th -&gt; {</span>
+<span class="nc" id="L179">                    log.error(&quot;Installable '{}' had errors during uninstall&quot;, installable.getName(), th.getCause());</span>
+<span class="nc" id="L180">                    String message = getMeaningfulErrorMessage(th);</span>
+<span class="nc" id="L181">                    return JobResult.builder()</span>
+<span class="nc" id="L182">                            .status(JobStatus.UNINSTALL_ERROR)</span>
+<span class="nc" id="L183">                            .exception(new Exception(message))</span>
+<span class="nc" id="L184">                            .build();</span>
                 });
 
-<span class="nc" id="L190">        return uninstallResult.join();</span>
+<span class="nc" id="L187">        return uninstallResult.join();</span>
     }
 
 }
