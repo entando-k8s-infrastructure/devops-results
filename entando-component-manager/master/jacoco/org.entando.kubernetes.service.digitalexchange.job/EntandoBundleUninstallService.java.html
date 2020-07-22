@@ -19,9 +19,9 @@ import org.entando.kubernetes.exception.job.JobConflictException;
 import org.entando.kubernetes.model.bundle.installable.Installable;
 import org.entando.kubernetes.model.bundle.processor.ComponentProcessor;
 import org.entando.kubernetes.model.digitalexchange.ComponentType;
-import org.entando.kubernetes.model.digitalexchange.EntandoBundle;
-import org.entando.kubernetes.model.job.EntandoBundleComponentJob;
-import org.entando.kubernetes.model.job.EntandoBundleJob;
+import org.entando.kubernetes.model.digitalexchange.EntandoBundleEntity;
+import org.entando.kubernetes.model.job.EntandoBundleComponentJobEntity;
+import org.entando.kubernetes.model.job.EntandoBundleJobEntity;
 import org.entando.kubernetes.model.job.JobResult;
 import org.entando.kubernetes.model.job.JobScheduler;
 import org.entando.kubernetes.model.job.JobStatus;
@@ -43,8 +43,8 @@ public class EntandoBundleUninstallService implements EntandoBundleJobExecutor {
     private final @NonNull EntandoBundleComponentUsageService usageService;
     private final @NonNull Map&lt;ComponentType, ComponentProcessor&gt; processorMap;
 
-    public EntandoBundleJob uninstall(String componentId) {
-<span class="fc" id="L47">        EntandoBundle installedBundle = installedComponentRepository.findById(componentId)</span>
+    public EntandoBundleJobEntity uninstall(String componentId) {
+<span class="fc" id="L47">        EntandoBundleEntity installedBundle = installedComponentRepository.findById(componentId)</span>
 <span class="pc" id="L48">                .orElseThrow(() -&gt; new BundleNotInstalledException(&quot;Bundle &quot; + componentId + &quot; is not installed&quot;));</span>
 
 <span class="fc" id="L50">        verifyBundleUninstallIsPossibleOrThrow(installedBundle);</span>
@@ -52,7 +52,7 @@ public class EntandoBundleUninstallService implements EntandoBundleJobExecutor {
 <span class="fc" id="L52">        return createAndSubmitUninstallJob(installedBundle.getJob());</span>
     }
 
-    private void verifyBundleUninstallIsPossibleOrThrow(EntandoBundle bundle) {
+    private void verifyBundleUninstallIsPossibleOrThrow(EntandoBundleEntity bundle) {
 <span class="pc bpc" id="L56" title="2 of 4 branches missed.">        if (bundle.getJob() != null &amp;&amp; bundle.getJob().getStatus().equals(JobStatus.INSTALL_COMPLETED)) {</span>
 <span class="fc" id="L57">            verifyNoComponentInUseOrThrow(bundle);</span>
 <span class="fc" id="L58">            verifyNoConcurrentUninstallOrThrow(bundle);</span>
@@ -62,8 +62,8 @@ public class EntandoBundleUninstallService implements EntandoBundleJobExecutor {
         }
 <span class="fc" id="L63">    }</span>
 
-    private void verifyNoConcurrentUninstallOrThrow(EntandoBundle bundle) {
-<span class="fc" id="L66">        Optional&lt;EntandoBundleJob&gt; lastJob = jobRepo.findFirstByComponentIdOrderByStartedAtDesc(bundle.getId());</span>
+    private void verifyNoConcurrentUninstallOrThrow(EntandoBundleEntity bundle) {
+<span class="fc" id="L66">        Optional&lt;EntandoBundleJobEntity&gt; lastJob = jobRepo.findFirstByComponentIdOrderByStartedAtDesc(bundle.getId());</span>
 <span class="fc" id="L67">        EnumSet&lt;JobStatus&gt; concurrentUninstallJobStatus = EnumSet</span>
 <span class="fc" id="L68">                .of(JobStatus.UNINSTALL_IN_PROGRESS, JobStatus.UNINSTALL_CREATED);</span>
 <span class="pc bpc" id="L69" title="1 of 4 branches missed.">        if (lastJob.isPresent() &amp;&amp; lastJob.get().getStatus().isAny(concurrentUninstallJobStatus)) {</span>
@@ -72,8 +72,8 @@ public class EntandoBundleUninstallService implements EntandoBundleJobExecutor {
         }
 <span class="fc" id="L73">    }</span>
 
-    private void verifyNoComponentInUseOrThrow(EntandoBundle bundle) {
-<span class="fc" id="L76">        List&lt;EntandoBundleComponentJob&gt; bundleComponentJobs = compJobRepo.findAllByParentJob(bundle.getJob());</span>
+    private void verifyNoComponentInUseOrThrow(EntandoBundleEntity bundle) {
+<span class="fc" id="L76">        List&lt;EntandoBundleComponentJobEntity&gt; bundleComponentJobs = compJobRepo.findAllByParentJob(bundle.getJob());</span>
 <span class="fc" id="L77">        if (bundleComponentJobs.stream()</span>
 <span class="pc bpc" id="L78" title="2 of 4 branches missed.">                .anyMatch(e -&gt; usageService.getUsage(e.getComponentType(), e.getComponentId()).getUsage() &gt; 0)) {</span>
 <span class="nc" id="L79">            throw new JobConflictException(</span>
@@ -81,37 +81,37 @@ public class EntandoBundleUninstallService implements EntandoBundleJobExecutor {
         }
 <span class="fc" id="L82">    }</span>
 
-    private EntandoBundleJob createAndSubmitUninstallJob(EntandoBundleJob lastAvailableJob) {
+    private EntandoBundleJobEntity createAndSubmitUninstallJob(EntandoBundleJobEntity lastAvailableJob) {
 
-<span class="fc" id="L86">        EntandoBundleJob uninstallJob = new EntandoBundleJob();</span>
+<span class="fc" id="L86">        EntandoBundleJobEntity uninstallJob = new EntandoBundleJobEntity();</span>
 <span class="fc" id="L87">        uninstallJob.setComponentId(lastAvailableJob.getComponentId());</span>
 <span class="fc" id="L88">        uninstallJob.setComponentName(lastAvailableJob.getComponentName());</span>
 <span class="fc" id="L89">        uninstallJob.setComponentVersion(lastAvailableJob.getComponentVersion());</span>
 <span class="fc" id="L90">        uninstallJob.setStatus(JobStatus.UNINSTALL_CREATED);</span>
 <span class="fc" id="L91">        uninstallJob.setProgress(0.0);</span>
-<span class="fc" id="L92">        EntandoBundleJob savedJob = jobRepo.save(uninstallJob);</span>
+<span class="fc" id="L92">        EntandoBundleJobEntity savedJob = jobRepo.save(uninstallJob);</span>
 
 <span class="fc" id="L94">        submitUninstallAsync(uninstallJob, lastAvailableJob);</span>
 
 <span class="fc" id="L96">        return savedJob;</span>
     }
 
-    private void submitUninstallAsync(EntandoBundleJob parentJob, EntandoBundleJob referenceJob) {
+    private void submitUninstallAsync(EntandoBundleJobEntity parentJob, EntandoBundleJobEntity referenceJob) {
 <span class="fc" id="L100">        CompletableFuture.runAsync(() -&gt; {</span>
-<span class="fc" id="L101">            JobTracker&lt;EntandoBundleJob&gt; parentJobTracker = new JobTracker&lt;&gt;(parentJob, jobRepo);</span>
+<span class="fc" id="L101">            JobTracker&lt;EntandoBundleJobEntity&gt; parentJobTracker = new JobTracker&lt;&gt;(parentJob, jobRepo);</span>
 <span class="fc" id="L102">            JobScheduler scheduler = new JobScheduler();</span>
 
 <span class="fc" id="L104">            JobResult parentJobResult = JobResult.builder().status(JobStatus.UNINSTALL_IN_PROGRESS).build();</span>
 <span class="fc" id="L105">            parentJobTracker.startTracking(parentJobResult.getStatus());</span>
 
             try {
-<span class="fc" id="L108">                Queue&lt;EntandoBundleComponentJob&gt; uninstallJobs = createUninstallComponentJobs(parentJob, referenceJob);</span>
+<span class="fc" id="L108">                Queue&lt;EntandoBundleComponentJobEntity&gt; uninstallJobs = createUninstallComponentJobs(parentJob, referenceJob);</span>
 <span class="fc" id="L109">                scheduler.queueAll(uninstallJobs);</span>
 
-<span class="fc" id="L111">                Optional&lt;EntandoBundleComponentJob&gt; optCompJob = scheduler.extractFromQueue();</span>
+<span class="fc" id="L111">                Optional&lt;EntandoBundleComponentJobEntity&gt; optCompJob = scheduler.extractFromQueue();</span>
 <span class="fc bfc" id="L112" title="All 2 branches covered.">                while(optCompJob.isPresent()) {</span>
-<span class="fc" id="L113">                    EntandoBundleComponentJob uninstallJob = optCompJob.get();</span>
-<span class="fc" id="L114">                    JobTracker&lt;EntandoBundleComponentJob&gt; cjt = trackExecution(uninstallJob, this::executeUninstall);</span>
+<span class="fc" id="L113">                    EntandoBundleComponentJobEntity uninstallJob = optCompJob.get();</span>
+<span class="fc" id="L114">                    JobTracker&lt;EntandoBundleComponentJobEntity&gt; cjt = trackExecution(uninstallJob, this::executeUninstall);</span>
 <span class="fc bfc" id="L115" title="All 2 branches covered.">                    if (cjt.getJob().getStatus().equals(JobStatus.UNINSTALL_ERROR)) {</span>
 <span class="fc" id="L116">                        throw new EntandoComponentManagerException(parentJob.getComponentId()</span>
                                 + &quot; uninstall can't proceed due to an error with one of the components&quot;);
@@ -136,26 +136,26 @@ public class EntandoBundleUninstallService implements EntandoBundleJobExecutor {
 <span class="fc" id="L136">        });</span>
 <span class="fc" id="L137">    }</span>
 
-    private JobTracker&lt;EntandoBundleComponentJob&gt; trackExecution(EntandoBundleComponentJob cj, Function&lt;Installable, JobResult&gt; action) {
-<span class="fc" id="L140">        JobTracker&lt;EntandoBundleComponentJob&gt; cjt = new JobTracker&lt;&gt;(cj, compJobRepo);</span>
+    private JobTracker&lt;EntandoBundleComponentJobEntity&gt; trackExecution(EntandoBundleComponentJobEntity cj, Function&lt;Installable, JobResult&gt; action) {
+<span class="fc" id="L140">        JobTracker&lt;EntandoBundleComponentJobEntity&gt; cjt = new JobTracker&lt;&gt;(cj, compJobRepo);</span>
 <span class="fc" id="L141">        cjt.startTracking(JobStatus.UNINSTALL_IN_PROGRESS);</span>
 <span class="fc" id="L142">        JobResult result = action.apply(cj.getInstallable());</span>
 <span class="fc" id="L143">        cjt.stopTrackingTime(result);</span>
 <span class="fc" id="L144">        return cjt;</span>
     }
 
-    private Queue&lt;EntandoBundleComponentJob&gt; createUninstallComponentJobs(EntandoBundleJob parentJob, EntandoBundleJob referenceJob) {
-<span class="fc" id="L148">        List&lt;EntandoBundleComponentJob&gt; installJobs = compJobRepo.findAllByParentJob(referenceJob);</span>
+    private Queue&lt;EntandoBundleComponentJobEntity&gt; createUninstallComponentJobs(EntandoBundleJobEntity parentJob, EntandoBundleJobEntity referenceJob) {
+<span class="fc" id="L148">        List&lt;EntandoBundleComponentJobEntity&gt; installJobs = compJobRepo.findAllByParentJob(referenceJob);</span>
 <span class="fc" id="L149">        return installJobs.stream()</span>
 <span class="fc" id="L150">                .map(cj -&gt; {</span>
 <span class="fc" id="L151">                    Installable&lt;?&gt; i = processorMap.get(cj.getComponentType()).process(cj);</span>
-<span class="fc" id="L152">                    EntandoBundleComponentJob uninstallCopy = EntandoBundleComponentJob.getNewCopy(cj);</span>
+<span class="fc" id="L152">                    EntandoBundleComponentJobEntity uninstallCopy = EntandoBundleComponentJobEntity.getNewCopy(cj);</span>
 <span class="fc" id="L153">                    uninstallCopy.setParentJob(parentJob);</span>
 <span class="fc" id="L154">                    uninstallCopy.setStatus(JobStatus.UNINSTALL_CREATED);</span>
 <span class="fc" id="L155">                    uninstallCopy.setInstallable(i);</span>
 <span class="fc" id="L156">                    return uninstallCopy;</span>
                 })
-<span class="fc" id="L158">                .sorted(Comparator.comparingInt(cj -&gt; ((EntandoBundleComponentJob) cj).getInstallable().getPriority()).reversed())</span>
+<span class="fc" id="L158">                .sorted(Comparator.comparingInt(cj -&gt; ((EntandoBundleComponentJobEntity) cj).getInstallable().getPriority()).reversed())</span>
 <span class="fc" id="L159">                .collect(Collectors.toCollection(ArrayDeque::new));</span>
     }
 
