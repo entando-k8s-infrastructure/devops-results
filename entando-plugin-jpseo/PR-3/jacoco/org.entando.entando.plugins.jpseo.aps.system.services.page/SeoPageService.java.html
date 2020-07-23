@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SeoPageService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Plugin: SEO</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.plugins.jpseo.aps.system.services.page</a> &gt; <span class="el_source">SeoPageService.java</span></div><h1>SeoPageService.java</h1><pre class="source lang-java linenums">package org.entando.entando.plugins.jpseo.aps.system.services.page;
+
+import com.agiletec.aps.system.services.page.IPage;
+import com.agiletec.aps.system.services.page.PageManager;
+import com.agiletec.aps.util.ApsProperties;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import org.entando.entando.aps.system.exception.ResourceNotFoundException;
+import org.entando.entando.aps.system.services.page.PageService;
+import org.entando.entando.aps.system.services.page.model.PageDto;
+import org.entando.entando.plugins.jpseo.web.page.model.SeoData;
+import org.entando.entando.plugins.jpseo.web.page.model.SeoDataByLang;
+import org.entando.entando.plugins.jpseo.web.page.model.SeoMetaTag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Service;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.DataBinder;
+
+@Service
+@Primary
+<span class="fc" id="L26">public class SeoPageService extends PageService {</span>
+
+<span class="fc" id="L28">    private static final Logger logger = LoggerFactory.getLogger(SeoPageService.class);</span>
+
+    @Autowired
+    private PageManager pageManager;
+
+    @Override
+    public SeoPageDto getPage(String pageCode, String status) {
+<span class="nc" id="L35">        IPage page = super.loadPage(pageCode, status);</span>
+<span class="nc bnc" id="L36" title="All 2 branches missed.">        if (null == page) {</span>
+<span class="nc" id="L37">            logger.warn(&quot;no page found with code {} and status {}&quot;, pageCode, status);</span>
+<span class="nc" id="L38">            DataBinder binder = new DataBinder(pageCode);</span>
+<span class="nc" id="L39">            BindingResult bindingResult = binder.getBindingResult();</span>
+<span class="nc bnc" id="L40" title="All 2 branches missed.">            String errorCode = status.equals(STATUS_DRAFT) ? ERRCODE_PAGE_NOT_FOUND : ERRCODE_PAGE_ONLY_DRAFT;</span>
+<span class="nc" id="L41">            bindingResult.reject(errorCode, new String[]{pageCode, status}, &quot;page.NotFound&quot;);</span>
+<span class="nc" id="L42">            throw new ResourceNotFoundException(bindingResult);</span>
+        }
+<span class="nc" id="L44">        String token = this.getPageTokenManager().encrypt(pageCode);</span>
+<span class="nc" id="L45">        PageDto pageDto = this.getDtoBuilder().convert(page);</span>
+<span class="nc" id="L46">        pageDto.setToken(token);</span>
+<span class="nc" id="L47">        pageDto.setReferences(super.getReferencesInfo(page));</span>
+<span class="nc" id="L48">        SeoPageMetadata seoMetadata = (SeoPageMetadata) page.getMetadata();</span>
+<span class="nc" id="L49">        SeoPageDto seoPageDto = mapPageDtoToSeoPageDto(pageDto, seoMetadata);</span>
+<span class="nc" id="L50">        return seoPageDto;</span>
+    }
+
+    private SeoPageDto mapPageDtoToSeoPageDto(PageDto pageDto, SeoPageMetadata seoMetadata) {
+<span class="nc" id="L54">        SeoPageDto seoPageDto = new SeoPageDto();</span>
+<span class="nc" id="L55">        seoPageDto.setCharset(pageDto.getCharset());</span>
+<span class="nc" id="L56">        seoPageDto.setCode(pageDto.getCode());</span>
+<span class="nc" id="L57">        seoPageDto.setSeo(pageDto.isSeo());</span>
+<span class="nc" id="L58">        seoPageDto.setChildren(pageDto.getChildren());</span>
+<span class="nc" id="L59">        seoPageDto.setContentType(pageDto.getContentType());</span>
+<span class="nc" id="L60">        seoPageDto.setDisplayedInMenu(pageDto.isDisplayedInMenu());</span>
+<span class="nc" id="L61">        seoPageDto.setFullPath(pageDto.getFullPath());</span>
+<span class="nc" id="L62">        seoPageDto.setFullTitles(pageDto.getFullTitles());</span>
+<span class="nc" id="L63">        seoPageDto.setJoinGroups(pageDto.getJoinGroups());</span>
+<span class="nc" id="L64">        seoPageDto.setToken(pageDto.getToken());</span>
+<span class="nc" id="L65">        seoPageDto.setLastModified(pageDto.getLastModified());</span>
+<span class="nc" id="L66">        seoPageDto.setNumWidget(pageDto.getNumWidget());</span>
+<span class="nc" id="L67">        seoPageDto.setParentCode(pageDto.getParentCode());</span>
+<span class="nc" id="L68">        seoPageDto.setStatus(pageDto.getStatus());</span>
+<span class="nc" id="L69">        seoPageDto.setTitles(pageDto.getTitles());</span>
+<span class="nc" id="L70">        seoPageDto.setPageModel(pageDto.getPageModel());</span>
+<span class="nc" id="L71">        seoPageDto.setOwnerGroup(pageDto.getOwnerGroup());</span>
+<span class="nc" id="L72">        seoPageDto.setOnlineInstance(pageDto.isOnlineInstance());</span>
+<span class="nc" id="L73">        SeoData seoData = new SeoData();</span>
+<span class="nc" id="L74">        seoData.setFriendlyCode(seoMetadata.getFriendlyCode());</span>
+<span class="nc" id="L75">        seoData.setUseExtraDescriptorSearch(seoMetadata.isUseExtraDescriptions());</span>
+<span class="nc" id="L76">        Map&lt;String, SeoDataByLang&gt; seoDataByLangMap = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L77" title="All 2 branches missed.">        if (seoMetadata.getComplexParameters() != null) {</span>
+<span class="nc" id="L78">            seoMetadata.getComplexParameters().entrySet().stream()</span>
+<span class="nc" id="L79">                    .forEach(e -&gt; {</span>
+<span class="nc" id="L80">                        String lang = e.getKey();</span>
+<span class="nc" id="L81">                        final Map&lt;String, PageMetatag&gt; metatagMap = e.getValue();</span>
+<span class="nc" id="L82">                        final List&lt;SeoMetaTag&gt; pageMetaTagList = metatagMap.entrySet().stream().map(meta -&gt;</span>
+                                {
+<span class="nc" id="L84">                                    final PageMetatag metatag = meta.getValue();</span>
+<span class="nc" id="L85">                                    return new SeoMetaTag(metatag.getKey(),</span>
+<span class="nc" id="L86">                                            metatag.getKeyAttribute(),</span>
+<span class="nc" id="L87">                                            metatag.getValue(),</span>
+<span class="nc" id="L88">                                            metatag.isUseDefaultLangValue());</span>
+                                }
+<span class="nc" id="L90">                        ).collect(Collectors.toList());</span>
+<span class="nc" id="L91">                        boolean inheritDescriptionFromDefaultLang = false;</span>
+<span class="nc" id="L92">                        boolean inheritKeywordsFromDefaultLang = false;</span>
+<span class="nc" id="L93">                        String seoMetadataDescription = null;</span>
+<span class="nc" id="L94">                        String seoMetadataKeyword = null;</span>
+<span class="nc" id="L95">                        ApsProperties descriptions = seoMetadata.getDescriptions();</span>
+<span class="nc bnc" id="L96" title="All 2 branches missed.">                        if (null != descriptions) {</span>
+<span class="nc" id="L97">                            PageMetatag metatag = (PageMetatag) descriptions.get(lang);</span>
+<span class="nc" id="L98">                            seoMetadataDescription = metatag.getValue();</span>
+<span class="nc" id="L99">                            inheritDescriptionFromDefaultLang = metatag.isUseDefaultLangValue();</span>
+
+                        }
+<span class="nc" id="L102">                        ApsProperties keywords = seoMetadata.getKeywords();</span>
+<span class="nc bnc" id="L103" title="All 2 branches missed.">                        if (null != keywords) {</span>
+<span class="nc" id="L104">                            PageMetatag metatag = (PageMetatag) keywords.get(lang);</span>
+<span class="nc" id="L105">                            seoMetadataKeyword = metatag.getValue();</span>
+<span class="nc" id="L106">                            inheritDescriptionFromDefaultLang = metatag.isUseDefaultLangValue();</span>
+                        }
+<span class="nc" id="L108">                        SeoDataByLang seoDataByLang = new SeoDataByLang(</span>
+                                seoMetadataDescription,
+                                seoMetadataKeyword,
+                                pageMetaTagList,
+                                inheritDescriptionFromDefaultLang,
+                                inheritKeywordsFromDefaultLang);
+<span class="nc" id="L114">                        seoDataByLangMap.put(lang, seoDataByLang);</span>
+<span class="nc" id="L115">                    });</span>
+<span class="nc" id="L116">            seoData.setSeoDataByLang(seoDataByLangMap);</span>
+        }
+<span class="nc" id="L118">        seoPageDto.setSeoData(seoData);</span>
+<span class="nc" id="L119">        return seoPageDto;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
