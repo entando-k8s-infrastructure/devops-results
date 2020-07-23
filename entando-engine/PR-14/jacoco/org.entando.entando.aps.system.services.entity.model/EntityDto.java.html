@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EntityDto.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.system.services.entity.model</a> &gt; <span class="el_source">EntityDto.java</span></div><h1>EntityDto.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.entando.aps.system.services.entity.model;
+
+import com.agiletec.aps.system.common.entity.model.IApsEntity;
+import com.agiletec.aps.system.common.entity.model.attribute.AttributeInterface;
+import com.agiletec.aps.system.services.category.Category;
+import com.agiletec.aps.system.services.category.ICategoryManager;
+import java.util.List;
+import java.util.Set;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Size;
+import org.hibernate.validator.constraints.NotBlank;
+import org.springframework.validation.BindingResult;
+
+public class EntityDto implements Serializable {
+
+    @NotBlank(message = &quot;entity.id.notBlank&quot;)
+    private String id;
+
+    @Size(min = 3, max = 3, message = &quot;string.size.invalid&quot;)
+    @NotNull(message = &quot;entity.typeCode.notBlank&quot;)
+    private String typeCode;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String typeDescription;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String description;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private String mainGroup;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private Set&lt;String&gt; groups;
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List&lt;String&gt; categories;
+<span class="fc" id="L51">    private List&lt;EntityAttributeDto&gt; attributes = new ArrayList&lt;&gt;();</span>
+
+<span class="fc" id="L53">    public EntityDto() {</span>
+<span class="fc" id="L54">    }</span>
+
+<span class="fc" id="L56">    public EntityDto(IApsEntity src) {</span>
+<span class="fc" id="L57">        this.setId(src.getId());</span>
+<span class="fc" id="L58">        this.setTypeCode(src.getTypeCode());</span>
+<span class="fc" id="L59">        this.setTypeDescription(src.getTypeDescription());</span>
+<span class="fc" id="L60">        this.setDescription(src.getDescription());</span>
+<span class="fc" id="L61">        this.setMainGroup(src.getMainGroup());</span>
+<span class="fc" id="L62">        this.setGroups(src.getGroups());</span>
+<span class="pc bpc" id="L63" title="1 of 2 branches missed.">        if (null != src.getCategories()) {</span>
+<span class="pc" id="L64">            this.setCategories(src.getCategories().stream().map(i -&gt; i.getCode()).collect(Collectors.toList()));</span>
+        }
+<span class="pc bpc" id="L66" title="1 of 2 branches missed.">        if (null != src.getAttributeList()) {</span>
+<span class="fc" id="L67">            src.getAttributeList().stream().forEach(j -&gt; this.getAttributes().add(new EntityAttributeDto(j)));</span>
+        }
+<span class="fc" id="L69">    }</span>
+
+    public void fillEntity(IApsEntity prototype, ICategoryManager categoryManager, BindingResult bindingResult) {
+<span class="fc" id="L72">        prototype.setId(this.getId());</span>
+<span class="pc bpc" id="L73" title="1 of 2 branches missed.">        prototype.setDescription(getDescription() == null ? prototype.getDescription() : getDescription());</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">        prototype.setMainGroup(getMainGroup() == null ? prototype.getMainGroup() : getMainGroup());</span>
+<span class="fc bfc" id="L75" title="All 2 branches covered.">        if (null != this.getGroups()) {</span>
+<span class="fc" id="L76">            prototype.getGroups().addAll(this.getGroups());</span>
+        }
+<span class="pc bpc" id="L78" title="1 of 2 branches missed.">        if (null != this.getCategories()) {</span>
+<span class="nc" id="L79">            prototype.getCategories().clear();</span>
+<span class="nc" id="L80">            this.getCategories().stream().forEach(i -&gt; {</span>
+<span class="nc" id="L81">                Category category = categoryManager.getCategory(i);</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">                if (null != category) {</span>
+<span class="nc" id="L83">                    prototype.addCategory(category);</span>
+                }
+<span class="nc" id="L85">            });</span>
+        }
+<span class="fc" id="L87">        List&lt;EntityAttributeDto&gt; attributeDtos = this.getAttributes();</span>
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">        if (null == attributeDtos) {</span>
+<span class="nc" id="L89">            return;</span>
+        }
+<span class="fc bfc" id="L91" title="All 2 branches covered.">        for (EntityAttributeDto attributeDto : attributeDtos) {</span>
+<span class="fc" id="L92">            String code = attributeDto.getCode();</span>
+<span class="fc" id="L93">            AttributeInterface attribute = prototype.getAttribute(code);</span>
+<span class="pc bpc" id="L94" title="1 of 2 branches missed.">            if (null != attribute) {</span>
+<span class="fc" id="L95">                attributeDto.fillEntityAttribute(attribute, bindingResult);</span>
+            } else {
+                //ADD LOG
+            }
+<span class="fc" id="L99">        }</span>
+<span class="fc" id="L100">    }</span>
+
+    public String getId() {
+<span class="fc" id="L103">        return id;</span>
+    }
+
+    public void setId(String id) {
+<span class="fc" id="L107">        this.id = id;</span>
+<span class="fc" id="L108">    }</span>
+
+    public String getTypeCode() {
+<span class="fc" id="L111">        return typeCode;</span>
+    }
+
+    public void setTypeCode(String typeCode) {
+<span class="fc" id="L115">        this.typeCode = typeCode;</span>
+<span class="fc" id="L116">    }</span>
+
+    public String getTypeDescription() {
+<span class="fc" id="L119">        return typeDescription;</span>
+    }
+
+    public void setTypeDescription(String typeDescription) {
+<span class="fc" id="L123">        this.typeDescription = typeDescription;</span>
+<span class="fc" id="L124">    }</span>
+
+    public String getDescription() {
+<span class="fc" id="L127">        return description;</span>
+    }
+
+    public void setDescription(String description) {
+<span class="fc" id="L131">        this.description = description;</span>
+<span class="fc" id="L132">    }</span>
+
+    public String getMainGroup() {
+<span class="fc" id="L135">        return mainGroup;</span>
+    }
+
+    public void setMainGroup(String mainGroup) {
+<span class="fc" id="L139">        this.mainGroup = mainGroup;</span>
+<span class="fc" id="L140">    }</span>
+
+    public Set&lt;String&gt; getGroups() {
+<span class="fc" id="L143">        return groups;</span>
+    }
+
+    public void setGroups(Set&lt;String&gt; groups) {
+<span class="fc" id="L147">        this.groups = groups;</span>
+<span class="fc" id="L148">    }</span>
+
+    public List&lt;EntityAttributeDto&gt; getAttributes() {
+<span class="fc" id="L151">        return attributes;</span>
+    }
+
+    public void setAttributes(List&lt;EntityAttributeDto&gt; attributes) {
+<span class="fc" id="L155">        this.attributes = attributes;</span>
+<span class="fc" id="L156">    }</span>
+
+    public List&lt;String&gt; getCategories() {
+<span class="fc" id="L159">        return categories;</span>
+    }
+
+    public void setCategories(List&lt;String&gt; categories) {
+<span class="fc" id="L163">        this.categories = categories;</span>
+<span class="fc" id="L164">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
