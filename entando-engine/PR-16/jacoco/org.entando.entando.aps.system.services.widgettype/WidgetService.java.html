@@ -300,102 +300,105 @@ import org.springframework.web.context.ServletContextAware;
 
     @Override
     public Integer getComponentUsage(String componentCode) {
-
-<span class="fc" id="L304">        return this.getWidget(componentCode).getUsed();</span>
+        try {
+<span class="fc" id="L304">            return this.getWidget(componentCode).getUsed();</span>
+<span class="fc" id="L305">        } catch (ResourceNotFoundException e) {</span>
+<span class="fc" id="L306">            return 0;</span>
+        }
     }
 
 
     @Override
     public PagedMetadata&lt;ComponentUsageEntity&gt; getComponentUsageDetails(String componentCode, RestListRequest restListRequest) {
 
-<span class="fc" id="L311">        WidgetInfoDto widgetInfoDto = this.getWidgetInfo(componentCode);</span>
+<span class="fc" id="L314">        WidgetInfoDto widgetInfoDto = this.getWidgetInfo(componentCode);</span>
 
-<span class="fc" id="L313">        List&lt;ComponentUsageEntity&gt; totalReferenced = widgetInfoDto.getPublishedUtilizers().stream()</span>
-<span class="fc" id="L314">                .map(widgetDetail -&gt; new ComponentUsageEntity(ComponentUsageEntity.TYPE_PAGE, widgetDetail.getPageCode(), IPageService.STATUS_ONLINE))</span>
-<span class="fc" id="L315">                .collect(Collectors.toList());</span>
-<span class="fc" id="L316">        List&lt;ComponentUsageEntity&gt; draftReferenced = widgetInfoDto.getDraftUtilizers().stream()</span>
-<span class="fc" id="L317">                .map(widgetDetail -&gt; new ComponentUsageEntity(ComponentUsageEntity.TYPE_PAGE, widgetDetail.getPageCode(), IPageService.STATUS_DRAFT))</span>
+<span class="fc" id="L316">        List&lt;ComponentUsageEntity&gt; totalReferenced = widgetInfoDto.getPublishedUtilizers().stream()</span>
+<span class="fc" id="L317">                .map(widgetDetail -&gt; new ComponentUsageEntity(ComponentUsageEntity.TYPE_PAGE, widgetDetail.getPageCode(), IPageService.STATUS_ONLINE))</span>
 <span class="fc" id="L318">                .collect(Collectors.toList());</span>
+<span class="fc" id="L319">        List&lt;ComponentUsageEntity&gt; draftReferenced = widgetInfoDto.getDraftUtilizers().stream()</span>
+<span class="fc" id="L320">                .map(widgetDetail -&gt; new ComponentUsageEntity(ComponentUsageEntity.TYPE_PAGE, widgetDetail.getPageCode(), IPageService.STATUS_DRAFT))</span>
+<span class="fc" id="L321">                .collect(Collectors.toList());</span>
 
-<span class="fc" id="L320">        totalReferenced.addAll(draftReferenced);</span>
+<span class="fc" id="L323">        totalReferenced.addAll(draftReferenced);</span>
 
-<span class="fc" id="L322">        return pagedMetadataMapper.getPagedResult(restListRequest, totalReferenced);</span>
+<span class="fc" id="L325">        return pagedMetadataMapper.getPagedResult(restListRequest, totalReferenced);</span>
     }
 
 
     protected String extractUniqueGuiFragmentCode(String widgetTypeCode) throws ApsSystemException {
-<span class="fc" id="L327">        String uniqueCode = widgetTypeCode;</span>
-<span class="pc bpc" id="L328" title="1 of 2 branches missed.">        if (null != this.getGuiFragmentManager().getGuiFragment(uniqueCode)) {</span>
-<span class="nc" id="L329">            int index = 0;</span>
-<span class="nc" id="L330">            String currentCode = null;</span>
+<span class="fc" id="L330">        String uniqueCode = widgetTypeCode;</span>
+<span class="pc bpc" id="L331" title="1 of 2 branches missed.">        if (null != this.getGuiFragmentManager().getGuiFragment(uniqueCode)) {</span>
+<span class="nc" id="L332">            int index = 0;</span>
+<span class="nc" id="L333">            String currentCode = null;</span>
             do {
-<span class="nc" id="L332">                index++;</span>
-<span class="nc" id="L333">                currentCode = uniqueCode + &quot;_&quot; + index;</span>
-<span class="nc bnc" id="L334" title="All 2 branches missed.">            } while (null != this.getGuiFragmentManager().getGuiFragment(currentCode));</span>
-<span class="nc" id="L335">            uniqueCode = currentCode;</span>
+<span class="nc" id="L335">                index++;</span>
+<span class="nc" id="L336">                currentCode = uniqueCode + &quot;_&quot; + index;</span>
+<span class="nc bnc" id="L337" title="All 2 branches missed.">            } while (null != this.getGuiFragmentManager().getGuiFragment(currentCode));</span>
+<span class="nc" id="L338">            uniqueCode = currentCode;</span>
         }
-<span class="fc" id="L337">        return uniqueCode;</span>
+<span class="fc" id="L340">        return uniqueCode;</span>
     }
 
     private void createAndAddFragment(WidgetType widgetType, WidgetRequest widgetRequest) throws Exception {
-<span class="fc" id="L341">        GuiFragment guiFragment = new GuiFragment();</span>
-<span class="fc" id="L342">        String code = this.extractUniqueGuiFragmentCode(widgetType.getCode());</span>
-<span class="fc" id="L343">        guiFragment.setCode(code);</span>
-<span class="fc" id="L344">        guiFragment.setPluginCode(widgetType.getPluginCode());</span>
-<span class="fc" id="L345">        guiFragment.setGui(widgetRequest.getCustomUi());</span>
-<span class="fc" id="L346">        guiFragment.setWidgetTypeCode(widgetType.getCode());</span>
-<span class="fc" id="L347">        this.getGuiFragmentManager().addGuiFragment(guiFragment);</span>
-<span class="fc" id="L348">    }</span>
+<span class="fc" id="L344">        GuiFragment guiFragment = new GuiFragment();</span>
+<span class="fc" id="L345">        String code = this.extractUniqueGuiFragmentCode(widgetType.getCode());</span>
+<span class="fc" id="L346">        guiFragment.setCode(code);</span>
+<span class="fc" id="L347">        guiFragment.setPluginCode(widgetType.getPluginCode());</span>
+<span class="fc" id="L348">        guiFragment.setGui(widgetRequest.getCustomUi());</span>
+<span class="fc" id="L349">        guiFragment.setWidgetTypeCode(widgetType.getCode());</span>
+<span class="fc" id="L350">        this.getGuiFragmentManager().addGuiFragment(guiFragment);</span>
+<span class="fc" id="L351">    }</span>
 
     private void processWidgetType(WidgetType type, WidgetRequest widgetRequest) {
-<span class="fc" id="L351">        type.setCode(widgetRequest.getCode());</span>
-<span class="fc" id="L352">        ApsProperties titles = new ApsProperties();</span>
-<span class="fc" id="L353">        widgetRequest.getTitles().forEach(titles::put);</span>
-<span class="fc" id="L354">        type.setTitles(titles);</span>
-<span class="fc" id="L355">        type.setMainGroup(widgetRequest.getGroup());</span>
-<span class="fc" id="L356">        type.setBundleId(widgetRequest.getBundleId());</span>
+<span class="fc" id="L354">        type.setCode(widgetRequest.getCode());</span>
+<span class="fc" id="L355">        ApsProperties titles = new ApsProperties();</span>
+<span class="fc" id="L356">        widgetRequest.getTitles().forEach(titles::put);</span>
+<span class="fc" id="L357">        type.setTitles(titles);</span>
+<span class="fc" id="L358">        type.setMainGroup(widgetRequest.getGroup());</span>
+<span class="fc" id="L359">        type.setBundleId(widgetRequest.getBundleId());</span>
         try {
-<span class="fc bfc" id="L358" title="All 2 branches covered.">            if (widgetRequest.getConfigUi() != null) {</span>
-<span class="fc" id="L359">                type.setConfigUi(objectMapper.writeValueAsString(widgetRequest.getConfigUi()));</span>
+<span class="fc bfc" id="L361" title="All 2 branches covered.">            if (widgetRequest.getConfigUi() != null) {</span>
+<span class="fc" id="L362">                type.setConfigUi(objectMapper.writeValueAsString(widgetRequest.getConfigUi()));</span>
             } else {
-<span class="fc" id="L361">                type.setConfigUi(null);</span>
+<span class="fc" id="L364">                type.setConfigUi(null);</span>
             }
-<span class="nc" id="L363">        } catch (JsonProcessingException e) {</span>
-<span class="nc" id="L364">            logger.error(&quot;Failed to parse configUi property for request {} &quot;, widgetRequest, e);</span>
-<span class="nc" id="L365">            throw new RestServerError(&quot;error in add widget&quot;, e);</span>
-<span class="fc" id="L366">        }</span>
-<span class="fc" id="L367">    }</span>
+<span class="nc" id="L366">        } catch (JsonProcessingException e) {</span>
+<span class="nc" id="L367">            logger.error(&quot;Failed to parse configUi property for request {} &quot;, widgetRequest, e);</span>
+<span class="nc" id="L368">            throw new RestServerError(&quot;error in add widget&quot;, e);</span>
+<span class="fc" id="L369">        }</span>
+<span class="fc" id="L370">    }</span>
 
     private void addFragments(WidgetDto widgetDto) throws Exception {
-<span class="fc" id="L370">        List&lt;String&gt; fragmentCodes = this.getGuiFragmentManager().getGuiFragmentCodesByWidgetType(widgetDto.getCode());</span>
-<span class="pc bpc" id="L371" title="1 of 2 branches missed.">        if (fragmentCodes != null) {</span>
-<span class="fc bfc" id="L372" title="All 2 branches covered.">            for (String fragmentCode : fragmentCodes) {</span>
-<span class="fc" id="L373">                GuiFragment fragment = this.getGuiFragmentManager().getGuiFragment(fragmentCode);</span>
-<span class="fc" id="L374">                widgetDto.addGuiFragmentRef(fragment.getCode(), fragment.getCurrentGui(), fragment.getDefaultGui());</span>
-<span class="fc" id="L375">            }</span>
+<span class="fc" id="L373">        List&lt;String&gt; fragmentCodes = this.getGuiFragmentManager().getGuiFragmentCodesByWidgetType(widgetDto.getCode());</span>
+<span class="pc bpc" id="L374" title="1 of 2 branches missed.">        if (fragmentCodes != null) {</span>
+<span class="fc bfc" id="L375" title="All 2 branches covered.">            for (String fragmentCode : fragmentCodes) {</span>
+<span class="fc" id="L376">                GuiFragment fragment = this.getGuiFragmentManager().getGuiFragment(fragmentCode);</span>
+<span class="fc" id="L377">                widgetDto.addGuiFragmentRef(fragment.getCode(), fragment.getCurrentGui(), fragment.getDefaultGui());</span>
+<span class="fc" id="L378">            }</span>
         }
-<span class="fc" id="L377">    }</span>
+<span class="fc" id="L380">    }</span>
 
     private BeanPropertyBindingResult checkWidgetForDelete(WidgetType widgetType) throws ApsSystemException {
-<span class="fc" id="L380">        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(widgetType, &quot;widget&quot;);</span>
-<span class="pc bpc" id="L381" title="1 of 2 branches missed.">        if (null == widgetType) {</span>
-<span class="nc" id="L382">            return bindingResult;</span>
+<span class="fc" id="L383">        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(widgetType, &quot;widget&quot;);</span>
+<span class="pc bpc" id="L384" title="1 of 2 branches missed.">        if (null == widgetType) {</span>
+<span class="nc" id="L385">            return bindingResult;</span>
         }
-<span class="fc bfc" id="L384" title="All 2 branches covered.">        if (widgetType.isLocked()) {</span>
-<span class="fc" id="L385">            bindingResult.reject(WidgetValidator.ERRCODE_OPERATION_FORBIDDEN_LOCKED, new String[]{widgetType.getCode()}, &quot;widgettype.delete.locked&quot;);</span>
+<span class="fc bfc" id="L387" title="All 2 branches covered.">        if (widgetType.isLocked()) {</span>
+<span class="fc" id="L388">            bindingResult.reject(WidgetValidator.ERRCODE_OPERATION_FORBIDDEN_LOCKED, new String[]{widgetType.getCode()}, &quot;widgettype.delete.locked&quot;);</span>
         }
-<span class="fc" id="L387">        List&lt;IPage&gt; onLinePages = this.getPageManager().getOnlineWidgetUtilizers(widgetType.getCode());</span>
-<span class="fc" id="L388">        List&lt;IPage&gt; draftPages = this.getPageManager().getDraftWidgetUtilizers(widgetType.getCode());</span>
-<span class="pc bpc" id="L389" title="3 of 8 branches missed.">        if ((null != onLinePages &amp;&amp; onLinePages.size() &gt; 0) || (null != draftPages &amp;&amp; draftPages.size() &gt; 0)) {</span>
-<span class="fc" id="L390">            bindingResult.reject(WidgetValidator.ERRCODE_CANNOT_DELETE_USED_PAGES, new String[]{widgetType.getCode()}, &quot;widgettype.delete.references.page&quot;);</span>
+<span class="fc" id="L390">        List&lt;IPage&gt; onLinePages = this.getPageManager().getOnlineWidgetUtilizers(widgetType.getCode());</span>
+<span class="fc" id="L391">        List&lt;IPage&gt; draftPages = this.getPageManager().getDraftWidgetUtilizers(widgetType.getCode());</span>
+<span class="pc bpc" id="L392" title="3 of 8 branches missed.">        if ((null != onLinePages &amp;&amp; onLinePages.size() &gt; 0) || (null != draftPages &amp;&amp; draftPages.size() &gt; 0)) {</span>
+<span class="fc" id="L393">            bindingResult.reject(WidgetValidator.ERRCODE_CANNOT_DELETE_USED_PAGES, new String[]{widgetType.getCode()}, &quot;widgettype.delete.references.page&quot;);</span>
         }
-<span class="fc" id="L392">        return bindingResult;</span>
+<span class="fc" id="L395">        return bindingResult;</span>
     }
 
     @Override
     public void setServletContext(ServletContext srvCtx) {
-<span class="fc" id="L397">        this.srvCtx = srvCtx;</span>
-<span class="fc" id="L398">    }</span>
+<span class="fc" id="L400">        this.srvCtx = srvCtx;</span>
+<span class="fc" id="L401">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
