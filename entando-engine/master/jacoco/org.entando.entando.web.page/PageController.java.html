@@ -46,6 +46,7 @@ import org.entando.entando.web.page.validator.PageValidator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -66,12 +67,13 @@ import org.springframework.web.bind.annotation.SessionAttributes;
  */
 @RestController
 @SessionAttributes(&quot;user&quot;)
-<span class="fc" id="L69">public class PageController {</span>
+<span class="fc" id="L70">public class PageController {</span>
     public static final String COMPONENT_ID = &quot;page&quot;;
 
-<span class="fc" id="L72">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+<span class="fc" id="L73">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
 
     @Autowired
+    @Qualifier(&quot;PageService&quot;)
     private IPageService pageService;
 
     @Autowired
@@ -84,28 +86,28 @@ import org.springframework.web.bind.annotation.SessionAttributes;
     private PageAuthorizationService authorizationService;
 
     public IPageService getPageService() {
-<span class="fc" id="L87">        return pageService;</span>
+<span class="fc" id="L89">        return pageService;</span>
     }
 
     public void setPageService(IPageService pageService) {
-<span class="fc" id="L91">        this.pageService = pageService;</span>
-<span class="fc" id="L92">    }</span>
+<span class="fc" id="L93">        this.pageService = pageService;</span>
+<span class="fc" id="L94">    }</span>
 
     public PageValidator getPageValidator() {
-<span class="fc" id="L95">        return pageValidator;</span>
+<span class="fc" id="L97">        return pageValidator;</span>
     }
 
     public void setPageValidator(PageValidator pageValidator) {
-<span class="fc" id="L99">        this.pageValidator = pageValidator;</span>
-<span class="fc" id="L100">    }</span>
+<span class="fc" id="L101">        this.pageValidator = pageValidator;</span>
+<span class="fc" id="L102">    }</span>
 
     public PageAuthorizationService getAuthorizationService() {
-<span class="fc" id="L103">        return authorizationService;</span>
+<span class="fc" id="L105">        return authorizationService;</span>
     }
 
     public void setAuthorizationService(PageAuthorizationService authorizationService) {
-<span class="fc" id="L107">        this.authorizationService = authorizationService;</span>
-<span class="fc" id="L108">    }</span>
+<span class="fc" id="L109">        this.authorizationService = authorizationService;</span>
+<span class="fc" id="L110">    }</span>
 
     @RestAccessControl(permission = Permission.MANAGE_PAGES)
     @RequestMapping(value = &quot;/pages&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -114,75 +116,75 @@ import org.springframework.web.bind.annotation.SessionAttributes;
             @RequestParam(value = &quot;parentCode&quot;, required = false, defaultValue = &quot;homepage&quot;) String parentCode,
             @RequestParam(value = &quot;forLinkingToOwnerGroup&quot;, required = false) String forLinkingToOwnerGroup,
             @RequestParam(value = &quot;forLinkingToExtraGroups&quot;, required = false) String forLinkingToExtraGroups) {
-<span class="fc" id="L117">        logger.debug(&quot;getting page tree for parent {} ({}|{})&quot;, parentCode,</span>
+<span class="fc" id="L119">        logger.debug(&quot;getting page tree for parent {} ({}|{})&quot;, parentCode,</span>
                 forLinkingToOwnerGroup, forLinkingToExtraGroups);
 
-<span class="fc bfc" id="L120" title="All 2 branches covered.">        List&lt;String&gt; exg = (forLinkingToExtraGroups == null) ? null :</span>
-<span class="fc" id="L121">                Arrays.asList(forLinkingToExtraGroups.split(&quot;,&quot;));</span>
+<span class="fc bfc" id="L122" title="All 2 branches covered.">        List&lt;String&gt; exg = (forLinkingToExtraGroups == null) ? null :</span>
+<span class="fc" id="L123">                Arrays.asList(forLinkingToExtraGroups.split(&quot;,&quot;));</span>
 
-<span class="fc" id="L123">        List&lt;PageDto&gt; result = this.getAuthorizationService().filterList(</span>
+<span class="fc" id="L125">        List&lt;PageDto&gt; result = this.getAuthorizationService().filterList(</span>
                 user,
-<span class="fc" id="L125">                this.getPageService().getPages(parentCode, forLinkingToOwnerGroup, exg)</span>
+<span class="fc" id="L127">                this.getPageService().getPages(parentCode, forLinkingToOwnerGroup, exg)</span>
         );
 
-<span class="fc" id="L128">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L129">        metadata.put(&quot;parentCode&quot;, parentCode);</span>
-<span class="fc" id="L130">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(result, metadata), HttpStatus.OK);</span>
+<span class="fc" id="L130">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L131">        metadata.put(&quot;parentCode&quot;, parentCode);</span>
+<span class="fc" id="L132">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(result, metadata), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.MANAGE_PAGES)
     @RequestMapping(value = &quot;/pages/search&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;PagedRestResponse&lt;PageDto&gt;&gt; getPages(@ModelAttribute(&quot;user&quot;) UserDetails user, PageSearchRequest searchRequest) {
-<span class="fc" id="L136">        logger.debug(&quot;getting page list with request {}&quot;, searchRequest);</span>
-<span class="fc" id="L137">        this.getPageValidator().validateRestListRequest(searchRequest, PageDto.class);</span>
-<span class="fc" id="L138">        List&lt;String&gt; groups = this.getAuthorizationService().getAllowedGroupCodes(user);</span>
-<span class="fc" id="L139">        PagedMetadata&lt;PageDto&gt; result = this.getPageService().searchPages(searchRequest, groups);</span>
-<span class="fc" id="L140">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+<span class="fc" id="L138">        logger.debug(&quot;getting page list with request {}&quot;, searchRequest);</span>
+<span class="fc" id="L139">        this.getPageValidator().validateRestListRequest(searchRequest, PageDto.class);</span>
+<span class="fc" id="L140">        List&lt;String&gt; groups = this.getAuthorizationService().getAllowedGroupCodes(user);</span>
+<span class="fc" id="L141">        PagedMetadata&lt;PageDto&gt; result = this.getPageService().searchPages(searchRequest, groups);</span>
+<span class="fc" id="L142">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.MANAGE_PAGES)
     @RequestMapping(value = &quot;/pages/search/group/free&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;PagedRestResponse&lt;PageDto&gt;&gt; getFreeOnlinePages(@ModelAttribute(&quot;user&quot;) UserDetails user, RestListRequest restListRequest) {
-<span class="fc" id="L146">        logger.debug(&quot;getting free pages list with request {}&quot;, restListRequest);</span>
-<span class="fc" id="L147">        this.getPageValidator().validateRestListRequest(restListRequest, PageDto.class);</span>
-<span class="fc" id="L148">        PagedMetadata&lt;PageDto&gt; result = this.getPageService().searchOnlineFreePages(restListRequest);</span>
-<span class="fc" id="L149">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+<span class="fc" id="L148">        logger.debug(&quot;getting free pages list with request {}&quot;, restListRequest);</span>
+<span class="fc" id="L149">        this.getPageValidator().validateRestListRequest(restListRequest, PageDto.class);</span>
+<span class="fc" id="L150">        PagedMetadata&lt;PageDto&gt; result = this.getPageService().searchOnlineFreePages(restListRequest);</span>
+<span class="fc" id="L151">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.MANAGE_PAGES)
     @RequestMapping(value = &quot;/pages/viewpages&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;List&lt;PageDto&gt;&gt;&gt; listViewPages() {
-<span class="fc" id="L155">        logger.debug(&quot;REST request - content type list view pages&quot;);</span>
+<span class="fc" id="L157">        logger.debug(&quot;REST request - content type list view pages&quot;);</span>
 
-<span class="fc" id="L157">        return ResponseEntity.ok(</span>
-<span class="fc" id="L158">                new SimpleRestResponse&lt;&gt;(pageService.listViewPages()));</span>
+<span class="fc" id="L159">        return ResponseEntity.ok(</span>
+<span class="fc" id="L160">                new SimpleRestResponse&lt;&gt;(pageService.listViewPages()));</span>
     }
 
     @RestAccessControl(permission = Permission.MANAGE_PAGES)
     @RequestMapping(value = &quot;/pages/{pageCode}&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;RestResponse&lt;PageDto, Map&lt;String, String&gt;&gt;&gt; getPage(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String pageCode, @RequestParam(value = &quot;status&quot;, required = false, defaultValue = IPageService.STATUS_DRAFT) String status) {
-<span class="fc" id="L164">        logger.debug(&quot;getting page {}&quot;, pageCode);</span>
-<span class="fc" id="L165">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
-<span class="pc bpc" id="L166" title="1 of 2 branches missed.">        if (!this.getAuthorizationService().isAuth(user, pageCode)) {</span>
-<span class="nc" id="L167">            return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(new PageDto(), metadata), HttpStatus.UNAUTHORIZED);</span>
+<span class="fc" id="L166">        logger.debug(&quot;getting page {}&quot;, pageCode);</span>
+<span class="fc" id="L167">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
+<span class="pc bpc" id="L168" title="1 of 2 branches missed.">        if (!this.getAuthorizationService().isAuth(user, pageCode)) {</span>
+<span class="nc" id="L169">            return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(new PageDto(), metadata), HttpStatus.UNAUTHORIZED);</span>
         }
-<span class="fc" id="L169">        PageDto page = this.getPageService().getPage(pageCode, status);</span>
-<span class="fc" id="L170">        metadata.put(&quot;status&quot;, status);</span>
-<span class="fc" id="L171">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(page, metadata), HttpStatus.OK);</span>
+<span class="fc" id="L171">        PageDto page = this.getPageService().getPage(pageCode, status);</span>
+<span class="fc" id="L172">        metadata.put(&quot;status&quot;, status);</span>
+<span class="fc" id="L173">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(page, metadata), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.SUPERUSER)
     @RequestMapping(value = &quot;/pages/{pageCode}/usage&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;ComponentUsage&gt;&gt; getComponentUsage(@PathVariable String pageCode) {
-<span class="fc" id="L177">        logger.trace(&quot;get {} usage by code {}&quot;, COMPONENT_ID, pageCode);</span>
+<span class="fc" id="L179">        logger.trace(&quot;get {} usage by code {}&quot;, COMPONENT_ID, pageCode);</span>
 
-<span class="fc" id="L179">        ComponentUsage usage = ComponentUsage.builder()</span>
-<span class="fc" id="L180">                .type(COMPONENT_ID)</span>
-<span class="fc" id="L181">                .code(pageCode)</span>
-<span class="fc" id="L182">                .usage(getPageService().getComponentUsage(pageCode))</span>
-<span class="fc" id="L183">                .build();</span>
+<span class="fc" id="L181">        ComponentUsage usage = ComponentUsage.builder()</span>
+<span class="fc" id="L182">                .type(COMPONENT_ID)</span>
+<span class="fc" id="L183">                .code(pageCode)</span>
+<span class="fc" id="L184">                .usage(getPageService().getComponentUsage(pageCode))</span>
+<span class="fc" id="L185">                .build();</span>
 
-<span class="fc" id="L185">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(usage), HttpStatus.OK);</span>
+<span class="fc" id="L187">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(usage), HttpStatus.OK);</span>
     }
 
 
@@ -190,18 +192,18 @@ import org.springframework.web.bind.annotation.SessionAttributes;
     @RequestMapping(value = &quot;/pages/{pageCode}/usage/details&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;PagedRestResponse&lt;ComponentUsageEntity&gt;&gt; getComponentUsageDetails(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String pageCode, PageSearchRequest searchRequest) {
 
-<span class="fc" id="L193">        logger.trace(&quot;get {} usage details by code {}&quot;, COMPONENT_ID, pageCode);</span>
+<span class="fc" id="L195">        logger.trace(&quot;get {} usage details by code {}&quot;, COMPONENT_ID, pageCode);</span>
 
         // clear filters
-<span class="fc" id="L196">        searchRequest.setFilters(new Filter[0]);</span>
+<span class="fc" id="L198">        searchRequest.setFilters(new Filter[0]);</span>
 
-<span class="fc bfc" id="L198" title="All 2 branches covered.">        if (!this.getAuthorizationService().isAuth(user, pageCode)) {</span>
-<span class="fc" id="L199">            return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(new PagedMetadata&lt;&gt;()), HttpStatus.UNAUTHORIZED);</span>
+<span class="fc bfc" id="L200" title="All 2 branches covered.">        if (!this.getAuthorizationService().isAuth(user, pageCode)) {</span>
+<span class="fc" id="L201">            return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(new PagedMetadata&lt;&gt;()), HttpStatus.UNAUTHORIZED);</span>
         }
 
-<span class="fc" id="L202">        PagedMetadata&lt;ComponentUsageEntity&gt; result = pageService.getComponentUsageDetails(pageCode, searchRequest);</span>
+<span class="fc" id="L204">        PagedMetadata&lt;ComponentUsageEntity&gt; result = pageService.getComponentUsageDetails(pageCode, searchRequest);</span>
 
-<span class="fc" id="L204">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+<span class="fc" id="L206">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
     }
 
 
@@ -209,31 +211,31 @@ import org.springframework.web.bind.annotation.SessionAttributes;
     @RestAccessControl(permission = Permission.MANAGE_PAGES)
     @RequestMapping(value = &quot;/pages/{pageCode}&quot;, method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;RestResponse&lt;PageDto, Map&lt;String, String&gt;&gt;&gt; updatePage(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String pageCode, @Valid @RequestBody PageRequest pageRequest, BindingResult bindingResult) {
-<span class="fc" id="L212">        logger.debug(&quot;updating page {} with request {}&quot;, pageCode, pageRequest);</span>
+<span class="fc" id="L214">        logger.debug(&quot;updating page {} with request {}&quot;, pageCode, pageRequest);</span>
 
-<span class="pc bpc" id="L214" title="1 of 2 branches missed.">        if (!this.getAuthorizationService().isAuth(user, pageCode)) {</span>
-<span class="nc" id="L215">            throw new ResourcePermissionsException(bindingResult, user.getUsername(), pageCode);</span>
+<span class="pc bpc" id="L216" title="1 of 2 branches missed.">        if (!this.getAuthorizationService().isAuth(user, pageCode)) {</span>
+<span class="nc" id="L217">            throw new ResourcePermissionsException(bindingResult, user.getUsername(), pageCode);</span>
         }
         //field validations
-<span class="pc bpc" id="L218" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L219">            throw new ValidationGenericException(bindingResult);</span>
+<span class="pc bpc" id="L220" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L221">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="fc" id="L221">        this.getPageValidator().validateBodyCode(pageCode, pageRequest, bindingResult);</span>
-<span class="fc bfc" id="L222" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
-<span class="fc" id="L223">            throw new ValidationGenericException(bindingResult);</span>
+<span class="fc" id="L223">        this.getPageValidator().validateBodyCode(pageCode, pageRequest, bindingResult);</span>
+<span class="fc bfc" id="L224" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L225">            throw new ValidationGenericException(bindingResult);</span>
         }
 
-<span class="fc" id="L226">        PagePositionRequest pagePositionRequest = new PagePositionRequest();</span>
-<span class="fc" id="L227">        pagePositionRequest.setParentCode(pageRequest.getParentCode());</span>
-<span class="fc" id="L228">        pagePositionRequest.setCode(pageCode);</span>
-<span class="fc" id="L229">        int position = pageService.getPages(pageCode).size() + 1;</span>
-<span class="fc" id="L230">        pagePositionRequest.setPosition(position);</span>
+<span class="fc" id="L228">        PagePositionRequest pagePositionRequest = new PagePositionRequest();</span>
+<span class="fc" id="L229">        pagePositionRequest.setParentCode(pageRequest.getParentCode());</span>
+<span class="fc" id="L230">        pagePositionRequest.setCode(pageCode);</span>
+<span class="fc" id="L231">        int position = pageService.getPages(pageCode).size() + 1;</span>
+<span class="fc" id="L232">        pagePositionRequest.setPosition(position);</span>
 
-<span class="fc" id="L232">        this.getPageValidator().validateMovePage(pageCode, bindingResult, pagePositionRequest);</span>
+<span class="fc" id="L234">        this.getPageValidator().validateMovePage(pageCode, bindingResult, pagePositionRequest);</span>
 
-<span class="fc" id="L234">        PageDto page = this.getPageService().updatePage(pageCode, pageRequest);</span>
-<span class="fc" id="L235">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L236">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(page, metadata), HttpStatus.OK);</span>
+<span class="fc" id="L236">        PageDto page = this.getPageService().updatePage(pageCode, pageRequest);</span>
+<span class="fc" id="L237">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L238">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(page, metadata), HttpStatus.OK);</span>
     }
 
 
@@ -244,110 +246,110 @@ import org.springframework.web.bind.annotation.SessionAttributes;
     public ResponseEntity&lt;RestResponse&lt;PageDto, Map&lt;String, String&gt;&gt;&gt; updatePageStatus(
             @ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String pageCode,
             @Valid @RequestBody PageStatusRequest pageStatusRequest, BindingResult bindingResult) {
-<span class="fc" id="L247">        logger.debug(&quot;changing status for page {} with request {}&quot;, pageCode, pageStatusRequest);</span>
-<span class="fc" id="L248">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
-<span class="pc bpc" id="L249" title="1 of 2 branches missed.">        if (!this.getAuthorizationService().isAuth(user, pageCode)) {</span>
-<span class="nc" id="L250">            return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(new PageDto(), metadata), HttpStatus.UNAUTHORIZED);</span>
+<span class="fc" id="L249">        logger.debug(&quot;changing status for page {} with request {}&quot;, pageCode, pageStatusRequest);</span>
+<span class="fc" id="L250">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
+<span class="pc bpc" id="L251" title="1 of 2 branches missed.">        if (!this.getAuthorizationService().isAuth(user, pageCode)) {</span>
+<span class="nc" id="L252">            return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(new PageDto(), metadata), HttpStatus.UNAUTHORIZED);</span>
         }
         //field validations
-<span class="fc bfc" id="L253" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
-<span class="fc" id="L254">            throw new ValidationGenericException(bindingResult);</span>
+<span class="fc bfc" id="L255" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L256">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="fc" id="L256">        PageDto page = this.getPageService().updatePageStatus(pageCode, pageStatusRequest.getStatus());</span>
-<span class="fc" id="L257">        metadata.put(&quot;status&quot;, pageStatusRequest.getStatus());</span>
-<span class="fc" id="L258">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(page, metadata), HttpStatus.OK);</span>
+<span class="fc" id="L258">        PageDto page = this.getPageService().updatePageStatus(pageCode, pageStatusRequest.getStatus());</span>
+<span class="fc" id="L259">        metadata.put(&quot;status&quot;, pageStatusRequest.getStatus());</span>
+<span class="fc" id="L260">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(page, metadata), HttpStatus.OK);</span>
     }
 
     @ActivityStreamAuditable
     @RestAccessControl(permission = Permission.MANAGE_PAGES)
     @RequestMapping(value = &quot;/pages&quot;, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;PageDto&gt;&gt; addPage(@ModelAttribute(&quot;user&quot;) UserDetails user, @Valid @RequestBody PageRequest pageRequest, BindingResult bindingResult) throws ApsSystemException {
-<span class="fc" id="L265">        logger.debug(&quot;creating page with request {}&quot;, pageRequest);</span>
+<span class="fc" id="L267">        logger.debug(&quot;creating page with request {}&quot;, pageRequest);</span>
         //field validations
-<span class="pc bpc" id="L267" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L268">            throw new ValidationGenericException(bindingResult);</span>
+<span class="pc bpc" id="L269" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L270">            throw new ValidationGenericException(bindingResult);</span>
         }
         //business validations
-<span class="fc" id="L271">        getPageValidator().validate(pageRequest, bindingResult);</span>
-<span class="fc bfc" id="L272" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
-<span class="fc" id="L273">            throw new ValidationConflictException(bindingResult);</span>
+<span class="fc" id="L273">        getPageValidator().validate(pageRequest, bindingResult);</span>
+<span class="fc bfc" id="L274" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L275">            throw new ValidationConflictException(bindingResult);</span>
         }
-<span class="fc" id="L275">        PageDto dto = this.getPageService().addPage(pageRequest);</span>
-<span class="fc" id="L276">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(dto), HttpStatus.OK);</span>
+<span class="fc" id="L277">        PageDto dto = this.getPageService().addPage(pageRequest);</span>
+<span class="fc" id="L278">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(dto), HttpStatus.OK);</span>
     }
 
     @ActivityStreamAuditable
     @RestAccessControl(permission = Permission.MANAGE_PAGES)
     @RequestMapping(value = &quot;/pages/{pageCode}&quot;, method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;?&gt;&gt; deletePage(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String pageCode) throws ApsSystemException {
-<span class="fc" id="L283">        logger.debug(&quot;deleting {}&quot;, pageCode);</span>
-<span class="pc bpc" id="L284" title="1 of 2 branches missed.">        if (!this.getAuthorizationService().isAuth(user, pageCode)) {</span>
-<span class="nc" id="L285">            return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(new PageDto()), HttpStatus.UNAUTHORIZED);</span>
+<span class="fc" id="L285">        logger.debug(&quot;deleting {}&quot;, pageCode);</span>
+<span class="pc bpc" id="L286" title="1 of 2 branches missed.">        if (!this.getAuthorizationService().isAuth(user, pageCode)) {</span>
+<span class="nc" id="L287">            return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(new PageDto()), HttpStatus.UNAUTHORIZED);</span>
         }
-<span class="fc" id="L287">        DataBinder binder = new DataBinder(pageCode);</span>
-<span class="fc" id="L288">        BindingResult bindingResult = binder.getBindingResult();</span>
+<span class="fc" id="L289">        DataBinder binder = new DataBinder(pageCode);</span>
+<span class="fc" id="L290">        BindingResult bindingResult = binder.getBindingResult();</span>
         //field validations
-<span class="pc bpc" id="L290" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L291">            throw new ValidationGenericException(bindingResult);</span>
+<span class="pc bpc" id="L292" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L293">            throw new ValidationGenericException(bindingResult);</span>
         }
         //business validations
-<span class="fc" id="L294">        getPageValidator().validateOnlinePage(pageCode, bindingResult);</span>
-<span class="fc bfc" id="L295" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
-<span class="fc" id="L296">            throw new ValidationGenericException(bindingResult);</span>
+<span class="fc" id="L296">        getPageValidator().validateOnlinePage(pageCode, bindingResult);</span>
+<span class="fc bfc" id="L297" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L298">            throw new ValidationGenericException(bindingResult);</span>
         }
         //business validations
-<span class="fc" id="L299">        getPageValidator().validateChildren(pageCode, bindingResult);</span>
-<span class="fc bfc" id="L300" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
-<span class="fc" id="L301">            throw new ValidationGenericException(bindingResult);</span>
+<span class="fc" id="L301">        getPageValidator().validateChildren(pageCode, bindingResult);</span>
+<span class="fc bfc" id="L302" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L303">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="fc" id="L303">        this.getPageService().removePage(pageCode);</span>
-<span class="fc" id="L304">        Map&lt;String, String&gt; payload = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L305">        payload.put(&quot;code&quot;, pageCode);</span>
-<span class="fc" id="L306">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(payload), HttpStatus.OK);</span>
+<span class="fc" id="L305">        this.getPageService().removePage(pageCode);</span>
+<span class="fc" id="L306">        Map&lt;String, String&gt; payload = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L307">        payload.put(&quot;code&quot;, pageCode);</span>
+<span class="fc" id="L308">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(payload), HttpStatus.OK);</span>
     }
 
     @ActivityStreamAuditable
     @RestAccessControl(permission = Permission.MANAGE_PAGES)
     @RequestMapping(value = &quot;/pages/{pageCode}/position&quot;, method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;PageDto&gt;&gt; movePage(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String pageCode, @Valid @RequestBody PagePositionRequest pageRequest, BindingResult bindingResult) {
-<span class="fc" id="L313">        logger.debug(&quot;changing position for page {} with request {}&quot;, pageCode, pageRequest);</span>
+<span class="fc" id="L315">        logger.debug(&quot;changing position for page {} with request {}&quot;, pageCode, pageRequest);</span>
 
         //field validations
-<span class="fc bfc" id="L316" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
-<span class="fc" id="L317">            throw new ValidationGenericException(bindingResult);</span>
+<span class="fc bfc" id="L318" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L319">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="fc" id="L319">        this.getPageValidator().validateMovePage(pageCode, bindingResult, pageRequest);</span>
+<span class="fc" id="L321">        this.getPageValidator().validateMovePage(pageCode, bindingResult, pageRequest);</span>
 
-<span class="pc bpc" id="L321" title="1 of 2 branches missed.">        if (!this.getAuthorizationService().isAuth(user, pageCode)) {</span>
-<span class="nc" id="L322">            return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(new PageDto()), HttpStatus.UNAUTHORIZED);</span>
+<span class="pc bpc" id="L323" title="1 of 2 branches missed.">        if (!this.getAuthorizationService().isAuth(user, pageCode)) {</span>
+<span class="nc" id="L324">            return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(new PageDto()), HttpStatus.UNAUTHORIZED);</span>
         }
 
-<span class="fc" id="L325">        PageDto page = this.getPageService().movePage(pageCode, pageRequest);</span>
-<span class="fc" id="L326">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(page), HttpStatus.OK);</span>
+<span class="fc" id="L327">        PageDto page = this.getPageService().movePage(pageCode, pageRequest);</span>
+<span class="fc" id="L328">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(page), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.SUPERUSER)
     @RequestMapping(value = &quot;/pages/{pageCode}/references/{manager}&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;PagedRestResponse&lt;?&gt;&gt; getPageReferences(@PathVariable String pageCode, @PathVariable String manager, RestListRequest requestList) {
-<span class="nc" id="L332">        logger.debug(&quot;loading references for page {} and manager {}&quot;, pageCode, manager);</span>
-<span class="nc" id="L333">        PagedMetadata&lt;?&gt; result = this.getPageService().getPageReferences(pageCode, manager, requestList);</span>
-<span class="nc" id="L334">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+<span class="nc" id="L334">        logger.debug(&quot;loading references for page {} and manager {}&quot;, pageCode, manager);</span>
+<span class="nc" id="L335">        PagedMetadata&lt;?&gt; result = this.getPageService().getPageReferences(pageCode, manager, requestList);</span>
+<span class="nc" id="L336">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.MANAGE_PAGES)
     @RequestMapping(value = &quot;/pages/{pageCode}&quot;, method = RequestMethod.PATCH, produces = MediaType.APPLICATION_JSON_VALUE, consumes = &quot;application/json-patch+json&quot;)
     public ResponseEntity&lt;RestResponse&lt;PageDto, Map&lt;String, String&gt;&gt;&gt; patchPage(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String pageCode, @RequestBody JsonNode patchRequest, BindingResult bindingResult) {
-<span class="fc" id="L340">        logger.debug(&quot;update page {} with jsonpatch-request {}&quot;, pageCode, patchRequest);</span>
+<span class="fc" id="L342">        logger.debug(&quot;update page {} with jsonpatch-request {}&quot;, pageCode, patchRequest);</span>
 
-<span class="fc" id="L342">        this.getPageValidator().validateJsonPatchRequest(patchRequest, bindingResult);</span>
-<span class="pc bpc" id="L343" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L344">            throw new ValidationGenericException(bindingResult);</span>
+<span class="fc" id="L344">        this.getPageValidator().validateJsonPatchRequest(patchRequest, bindingResult);</span>
+<span class="pc bpc" id="L345" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L346">            throw new ValidationGenericException(bindingResult);</span>
         }
 
-<span class="fc" id="L347">        PageDto updatedPageDto = this.getPageService().getPatchedPage(pageCode, patchRequest);</span>
-<span class="fc" id="L348">        PageRequest pageRequest = this.pageDtoToRequestConverter.convert(updatedPageDto);</span>
+<span class="fc" id="L349">        PageDto updatedPageDto = this.getPageService().getPatchedPage(pageCode, patchRequest);</span>
+<span class="fc" id="L350">        PageRequest pageRequest = this.pageDtoToRequestConverter.convert(updatedPageDto);</span>
 
-<span class="fc" id="L350">        return this.updatePage(user, pageCode, pageRequest, bindingResult);</span>
+<span class="fc" id="L352">        return this.updatePage(user, pageCode, pageRequest, bindingResult);</span>
     }
 
 
