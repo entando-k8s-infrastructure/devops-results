@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EntandoBundleJobService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.service.digitalexchange.job</a> &gt; <span class="el_source">EntandoBundleJobService.java</span></div><h1>EntandoBundleJobService.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.service.digitalexchange.job;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.entando.kubernetes.model.job.EntandoBundleComponentJobEntity;
+import org.entando.kubernetes.model.job.EntandoBundleJobEntity;
+import org.entando.kubernetes.model.job.JobStatus;
+import org.entando.kubernetes.model.job.JobType;
+import org.entando.kubernetes.model.web.request.PagedListRequest;
+import org.entando.kubernetes.model.web.response.PagedMetadata;
+import org.entando.kubernetes.repository.EntandoBundleComponentJobRepository;
+import org.entando.kubernetes.repository.EntandoBundleJobRepository;
+import org.springframework.stereotype.Service;
+
+<span class="fc" id="L19">@Slf4j</span>
+@Service
+@RequiredArgsConstructor
+public class EntandoBundleJobService {
+
+    private final @NonNull EntandoBundleJobRepository jobRepository;
+    private final @NonNull EntandoBundleComponentJobRepository componentJobRepository;
+
+    public PagedMetadata&lt;EntandoBundleJobEntity&gt; getJobs(PagedListRequest request) {
+<span class="fc" id="L28">        List&lt;EntandoBundleJobEntity&gt; allJobs = getJobs();</span>
+<span class="fc" id="L29">        List&lt;EntandoBundleJobEntity&gt; filteredList = new EntandoBundleJobListProcessor(request, allJobs)</span>
+<span class="fc" id="L30">                .filterAndSort().toList();</span>
+<span class="fc" id="L31">        List&lt;EntandoBundleJobEntity&gt; sublist = request.getSublist(filteredList);</span>
+
+<span class="fc" id="L33">        return new PagedMetadata&lt;&gt;(request, sublist, filteredList.size());</span>
+    }
+
+    public List&lt;EntandoBundleComponentJobEntity&gt; getJobRelatedComponentJobs(EntandoBundleJobEntity job) {
+<span class="fc" id="L37">        return componentJobRepository.findAllByParentJob(job);</span>
+    }
+
+    public List&lt;EntandoBundleJobEntity&gt; getJobs() {
+<span class="fc" id="L41">        return jobRepository.findAllByOrderByStartedAtDesc();</span>
+    }
+
+    public List&lt;EntandoBundleJobEntity&gt; getJobs(String componentId) {
+<span class="fc" id="L45">        return jobRepository.findAllByComponentIdOrderByStartedAtDesc(componentId);</span>
+    }
+
+    public Optional&lt;EntandoBundleJobEntity&gt; getById(String jobId) {
+<span class="fc" id="L49">        return jobRepository.findById(UUID.fromString(jobId));</span>
+    }
+
+    public Optional&lt;EntandoBundleJobEntity&gt; getComponentLastJobOfType(String componentId, JobType type) {
+<span class="nc" id="L53">        return jobRepository.findFirstByComponentIdAndStatusInOrderByStartedAtDesc(componentId, type.getStatuses());</span>
+    }
+
+    public Optional&lt;EntandoBundleJobEntity&gt; getComponentLastJobWithStatus(String componentId, JobStatus status) {
+<span class="nc" id="L57">        return jobRepository.findFirstByComponentIdAndStatusOrderByStartedAtDesc(componentId, status);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
