@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>UserShortcutConfigDOM.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Administration Console</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.apsadmin.system.services.shortcut</a> &gt; <span class="el_source">UserShortcutConfigDOM.java</span></div><h1>UserShortcutConfigDOM.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.entando.apsadmin.system.services.shortcut;
+
+import com.agiletec.aps.system.exception.ApsSystemException;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.input.SAXBuilder;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.StringReader;
+import java.util.List;
+
+/**
+ * @author E.Santoboni
+ */
+<span class="nc" id="L31">public class UserShortcutConfigDOM {</span>
+
+<span class="fc" id="L33">	private static final Logger _logger = LoggerFactory.getLogger(UserShortcutConfigDOM.class);</span>
+	
+	protected static String createUserConfigXml(String[] config) throws ApsSystemException {
+<span class="fc" id="L36">		XMLOutputter out = new XMLOutputter();</span>
+<span class="fc" id="L37">		Document document = new Document();</span>
+		try {
+<span class="fc" id="L39">			Element rootElement = new Element(ROOT_ELEMENT_NAME);</span>
+<span class="fc" id="L40">			document.setRootElement(rootElement);</span>
+<span class="fc bfc" id="L41" title="All 2 branches covered.">			for (int i = 0; i &lt; config.length; i++) {</span>
+<span class="fc" id="L42">				String shortcut = config[i];</span>
+<span class="fc bfc" id="L43" title="All 2 branches covered.">				if (null != shortcut) {</span>
+<span class="fc" id="L44">					Element element = new Element(BOX_ELEMENT_NAME);</span>
+<span class="fc" id="L45">					element.setAttribute(POS_ATTRIBUTE_NAME, String.valueOf(i));</span>
+<span class="fc" id="L46">					element.setText(shortcut);</span>
+<span class="fc" id="L47">					rootElement.addContent(element);</span>
+				}
+			}
+<span class="nc" id="L50">		} catch (Throwable t) {</span>
+<span class="nc" id="L51">			_logger.error(&quot;Error parsing user config&quot;, t);</span>
+			//ApsSystemUtils.logThrowable(t, UserShortcutConfigDOM.class, &quot;extractUserShortcutConfig&quot;);
+<span class="nc" id="L53">			throw new ApsSystemException(&quot;Error parsing user config&quot;, t);</span>
+<span class="fc" id="L54">		}</span>
+<span class="fc" id="L55">		Format format = Format.getPrettyFormat();</span>
+<span class="fc" id="L56">		format.setIndent(&quot;\t&quot;);</span>
+<span class="fc" id="L57">		out.setFormat(format);</span>
+<span class="fc" id="L58">		return out.outputString(document);</span>
+	}
+	
+	protected static String[] extractUserConfig(String xml, Integer definiteSize) throws ApsSystemException {
+<span class="fc" id="L62">		String[] config = new String[definiteSize];</span>
+		try {
+<span class="pc bpc" id="L64" title="1 of 4 branches missed.">			if (null == xml || xml.trim().length() == 0) return config;</span>
+<span class="fc" id="L65">			Document doc = decodeDOM(xml);</span>
+<span class="fc" id="L66">			List&lt;Element&gt; elements = doc.getRootElement().getChildren(BOX_ELEMENT_NAME);</span>
+<span class="fc bfc" id="L67" title="All 2 branches covered.">			for (int i=0; i&lt;elements.size(); i++) {</span>
+<span class="pc bpc" id="L68" title="1 of 2 branches missed.">				if (i &gt; definiteSize) break;</span>
+<span class="fc" id="L69">				Element element = elements.get(i);</span>
+<span class="fc" id="L70">				Integer pos = null;</span>
+				try {
+<span class="fc" id="L72">					pos = Integer.parseInt(element.getAttributeValue(POS_ATTRIBUTE_NAME));</span>
+<span class="nc" id="L73">				} catch (Exception e) {</span>
+					//nothing to catch
+<span class="fc" id="L75">				}</span>
+<span class="fc" id="L76">				String shortcutCode = element.getText();</span>
+<span class="pc bpc" id="L77" title="1 of 2 branches missed.">				if (null != pos) {</span>
+<span class="fc" id="L78">					config[pos] = shortcutCode;</span>
+				}
+			}
+<span class="nc" id="L81">		} catch (Throwable t) {</span>
+<span class="nc" id="L82">			_logger.error(&quot;Error parsing user config&quot;, t);</span>
+			//ApsSystemUtils.logThrowable(t, UserShortcutConfigDOM.class, &quot;extractUserShortcutConfig&quot;);
+<span class="nc" id="L84">			throw new ApsSystemException(&quot;Error parsing user config&quot;, t);</span>
+<span class="fc" id="L85">		}</span>
+<span class="fc" id="L86">		return config;</span>
+	}
+	
+	private static Document decodeDOM(String xmlText) throws ApsSystemException {
+<span class="fc" id="L90">		Document doc = null;</span>
+<span class="fc" id="L91">		SAXBuilder builder = new SAXBuilder();</span>
+<span class="fc" id="L92">		builder.setValidation(false);</span>
+<span class="fc" id="L93">		StringReader reader = new StringReader(xmlText);</span>
+		try {
+<span class="fc" id="L95">			doc = builder.build(reader);</span>
+<span class="nc" id="L96">		} catch (Throwable t) {</span>
+<span class="nc" id="L97">			_logger.error(&quot;Error while parsing xml: {}&quot;, xmlText, t);</span>
+<span class="nc" id="L98">			throw new ApsSystemException(&quot;Error detected while parsing the XML&quot;, t);</span>
+<span class="fc" id="L99">		}</span>
+<span class="fc" id="L100">		return doc;</span>
+	}
+	
+	public static final String ROOT_ELEMENT_NAME = &quot;shortcuts&quot;;
+	public static final String BOX_ELEMENT_NAME = &quot;box&quot;;
+	public static final String POS_ATTRIBUTE_NAME = &quot;pos&quot;;
+	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
