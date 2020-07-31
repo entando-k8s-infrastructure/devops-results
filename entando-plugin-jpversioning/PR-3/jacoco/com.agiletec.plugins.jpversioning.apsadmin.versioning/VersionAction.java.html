@@ -1,0 +1,413 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>VersionAction.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Plugin: Content Versioning</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.plugins.jpversioning.apsadmin.versioning</a> &gt; <span class="el_source">VersionAction.java</span></div><h1>VersionAction.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the &quot;Software&quot;), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED &quot;AS IS&quot;, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
+package com.agiletec.plugins.jpversioning.apsadmin.versioning;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
+
+import com.agiletec.apsadmin.system.ApsAdminSystemConstants;
+import com.agiletec.plugins.jacms.aps.system.services.content.model.Content;
+import com.agiletec.plugins.jacms.aps.system.services.content.model.ContentRecordVO;
+import com.agiletec.plugins.jacms.aps.system.services.content.model.SmallContentType;
+import com.agiletec.plugins.jacms.aps.system.services.resource.IResourceManager;
+import com.agiletec.plugins.jacms.aps.system.services.resource.model.ResourceInterface;
+import com.agiletec.plugins.jacms.apsadmin.content.AbstractContentAction;
+import com.agiletec.plugins.jacms.apsadmin.content.ContentActionConstants;
+import com.agiletec.plugins.jpversioning.aps.system.services.resource.ITrashedResourceManager;
+import com.agiletec.plugins.jpversioning.aps.system.services.versioning.ContentVersion;
+import com.agiletec.plugins.jpversioning.aps.system.services.versioning.IVersioningManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * @author G.Cocco
+ */
+<span class="nc" id="L59">public class VersionAction extends AbstractContentAction {</span>
+	
+<span class="nc" id="L61">	private static final Logger logger = LoggerFactory.getLogger(VersionAction.class);</span>
+
+    public String history() {
+<span class="nc" id="L64">		return SUCCESS;</span>
+	}
+	
+	public String trash() {
+<span class="nc" id="L68">		return SUCCESS;</span>
+	}
+	
+	public String delete() {
+		try {
+<span class="nc" id="L73">			this.getVersioningManager().deleteVersion(this.getVersionId());</span>
+<span class="nc" id="L74">		} catch (Exception e) {</span>
+<span class="nc" id="L75">			logger.error(&quot;Error deleting version &quot; + this.getVersionId(), e);</span>
+<span class="nc" id="L76">			return FAILURE;</span>
+<span class="nc" id="L77">		}</span>
+<span class="nc" id="L78">		return SUCCESS;</span>
+	}
+	
+	public String preview() {
+		try {
+<span class="nc" id="L83">			ContentVersion contentVersion = this.getContentVersion();</span>
+<span class="nc" id="L84">			Content currentContent = this.getVersioningManager().getContent(contentVersion);</span>
+<span class="nc" id="L85">			this.setContent(currentContent);</span>
+<span class="nc" id="L86">		} catch (Exception e) {</span>
+<span class="nc" id="L87">			logger.error(&quot;Error on preview of version &quot;, e);</span>
+<span class="nc" id="L88">			return FAILURE;</span>
+<span class="nc" id="L89">		}</span>
+<span class="nc" id="L90">		return SUCCESS;</span>
+	}
+	
+	public String entryRecover() {
+<span class="nc" id="L94">		return SUCCESS;</span>
+	}
+	
+	public String recover() {
+<span class="nc" id="L98">		Content content = null;</span>
+		try {
+<span class="nc" id="L100">			ContentVersion contentVersion = this.getContentVersion();</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">			if (null == contentVersion) {</span>
+<span class="nc" id="L102">				throw new RuntimeException(&quot;Null content version : versionid &quot; + this.getVersionId());</span>
+			}
+<span class="nc" id="L104">			List&lt;String&gt; trashedResources = this.getTrashedResources();</span>
+<span class="nc bnc" id="L105" title="All 4 branches missed.">			if (null != trashedResources &amp;&amp; trashedResources.size() &gt; 0) {</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">				for (String resourceId : trashedResources) {</span>
+<span class="nc" id="L107">					this.getTrashedResourceManager().restoreResource(resourceId);</span>
+<span class="nc" id="L108">				}</span>
+			}
+<span class="nc" id="L110">            content = this.getVersioningManager().getContent(contentVersion);</span>
+<span class="nc" id="L111">            String lastVersionNumber = null;</span>
+<span class="nc" id="L112">            ContentRecordVO currentRecordVo = this.getContentManager().loadContentVO(contentVersion.getContentId());</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">            if (null != currentRecordVo) {</span>
+<span class="nc" id="L114">                lastVersionNumber = currentRecordVo.getVersion();</span>
+            } else {
+<span class="nc" id="L116">                ContentVersion lastVersion = this.getVersioningManager().getLastVersion(contentVersion.getContentId());</span>
+<span class="nc" id="L117">                lastVersionNumber = lastVersion.getVersion();</span>
+            }
+<span class="nc" id="L119">            content.setVersion(lastVersionNumber);</span>
+<span class="nc" id="L120">            this.getContentManager().saveContent(content);</span>
+<span class="nc" id="L121">            String marker = AbstractContentAction.buildContentOnSessionMarker(contentVersion.getContentId(), </span>
+<span class="nc" id="L122">                    contentVersion.getContentType(), ApsAdminSystemConstants.EDIT);</span>
+<span class="nc" id="L123">            this.setContentOnSessionMarker(marker);</span>
+<span class="nc" id="L124">			this.getRequest().getSession()</span>
+<span class="nc" id="L125">					.setAttribute(ContentActionConstants.SESSION_PARAM_NAME_CURRENT_CONTENT_PREXIX + marker, content);</span>
+<span class="nc" id="L126">		} catch (Exception e) {</span>
+<span class="nc" id="L127">			logger.error(&quot;Error recovering version &quot; + this.getVersionId(), e);</span>
+<span class="nc" id="L128">			return FAILURE;</span>
+<span class="nc" id="L129">		}</span>
+<span class="nc" id="L130">		return SUCCESS;</span>
+	}
+    
+    public Content getCurrentContent(String contentId) {
+<span class="nc" id="L134">        Content current = null;</span>
+		try {
+<span class="nc" id="L136">			current = this.getContentManager().loadContent(contentId, false);</span>
+<span class="nc" id="L137">		} catch (Exception e) {</span>
+<span class="nc" id="L138">			logger.error(&quot;Error extracting current content &quot; + contentId, e);</span>
+<span class="nc" id="L139">			throw new RuntimeException(&quot;Error extracting current content &quot; + contentId, e);</span>
+<span class="nc" id="L140">		}</span>
+<span class="nc" id="L141">		return current;</span>
+    }
+	
+	public List&lt;Long&gt; getContentVersions() {
+<span class="nc" id="L145">		List&lt;Long&gt; versions = null;</span>
+		try {
+<span class="nc" id="L147">			versions = this.getVersioningManager().getVersions(this.getContentId());</span>
+<span class="nc" id="L148">		} catch (Exception e) {</span>
+<span class="nc" id="L149">			logger.error(&quot;Error extracting versions of content &quot; + this.getContentId(), e);</span>
+<span class="nc" id="L150">			throw new RuntimeException(&quot;Errore in estrazione lista versioni per contenuto &quot; + this.getContentId(), e);</span>
+<span class="nc" id="L151">		}</span>
+<span class="nc" id="L152">		return versions;</span>
+	}
+	
+	public ContentVersion getContentVersion(long versionId) {
+<span class="nc" id="L156">		ContentVersion version = null;	</span>
+		try {
+<span class="nc" id="L158">			version = this.getVersioningManager().getVersion(versionId);</span>
+<span class="nc" id="L159">		} catch (Exception e) {</span>
+<span class="nc" id="L160">			logger.error(&quot;Error extracting current content &quot; + versionId, e);</span>
+<span class="nc" id="L161">			throw new RuntimeException(&quot;Error extracting current version &quot; + versionId, e);</span>
+<span class="nc" id="L162">		}</span>
+<span class="nc" id="L163">		return version;</span>
+	}
+	
+	public ResourceInterface getTrashedResource(String id) {
+<span class="nc" id="L167">		ResourceInterface resource = null;	</span>
+		try {
+<span class="nc" id="L169">			resource  = this.getTrashedResourceManager().loadTrashedResource(id);</span>
+<span class="nc" id="L170">		} catch (Exception e) {</span>
+<span class="nc" id="L171">			logger.error(&quot;Error loading resource &quot; + id, e);</span>
+<span class="nc" id="L172">			throw new RuntimeException(&quot;Error loading resource &quot; + id, e);</span>
+<span class="nc" id="L173">		}</span>
+<span class="nc" id="L174">		return resource;</span>
+	}
+	
+    public List&lt;String&gt; getTrashedResources() {
+<span class="nc bnc" id="L178" title="All 2 branches missed.">        if (this._trashedResources == null) {</span>
+            try {
+<span class="nc" id="L180">                this.loadTrashResources();</span>
+<span class="nc" id="L181">            } catch (Exception e) {</span>
+<span class="nc" id="L182">                logger.error(&quot;Error loading trashed resources for content with version &quot; + this.getVersionId(), e);</span>
+<span class="nc" id="L183">                throw new RuntimeException(&quot;Error loading trashed resources for content with version &quot; + getVersionId(), e);</span>
+<span class="nc" id="L184">            }</span>
+        }
+<span class="nc" id="L186">        return this._trashedResources;</span>
+    }
+	
+    public Set&lt;String&gt; getTrashRemovedResources() {
+<span class="nc bnc" id="L190" title="All 2 branches missed.">        if (this._trashRemovedResources == null) {</span>
+            try {
+<span class="nc" id="L192">                this.loadTrashResources();</span>
+<span class="nc" id="L193">            } catch (Exception e) {</span>
+<span class="nc" id="L194">                logger.error(&quot;Error loading trashed resources for content with version &quot; + this.getVersionId(), e);</span>
+<span class="nc" id="L195">                throw new RuntimeException(&quot;Error loading trashed resources for content with version &quot; + getVersionId(), e);</span>
+<span class="nc" id="L196">            }</span>
+        }
+<span class="nc" id="L198">        return this._trashRemovedResources;</span>
+    }
+	
+	private void loadTrashResources() throws Exception {
+<span class="nc" id="L202">		ContentVersion contentVersion = this.getContentVersion();</span>
+<span class="nc" id="L203">		String contentXml = contentVersion.getXml();</span>
+<span class="nc" id="L204">		Document doc = this.loadContentDocumentDOM(contentXml);			</span>
+<span class="nc" id="L205">		List&lt;String&gt; resourceIds = this.loadResourcesIdFromContentDocumentDOM(doc);</span>
+<span class="nc" id="L206">		List&lt;String&gt; archivedResources = this.getArchivedResourcesId(resourceIds);</span>
+<span class="nc bnc" id="L207" title="All 4 branches missed.">		if (null != resourceIds &amp;&amp; resourceIds.size() &gt; 0 ) {</span>
+<span class="nc" id="L208">			this._trashedResources = this.getTrashedResourcesId(resourceIds, archivedResources);</span>
+<span class="nc" id="L209">			this._trashRemovedResources = this.getTrashRemovedResourcesId(resourceIds, archivedResources);</span>
+		}
+<span class="nc" id="L211">	}</span>
+	
+	/*
+	 * Restituisce la lista degli identificativi di quelle risorse 
+	 * che sono state cestinate ed eliminate dal cestino.
+	 * */
+	private Set&lt;String&gt; getTrashRemovedResourcesId(List&lt;String&gt; resourceIds, List&lt;String&gt; archivedResources) {
+<span class="nc" id="L218">		Set&lt;String&gt; trashRemovedResources = null;</span>
+<span class="nc" id="L219">		Iterator&lt;String&gt; it = resourceIds.iterator();</span>
+<span class="nc" id="L220">		String id = null;</span>
+<span class="nc bnc" id="L221" title="All 2 branches missed.">		while (it.hasNext()) {</span>
+<span class="nc" id="L222">			id = (String)it.next();</span>
+<span class="nc" id="L223">			ResourceInterface resourceInterfaceArchived = null;</span>
+<span class="nc" id="L224">			ResourceInterface resourceInterfaceTrashed = null;</span>
+			try {
+<span class="nc" id="L226">				resourceInterfaceTrashed = this.getTrashedResourceManager().loadTrashedResource(id);</span>
+<span class="nc" id="L227">				resourceInterfaceArchived = this.getResourceManager().loadResource(id);</span>
+<span class="nc bnc" id="L228" title="All 4 branches missed.">				if (!(null != resourceInterfaceArchived || null != resourceInterfaceTrashed)) {</span>
+<span class="nc bnc" id="L229" title="All 2 branches missed.">					if (null == trashRemovedResources) {</span>
+<span class="nc" id="L230">						trashRemovedResources = new HashSet&lt;String&gt;();</span>
+					}
+<span class="nc" id="L232">					trashRemovedResources.add(id);</span>
+				}
+<span class="nc" id="L234">			} catch (Throwable t) {</span>
+<span class="nc" id="L235">				logger.error(&quot;Error checking resource permanently removed, id &quot; + id, t);</span>
+<span class="nc" id="L236">				throw new RuntimeException(&quot;Error checking resource permanently removed, id &quot; + id, t);</span>
+<span class="nc" id="L237">			}</span>
+<span class="nc" id="L238">		}</span>
+<span class="nc" id="L239">		return trashRemovedResources;</span>
+	}
+	
+	/*
+	 * Verifica quali delle risorse presenti in resourcesIds risulta nel cestino risorse
+	 * */
+	private List&lt;String&gt; getArchivedResourcesId(List&lt;String&gt; resourceIds) {
+<span class="nc" id="L246">		List&lt;String&gt; archivedResources = null;</span>
+<span class="nc bnc" id="L247" title="All 2 branches missed.">		if (null != resourceIds) {</span>
+<span class="nc" id="L248">			Iterator&lt;String&gt; it = resourceIds.iterator();</span>
+<span class="nc" id="L249">			String id = null;</span>
+<span class="nc bnc" id="L250" title="All 2 branches missed.">			while (it.hasNext()) {</span>
+<span class="nc" id="L251">				ResourceInterface resourceInterface = null;</span>
+<span class="nc" id="L252">				id = (String) it.next();</span>
+				try {
+<span class="nc" id="L254">					resourceInterface = this.getResourceManager().loadResource(id);</span>
+<span class="nc bnc" id="L255" title="All 2 branches missed.">					if (null != resourceInterface) {</span>
+<span class="nc bnc" id="L256" title="All 2 branches missed.">						if ( null == archivedResources) {</span>
+<span class="nc" id="L257">							archivedResources = new ArrayList&lt;&gt;();</span>
+						}
+<span class="nc" id="L259">						archivedResources.add(id);</span>
+					}
+<span class="nc" id="L261">				} catch (Throwable t) {</span>
+<span class="nc" id="L262">                    logger.error(&quot;Error checking resource &quot; + id, t);</span>
+<span class="nc" id="L263">					throw new RuntimeException(&quot;Error checking resource &quot; + id, t);</span>
+<span class="nc" id="L264">				}</span>
+<span class="nc" id="L265">			}</span>
+		}
+<span class="nc" id="L267">		return archivedResources;</span>
+	}
+	
+	private List&lt;String&gt; getTrashedResourcesId(List&lt;String&gt; resourceIds, List&lt;String&gt; archivedResources) {
+<span class="nc" id="L271">		List&lt;String&gt; trashedResources = null; </span>
+<span class="nc" id="L272">		Iterator&lt;String&gt; it = resourceIds.iterator();</span>
+<span class="nc" id="L273">		String id = null;</span>
+<span class="nc bnc" id="L274" title="All 2 branches missed.">		while (it.hasNext()) {</span>
+<span class="nc" id="L275">			id = (String) it.next();</span>
+<span class="nc bnc" id="L276" title="All 4 branches missed.">			if (null == archivedResources || !archivedResources.contains(id)) {</span>
+<span class="nc" id="L277">				ResourceInterface resourceInterface = null;</span>
+				try {
+<span class="nc" id="L279">					resourceInterface = this.getTrashedResourceManager().loadTrashedResource(id);</span>
+<span class="nc bnc" id="L280" title="All 2 branches missed.">					if (null != resourceInterface) {</span>
+<span class="nc bnc" id="L281" title="All 2 branches missed.">						if (null == trashedResources) {</span>
+<span class="nc" id="L282">							trashedResources = new ArrayList&lt;&gt;();</span>
+						}
+<span class="nc" id="L284">						trashedResources.add(id);</span>
+					}
+<span class="nc" id="L286">				} catch (Throwable t) {</span>
+<span class="nc" id="L287">                    logger.error(&quot;Error checking resource &quot; + id, t);</span>
+<span class="nc" id="L288">					throw new RuntimeException(&quot;Error checking resource &quot; + id, t);</span>
+<span class="nc" id="L289">				}</span>
+<span class="nc" id="L290">			}</span>
+		}
+<span class="nc" id="L292">		return trashedResources;</span>
+	}
+	
+	/*
+	 * Restituisce gli id delle risorse presenti nel documento
+	 * */
+	private List&lt;String&gt; loadResourcesIdFromContentDocumentDOM(Document doc) {
+<span class="nc" id="L299">		List&lt;String&gt; resourcesId = null;</span>
+<span class="nc" id="L300">		NodeList listaNodiAttributi = doc.getElementsByTagName(RESOURCE);</span>
+<span class="nc bnc" id="L301" title="All 2 branches missed.">		for (int i = 0 ; i &lt; listaNodiAttributi.getLength(); i++) {</span>
+<span class="nc" id="L302">			Node node = listaNodiAttributi.item(i);</span>
+<span class="nc" id="L303">			NamedNodeMap namedNodeMap = node.getAttributes();</span>
+<span class="nc bnc" id="L304" title="All 2 branches missed.">			if (null == resourcesId) {</span>
+<span class="nc" id="L305">				resourcesId = new ArrayList&lt;&gt;();</span>
+			}
+<span class="nc" id="L307">			resourcesId.add(namedNodeMap.getNamedItem(RESOURCE_ID).getNodeValue());</span>
+		}
+<span class="nc" id="L309">		return resourcesId;</span>
+	}
+	
+	private Document loadContentDocumentDOM(String contentXml) throws ParserConfigurationException, SAXException, IOException {
+<span class="nc" id="L313">		DocumentBuilderFactory fact = DocumentBuilderFactory.newInstance();</span>
+<span class="nc" id="L314">		DocumentBuilder builder = fact.newDocumentBuilder();</span>
+<span class="nc" id="L315">		ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(contentXml.getBytes(&quot;UTF-8&quot;));</span>
+<span class="nc" id="L316">		Document doc = builder.parse(byteArrayInputStream);</span>
+<span class="nc" id="L317">		return doc;</span>
+	}
+	
+	public ContentVersion getContentVersion() {
+<span class="nc bnc" id="L321" title="All 2 branches missed.">		if (this._contentVersion == null) {</span>
+			try {
+<span class="nc" id="L323">				this._contentVersion = this.getVersioningManager().getVersion(this.getVersionId());</span>
+<span class="nc" id="L324">			} catch (Throwable t) {</span>
+<span class="nc" id="L325">                logger.error(&quot;Error extracting content version &quot; + this.getVersionId(), t);</span>
+<span class="nc" id="L326">				throw new RuntimeException(&quot;Error extracting content version &quot; + this.getVersionId(), t);</span>
+<span class="nc" id="L327">			}</span>
+		}
+<span class="nc" id="L329">		return this._contentVersion;</span>
+	}
+	
+	@Override
+	public SmallContentType getSmallContentType(String typeCode) {
+<span class="nc" id="L334">		SmallContentType contentType = this.getContentManager().getSmallContentTypesMap().get(typeCode);</span>
+<span class="nc" id="L335">		return contentType;</span>
+	}
+	
+	public long getBackId() {
+<span class="nc" id="L339">		return _backId;</span>
+	}
+	public void setBackId(long backId) {
+<span class="nc" id="L342">		this._backId = backId;</span>
+<span class="nc" id="L343">	}</span>
+	
+	public long getVersionId() {
+<span class="nc" id="L346">		return _versionId;</span>
+	}
+	public void setVersionId(long versionId) {
+<span class="nc" id="L349">		this._versionId = versionId;</span>
+<span class="nc" id="L350">	}</span>
+	
+	public String getContentId() {
+<span class="nc" id="L353">		return _contentId;</span>
+	}
+	public void setContentId(String contentId) {
+<span class="nc" id="L356">		this._contentId = contentId;</span>
+<span class="nc" id="L357">	}</span>
+	
+	public boolean isFromEdit() {
+<span class="nc" id="L360">		return _fromEdit;</span>
+	}
+	public void setFromEdit(boolean fromEdit) {
+<span class="nc" id="L363">		this._fromEdit = fromEdit;</span>
+<span class="nc" id="L364">	}</span>
+	
+	public Content getContent() {
+<span class="nc" id="L367">		return _content;</span>
+	}
+	protected void setContent(Content content) {
+<span class="nc" id="L370">		this._content = content;</span>
+<span class="nc" id="L371">	}</span>
+	
+	protected IVersioningManager getVersioningManager() {
+<span class="nc" id="L374">		return _versioningManager;</span>
+	}
+	public void setVersioningManager(IVersioningManager versioningManager) {
+<span class="nc" id="L377">		this._versioningManager = versioningManager;</span>
+<span class="nc" id="L378">	}</span>
+	
+	public ITrashedResourceManager getTrashedResourceManager() {
+<span class="nc" id="L381">		return _trashedResourceManager;</span>
+	}
+	public void setTrashedResourceManager(ITrashedResourceManager trashedResourceManager) {
+<span class="nc" id="L384">		this._trashedResourceManager = trashedResourceManager;</span>
+<span class="nc" id="L385">	}</span>
+	
+	public void setResourceManager(IResourceManager resourceManager) {
+<span class="nc" id="L388">		this._resourceManager = resourceManager;</span>
+<span class="nc" id="L389">	}</span>
+	public IResourceManager getResourceManager() {
+<span class="nc" id="L391">		return _resourceManager;</span>
+	}
+	
+	private long _versionId;
+	private String _contentId;
+	
+	private long _backId;
+	private boolean _fromEdit;
+	
+	private Content _content;
+	private ContentVersion _contentVersion;
+<span class="nc" id="L402">	private List&lt;String&gt; _trashedResources = null;</span>
+<span class="nc" id="L403">	private Set&lt;String&gt; _trashRemovedResources = null;</span>
+	
+	private IVersioningManager _versioningManager;
+	private IResourceManager _resourceManager;
+	private ITrashedResourceManager _trashedResourceManager;
+	
+	private final static String RESOURCE = &quot;resource&quot;;
+	private final static String RESOURCE_ID = &quot;id&quot;;
+	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
