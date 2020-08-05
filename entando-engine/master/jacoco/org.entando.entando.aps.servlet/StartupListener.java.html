@@ -13,24 +13,49 @@
  */
 package org.entando.entando.aps.servlet;
 
+import com.agiletec.aps.system.SystemConstants;
+import org.entando.entando.aps.system.exception.CSRFProtectionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
+import java.util.Objects;
 
 /**
  * Init the system when the web application is started
+ *
  * @author E.Santoboni
  */
-<span class="nc" id="L23">public class StartupListener extends org.springframework.web.context.ContextLoaderListener {</span>
-	
-	@Override
-	public void contextInitialized(ServletContextEvent event) {
-<span class="nc" id="L27">		ServletContext svCtx = event.getServletContext();</span>
-<span class="nc" id="L28">		String msg = this.getClass().getName()+ &quot;: INIT &quot; + svCtx.getServletContextName();</span>
-<span class="nc" id="L29">		System.out.println(msg);</span>
-<span class="nc" id="L30">		super.contextInitialized(event);</span>
-<span class="nc" id="L31">		msg = this.getClass().getName() + &quot;: INIT DONE &quot;+ svCtx.getServletContextName();</span>
-<span class="nc" id="L32">		System.out.println(msg);</span>
-<span class="nc" id="L33">	}</span>
-	
+<span class="nc" id="L30">public class StartupListener extends org.springframework.web.context.ContextLoaderListener {</span>
+
+<span class="nc" id="L32">    private static final Logger LOGGER = LoggerFactory.getLogger(StartupListener.class);</span>
+
+    @Override
+    public void contextInitialized(ServletContextEvent event) {
+<span class="nc" id="L36">        ServletContext svCtx = event.getServletContext();</span>
+<span class="nc" id="L37">        String msg = this.getClass().getName() + &quot;: INIT &quot; + svCtx.getServletContextName();</span>
+<span class="nc" id="L38">        System.out.println(msg);</span>
+<span class="nc" id="L39">        super.contextInitialized(event);</span>
+<span class="nc" id="L40">        msg = this.getClass().getName() + &quot;: INIT DONE &quot; + svCtx.getServletContextName();</span>
+<span class="nc" id="L41">        System.out.println(msg);</span>
+
+<span class="nc" id="L43">        boolean isActive = Objects.nonNull(System.getenv(SystemConstants.ENTANDO_CSRF_PROTECTION));</span>
+<span class="nc" id="L44">        String whiteList = System.getenv(SystemConstants.ENTANDO_CSRF_ALLOWED_DOMAINS);</span>
+
+<span class="nc bnc" id="L46" title="All 4 branches missed.">        if (!isActive || !SystemConstants.CSRF_BASIC_PROTECTION.equals(System.getenv(SystemConstants.ENTANDO_CSRF_PROTECTION))) {</span>
+<span class="nc" id="L47">            LOGGER.warn(&quot;CSRF protection is not enabled&quot;);</span>
+<span class="nc bnc" id="L48" title="All 2 branches missed.">        } else if (SystemConstants.CSRF_BASIC_PROTECTION.equals(System.getenv(SystemConstants.ENTANDO_CSRF_PROTECTION))) {</span>
+<span class="nc bnc" id="L49" title="All 4 branches missed.">            if (whiteList != null &amp;&amp; !whiteList.equals(&quot;&quot;)) {</span>
+<span class="nc" id="L50">                String message = &quot;CSRF protection is enabled Domains --&gt; &quot;.concat(whiteList);</span>
+<span class="nc" id="L51">                LOGGER.info(message);</span>
+<span class="nc" id="L52">            } else {</span>
+<span class="nc" id="L53">                LOGGER.error(&quot;CSRF protection is enabled but the domains are initialized. Please initialize the domains&quot;);</span>
+<span class="nc" id="L54">                throw new CSRFProtectionException(&quot;CSRF protection is enabled but the domains are not initialized. Please initialize the domains&quot;);</span>
+            }
+        }
+
+<span class="nc" id="L58">    }</span>
+
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
