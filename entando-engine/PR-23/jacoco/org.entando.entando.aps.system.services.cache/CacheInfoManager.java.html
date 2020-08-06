@@ -1,0 +1,360 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CacheInfoManager.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.system.services.cache</a> &gt; <span class="el_source">CacheInfoManager.java</span></div><h1>CacheInfoManager.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando S.r.l. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.entando.aps.system.services.cache;
+
+import com.agiletec.aps.system.SystemConstants;
+import com.agiletec.aps.system.common.AbstractService;
+import com.agiletec.aps.system.exception.ApsSystemException;
+import com.agiletec.aps.system.services.page.IPage;
+import com.agiletec.aps.system.services.page.events.PageChangedEvent;
+import com.agiletec.aps.system.services.page.events.PageChangedObserver;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.time.DateUtils;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.reflect.MethodSignature;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.expression.EvaluationContext;
+
+/**
+ * Manager of the System Cache
+ *
+ * @author E.Santoboni
+ */
+@Aspect
+<span class="fc" id="L53">public class CacheInfoManager extends AbstractService implements ICacheInfoManager, PageChangedObserver {</span>
+
+<span class="fc" id="L55">    private static final Logger logger = LoggerFactory.getLogger(CacheInfoManager.class);</span>
+
+    private CacheManager springCacheManager;
+
+    @Override
+    public void init() throws Exception {
+<span class="fc" id="L61">        logger.debug(&quot;{} (cache info service initialized) ready&quot;, this.getClass().getName());</span>
+<span class="fc" id="L62">    }</span>
+
+    @Around(&quot;@annotation(cacheableInfo)&quot;)
+    public Object aroundCacheableMethod(ProceedingJoinPoint pjp, CacheableInfo cacheableInfo) throws Throwable {
+<span class="pc bpc" id="L66" title="1 of 4 branches missed.">        boolean skipCacheableInfo = (cacheableInfo.expiresInMinute() &lt; 0 &amp;&amp; (StringUtils.isBlank(cacheableInfo.groups())));</span>
+<span class="pc bpc" id="L67" title="1 of 2 branches missed.">        if (skipCacheableInfo) {</span>
+<span class="nc" id="L68">            return pjp.proceed();</span>
+        }
+<span class="fc" id="L70">        Object result = null;</span>
+        try {
+<span class="fc" id="L72">            MethodSignature methodSignature = (MethodSignature) pjp.getSignature();</span>
+<span class="fc" id="L73">            Method targetMethod = methodSignature.getMethod();</span>
+<span class="fc" id="L74">            Class targetClass = pjp.getTarget().getClass();</span>
+<span class="fc" id="L75">            Method effectiveTargetMethod = targetClass.getMethod(targetMethod.getName(), targetMethod.getParameterTypes());</span>
+<span class="fc" id="L76">            Cacheable cacheable = effectiveTargetMethod.getAnnotation(Cacheable.class);</span>
+<span class="fc" id="L77">            String keyExpression = null;</span>
+<span class="fc" id="L78">            String[] cacheNames = null;</span>
+<span class="pc bpc" id="L79" title="1 of 2 branches missed.">            if (null == cacheable) {</span>
+<span class="nc" id="L80">                CachePut cachePut = effectiveTargetMethod.getAnnotation(CachePut.class);</span>
+<span class="nc bnc" id="L81" title="All 2 branches missed.">                if (null == cachePut) {</span>
+<span class="nc" id="L82">                    return pjp.proceed();</span>
+                }
+<span class="nc" id="L84">                cacheNames = cachePut.value();</span>
+<span class="nc" id="L85">                keyExpression = cachePut.key();</span>
+<span class="nc" id="L86">            } else {</span>
+<span class="pc bpc" id="L87" title="1 of 2 branches missed.">                if (!StringUtils.isBlank(cacheable.condition())) {</span>
+<span class="nc" id="L88">                    Object isCacheable = this.evaluateExpression(cacheable.condition(), targetMethod, pjp.getArgs(), effectiveTargetMethod, targetClass);</span>
+<span class="nc" id="L89">                    Boolean check = Boolean.valueOf(isCacheable.toString());</span>
+<span class="nc bnc" id="L90" title="All 4 branches missed.">                    if (null != check &amp;&amp; !check) {</span>
+<span class="nc" id="L91">                        return pjp.proceed();</span>
+                    }
+                }
+<span class="fc" id="L94">                cacheNames = cacheable.value();</span>
+<span class="fc" id="L95">                keyExpression = cacheable.key();</span>
+            }
+<span class="fc" id="L97">            Object key = this.evaluateExpression(keyExpression, targetMethod, pjp.getArgs(), effectiveTargetMethod, targetClass);</span>
+<span class="fc" id="L98">            result = pjp.proceed();</span>
+<span class="fc bfc" id="L99" title="All 2 branches covered.">            for (String cacheName : cacheNames) {</span>
+<span class="pc bpc" id="L100" title="2 of 4 branches missed.">                if (cacheableInfo.groups() != null &amp;&amp; cacheableInfo.groups().trim().length() &gt; 0) {</span>
+<span class="fc" id="L101">                    Object groupsCsv = this.evaluateExpression(cacheableInfo.groups(), targetMethod, pjp.getArgs(), effectiveTargetMethod, targetClass);</span>
+<span class="pc bpc" id="L102" title="2 of 4 branches missed.">                    if (null != groupsCsv &amp;&amp; groupsCsv.toString().trim().length() &gt; 0) {</span>
+<span class="fc" id="L103">                        String[] groups = groupsCsv.toString().split(&quot;,&quot;);</span>
+<span class="fc" id="L104">                        this.putInGroup(cacheName, key.toString(), groups);</span>
+                    }
+                }
+<span class="pc bpc" id="L107" title="1 of 2 branches missed.">                if (cacheableInfo.expiresInMinute() &gt; 0) {</span>
+<span class="nc" id="L108">                    this.setExpirationTime(cacheName, key.toString(), cacheableInfo.expiresInMinute());</span>
+                }
+            }
+<span class="fc" id="L111">        } catch (Throwable t) {</span>
+<span class="fc" id="L112">            logger.error(&quot;Error while evaluating cacheableInfo annotation&quot;, t);</span>
+<span class="fc" id="L113">            throw new ApsSystemException(&quot;Error while evaluating cacheableInfo annotation&quot;, t);</span>
+<span class="fc" id="L114">        }</span>
+<span class="fc" id="L115">        return result;</span>
+    }
+
+    @Around(&quot;@annotation(cacheInfoEvict)&quot;)
+    public Object aroundCacheInfoEvictMethod(ProceedingJoinPoint pjp, CacheInfoEvict cacheInfoEvict) throws Throwable {
+        try {
+<span class="fc" id="L121">            MethodSignature methodSignature = (MethodSignature) pjp.getSignature();</span>
+<span class="fc" id="L122">            Method targetMethod = methodSignature.getMethod();</span>
+<span class="fc" id="L123">            Class targetClass = pjp.getTarget().getClass();</span>
+<span class="fc" id="L124">            Method effectiveTargetMethod = targetClass.getMethod(targetMethod.getName(), targetMethod.getParameterTypes());</span>
+<span class="fc" id="L125">            String[] cacheNames = cacheInfoEvict.value();</span>
+<span class="fc" id="L126">            Object groupsCsv = this.evaluateExpression(cacheInfoEvict.groups().toString(), targetMethod, pjp.getArgs(), effectiveTargetMethod, targetClass);</span>
+<span class="pc bpc" id="L127" title="2 of 4 branches missed.">            if (null != groupsCsv &amp;&amp; groupsCsv.toString().trim().length() &gt; 0) {</span>
+<span class="fc" id="L128">                String[] groups = groupsCsv.toString().split(&quot;,&quot;);</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">                for (String group : groups) {</span>
+<span class="fc bfc" id="L130" title="All 2 branches covered.">                    for (String cacheName : cacheNames) {</span>
+<span class="fc" id="L131">                        this.flushGroup(cacheName, group);</span>
+                    }
+                }
+            }
+<span class="fc" id="L135">        } catch (Throwable t) {</span>
+<span class="fc" id="L136">            logger.error(&quot;Error while flushing group&quot;, t);</span>
+<span class="fc" id="L137">            throw new ApsSystemException(&quot;Error while flushing group&quot;, t);</span>
+<span class="fc" id="L138">        }</span>
+<span class="fc" id="L139">        return pjp.proceed();</span>
+    }
+
+    public void setExpirationTime(String targetCache, String key, int expiresInMinute) {
+<span class="fc" id="L143">        Date expirationTime = DateUtils.addMinutes(new Date(), expiresInMinute);</span>
+<span class="fc" id="L144">        this.setExpirationTime(targetCache, key, expirationTime);</span>
+<span class="fc" id="L145">    }</span>
+
+    public void setExpirationTime(String targetCache, String key, long expiresInSeconds) {
+<span class="fc" id="L148">        Date expirationTime = DateUtils.addSeconds(new Date(), (int) expiresInSeconds);</span>
+<span class="fc" id="L149">        this.setExpirationTime(targetCache, key, expirationTime);</span>
+<span class="fc" id="L150">    }</span>
+
+    public void setExpirationTime(String targetCache, String key, Date expirationTime) {
+<span class="fc" id="L153">        Cache cache = this.getCache(CACHE_INFO_MANAGER_CACHE_NAME);</span>
+<span class="fc" id="L154">        Map&lt;String, Date&gt; expirationTimes = this.get(cache, EXPIRATIONS_CACHE_NAME_PREFIX + targetCache, Map.class);</span>
+<span class="fc bfc" id="L155" title="All 2 branches covered.">        if (null == expirationTimes) {</span>
+<span class="fc" id="L156">            expirationTimes = new HashMap&lt;String, Date&gt;();</span>
+        }
+<span class="fc" id="L158">        expirationTimes.put(key, expirationTime);</span>
+<span class="fc" id="L159">        cache.put(EXPIRATIONS_CACHE_NAME_PREFIX + targetCache, expirationTimes);</span>
+<span class="fc" id="L160">    }</span>
+
+    @Override
+    public void updateFromPageChanged(PageChangedEvent event) {
+<span class="fc" id="L164">        IPage page = event.getPage();</span>
+<span class="fc bfc" id="L165" title="All 2 branches covered.">        if (null != page) {</span>
+<span class="fc" id="L166">            String pageCacheGroupName = SystemConstants.PAGES_CACHE_GROUP_PREFIX + page.getCode();</span>
+<span class="fc" id="L167">            this.flushGroup(DEFAULT_CACHE_NAME, pageCacheGroupName);</span>
+        }
+<span class="fc" id="L169">    }</span>
+
+    @Override
+    protected void release() {
+<span class="fc" id="L173">        super.release();</span>
+<span class="fc" id="L174">        this.destroy();</span>
+<span class="fc" id="L175">    }</span>
+
+    @Override
+    public void destroy() {
+<span class="fc" id="L179">        this.flushAll(CACHE_INFO_MANAGER_CACHE_NAME);</span>
+<span class="fc" id="L180">        this.flushAll(DEFAULT_CACHE_NAME);</span>
+<span class="fc" id="L181">        super.destroy();</span>
+<span class="fc" id="L182">    }</span>
+
+    public void flushAll() {
+<span class="fc" id="L185">        Collection&lt;String&gt; cacheNames = this.getSpringCacheManager().getCacheNames();</span>
+<span class="fc" id="L186">        Iterator&lt;String&gt; iter = cacheNames.iterator();</span>
+<span class="fc bfc" id="L187" title="All 2 branches covered.">        while (iter.hasNext()) {</span>
+<span class="fc" id="L188">            String cacheName = iter.next();</span>
+<span class="fc" id="L189">            this.flushAll(cacheName);</span>
+<span class="fc" id="L190">        }</span>
+<span class="fc" id="L191">    }</span>
+
+    public void flushAll(String cacheName) {
+<span class="fc" id="L194">        Cache cacheOfGroup = this.getCache(CACHE_INFO_MANAGER_CACHE_NAME);</span>
+<span class="fc" id="L195">        cacheOfGroup.evict(GROUP_CACHE_NAME_PREFIX + cacheName);</span>
+<span class="fc" id="L196">        Cache cache = this.getCache(cacheName);</span>
+<span class="fc" id="L197">        cache.clear();</span>
+<span class="fc" id="L198">    }</span>
+
+    @Override
+    public void flushEntry(String targetCache, String key) {
+<span class="fc" id="L202">        this.getCache(targetCache).evict(key);</span>
+<span class="fc" id="L203">    }</span>
+
+    /**
+     * Put an object on the given cache.
+     *
+     * @param targetCache The cache name
+     * @param key The key
+     * @param obj The object to put into cache.
+     */
+    public void putInCache(String targetCache, String key, Object obj) {
+<span class="fc" id="L213">        Cache cache = this.getCache(targetCache);</span>
+<span class="fc" id="L214">        cache.put(key, obj);</span>
+<span class="fc" id="L215">    }</span>
+
+    public void putInCache(String targetCache, String key, Object obj, String[] groups) {
+<span class="fc" id="L218">        Cache cache = this.getCache(targetCache);</span>
+<span class="fc" id="L219">        cache.put(key, obj);</span>
+<span class="fc" id="L220">        this.accessOnGroupMapping(targetCache, 1, groups, key);</span>
+<span class="fc" id="L221">    }</span>
+
+    @Override
+    public void putInGroup(String targetCache, String key, String[] groups) {
+<span class="fc" id="L225">        this.accessOnGroupMapping(targetCache, 1, groups, key);</span>
+<span class="fc" id="L226">    }</span>
+
+    @Override
+    public void flushGroup(String targetCache, String group) {
+<span class="fc" id="L230">        String[] groups = {group};</span>
+<span class="fc" id="L231">        this.accessOnGroupMapping(targetCache, -1, groups, null);</span>
+<span class="fc" id="L232">    }</span>
+
+    protected synchronized void accessOnGroupMapping(String targetCache, int operationId, String[] groups, String key) {
+<span class="fc" id="L235">        Cache cache = this.getCache(CACHE_INFO_MANAGER_CACHE_NAME);</span>
+<span class="fc" id="L236">        Map&lt;String, List&lt;String&gt;&gt; objectsByGroup = this.get(cache, GROUP_CACHE_NAME_PREFIX + targetCache, Map.class);</span>
+<span class="fc" id="L237">        boolean updateMapInCache = false;</span>
+<span class="fc bfc" id="L238" title="All 2 branches covered.">        if (operationId &gt; 0) {</span>
+            //add
+<span class="fc bfc" id="L240" title="All 2 branches covered.">            if (null == objectsByGroup) {</span>
+<span class="fc" id="L241">                objectsByGroup = new HashMap&lt;String, List&lt;String&gt;&gt;();</span>
+            }
+<span class="fc bfc" id="L243" title="All 2 branches covered.">            for (String group : groups) {</span>
+<span class="fc" id="L244">                List&lt;String&gt; objectKeys = objectsByGroup.get(group);</span>
+<span class="fc bfc" id="L245" title="All 2 branches covered.">                if (null == objectKeys) {</span>
+<span class="fc" id="L246">                    objectKeys = new ArrayList&lt;String&gt;();</span>
+<span class="fc" id="L247">                    objectsByGroup.put(group, objectKeys);</span>
+                }
+<span class="fc bfc" id="L249" title="All 2 branches covered.">                if (!objectKeys.contains(key)) {</span>
+<span class="fc" id="L250">                    objectKeys.add(key);</span>
+<span class="fc" id="L251">                    updateMapInCache = true;</span>
+                }
+            }
+        } else {
+            //remove
+<span class="fc bfc" id="L256" title="All 2 branches covered.">            if (null == objectsByGroup) {</span>
+<span class="fc" id="L257">                return;</span>
+            }
+<span class="fc bfc" id="L259" title="All 2 branches covered.">            for (String group : groups) {</span>
+<span class="fc" id="L260">                List&lt;String&gt; objectKeys = objectsByGroup.get(group);</span>
+<span class="fc bfc" id="L261" title="All 2 branches covered.">                if (null != objectKeys) {</span>
+<span class="fc bfc" id="L262" title="All 2 branches covered.">                    for (String extractedKey : objectKeys) {</span>
+<span class="fc" id="L263">                        this.flushEntry(targetCache, extractedKey);</span>
+<span class="fc" id="L264">                    }</span>
+<span class="fc" id="L265">                    objectsByGroup.remove(group);</span>
+<span class="fc" id="L266">                    updateMapInCache = true;</span>
+                }
+            }
+        }
+<span class="fc bfc" id="L270" title="All 2 branches covered.">        if (updateMapInCache) {</span>
+<span class="fc" id="L271">            cache.put(GROUP_CACHE_NAME_PREFIX + targetCache, objectsByGroup);</span>
+        }
+<span class="fc" id="L273">    }</span>
+
+    protected Object evaluateExpression(String expression, Method method, Object[] args, Object target, Class&lt;?&gt; targetClass) {
+<span class="fc" id="L276">        Collection&lt;Cache&gt; caches = this.getCaches();</span>
+<span class="fc" id="L277">        ExpressionEvaluator evaluator = new ExpressionEvaluator();</span>
+<span class="fc" id="L278">        EvaluationContext context = evaluator.createEvaluationContext(caches,</span>
+                method, args, target, targetClass, ExpressionEvaluator.NO_RESULT);
+<span class="fc" id="L280">        return evaluator.evaluateExpression(expression, method, context);</span>
+    }
+
+    protected Collection&lt;Cache&gt; getCaches() {
+<span class="fc" id="L284">        Collection&lt;Cache&gt; caches = new ArrayList&lt;Cache&gt;();</span>
+<span class="fc" id="L285">        Iterator&lt;String&gt; iter = this.getSpringCacheManager().getCacheNames().iterator();</span>
+<span class="fc bfc" id="L286" title="All 2 branches covered.">        while (iter.hasNext()) {</span>
+<span class="fc" id="L287">            String cacheName = iter.next();</span>
+<span class="fc" id="L288">            caches.add(this.getSpringCacheManager().getCache(cacheName));</span>
+<span class="fc" id="L289">        }</span>
+<span class="fc" id="L290">        return caches;</span>
+    }
+
+    protected boolean isNotExpired(String targetCache, String key) {
+<span class="nc bnc" id="L294" title="All 2 branches missed.">        return !isExpired(targetCache, key);</span>
+    }
+
+    @Override
+    public boolean isExpired(String targetCache, String key) {
+<span class="pc bpc" id="L299" title="1 of 2 branches missed.">        if (StringUtils.isBlank(targetCache)) {</span>
+<span class="nc" id="L300">            targetCache = DEFAULT_CACHE_NAME;</span>
+        }
+<span class="fc" id="L302">        Map&lt;String, Date&gt; expirationTimes = this.get(EXPIRATIONS_CACHE_NAME_PREFIX + targetCache, Map.class);</span>
+<span class="fc bfc" id="L303" title="All 2 branches covered.">        if (null == expirationTimes) {</span>
+<span class="fc" id="L304">            return false;</span>
+        }
+<span class="fc" id="L306">        Date expirationTime = expirationTimes.get(key);</span>
+<span class="fc bfc" id="L307" title="All 2 branches covered.">        if (null == expirationTime) {</span>
+<span class="fc" id="L308">            return false;</span>
+        }
+<span class="fc bfc" id="L310" title="All 2 branches covered.">        if (expirationTime.before(new Date())) {</span>
+<span class="fc" id="L311">            expirationTimes.remove(key);</span>
+<span class="fc" id="L312">            return true;</span>
+        } else {
+<span class="fc" id="L314">            return false;</span>
+        }
+    }
+
+    protected Cache getCache(String cacheName) {
+<span class="pc bpc" id="L319" title="1 of 2 branches missed.">        if (StringUtils.isBlank(cacheName)) {</span>
+<span class="nc" id="L320">            cacheName = DEFAULT_CACHE_NAME;</span>
+        }
+<span class="fc" id="L322">        return this.getSpringCacheManager().getCache(cacheName);</span>
+    }
+
+    public Object getFromCache(String targetCache, String key) {
+<span class="fc bfc" id="L326" title="All 2 branches covered.">        if (isExpired(targetCache, key)) {</span>
+<span class="fc" id="L327">            this.flushEntry(targetCache, key);</span>
+<span class="fc" id="L328">            return null;</span>
+        }
+<span class="fc" id="L330">        Cache cache = this.getCache(targetCache);</span>
+<span class="fc" id="L331">        return this.get(cache, key, Object.class);</span>
+    }
+
+    protected &lt;T&gt; T get(String name, Class&lt;T&gt; requiredType) {
+<span class="fc" id="L335">        Cache cache = this.getCache(CACHE_INFO_MANAGER_CACHE_NAME);</span>
+<span class="fc" id="L336">        return this.get(cache, name, requiredType);</span>
+    }
+
+    protected &lt;T&gt; T get(Cache cache, String name, Class&lt;T&gt; requiredType) {
+<span class="fc" id="L340">        Object value = cache.get(name);</span>
+<span class="fc bfc" id="L341" title="All 2 branches covered.">        if (value instanceof Cache.ValueWrapper) {</span>
+<span class="fc" id="L342">            value = ((Cache.ValueWrapper) value).get();</span>
+        }
+<span class="fc" id="L344">        return (T) value;</span>
+    }
+
+    protected CacheManager getSpringCacheManager() {
+<span class="fc" id="L348">        return springCacheManager;</span>
+    }
+
+    public void setSpringCacheManager(CacheManager springCacheManager) {
+<span class="fc" id="L352">        this.springCacheManager = springCacheManager;</span>
+<span class="fc" id="L353">    }</span>
+
+    protected String getCacheName() {
+<span class="nc" id="L356">        return CACHE_INFO_MANAGER_CACHE_NAME;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

@@ -1,0 +1,682 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PageManagerCacheWrapper.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.services.page.cache</a> &gt; <span class="el_source">PageManagerCacheWrapper.java</span></div><h1>PageManagerCacheWrapper.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package com.agiletec.aps.system.services.page.cache;
+
+import com.agiletec.aps.system.common.AbstractCacheWrapper;
+import com.agiletec.aps.system.exception.ApsSystemException;
+import com.agiletec.aps.system.services.page.IPage;
+import com.agiletec.aps.system.services.page.IPageDAO;
+import com.agiletec.aps.system.services.page.Page;
+import com.agiletec.aps.system.services.page.PageMetadata;
+import com.agiletec.aps.system.services.page.PageRecord;
+import com.agiletec.aps.system.services.page.PagesStatus;
+import com.agiletec.aps.system.services.page.Widget;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
+import org.apache.commons.lang3.ArrayUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.cache.Cache;
+
+/**
+ * @author E.Santoboni
+ */
+<span class="fc" id="L42">public class PageManagerCacheWrapper extends AbstractCacheWrapper implements IPageManagerCacheWrapper {</span>
+
+<span class="fc" id="L44">    private static final Logger _logger = LoggerFactory.getLogger(PageManagerCacheWrapper.class);</span>
+
+<span class="fc" id="L46">    private List&lt;String&gt; localObject = new CopyOnWriteArrayList&lt;&gt;();</span>
+
+    @Override
+    public void initCache(IPageDAO pageDao) throws ApsSystemException {
+<span class="fc" id="L50">        PagesStatus status = new PagesStatus();</span>
+<span class="fc" id="L51">        IPage newDraftRoot = null;</span>
+<span class="fc" id="L52">        IPage newOnLineRoot = null;</span>
+        try {
+<span class="fc" id="L54">            List&lt;PageRecord&gt; pageRecordList = pageDao.loadPageRecords();</span>
+<span class="fc" id="L55">            Map&lt;String, IPage&gt; newFullMap = new HashMap&lt;&gt;(pageRecordList.size());</span>
+<span class="fc" id="L56">            Map&lt;String, IPage&gt; newOnlineMap = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L57">            List&lt;IPage&gt; pageListO = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L58">            List&lt;IPage&gt; pageListD = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L59" title="All 2 branches covered.">            for (int i = 0; i &lt; pageRecordList.size(); i++) {</span>
+<span class="fc" id="L60">                PageRecord pageRecord = pageRecordList.get(i);</span>
+<span class="fc" id="L61">                IPage pageD = pageRecord.createDraftPage();</span>
+<span class="fc" id="L62">                IPage pageO = pageRecord.createOnlinePage();</span>
+<span class="fc" id="L63">                pageListD.add(pageD);</span>
+<span class="fc" id="L64">                newFullMap.put(pageD.getCode(), pageD);</span>
+<span class="fc bfc" id="L65" title="All 2 branches covered.">                if (pageD.getCode().equals(pageD.getParentCode())) {</span>
+<span class="fc" id="L66">                    newDraftRoot = pageD;</span>
+<span class="fc" id="L67">                    newOnLineRoot = pageO;</span>
+                }
+<span class="fc" id="L69">                this.buildPagesStatus(status, pageD);</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">                if (pageD.isOnline()) {</span>
+<span class="fc" id="L71">                    newOnlineMap.put(pageO.getCode(), pageO);</span>
+<span class="fc" id="L72">                    pageListO.add(pageO);</span>
+                }
+            }
+<span class="fc bfc" id="L75" title="All 2 branches covered.">            for (int i = 0; i &lt; pageListD.size(); i++) {</span>
+<span class="fc" id="L76">                this.buildTreeHierarchy(newDraftRoot, newFullMap, pageListD.get(i));</span>
+            }
+<span class="fc bfc" id="L78" title="All 2 branches covered.">            for (int i = 0; i &lt; pageListO.size(); i++) {</span>
+<span class="fc" id="L79">                this.buildTreeHierarchy(newOnLineRoot, newOnlineMap, pageListO.get(i));</span>
+            }
+<span class="pc bpc" id="L81" title="1 of 2 branches missed.">            if (newDraftRoot == null) {</span>
+<span class="nc" id="L82">                throw new ApsSystemException(&quot;Error in the page tree: root page undefined&quot;);</span>
+            }
+<span class="fc" id="L84">            Cache cache = this.getCache();</span>
+            //this.releaseCachedObjects(cache);
+<span class="fc" id="L86">            this.cleanLocalCache(cache);</span>
+<span class="fc" id="L87">            List&lt;String&gt; draftPageCodes = pageListD.stream().map(p -&gt; p.getCode()).collect(Collectors.toList());</span>
+<span class="fc" id="L88">            cache.put(DRAFT_PAGE_CODES_CACHE_NAME, draftPageCodes);</span>
+<span class="fc" id="L89">            List&lt;String&gt; onlinePageCodes = pageListO.stream().map(p -&gt; p.getCode()).collect(Collectors.toList());</span>
+<span class="fc" id="L90">            cache.put(ONLINE_PAGE_CODES_CACHE_NAME, onlinePageCodes);</span>
+<span class="fc" id="L91">            this.insertObjectsOnCache(cache, status, newDraftRoot, newOnLineRoot, pageListD, pageListO);</span>
+<span class="nc" id="L92">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L93">            throw e;</span>
+<span class="nc" id="L94">        } catch (Throwable t) {</span>
+<span class="nc" id="L95">            _logger.error(&quot;Error while building the tree of pages&quot;, t);</span>
+<span class="nc" id="L96">            throw new ApsSystemException(&quot;Error while building the tree of pages&quot;, t);</span>
+<span class="fc" id="L97">        }</span>
+<span class="fc" id="L98">    }</span>
+
+    private void cleanLocalCache(Cache cache) {
+<span class="fc bfc" id="L101" title="All 2 branches covered.">        for (String key : this.localObject) {</span>
+<span class="pc bpc" id="L102" title="1 of 2 branches missed.">            if (null != key) {</span>
+<span class="fc" id="L103">                cache.evict(key);</span>
+            }
+<span class="fc" id="L105">        }</span>
+<span class="fc" id="L106">        this.localObject.clear();</span>
+<span class="fc" id="L107">    }</span>
+
+    protected void releaseCachedObjects(Cache cache) {
+<span class="nc" id="L110">        List&lt;String&gt; codes = (List&lt;String&gt;) this.get(cache, DRAFT_PAGE_CODES_CACHE_NAME, List.class);</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">        if (null != codes) {</span>
+<span class="nc bnc" id="L112" title="All 2 branches missed.">            for (int i = 0; i &lt; codes.size(); i++) {</span>
+<span class="nc" id="L113">                String code = codes.get(i);</span>
+<span class="nc" id="L114">                cache.evict(DRAFT_PAGE_CACHE_NAME_PREFIX + code);</span>
+<span class="nc" id="L115">                cache.evict(ONLINE_PAGE_CACHE_NAME_PREFIX + code);</span>
+            }
+<span class="nc" id="L117">            cache.evict(DRAFT_PAGE_CODES_CACHE_NAME);</span>
+<span class="nc" id="L118">            cache.evict(ONLINE_PAGE_CODES_CACHE_NAME);</span>
+        }
+<span class="nc" id="L120">    }</span>
+
+    protected void insertObjectsOnCache(Cache cache, PagesStatus status,
+            IPage newDraftRoot, IPage newOnLineRoot, List&lt;IPage&gt; pageListD, List&lt;IPage&gt; pageListO) {
+<span class="fc" id="L124">        cache.put(DRAFT_ROOT_CACHE_NAME, newDraftRoot);</span>
+<span class="fc" id="L125">        cache.put(ONLINE_ROOT_CACHE_NAME, newOnLineRoot);</span>
+<span class="fc" id="L126">        cache.put(PAGE_STATUS_CACHE_NAME, status);</span>
+<span class="fc bfc" id="L127" title="All 2 branches covered.">        for (int i = 0; i &lt; pageListD.size(); i++) {</span>
+<span class="fc" id="L128">            IPage draftPage = pageListD.get(i);</span>
+<span class="fc" id="L129">            cache.put(DRAFT_PAGE_CACHE_NAME_PREFIX + draftPage.getCode(), draftPage);</span>
+        }
+<span class="fc bfc" id="L131" title="All 2 branches covered.">        for (int i = 0; i &lt; pageListO.size(); i++) {</span>
+<span class="fc" id="L132">            IPage onLinePage = pageListO.get(i);</span>
+<span class="fc" id="L133">            cache.put(ONLINE_PAGE_CACHE_NAME_PREFIX + onLinePage.getCode(), onLinePage);</span>
+        }
+<span class="fc" id="L135">    }</span>
+
+    @Override
+    public void deleteDraftPage(String pageCode) {
+<span class="fc" id="L139">        Cache cache = this.getCache();</span>
+<span class="fc" id="L140">        IPage page = this.getDraftPage(pageCode);</span>
+<span class="pc bpc" id="L141" title="1 of 2 branches missed.">        if (null == page) {</span>
+<span class="nc" id="L142">            return;</span>
+        }
+<span class="fc" id="L144">        IPage parent = this.getDraftPage(page.getParentCode());</span>
+<span class="pc bpc" id="L145" title="1 of 2 branches missed.">        if (null != parent.getChildrenCodes()) {</span>
+<span class="fc" id="L146">            List&lt;String&gt; childrenCodes = new ArrayList&lt;&gt;(Arrays.asList(parent.getChildrenCodes()));</span>
+<span class="fc" id="L147">            int index = -1;</span>
+<span class="fc bfc" id="L148" title="All 2 branches covered.">            for (int i = 0; i &lt; childrenCodes.size(); i++) {</span>
+<span class="fc" id="L149">                String childCode = childrenCodes.get(i);</span>
+<span class="fc bfc" id="L150" title="All 2 branches covered.">                if (childCode.equals(pageCode)) {</span>
+<span class="fc" id="L151">                    index = i;</span>
+                }
+<span class="fc bfc" id="L153" title="All 4 branches covered.">                if (index &gt; 0 &amp;&amp; i &gt; index) {</span>
+<span class="fc" id="L154">                    this.upgradePositionForSisterDeletion(cache, childCode, true);</span>
+<span class="fc" id="L155">                    this.upgradePositionForSisterDeletion(cache, childCode, false);</span>
+                }
+            }
+<span class="fc" id="L158">            boolean executedRemove = childrenCodes.remove(pageCode);</span>
+<span class="pc bpc" id="L159" title="1 of 2 branches missed.">            if (executedRemove) {</span>
+<span class="fc" id="L160">                ((Page) parent).setChildrenCodes(childrenCodes.toArray(new String[childrenCodes.size()]));</span>
+<span class="fc" id="L161">                cache.put(DRAFT_PAGE_CACHE_NAME_PREFIX + parent.getCode(), parent);</span>
+<span class="fc" id="L162">                this.checkRootModification(parent, false, cache);</span>
+            }
+<span class="fc" id="L164">            IPage parentOnLine = this.getOnlinePage(page.getParentCode());</span>
+<span class="fc bfc" id="L165" title="All 2 branches covered.">            if (null != parentOnLine) {</span>
+<span class="fc" id="L166">                List&lt;String&gt; onlineChildrenCodes = new ArrayList&lt;&gt;(Arrays.asList(parentOnLine.getChildrenCodes()));</span>
+<span class="fc" id="L167">                boolean executedRemoveOnOnLine = onlineChildrenCodes.remove(pageCode);</span>
+<span class="fc bfc" id="L168" title="All 2 branches covered.">                if (executedRemoveOnOnLine) {</span>
+<span class="fc" id="L169">                    ((Page) parentOnLine).setChildrenCodes(onlineChildrenCodes.toArray(new String[childrenCodes.size()]));</span>
+<span class="fc" id="L170">                    cache.put(ONLINE_PAGE_CACHE_NAME_PREFIX + parentOnLine.getCode(), parentOnLine);</span>
+<span class="fc" id="L171">                    this.checkRootModification(parentOnLine, true, cache);</span>
+                }
+            }
+        }
+<span class="fc" id="L175">        this.removeCodeFromCachedList(cache, DRAFT_PAGE_CODES_CACHE_NAME, pageCode);</span>
+<span class="fc" id="L176">        this.removeCodeFromCachedList(cache, ONLINE_PAGE_CODES_CACHE_NAME, pageCode);</span>
+<span class="fc" id="L177">        boolean isPublic = page.isOnline();</span>
+<span class="fc" id="L178">        boolean isChanged = page.isChanged();</span>
+<span class="fc" id="L179">        cache.evict(DRAFT_PAGE_CACHE_NAME_PREFIX + pageCode);</span>
+<span class="fc" id="L180">        cache.evict(ONLINE_PAGE_CACHE_NAME_PREFIX + pageCode);</span>
+<span class="fc" id="L181">        this.cleanLocalCache(cache);</span>
+<span class="fc" id="L182">        PagesStatus status = this.getPagesStatus();</span>
+<span class="fc" id="L183">        status.setLastUpdate(new Date());</span>
+<span class="fc bfc" id="L184" title="All 4 branches covered.">        if (isPublic &amp;&amp; isChanged) {</span>
+<span class="fc" id="L185">            status.setOnlineWithChanges(status.getOnlineWithChanges() - 1);</span>
+<span class="pc bpc" id="L186" title="1 of 4 branches missed.">        } else if (isPublic &amp;&amp; !isChanged) {</span>
+<span class="fc" id="L187">            status.setOnline(status.getOnline() - 1);</span>
+        } else {
+<span class="fc" id="L189">            status.setUnpublished(status.getUnpublished() - 1);</span>
+        }
+<span class="fc" id="L191">        cache.put(PAGE_STATUS_CACHE_NAME, status);</span>
+<span class="fc" id="L192">    }</span>
+
+    private void upgradePositionForSisterDeletion(Cache cache, String code, boolean online) {
+<span class="fc bfc" id="L195" title="All 2 branches covered.">        IPage page = (online) ? this.getOnlinePage(code) : this.getDraftPage(code);</span>
+<span class="fc bfc" id="L196" title="All 2 branches covered.">        if (null == page) {</span>
+<span class="fc" id="L197">            return;</span>
+        }
+<span class="fc" id="L199">        ((Page) page).setPosition(page.getPosition() - 1);</span>
+<span class="fc bfc" id="L200" title="All 2 branches covered.">        if (online) {</span>
+<span class="fc" id="L201">            cache.put(ONLINE_PAGE_CACHE_NAME_PREFIX + page.getCode(), page);</span>
+        } else {
+<span class="fc" id="L203">            cache.put(DRAFT_PAGE_CACHE_NAME_PREFIX + page.getCode(), page);</span>
+        }
+<span class="fc" id="L205">    }</span>
+    
+    @Override
+    public void addDraftPage(IPage page) {
+<span class="fc" id="L209">        Cache cache = this.getCache();</span>
+<span class="fc" id="L210">        this.addCodeFromCachedList(cache, DRAFT_PAGE_CODES_CACHE_NAME, page.getCode());</span>
+<span class="fc" id="L211">        ((Page) page).setChildrenCodes(new String[0]);</span>
+<span class="fc" id="L212">        IPage parent = this.getDraftPage(page.getParentCode());</span>
+<span class="fc" id="L213">        String[] childCodes = parent.getChildrenCodes();</span>
+<span class="fc" id="L214">        boolean containsChild = Arrays.stream(childCodes).anyMatch(page.getCode()::equals);</span>
+<span class="pc bpc" id="L215" title="1 of 2 branches missed.">        if (!containsChild) {</span>
+<span class="fc" id="L216">            childCodes = ArrayUtils.add(childCodes, page.getCode());</span>
+<span class="fc" id="L217">            ((Page) parent).setChildrenCodes(childCodes);</span>
+<span class="fc" id="L218">            cache.put(DRAFT_PAGE_CACHE_NAME_PREFIX + parent.getCode(), parent);</span>
+        }
+<span class="fc" id="L220">        cache.put(DRAFT_PAGE_CACHE_NAME_PREFIX + page.getCode(), page);</span>
+<span class="fc" id="L221">        this.checkRootModification(page, false, cache);</span>
+<span class="fc" id="L222">        this.checkRootModification(parent, false, cache);</span>
+<span class="fc" id="L223">        this.cleanLocalCache(cache);</span>
+<span class="fc" id="L224">        PagesStatus status = this.getPagesStatus();</span>
+<span class="fc" id="L225">        status.setLastUpdate(new Date());</span>
+<span class="fc" id="L226">        status.setUnpublished(status.getUnpublished()+1);</span>
+<span class="fc" id="L227">        cache.put(PAGE_STATUS_CACHE_NAME, status);</span>
+<span class="fc" id="L228">    }</span>
+    
+    @Override
+    public void updateDraftPage(IPage page) {
+<span class="fc" id="L232">        IPage cachedPage = this.getDraftPage(page.getCode());</span>
+<span class="fc" id="L233">        boolean alreadyChanged = cachedPage.isChanged();</span>
+<span class="fc" id="L234">        IPage onlinepage = this.getOnlinePage(page.getCode());</span>
+<span class="fc bfc" id="L235" title="All 2 branches covered.">        PageMetadata onlineMeta = (null != onlinepage) ? onlinepage.getMetadata() : null;</span>
+<span class="fc bfc" id="L236" title="All 2 branches covered.">        Widget[] widgetsOnline = (null != onlinepage) ? onlinepage.getWidgets() : new Widget[0];</span>
+<span class="fc bfc" id="L237" title="All 2 branches covered.">        ((Page) page).setOnline(null != onlineMeta);</span>
+<span class="fc bfc" id="L238" title="All 4 branches covered.">        boolean isChanged = (null != onlinepage) &amp;&amp; this.isChanged(page.getMetadata(), onlineMeta, page.getWidgets(), widgetsOnline);</span>
+<span class="fc" id="L239">        ((Page) page).setChanged(isChanged);</span>
+<span class="fc" id="L240">        Cache cache = this.getCache();</span>
+<span class="fc" id="L241">        cache.put(DRAFT_PAGE_CACHE_NAME_PREFIX + page.getCode(), page);</span>
+<span class="fc" id="L242">        this.checkRootModification(page, false, cache);</span>
+<span class="fc" id="L243">        this.cleanLocalCache(cache);</span>
+
+<span class="fc" id="L245">        int online = 0;</span>
+<span class="fc" id="L246">        int onlineWithChanges = 0;</span>
+
+<span class="fc bfc" id="L248" title="All 4 branches covered.">        if (isChanged &amp;&amp; !alreadyChanged) {</span>
+<span class="fc" id="L249">            online = -1;</span>
+<span class="fc" id="L250">            onlineWithChanges = 1;</span>
+<span class="fc bfc" id="L251" title="All 4 branches covered.">        } else if (! isChanged &amp;&amp; alreadyChanged) {</span>
+<span class="fc" id="L252">            online = 1;</span>
+<span class="fc" id="L253">            onlineWithChanges = -1;</span>
+        }
+
+<span class="pc bpc" id="L256" title="1 of 4 branches missed.">        if (online != 0 || onlineWithChanges != 0) {</span>
+<span class="fc" id="L257">            PagesStatus status = this.getPagesStatus();</span>
+<span class="fc" id="L258">            status.setLastUpdate(new Date());</span>
+<span class="fc" id="L259">            status.setOnlineWithChanges(status.getOnlineWithChanges() + onlineWithChanges);</span>
+<span class="fc" id="L260">            status.setOnline(status.getOnline() + online);</span>
+<span class="fc" id="L261">            cache.put(PAGE_STATUS_CACHE_NAME, status);</span>
+        }
+<span class="fc" id="L263">    }</span>
+
+    @Override
+    public void setPageOnline(String pageCode) {
+<span class="fc" id="L267">        Cache cache = this.getCache();</span>
+<span class="fc" id="L268">        IPage page = this.getDraftPage(pageCode);</span>
+<span class="pc bpc" id="L269" title="1 of 2 branches missed.">        if (null != page) {</span>
+<span class="fc" id="L270">            this.addCodeFromCachedList(cache, ONLINE_PAGE_CODES_CACHE_NAME, page.getCode());</span>
+<span class="fc" id="L271">            boolean alreadyChanged = page.isChanged();</span>
+<span class="fc" id="L272">            IPage onlinepage = this.getOnlinePage(page.getCode());</span>
+<span class="pc bpc" id="L273" title="1 of 2 branches missed.">            boolean alreadyOnline = null != onlinepage;</span>
+<span class="fc" id="L274">            ((Page) page).setOnline(true);</span>
+<span class="fc" id="L275">            ((Page) page).setChanged(false);</span>
+<span class="fc" id="L276">            IPage newOnlinePage = page.clone();</span>
+<span class="fc" id="L277">            ((Page) newOnlinePage).setOnlineInstance(true);</span>
+<span class="fc" id="L278">            List&lt;String&gt; totalOnlineCodes = (List&lt;String&gt;) this.get(cache, ONLINE_PAGE_CODES_CACHE_NAME, List.class);</span>
+<span class="fc" id="L279">            List&lt;String&gt; onLineCodes = Arrays.asList(newOnlinePage.getChildrenCodes())</span>
+<span class="pc bpc" id="L280" title="3 of 4 branches missed.">                    .stream().filter(code -&gt; null != this.getOnlinePage(code) &amp;&amp; totalOnlineCodes.contains(code))</span>
+<span class="fc" id="L281">                    .collect(Collectors.toList());</span>
+<span class="fc" id="L282">            ((Page) newOnlinePage).setChildrenCodes(onLineCodes.toArray(new String[onLineCodes.size()]));</span>
+<span class="fc" id="L283">            cache.put(ONLINE_PAGE_CACHE_NAME_PREFIX + newOnlinePage.getCode(), newOnlinePage);</span>
+<span class="fc" id="L284">            this.checkRootModification(newOnlinePage, true, cache);</span>
+<span class="fc" id="L285">            cache.put(DRAFT_PAGE_CACHE_NAME_PREFIX + page.getCode(), page);</span>
+<span class="fc" id="L286">            this.checkRootModification(page, false, cache);</span>
+<span class="pc bpc" id="L287" title="1 of 2 branches missed.">            if (!alreadyOnline) {</span>
+<span class="fc" id="L288">                IPage parentOnLine = this.getOnlinePage(newOnlinePage.getParentCode());</span>
+<span class="pc bpc" id="L289" title="1 of 4 branches missed.">                if (null != parentOnLine &amp;&amp; !parentOnLine.getCode().equals(pageCode)) {</span>
+<span class="fc" id="L290">                    IPage parentDraft = this.getDraftPage(newOnlinePage.getParentCode());</span>
+<span class="fc" id="L291">                    List&lt;String&gt; draftChildrenCodes = Arrays.asList(parentDraft.getChildrenCodes());</span>
+<span class="fc" id="L292">                    List&lt;String&gt; newOnLineCodesForParent = draftChildrenCodes.stream()</span>
+<span class="pc bpc" id="L293" title="1 of 4 branches missed.">                            .filter(code -&gt; null != this.getOnlinePage(code) &amp;&amp; totalOnlineCodes.contains(code))</span>
+<span class="fc" id="L294">                            .collect(Collectors.toList());</span>
+<span class="fc" id="L295">                    ((Page) parentOnLine).setChildrenCodes(newOnLineCodesForParent.toArray(new String[newOnLineCodesForParent.size()]));</span>
+<span class="fc" id="L296">                    cache.put(ONLINE_PAGE_CACHE_NAME_PREFIX + parentOnLine.getCode(), parentOnLine);</span>
+<span class="fc" id="L297">                    this.checkRootModification(parentOnLine, true, cache);</span>
+                }
+            }
+<span class="pc bpc" id="L300" title="3 of 4 branches missed.">            if (!alreadyOnline || alreadyChanged) {</span>
+<span class="fc" id="L301">                PagesStatus status = this.getPagesStatus();</span>
+<span class="fc" id="L302">                status.setLastUpdate(new Date());</span>
+<span class="pc bpc" id="L303" title="1 of 2 branches missed.">                if (alreadyChanged) {</span>
+<span class="nc" id="L304">                    status.setOnlineWithChanges(status.getOnlineWithChanges() - 1);</span>
+<span class="pc bpc" id="L305" title="1 of 2 branches missed.">                } else if (!alreadyOnline) {</span>
+<span class="fc" id="L306">                    status.setUnpublished(status.getUnpublished() - 1);</span>
+                }
+<span class="fc" id="L308">                status.setOnline(status.getOnline() + 1);</span>
+<span class="fc" id="L309">                cache.put(PAGE_STATUS_CACHE_NAME, status);</span>
+            }
+        }
+<span class="fc" id="L312">        this.cleanLocalCache(cache);</span>
+<span class="fc" id="L313">    }</span>
+
+    @Override
+    public void setPageOffline(String pageCode) {
+<span class="fc" id="L317">        Cache cache = this.getCache();</span>
+<span class="fc" id="L318">        IPage page = this.getDraftPage(pageCode);</span>
+<span class="fc" id="L319">        this.removeCodeFromCachedList(cache, ONLINE_PAGE_CODES_CACHE_NAME, pageCode);</span>
+<span class="fc" id="L320">        IPage onlinepage = this.getOnlinePage(pageCode);</span>
+<span class="fc bfc" id="L321" title="All 2 branches covered.">        if (null != onlinepage) {</span>
+<span class="fc" id="L322">            cache.evict(ONLINE_PAGE_CACHE_NAME_PREFIX + pageCode);</span>
+<span class="fc" id="L323">            PagesStatus status = this.getPagesStatus();</span>
+<span class="fc" id="L324">            status.setLastUpdate(new Date());</span>
+<span class="fc bfc" id="L325" title="All 2 branches covered.">            if (page.isChanged()) {</span>
+<span class="fc" id="L326">                status.setOnlineWithChanges(status.getOnlineWithChanges() - 1);</span>
+            } else {
+<span class="fc" id="L328">                status.setOnline(status.getOnline() - 1);</span>
+            }
+<span class="fc" id="L330">            status.setUnpublished(status.getUnpublished() + 1);</span>
+<span class="fc" id="L331">            cache.put(PAGE_STATUS_CACHE_NAME, status);</span>
+<span class="fc" id="L332">            IPage parentOnLine = this.getOnlinePage(onlinepage.getParentCode());</span>
+<span class="pc bpc" id="L333" title="1 of 2 branches missed.">            if (null != parentOnLine) {</span>
+<span class="fc" id="L334">                List&lt;String&gt; onlineChildrenCodes = new ArrayList&lt;&gt;(Arrays.asList(parentOnLine.getChildrenCodes()));</span>
+<span class="fc" id="L335">                boolean executedRemoveOnOnLine = onlineChildrenCodes.remove(pageCode);</span>
+<span class="pc bpc" id="L336" title="1 of 2 branches missed.">                if (executedRemoveOnOnLine) {</span>
+<span class="fc" id="L337">                    ((Page) parentOnLine).setChildrenCodes(onlineChildrenCodes.toArray(new String[onlineChildrenCodes.size()]));</span>
+<span class="fc" id="L338">                    cache.put(ONLINE_PAGE_CACHE_NAME_PREFIX + parentOnLine.getCode(), parentOnLine);</span>
+<span class="fc" id="L339">                    this.checkRootModification(parentOnLine, true, cache);</span>
+                }
+            }
+        }
+<span class="pc bpc" id="L343" title="1 of 2 branches missed.">        if (null != page) {</span>
+<span class="fc" id="L344">            ((Page) page).setOnline(false);</span>
+<span class="fc" id="L345">            ((Page) page).setChanged(false);</span>
+<span class="fc" id="L346">            cache.put(DRAFT_PAGE_CACHE_NAME_PREFIX + page.getCode(), page);</span>
+        }
+<span class="fc" id="L348">        this.cleanLocalCache(cache);</span>
+<span class="fc" id="L349">    }</span>
+
+    protected boolean isChanged(PageMetadata draftMeta, PageMetadata onlineMeta, Widget[] widgetsDraft, Widget[] widgetsOnline) {
+<span class="fc" id="L352">        boolean changed = false;</span>
+<span class="pc bpc" id="L353" title="1 of 2 branches missed.">        if (onlineMeta != null) {</span>
+<span class="pc bpc" id="L354" title="1 of 2 branches missed.">            if (draftMeta != null) {</span>
+<span class="fc" id="L355">                boolean widgetEquals = true;</span>
+<span class="pc bpc" id="L356" title="1 of 2 branches missed.">                widgetsDraft = (null == widgetsDraft) ? new Widget[0] : widgetsDraft;</span>
+<span class="pc bpc" id="L357" title="1 of 2 branches missed.">                widgetsOnline = (null == widgetsOnline) ? new Widget[0] : widgetsOnline;</span>
+<span class="fc bfc" id="L358" title="All 2 branches covered.">                for (int i = 0; i &lt; widgetsDraft.length; i++) {</span>
+<span class="fc" id="L359">                    Widget widgetDraft = widgetsDraft[i];</span>
+<span class="pc bpc" id="L360" title="1 of 2 branches missed.">                    if (widgetsOnline.length &lt;= i) {</span>
+<span class="nc" id="L361">                        widgetEquals = false;</span>
+<span class="nc" id="L362">                        break;</span>
+                    }
+<span class="fc" id="L364">                    Widget widgetOnline = widgetsOnline[i];</span>
+<span class="fc bfc" id="L365" title="All 4 branches covered.">                    if (null == widgetOnline &amp;&amp; null == widgetDraft) {</span>
+<span class="fc" id="L366">                        continue;</span>
+                    }
+<span class="pc bpc" id="L368" title="2 of 8 branches missed.">                    if ((null != widgetOnline &amp;&amp; null == widgetDraft) || (null == widgetOnline &amp;&amp; null != widgetDraft)) {</span>
+<span class="fc" id="L369">                        widgetEquals = false;</span>
+<span class="fc" id="L370">                        break;</span>
+                    }
+<span class="pc bpc" id="L372" title="1 of 2 branches missed.">                    if (!widgetOnline.getType().getCode().equals(widgetDraft.getType().getCode())) {</span>
+<span class="nc" id="L373">                        widgetEquals = false;</span>
+                    }
+<span class="pc bpc" id="L375" title="3 of 4 branches missed.">                    if (null == widgetOnline.getConfig() &amp;&amp; null == widgetDraft.getConfig()) {</span>
+<span class="nc" id="L376">                        continue;</span>
+                    }
+<span class="pc bpc" id="L378" title="2 of 4 branches missed.">                    if ((null != widgetOnline.getConfig() &amp;&amp; null == widgetDraft.getConfig())</span>
+<span class="pc bpc" id="L379" title="3 of 4 branches missed.">                            || (null == widgetOnline.getConfig() &amp;&amp; null != widgetDraft.getConfig())) {</span>
+<span class="nc" id="L380">                        widgetEquals = false;</span>
+<span class="nc" id="L381">                        break;</span>
+                    }
+<span class="pc bpc" id="L383" title="1 of 2 branches missed.">                    if (!widgetOnline.getConfig().equals(widgetDraft.getConfig())) {</span>
+<span class="nc" id="L384">                        widgetEquals = false;</span>
+<span class="nc" id="L385">                        break;</span>
+                    }
+                }
+<span class="fc" id="L388">                boolean metaEquals = onlineMeta.hasEqualConfiguration(draftMeta);</span>
+<span class="fc bfc" id="L389" title="All 4 branches covered.">                return !(widgetEquals &amp;&amp; metaEquals);</span>
+            } else {
+<span class="nc" id="L391">                changed = true;</span>
+            }
+        }
+<span class="nc" id="L394">        return changed;</span>
+    }
+    
+    private void addCodeFromCachedList(Cache cache, String listKey, String codeToAdd) {
+<span class="fc" id="L398">        List&lt;String&gt; codes = (List&lt;String&gt;) this.get(cache, listKey, List.class);</span>
+<span class="pc bpc" id="L399" title="2 of 4 branches missed.">        if (null != codes &amp;&amp; !codes.contains(codeToAdd)) {</span>
+<span class="fc" id="L400">            codes.add(codeToAdd);</span>
+<span class="fc" id="L401">            cache.put(listKey, codes);</span>
+        }
+<span class="fc" id="L403">    }</span>
+    
+    private void removeCodeFromCachedList(Cache cache, String listKey, String codeToRemove) {
+<span class="fc" id="L406">        List&lt;String&gt; codes = (List&lt;String&gt;) this.get(cache, listKey, List.class);</span>
+<span class="pc bpc" id="L407" title="1 of 2 branches missed.">        if (null != codes) {</span>
+<span class="fc" id="L408">            codes.remove(codeToRemove);</span>
+<span class="fc" id="L409">            cache.put(listKey, codes);</span>
+        }
+<span class="fc" id="L411">    }</span>
+    
+    @Override
+    public void moveUpDown(String pageDown, String pageUp) {
+<span class="fc" id="L415">        IPage draftToMoveUp = this.getDraftPage(pageUp);</span>
+<span class="fc" id="L416">        IPage draftToMoveDown = this.getDraftPage(pageDown);</span>
+<span class="pc bpc" id="L417" title="2 of 4 branches missed.">        if (null != draftToMoveDown &amp;&amp; null != draftToMoveUp</span>
+<span class="pc bpc" id="L418" title="1 of 2 branches missed.">                &amp;&amp; draftToMoveDown.getParentCode().equals(draftToMoveUp.getParentCode())) {</span>
+<span class="fc" id="L419">            Cache cache = this.getCache();</span>
+<span class="fc" id="L420">            draftToMoveUp.setPosition(draftToMoveUp.getPosition()-1);</span>
+<span class="fc" id="L421">            cache.put(DRAFT_PAGE_CACHE_NAME_PREFIX + draftToMoveUp.getCode(), draftToMoveUp);</span>
+<span class="fc" id="L422">            draftToMoveDown.setPosition(draftToMoveDown.getPosition()+1);</span>
+<span class="fc" id="L423">            cache.put(DRAFT_PAGE_CACHE_NAME_PREFIX + draftToMoveDown.getCode(), draftToMoveDown);</span>
+<span class="fc" id="L424">            this.upgradePositionOnOnlineVersion(pageUp, draftToMoveUp.getPosition(), cache);</span>
+<span class="fc" id="L425">            this.upgradePositionOnOnlineVersion(pageDown, draftToMoveDown.getPosition(), cache);</span>
+<span class="pc bpc" id="L426" title="1 of 2 branches missed.">            if (draftToMoveUp.getPosition()&lt;draftToMoveDown.getPosition()) {</span>
+<span class="fc" id="L427">                this.switchSisterOnParent(draftToMoveUp.getParentCode(), pageUp, pageDown, cache, false);</span>
+<span class="fc" id="L428">                this.switchSisterOnParent(draftToMoveUp.getParentCode(), pageUp, pageDown, cache, true);</span>
+            }
+<span class="fc" id="L430">        } else {</span>
+<span class="nc" id="L431">            _logger.error(&quot;Movement impossible - page to move up {} - page to move down {}&quot;, pageUp, pageDown);</span>
+        }
+<span class="fc" id="L433">    }</span>
+    
+    private void upgradePositionOnOnlineVersion(String pageCode, int position, Cache cache) {
+<span class="fc" id="L436">        IPage onlinePage = this.getOnlinePage(pageCode);</span>
+<span class="fc bfc" id="L437" title="All 2 branches covered.">        if (null != onlinePage) {</span>
+<span class="fc" id="L438">            onlinePage.setPosition(position);</span>
+<span class="fc" id="L439">            cache.put(ONLINE_PAGE_CACHE_NAME_PREFIX + onlinePage.getCode(), onlinePage);</span>
+        }
+<span class="fc" id="L441">    }</span>
+    
+    private void switchSisterOnParent(String parentCode, String pageUp, String pageDown, Cache cache, boolean online) {
+<span class="fc bfc" id="L444" title="All 2 branches covered.">        IPage parent = (online) ? this.getOnlinePage(parentCode) : this.getDraftPage(parentCode);</span>
+<span class="fc bfc" id="L445" title="All 2 branches covered.">        if (null != parent) {</span>
+<span class="fc" id="L446">            List&lt;String&gt; children = new ArrayList(Arrays.asList(parent.getChildrenCodes()));</span>
+<span class="fc" id="L447">            int pos1 = children.indexOf(pageUp);</span>
+<span class="fc" id="L448">            int pos2 = children.indexOf(pageDown);</span>
+<span class="pc bpc" id="L449" title="1 of 4 branches missed.">            if (pos1 &gt;= 0 &amp;&amp; pos2 &gt;= 0) {</span>
+<span class="fc" id="L450">                Collections.swap(children, pos1, pos2);</span>
+<span class="fc" id="L451">                ((Page) parent).setChildrenCodes(children.toArray(new String[children.size()]));</span>
+<span class="pc bpc" id="L452" title="1 of 2 branches missed.">                String cacheKey = (online) ? </span>
+<span class="nc" id="L453">                        (ONLINE_PAGE_CACHE_NAME_PREFIX + parent.getCode()) :</span>
+<span class="fc" id="L454">                        (DRAFT_PAGE_CACHE_NAME_PREFIX + parent.getCode());</span>
+<span class="fc" id="L455">                cache.put(cacheKey, parent);</span>
+            }
+<span class="fc" id="L457">            this.checkRootModification(parent, online, cache);</span>
+        }
+<span class="fc" id="L459">    }</span>
+    
+    private void checkRootModification(IPage page, boolean online, Cache cache) {
+<span class="fc bfc" id="L462" title="All 2 branches covered.">        if (page.isRoot()) {</span>
+<span class="fc bfc" id="L463" title="All 2 branches covered.">            if (!online) {</span>
+<span class="fc" id="L464">                cache.put(DRAFT_ROOT_CACHE_NAME, page);</span>
+            } else {
+<span class="fc" id="L466">                cache.put(ONLINE_ROOT_CACHE_NAME, page);</span>
+            }
+        }
+<span class="fc" id="L469">    }</span>
+    
+    @Override
+    public PagesStatus getPagesStatus() {
+<span class="fc" id="L473">        return this.get(PAGE_STATUS_CACHE_NAME, PagesStatus.class);</span>
+    }
+    
+    @Override
+    public IPage getOnlinePage(String pageCode) {
+<span class="fc" id="L478">        IPage page = this.get(ONLINE_PAGE_CACHE_NAME_PREFIX + pageCode, IPage.class);</span>
+<span class="fc" id="L479">        return this.returnClone(page);</span>
+    }
+
+    @Override
+    public IPage getDraftPage(String pageCode) {
+<span class="fc" id="L484">        IPage page = this.get(DRAFT_PAGE_CACHE_NAME_PREFIX + pageCode, IPage.class);</span>
+<span class="fc" id="L485">        return this.returnClone(page);</span>
+    }
+
+    @Override
+    public IPage getOnlineRoot() {
+<span class="fc" id="L490">        IPage page = this.get(ONLINE_ROOT_CACHE_NAME, IPage.class).clone();</span>
+<span class="fc" id="L491">        return this.returnClone(page);</span>
+    }
+
+    @Override
+    public IPage getDraftRoot() {
+<span class="fc" id="L496">        IPage page = this.get(DRAFT_ROOT_CACHE_NAME, IPage.class).clone();</span>
+<span class="fc" id="L497">        return this.returnClone(page);</span>
+    }
+    
+    private IPage returnClone(IPage page) {
+<span class="fc bfc" id="L501" title="All 2 branches covered.">        if (null != page) {</span>
+<span class="fc" id="L502">            return page.clone();</span>
+        }
+<span class="fc" id="L504">        return null;</span>
+    }
+
+    protected void buildTreeHierarchy(IPage root, Map&lt;String, IPage&gt; pagesMap, IPage page) {
+        try {
+<span class="fc" id="L509">            Page parent = (Page) pagesMap.get(page.getParentCode());</span>
+<span class="fc" id="L510">            page.setParentCode(parent.getCode());</span>
+<span class="fc bfc" id="L511" title="All 2 branches covered.">            if (!page.getCode().equals(root.getCode())) {</span>
+<span class="fc" id="L512">                parent.addChildCode(page.getCode());</span>
+            }
+<span class="nc" id="L514">        } catch (Exception e) {</span>
+<span class="nc" id="L515">            _logger.error(&quot;Error extracting parent of page {} - parent {}&quot;, page.getCode(), page.getParentCode(), e);</span>
+<span class="nc" id="L516">            throw e;</span>
+<span class="fc" id="L517">        }</span>
+<span class="fc" id="L518">    }</span>
+
+    protected void buildPagesStatus(PagesStatus status, IPage pageD) {
+<span class="fc" id="L521">        Date currentDate = pageD.getMetadata().getUpdatedAt();</span>
+<span class="fc bfc" id="L522" title="All 2 branches covered.">        if (pageD.isOnline()) {</span>
+<span class="fc bfc" id="L523" title="All 2 branches covered.">            if (pageD.isChanged()) {</span>
+<span class="fc" id="L524">                status.setOnlineWithChanges(status.getOnlineWithChanges() + 1);</span>
+            } else {
+<span class="fc" id="L526">                status.setOnline(status.getOnline() + 1);</span>
+            }
+        } else {
+<span class="fc" id="L529">            status.setUnpublished(status.getUnpublished() + 1);</span>
+        }
+<span class="pc bpc" id="L531" title="1 of 2 branches missed.">        if (null != currentDate) {</span>
+<span class="fc bfc" id="L532" title="All 4 branches covered.">            if (null == status.getLastUpdate() || status.getLastUpdate().before(currentDate)) {</span>
+<span class="fc" id="L533">                status.setLastUpdate(currentDate);</span>
+            }
+        }
+<span class="fc" id="L536">    }</span>
+
+    @Override
+    public List&lt;String&gt; getOnlineWidgetUtilizers(String widgetTypeCode) throws ApsSystemException {
+<span class="fc" id="L540">        return this.getWidgetUtilizers(widgetTypeCode, false);</span>
+    }
+
+    @Override
+    public List&lt;String&gt; getDraftWidgetUtilizers(String widgetTypeCode) throws ApsSystemException {
+<span class="fc" id="L545">        return this.getWidgetUtilizers(widgetTypeCode, true);</span>
+    }
+
+    private List&lt;String&gt; getWidgetUtilizers(String widgetTypeCode, boolean draft) throws ApsSystemException {
+<span class="fc bfc" id="L549" title="All 2 branches covered.">        if (null == widgetTypeCode) {</span>
+<span class="fc" id="L550">            return new ArrayList&lt;&gt;();</span>
+        }
+<span class="fc" id="L552">        Cache cache = super.getCache();</span>
+<span class="fc" id="L553">        String key = this.getWidgetUtilizerCacheName(widgetTypeCode, draft);</span>
+<span class="fc" id="L554">        List&lt;String&gt; pageCodes = this.get(cache, key, List.class);</span>
+<span class="fc bfc" id="L555" title="All 2 branches covered.">        if (null == pageCodes) {</span>
+<span class="fc" id="L556">            Map&lt;String, List&gt; utilizersMap = new HashMap&lt;&gt;();</span>
+            try {
+<span class="fc bfc" id="L558" title="All 2 branches covered.">                IPage root = (draft) ? this.getDraftRoot() : this.getOnlineRoot();</span>
+<span class="fc" id="L559">                this.getWidgetUtilizers(root, utilizersMap, draft);</span>
+<span class="nc" id="L560">            } catch (Throwable t) {</span>
+<span class="nc" id="L561">                String message = &quot;Error during searching draft page utilizers&quot;;</span>
+<span class="nc" id="L562">                _logger.error(message, t);</span>
+<span class="nc" id="L563">                throw new ApsSystemException(message, t);</span>
+<span class="fc" id="L564">            }</span>
+<span class="fc" id="L565">            utilizersMap.keySet().stream().forEach(cacheKey -&gt; {</span>
+<span class="fc" id="L566">                cache.put(cacheKey, utilizersMap.get(cacheKey));</span>
+<span class="fc bfc" id="L567" title="All 2 branches covered.">                if (!this.localObject.contains(cacheKey)) {</span>
+<span class="fc" id="L568">                    this.localObject.add(cacheKey);</span>
+                }
+<span class="fc" id="L570">            });</span>
+<span class="fc" id="L571">            pageCodes = utilizersMap.get(key);</span>
+        }
+<span class="fc bfc" id="L573" title="All 2 branches covered.">        if (null == pageCodes) {</span>
+<span class="fc" id="L574">            pageCodes = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L575">            cache.put(key, pageCodes);</span>
+<span class="fc" id="L576">            this.localObject.add(key);</span>
+        }
+<span class="fc" id="L578">        return pageCodes;</span>
+    }
+
+    private void getWidgetUtilizers(IPage page, Map&lt;String, List&gt; utilizersMap, boolean draft) {
+<span class="fc" id="L582">        Widget[] widgets = page.getWidgets();</span>
+
+<span class="pc bpc" id="L584" title="1 of 2 branches missed.">        if(widgets!=null) {</span>
+<span class="fc bfc" id="L585" title="All 2 branches covered.">            for (Widget widget : widgets) {</span>
+<span class="pc bpc" id="L586" title="1 of 4 branches missed.">                if (null != widget &amp;&amp; null != widget.getType()) {</span>
+<span class="fc" id="L587">                    String cacheCode = this.getWidgetUtilizerCacheName(widget.getType().getCode(), draft);</span>
+<span class="fc" id="L588">                    List&lt;String&gt; widgetUtilizers = utilizersMap.get(cacheCode);</span>
+<span class="fc bfc" id="L589" title="All 2 branches covered.">                    if (null == widgetUtilizers) {</span>
+<span class="fc" id="L590">                        widgetUtilizers = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L591">                        utilizersMap.put(cacheCode, widgetUtilizers);</span>
+                    }
+<span class="fc" id="L593">                    widgetUtilizers.add(page.getCode());</span>
+                }
+            }
+        }
+<span class="fc" id="L597">        String[] childrenCodes = page.getChildrenCodes();</span>
+
+<span class="pc bpc" id="L599" title="1 of 2 branches missed.">        if(childrenCodes !=null) {</span>
+<span class="fc bfc" id="L600" title="All 2 branches covered.">            for (String childrenCode : childrenCodes) {</span>
+<span class="fc bfc" id="L601" title="All 2 branches covered.">                IPage child = (draft) ? this.getDraftPage(childrenCode) : this.getOnlinePage(childrenCode);</span>
+<span class="fc bfc" id="L602" title="All 2 branches covered.">                if (null != child) {</span>
+<span class="fc" id="L603">                    this.getWidgetUtilizers(child, utilizersMap, draft);</span>
+                }
+            }
+        }
+<span class="fc" id="L607">    }</span>
+
+    @Override
+    public void movePage(String pageCode, String newParentCode) {
+<span class="fc" id="L611">        Cache cache = super.getCache();</span>
+<span class="fc" id="L612">        IPage pageToMove = this.getDraftPage(pageCode);</span>
+<span class="fc" id="L613">        IPage newParent = this.getDraftPage(newParentCode);</span>
+        
+<span class="fc" id="L615">        IPage oldParentDraft = this.updateOldParent(pageToMove, true, cache);</span>
+<span class="fc" id="L616">        this.updateOldParent(pageToMove, false, cache);</span>
+<span class="fc" id="L617">        String[] newChildrenDraft = oldParentDraft.getChildrenCodes();</span>
+<span class="fc bfc" id="L618" title="All 2 branches covered.">        for (int i = 0; i &lt; newChildrenDraft.length; i++) {</span>
+<span class="fc" id="L619">            this.updatePositionAndParent(newChildrenDraft[i], i+1, null, false, cache);</span>
+<span class="fc" id="L620">            this.updatePositionAndParent(newChildrenDraft[i], i+1, null, true, cache);</span>
+        }
+        
+<span class="fc" id="L623">        String[] oldChildDest = newParent.getChildrenCodes();</span>
+<span class="pc bpc" id="L624" title="1 of 4 branches missed.">        Integer lastPos = (null == oldChildDest || oldChildDest.length == 0) ? 1</span>
+<span class="fc" id="L625">                : Arrays.stream(oldChildDest).map(f -&gt; this.getDraftPage(f).getPosition()).max(Integer::compareTo).get() + 1;</span>
+<span class="fc" id="L626">        this.updatePositionAndParent(pageCode, lastPos, newParentCode, false, cache);</span>
+<span class="fc" id="L627">        this.updatePositionAndParent(pageCode, lastPos, newParentCode, true, cache);</span>
+        
+<span class="fc" id="L629">        this.updateNewParent(pageCode, newParentCode, true, cache);</span>
+<span class="fc bfc" id="L630" title="All 2 branches covered.">        if (null != this.getOnlinePage(pageCode)) {</span>
+<span class="fc" id="L631">            this.updateNewParent(pageCode, newParentCode, false, cache);</span>
+        }
+<span class="fc" id="L633">    }</span>
+    
+    private IPage updateOldParent(IPage pageToMove, boolean draft, Cache cache) {
+<span class="fc bfc" id="L636" title="All 2 branches covered.">        IPage oldParent = (draft) ? this.getDraftPage(pageToMove.getParentCode()) : this.getOnlinePage(pageToMove.getParentCode());</span>
+<span class="pc bpc" id="L637" title="1 of 2 branches missed.">        if (null == oldParent) {</span>
+<span class="nc" id="L638">            return null;</span>
+        }
+<span class="fc" id="L640">        int index = Arrays.asList(oldParent.getChildrenCodes()).indexOf(pageToMove.getCode());</span>
+<span class="fc bfc" id="L641" title="All 2 branches covered.">        if (index &gt; -1) {</span>
+            //rimuovo l'elemento dal vecchio parent
+<span class="fc" id="L643">            String[] newChildren = ArrayUtils.remove(oldParent.getChildrenCodes(), index);</span>
+<span class="fc" id="L644">            ((Page) oldParent).setChildrenCodes(newChildren);</span>
+<span class="fc bfc" id="L645" title="All 2 branches covered.">            cache.put(((draft) ? DRAFT_PAGE_CACHE_NAME_PREFIX : ONLINE_PAGE_CACHE_NAME_PREFIX) + oldParent.getCode(), oldParent);</span>
+        }
+<span class="fc" id="L647">        return oldParent;</span>
+    }
+    
+    private void updatePositionAndParent(String pageCode, int newPosition, String newParent, boolean draft, Cache cache) {
+<span class="fc bfc" id="L651" title="All 2 branches covered.">        IPage page = (draft) ? this.getDraftPage(pageCode) : this.getOnlinePage(pageCode);</span>
+<span class="fc bfc" id="L652" title="All 2 branches covered.">        if (null != page) {</span>
+<span class="fc" id="L653">            page.setPosition(newPosition);</span>
+<span class="fc bfc" id="L654" title="All 2 branches covered.">            if (null != newParent) {</span>
+<span class="fc" id="L655">                page.setParentCode(newParent);</span>
+            }
+<span class="fc bfc" id="L657" title="All 2 branches covered.">            cache.put(((draft) ? DRAFT_PAGE_CACHE_NAME_PREFIX : ONLINE_PAGE_CACHE_NAME_PREFIX) + page.getCode(), page);</span>
+        }
+<span class="fc" id="L659">    }</span>
+    
+    private IPage updateNewParent(String pageToMoveCode, String newParentCode, boolean draft, Cache cache) {
+<span class="fc bfc" id="L662" title="All 2 branches covered.">        IPage newParent = (draft) ? this.getDraftPage(newParentCode) : this.getOnlinePage(newParentCode);</span>
+<span class="pc bpc" id="L663" title="1 of 2 branches missed.">        if (null == newParent) {</span>
+<span class="nc" id="L664">            return null;</span>
+        }
+<span class="fc" id="L666">        String[] newChildren = ArrayUtils.add(newParent.getChildrenCodes(), pageToMoveCode);</span>
+<span class="fc" id="L667">        ((Page) newParent).setChildrenCodes(newChildren);</span>
+<span class="fc bfc" id="L668" title="All 2 branches covered.">        cache.put(((draft) ? DRAFT_PAGE_CACHE_NAME_PREFIX : ONLINE_PAGE_CACHE_NAME_PREFIX) + newParent.getCode(), newParent);</span>
+<span class="fc" id="L669">        return newParent;</span>
+    }
+    
+    private String getWidgetUtilizerCacheName(String widgetTypeCode, boolean draft) {
+<span class="fc bfc" id="L673" title="All 2 branches covered.">        return ((draft) ? DRAFT_WIDGET_UTILIZER_CACHE_NAME_PREFIX : ONLINE_WIDGET_UTILIZER_CACHE_NAME_PREFIX) + widgetTypeCode;</span>
+    }
+
+    @Override
+    protected String getCacheName() {
+<span class="fc" id="L678">        return PAGE_MANAGER_CACHE_NAME;</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
