@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ShortcutDefDOM.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Administration Console</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.apsadmin.system.services.shortcut</a> &gt; <span class="el_source">ShortcutDefDOM.java</span></div><h1>ShortcutDefDOM.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.entando.apsadmin.system.services.shortcut;
+
+import com.agiletec.aps.system.exception.ApsSystemException;
+
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.StringReader;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.xml.XMLConstants;
+import javax.xml.transform.Source;
+import javax.xml.transform.stream.StreamSource;
+import javax.xml.validation.Schema;
+import javax.xml.validation.SchemaFactory;
+import javax.xml.validation.Validator;
+
+import org.entando.entando.apsadmin.system.services.shortcut.model.AbstractBaseBean;
+import org.entando.entando.apsadmin.system.services.shortcut.model.MenuSection;
+import org.entando.entando.apsadmin.system.services.shortcut.model.Shortcut;
+import org.jdom.Document;
+import org.jdom.Element;
+import org.jdom.input.SAXBuilder;
+import org.jdom.output.Format;
+import org.jdom.output.XMLOutputter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * @author E.Santoboni
+ */
+public class ShortcutDefDOM {
+
+<span class="fc" id="L50">	private static final Logger _logger = LoggerFactory.getLogger(ShortcutDefDOM.class);</span>
+	
+<span class="fc" id="L52">	public ShortcutDefDOM(String xmlText, String definitionPath) throws ApsSystemException {</span>
+<span class="fc" id="L53">		this.validate(xmlText, definitionPath);</span>
+<span class="fc" id="L54">		this.decodeDOM(xmlText);</span>
+<span class="fc" id="L55">	}</span>
+	
+	private void validate(String xmlText, String definitionPath) throws ApsSystemException {
+<span class="fc" id="L58">		SchemaFactory factory = </span>
+<span class="fc" id="L59">            SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);</span>
+<span class="fc" id="L60">		InputStream schemaIs = null;</span>
+<span class="fc" id="L61">		InputStream xmlIs = null;</span>
+		try {
+<span class="fc" id="L63">			schemaIs = this.getClass().getResourceAsStream(&quot;shortcuts-2.2.xsd&quot;);</span>
+<span class="fc" id="L64">			Source schemaSource = new StreamSource(schemaIs);</span>
+<span class="fc" id="L65">			Schema schema = factory.newSchema(schemaSource);</span>
+<span class="fc" id="L66">	        Validator validator = schema.newValidator();</span>
+<span class="fc" id="L67">	        xmlIs = new ByteArrayInputStream(xmlText.getBytes(StandardCharsets.UTF_8));</span>
+<span class="fc" id="L68">	        Source source = new StreamSource(xmlIs);</span>
+<span class="fc" id="L69">	        validator.validate(source);</span>
+<span class="fc" id="L70">	        _logger.trace(&quot;Valid Shortcut definition : &quot; + definitionPath);</span>
+<span class="nc" id="L71">        } catch (Throwable t) {</span>
+<span class="nc" id="L72">        	String message = &quot;Error validating Shortcut definition : &quot; + definitionPath;</span>
+<span class="nc" id="L73">        	_logger.error(message, t);</span>
+<span class="nc" id="L74">        	throw new ApsSystemException(message, t);</span>
+        } finally {
+        	try {
+<span class="pc bpc" id="L77" title="1 of 2 branches missed.">				if (null != schemaIs) schemaIs.close();</span>
+<span class="pc bpc" id="L78" title="1 of 2 branches missed.">				if (null != xmlIs) xmlIs.close();</span>
+<span class="nc" id="L79">			} catch (IOException e) {</span>
+<span class="nc" id="L80">				_logger.error(&quot;error closing input stream&quot;, e);</span>
+<span class="fc" id="L81">			}</span>
+        }
+<span class="fc" id="L83">	}</span>
+	
+	public Map&lt;String, Shortcut&gt; getShortcuts() {
+<span class="fc" id="L86">		Map&lt;String, Shortcut&gt; shortcuts = new HashMap&lt;String, Shortcut&gt;();</span>
+<span class="fc" id="L87">		Element shortcutsElement = this._doc.getRootElement().getChild(SHORTCUTS_ELEMENT_NAME);</span>
+<span class="pc bpc" id="L88" title="1 of 2 branches missed.">		if (null == shortcutsElement) {</span>
+<span class="nc" id="L89">			return shortcuts;</span>
+		}
+<span class="fc" id="L91">		List&lt;Element&gt; shortcutElements = shortcutsElement.getChildren();</span>
+<span class="fc bfc" id="L92" title="All 2 branches covered.">		for (int i=0; i&lt;shortcutElements.size(); i++) {</span>
+<span class="fc" id="L93">			Element shortcutElement = shortcutElements.get(i);</span>
+<span class="fc" id="L94">			String id = shortcutElement.getAttributeValue(SHORTCUT_ID_ATTRIBUTE_NAME);</span>
+<span class="fc" id="L95">			Shortcut shortcut = new Shortcut(id);</span>
+<span class="fc" id="L96">			shortcut.setRequiredPermission(shortcutElement.getAttributeValue(SHORTCUT_REQ_PERMISSION_ATTRIBUTE_NAME));</span>
+<span class="fc" id="L97">			shortcut.setMenuSectionCode(shortcutElement.getAttributeValue(SHORTCUT_MENU_SECTION_ATTRIBUTE_NAME));</span>
+<span class="fc" id="L98">			shortcut.setSource(shortcutElement.getAttributeValue(SHORTCUT_SOURCE_ATTRIBUTE_NAME));</span>
+<span class="fc" id="L99">			this.extractDescriptions(shortcutElement, shortcut);</span>
+<span class="fc" id="L100">			Element urlElement = shortcutElement.getChild(SHORTCUT_URL_ELEMENT_NAME);</span>
+<span class="pc bpc" id="L101" title="1 of 2 branches missed.">			if (null != urlElement) {</span>
+<span class="fc" id="L102">				List&lt;Element&gt; paramElements = urlElement.getChildren(PARAM_ELEMENT_NAME);</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">				for (int j=0; j&lt;paramElements.size(); j++) {</span>
+<span class="fc" id="L104">					Element paramElement = paramElements.get(j);</span>
+<span class="fc" id="L105">					String name = paramElement.getAttributeValue(PARAM_NAME_ATTRIBUTE_NAME);</span>
+<span class="fc" id="L106">					String value = paramElement.getText();</span>
+<span class="fc bfc" id="L107" title="All 2 branches covered.">					if (name.equals(NAMESPACE_PARAM_NAME)) {</span>
+<span class="fc" id="L108">						shortcut.setNamespace(value);</span>
+<span class="fc bfc" id="L109" title="All 2 branches covered.">					} else if (name.equals(ACTIONNAME_PARAM_NAME)) {</span>
+<span class="fc" id="L110">						shortcut.setActionName(value);</span>
+					} else {
+<span class="pc bpc" id="L112" title="1 of 2 branches missed.">						if (null == shortcut.getParameters()) {</span>
+<span class="fc" id="L113">							shortcut.setParameters(new HashMap&lt;String, Object&gt;());</span>
+						}
+<span class="fc" id="L115">						shortcut.getParameters().put(name, value);</span>
+					}
+				}
+			}
+<span class="fc" id="L119">			shortcuts.put(shortcut.getId(), shortcut);</span>
+		}
+<span class="fc" id="L121">		return shortcuts;</span>
+	}
+	
+	public Map&lt;String, MenuSection&gt; getSectionMenus() {
+<span class="fc" id="L125">		Map&lt;String, MenuSection&gt; menuSections = new HashMap&lt;String, MenuSection&gt;();</span>
+<span class="fc" id="L126">		Element menuSectionsElement = this._doc.getRootElement().getChild(MENUSECTIONS_ELEMENT_NAME);</span>
+<span class="pc bpc" id="L127" title="1 of 2 branches missed.">		if (null == menuSectionsElement) {</span>
+<span class="nc" id="L128">			return menuSections;</span>
+		}
+<span class="fc" id="L130">		List&lt;Element&gt; menuSectionElements = menuSectionsElement.getChildren();</span>
+<span class="fc bfc" id="L131" title="All 2 branches covered.">		for (int i=0; i&lt;menuSectionElements.size(); i++) {</span>
+<span class="fc" id="L132">			Element menuSectionElement = menuSectionElements.get(i);</span>
+<span class="fc" id="L133">			String id = menuSectionElement.getAttributeValue(MENUSECTION_ID_ATTRIBUTE_NAME);</span>
+<span class="fc" id="L134">			MenuSection menuSection = new MenuSection(id);</span>
+<span class="fc" id="L135">			this.extractDescriptions(menuSectionElement, menuSection);</span>
+<span class="fc" id="L136">			menuSections.put(menuSection.getId(), menuSection);</span>
+		}
+<span class="fc" id="L138">		return menuSections;</span>
+	}
+	
+	private void extractDescriptions(Element element, AbstractBaseBean bean) {
+<span class="fc" id="L142">		Element descrElement = element.getChild(&quot;description&quot;);</span>
+<span class="pc bpc" id="L143" title="1 of 2 branches missed.">		if (null != descrElement) {</span>
+<span class="fc" id="L144">			bean.setDescription(descrElement.getText());</span>
+<span class="fc" id="L145">			bean.setDescriptionKey(descrElement.getAttributeValue(&quot;key&quot;));</span>
+		}
+<span class="fc" id="L147">		Element longdescElement = element.getChild(&quot;longdesc&quot;);</span>
+<span class="pc bpc" id="L148" title="1 of 2 branches missed.">		if (null != longdescElement) {</span>
+<span class="fc" id="L149">			bean.setLongDescription(longdescElement.getText());</span>
+<span class="fc" id="L150">			bean.setLongDescriptionKey(longdescElement.getAttributeValue(&quot;key&quot;));</span>
+		}
+<span class="fc" id="L152">	}</span>
+	
+	public String getXMLDocument(){
+<span class="nc" id="L155">		XMLOutputter out = new XMLOutputter();</span>
+<span class="nc" id="L156">		Format format = Format.getPrettyFormat();</span>
+<span class="nc" id="L157">		format.setIndent(&quot;\t&quot;);</span>
+<span class="nc" id="L158">		out.setFormat(format);</span>
+<span class="nc" id="L159">		return out.outputString(_doc);</span>
+	}
+	
+	private void decodeDOM(String xmlText) throws ApsSystemException {
+<span class="fc" id="L163">		SAXBuilder builder = new SAXBuilder();</span>
+<span class="fc" id="L164">		builder.setValidation(false);</span>
+<span class="fc" id="L165">		StringReader reader = new StringReader(xmlText);</span>
+		try {
+<span class="fc" id="L167">			this._doc = builder.build(reader);</span>
+<span class="nc" id="L168">		} catch (Throwable t) {</span>
+<span class="nc" id="L169">			_logger.error(&quot;Error while parsing. xml: {} &quot;, xmlText,t);</span>
+<span class="nc" id="L170">			throw new ApsSystemException(&quot;Error detected while parsing the XML&quot;, t);</span>
+<span class="fc" id="L171">		}</span>
+<span class="fc" id="L172">	}</span>
+	
+	private Document _doc;
+	
+	public static final String ROOT_ELEMENT_NAME = &quot;&quot;;
+	public static final String SHORTCUTS_ELEMENT_NAME = &quot;shortcuts&quot;;
+	public static final String SHORTCUT_ID_ATTRIBUTE_NAME = &quot;id&quot;;
+	public static final String SHORTCUT_REQ_PERMISSION_ATTRIBUTE_NAME = &quot;requiredPermission&quot;;
+	public static final String SHORTCUT_MENU_SECTION_ATTRIBUTE_NAME = &quot;menusection&quot;;
+	public static final String SHORTCUT_SOURCE_ATTRIBUTE_NAME = &quot;source&quot;;
+	public static final String SHORTCUT_URL_ELEMENT_NAME = &quot;url&quot;;
+	public static final String PARAM_ELEMENT_NAME = &quot;param&quot;;
+	public static final String PARAM_NAME_ATTRIBUTE_NAME = &quot;name&quot;;
+	public static final String NAMESPACE_PARAM_NAME = &quot;namespace&quot;;
+	public static final String ACTIONNAME_PARAM_NAME = &quot;actionName&quot;;
+	
+	public static final String MENUSECTIONS_ELEMENT_NAME = &quot;menusections&quot;;
+	public static final String MENUSECTION_ID_ATTRIBUTE_NAME = &quot;id&quot;;
+	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
