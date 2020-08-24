@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DefaultEntandoCoreClient.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.client.core</a> &gt; <span class="el_source">DefaultEntandoCoreClient.java</span></div><h1>DefaultEntandoCoreClient.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.client.core;
+
+import java.nio.file.Paths;
+import org.entando.kubernetes.exception.web.HttpException;
+import org.entando.kubernetes.model.bundle.descriptor.ContentTemplateDescriptor;
+import org.entando.kubernetes.model.bundle.descriptor.ContentTypeDescriptor;
+import org.entando.kubernetes.model.bundle.descriptor.FileDescriptor;
+import org.entando.kubernetes.model.bundle.descriptor.FragmentDescriptor;
+import org.entando.kubernetes.model.bundle.descriptor.LabelDescriptor;
+import org.entando.kubernetes.model.bundle.descriptor.PageDescriptor;
+import org.entando.kubernetes.model.bundle.descriptor.PageTemplateDescriptor;
+import org.entando.kubernetes.model.bundle.descriptor.WidgetDescriptor;
+import org.entando.kubernetes.model.entandocore.EntandoCoreComponentUsage;
+import org.entando.kubernetes.model.entandocore.EntandoCoreContentModel;
+import org.entando.kubernetes.model.entandocore.EntandoCoreFile;
+import org.entando.kubernetes.model.entandocore.EntandoCoreFolder;
+import org.entando.kubernetes.model.entandocore.EntandoCoreFragment;
+import org.entando.kubernetes.model.entandocore.EntandoCorePage;
+import org.entando.kubernetes.model.entandocore.EntandoCorePageTemplate;
+import org.entando.kubernetes.model.entandocore.EntandoCoreWidget;
+import org.entando.kubernetes.model.web.response.SimpleRestResponse;
+import org.entando.kubernetes.service.digitalexchange.entandocore.EntandoDefaultOAuth2RequestAuthenticator;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.client.OAuth2RestTemplate;
+import org.springframework.security.oauth2.client.token.grant.client.ClientCredentialsAccessTokenProvider;
+import org.springframework.security.oauth2.client.token.grant.client.ClientCredentialsResourceDetails;
+import org.springframework.security.oauth2.common.AuthenticationScheme;
+import org.springframework.stereotype.Service;
+import org.springframework.web.util.UriComponentsBuilder;
+
+@Service
+public class DefaultEntandoCoreClient implements EntandoCoreClient {
+
+    private final OAuth2RestTemplate restTemplate;
+    private final String entandoUrl;
+    private static final String USAGE_PATH_SEGMENT = &quot;usage&quot;;
+
+    public DefaultEntandoCoreClient(
+            @Value(&quot;${spring.security.oauth2.client.registration.oidc.client-id}&quot;) final String clientId,
+            @Value(&quot;${spring.security.oauth2.client.registration.oidc.client-secret}&quot;) final String clientSecret,
+            @Value(&quot;${entando.auth-url}&quot;) final String tokenUri,
+<span class="fc" id="L45">            @Value(&quot;${entando.url}&quot;) final String entandoUrl) {</span>
+<span class="fc" id="L46">        final ClientCredentialsResourceDetails resourceDetails = new ClientCredentialsResourceDetails();</span>
+<span class="fc" id="L47">        resourceDetails.setAuthenticationScheme(AuthenticationScheme.header);</span>
+<span class="fc" id="L48">        resourceDetails.setClientId(clientId);</span>
+<span class="fc" id="L49">        resourceDetails.setClientSecret(clientSecret);</span>
+<span class="fc" id="L50">        resourceDetails.setAccessTokenUri(tokenUri);</span>
+
+<span class="fc" id="L52">        this.entandoUrl = entandoUrl;</span>
+<span class="fc" id="L53">        this.restTemplate = new OAuth2RestTemplate(resourceDetails);</span>
+<span class="fc" id="L54">        this.restTemplate.setAuthenticator(new EntandoDefaultOAuth2RequestAuthenticator());</span>
+<span class="fc" id="L55">        this.restTemplate.setAccessTokenProvider(new ClientCredentialsAccessTokenProvider());</span>
+<span class="fc" id="L56">    }</span>
+
+    @Override
+    public void registerWidget(final WidgetDescriptor descriptor) {
+<span class="fc" id="L60">        restTemplate</span>
+<span class="fc" id="L61">                .postForEntity(resolvePathSegments(&quot;api&quot;, &quot;widgets&quot;).build().toUri(), new EntandoCoreWidget(descriptor),</span>
+                        Void.class);
+<span class="fc" id="L63">    }</span>
+
+    @Override
+    public void deleteWidget(final String code) {
+<span class="fc" id="L67">        restTemplate.delete(resolvePathSegments(&quot;api&quot;, &quot;widgets&quot;, code).build().toUri());</span>
+<span class="fc" id="L68">    }</span>
+
+    @Override
+    public EntandoCoreComponentUsage getWidgetUsage(String code) {
+<span class="fc" id="L72">        return this.getComponentUsage(code, new String[]{&quot;api&quot;, &quot;widgets&quot;, code, USAGE_PATH_SEGMENT}, &quot;widget&quot;);</span>
+    }
+
+    @Override
+    public void registerFragment(FragmentDescriptor descriptor) {
+<span class="fc" id="L77">        restTemplate.postForEntity(resolvePathSegments(&quot;api&quot;, &quot;fragments&quot;).build().toUri(),</span>
+                new EntandoCoreFragment(descriptor), Void.class);
+<span class="fc" id="L79">    }</span>
+
+    @Override
+    public void deleteFragment(String code) {
+<span class="fc" id="L83">        restTemplate.delete(resolvePathSegments(&quot;api&quot;, &quot;fragments&quot;, code).build().toUri());</span>
+<span class="fc" id="L84">    }</span>
+
+    @Override
+    public EntandoCoreComponentUsage getFragmentUsage(String code) {
+<span class="fc" id="L88">        return this.getComponentUsage(code, new String[]{&quot;api&quot;, &quot;fragments&quot;, code, USAGE_PATH_SEGMENT}, &quot;fragment&quot;);</span>
+    }
+
+    @Override
+    public void registerLabel(final LabelDescriptor descriptor) {
+<span class="fc" id="L93">        restTemplate.postForEntity(resolvePathSegments(&quot;api&quot;, &quot;labels&quot;).build().toUri(), descriptor, Void.class);</span>
+<span class="fc" id="L94">    }</span>
+
+    @Override
+    public void deleteLabel(final String code) {
+<span class="fc" id="L98">        restTemplate.delete(resolvePathSegments(&quot;api&quot;, &quot;labels&quot;, code).build().toUri());</span>
+<span class="fc" id="L99">    }</span>
+
+    @Override
+    public void registerPage(PageDescriptor pageDescriptor) {
+<span class="fc" id="L103">        restTemplate</span>
+<span class="fc" id="L104">                .postForEntity(resolvePathSegments(&quot;api&quot;, &quot;pages&quot;).build().toUri(), new EntandoCorePage(pageDescriptor),</span>
+                        Void.class);
+<span class="fc" id="L106">    }</span>
+
+    @Override
+    public void deletePage(final String code) {
+<span class="fc" id="L110">        restTemplate.delete(resolvePathSegments(&quot;api&quot;, &quot;pages&quot;, code).build().toUri());</span>
+<span class="fc" id="L111">    }</span>
+
+    @Override
+    public EntandoCoreComponentUsage getPageUsage(String code) {
+<span class="fc" id="L115">        return this.getComponentUsage(code, new String[]{&quot;api&quot;, &quot;pages&quot;, code, USAGE_PATH_SEGMENT}, &quot;page&quot;);</span>
+    }
+
+    @Override
+    public void registerPageModel(final PageTemplateDescriptor descriptor) {
+<span class="fc" id="L120">        restTemplate.postForEntity(resolvePathSegments(&quot;api&quot;, &quot;pageModels&quot;).build().toUri(),</span>
+                new EntandoCorePageTemplate(descriptor), Void.class);
+<span class="fc" id="L122">    }</span>
+
+    @Override
+    public void deletePageModel(final String code) {
+<span class="fc" id="L126">        restTemplate.delete(resolvePathSegments(&quot;api&quot;, &quot;pageModels&quot;, code).build().toUri());</span>
+<span class="fc" id="L127">    }</span>
+
+    @Override
+    public EntandoCoreComponentUsage getPageModelUsage(String code) {
+<span class="fc" id="L131">        return this.getComponentUsage(code, new String[]{&quot;api&quot;, &quot;pageModels&quot;, code, USAGE_PATH_SEGMENT}, &quot;page template&quot;);</span>
+    }
+
+    @Override
+    public void deleteContentModel(final String code) {
+<span class="fc" id="L136">        restTemplate.delete(resolvePathSegments(&quot;api&quot;, &quot;plugins&quot;, &quot;cms&quot;, &quot;contentmodels&quot;, code).build().toUri());</span>
+<span class="fc" id="L137">    }</span>
+
+    @Override
+    public void registerContentModel(final ContentTemplateDescriptor descriptor) {
+<span class="fc" id="L141">        restTemplate.postForEntity(resolvePathSegments(&quot;api&quot;, &quot;plugins&quot;, &quot;cms&quot;, &quot;contentmodels&quot;).build().toUri(),</span>
+                new EntandoCoreContentModel(descriptor), Void.class);
+<span class="fc" id="L143">    }</span>
+
+    @Override
+    public EntandoCoreComponentUsage getContentModelUsage(String code) {
+<span class="fc" id="L147">        return this.getComponentUsage(code, new String[]{&quot;api&quot;, &quot;plugins&quot;, &quot;cms&quot;, &quot;contentmodels&quot;, code, USAGE_PATH_SEGMENT}, &quot;content template&quot;);</span>
+    }
+
+    @Override
+    public void registerContentType(final ContentTypeDescriptor descriptor) {
+<span class="fc" id="L152">        restTemplate</span>
+<span class="fc" id="L153">                .postForEntity(resolvePathSegments(&quot;api&quot;, &quot;plugins&quot;, &quot;cms&quot;, &quot;contentTypes&quot;).build().toUri(), descriptor,</span>
+                        Void.class);
+<span class="fc" id="L155">    }</span>
+
+    @Override
+    public void deleteContentType(final String code) {
+<span class="fc" id="L159">        restTemplate.delete(resolvePathSegments(&quot;api&quot;, &quot;plugins&quot;, &quot;cms&quot;, &quot;contentTypes&quot;, code).build().toUri());</span>
+<span class="fc" id="L160">    }</span>
+
+    @Override
+    public EntandoCoreComponentUsage getContentTypeUsage(String code) {
+<span class="fc" id="L164">        return this.getComponentUsage(code, new String[]{&quot;api&quot;, &quot;plugins&quot;, &quot;cms&quot;, &quot;contentTypes&quot;, code, USAGE_PATH_SEGMENT}, &quot;content type&quot;);</span>
+    }
+
+    @Override
+    public void createFolder(final String folder) {
+<span class="nc" id="L169">        restTemplate.postForEntity(resolvePathSegments(&quot;api&quot;, &quot;fileBrowser&quot;, &quot;directory&quot;).build().toUri(),</span>
+                new EntandoCoreFolder(folder), Void.class);
+<span class="nc" id="L171">    }</span>
+
+    @Override
+    public void deleteFolder(final String code) {
+<span class="nc" id="L175">        UriComponentsBuilder builder = resolvePathSegments(&quot;api&quot;, &quot;fileBrowser&quot;, &quot;directory&quot;);</span>
+<span class="nc" id="L176">        builder.queryParam(&quot;protectedFolder&quot;, &quot;false&quot;);</span>
+<span class="nc" id="L177">        builder.queryParam(&quot;currentPath&quot;, code);</span>
+<span class="nc" id="L178">        restTemplate.delete(builder.build().toUri());</span>
+<span class="nc" id="L179">    }</span>
+
+    @Override
+    public void uploadFile(final FileDescriptor descriptor) {
+<span class="nc" id="L183">        final String path = Paths.get(descriptor.getFolder(), descriptor.getFilename()).toString();</span>
+<span class="nc" id="L184">        final EntandoCoreFile file = new EntandoCoreFile(false, path, descriptor.getFilename(), descriptor.getBase64());</span>
+<span class="nc" id="L185">        restTemplate.postForEntity(resolvePathSegments(&quot;api&quot;, &quot;fileBrowser&quot;, &quot;file&quot;).build().toUri(), file, Void.class);</span>
+<span class="nc" id="L186">    }</span>
+
+    private UriComponentsBuilder resolvePathSegments(String... segments) {
+<span class="fc" id="L189">        return UriComponentsBuilder</span>
+<span class="fc" id="L190">                .fromUriString(entandoUrl)</span>
+<span class="fc" id="L191">                .pathSegment(segments);</span>
+    }
+
+
+    /**
+     * asks for component the received component id usage count
+     * @param code the code of the component of which get the usage count
+     * @param endpointUrlParts a String array containing the query segments representing the endpoint url to qurey
+     * @return an instance of EntandoCoreComponentUsage containing the number of the entities using the component
+     */
+    public EntandoCoreComponentUsage getComponentUsage(String code, String[] endpointUrlParts, String componentType) {
+
+<span class="fc" id="L203">        ResponseEntity&lt;SimpleRestResponse&lt;EntandoCoreComponentUsage&gt;&gt; usage = restTemplate</span>
+<span class="fc" id="L204">                .exchange(resolvePathSegments(endpointUrlParts).build().toUri(), HttpMethod.GET, null,</span>
+<span class="fc" id="L205">                        new ParameterizedTypeReference&lt;SimpleRestResponse&lt;EntandoCoreComponentUsage&gt;&gt;() {});</span>
+
+<span class="fc bfc" id="L207" title="All 2 branches covered.">        if (usage.getStatusCode().is2xxSuccessful()) {</span>
+<span class="fc" id="L208">            return usage.getBody().getPayload();</span>
+        } else {
+<span class="fc" id="L210">            throw new HttpException(usage.getStatusCode(),</span>
+<span class="fc" id="L211">                    String.format(&quot;Some error occurred while retrieving %s %s usage&quot;, componentType, code));</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
