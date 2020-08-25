@@ -109,7 +109,7 @@ public class EntandoBundleUninstallService implements EntandoBundleJobExecutor {
 <span class="fc" id="L109">                scheduler.queueAll(uninstallJobs);</span>
 
 <span class="fc" id="L111">                Optional&lt;EntandoBundleComponentJobEntity&gt; optCompJob = scheduler.extractFromQueue();</span>
-<span class="fc bfc" id="L112" title="All 2 branches covered.">                while(optCompJob.isPresent()) {</span>
+<span class="fc bfc" id="L112" title="All 2 branches covered.">                while (optCompJob.isPresent()) {</span>
 <span class="fc" id="L113">                    EntandoBundleComponentJobEntity uninstallJob = optCompJob.get();</span>
 <span class="fc" id="L114">                    JobTracker&lt;EntandoBundleComponentJobEntity&gt; cjt = trackExecution(uninstallJob, this::executeUninstall);</span>
 <span class="fc bfc" id="L115" title="All 2 branches covered.">                    if (cjt.getJob().getStatus().equals(JobStatus.UNINSTALL_ERROR)) {</span>
@@ -136,47 +136,49 @@ public class EntandoBundleUninstallService implements EntandoBundleJobExecutor {
 <span class="fc" id="L136">        });</span>
 <span class="fc" id="L137">    }</span>
 
-    private JobTracker&lt;EntandoBundleComponentJobEntity&gt; trackExecution(EntandoBundleComponentJobEntity cj, Function&lt;Installable, JobResult&gt; action) {
-<span class="fc" id="L140">        JobTracker&lt;EntandoBundleComponentJobEntity&gt; cjt = new JobTracker&lt;&gt;(cj, compJobRepo);</span>
-<span class="fc" id="L141">        cjt.startTracking(JobStatus.UNINSTALL_IN_PROGRESS);</span>
-<span class="fc" id="L142">        JobResult result = action.apply(cj.getInstallable());</span>
-<span class="fc" id="L143">        cjt.stopTrackingTime(result);</span>
-<span class="fc" id="L144">        return cjt;</span>
+    private JobTracker&lt;EntandoBundleComponentJobEntity&gt; trackExecution(EntandoBundleComponentJobEntity cj,
+            Function&lt;Installable, JobResult&gt; action) {
+<span class="fc" id="L141">        JobTracker&lt;EntandoBundleComponentJobEntity&gt; cjt = new JobTracker&lt;&gt;(cj, compJobRepo);</span>
+<span class="fc" id="L142">        cjt.startTracking(JobStatus.UNINSTALL_IN_PROGRESS);</span>
+<span class="fc" id="L143">        JobResult result = action.apply(cj.getInstallable());</span>
+<span class="fc" id="L144">        cjt.stopTrackingTime(result);</span>
+<span class="fc" id="L145">        return cjt;</span>
     }
 
-    private Queue&lt;EntandoBundleComponentJobEntity&gt; createUninstallComponentJobs(EntandoBundleJobEntity parentJob, EntandoBundleJobEntity referenceJob) {
-<span class="fc" id="L148">        List&lt;EntandoBundleComponentJobEntity&gt; installJobs = compJobRepo.findAllByParentJob(referenceJob);</span>
-<span class="fc" id="L149">        return installJobs.stream()</span>
-<span class="fc" id="L150">                .map(cj -&gt; {</span>
-<span class="fc" id="L151">                    Installable&lt;?&gt; i = processorMap.get(cj.getComponentType()).process(cj);</span>
-<span class="fc" id="L152">                    EntandoBundleComponentJobEntity uninstallCopy = EntandoBundleComponentJobEntity.getNewCopy(cj);</span>
-<span class="fc" id="L153">                    uninstallCopy.setParentJob(parentJob);</span>
-<span class="fc" id="L154">                    uninstallCopy.setStatus(JobStatus.UNINSTALL_CREATED);</span>
-<span class="fc" id="L155">                    uninstallCopy.setInstallable(i);</span>
-<span class="fc" id="L156">                    return uninstallCopy;</span>
+    private Queue&lt;EntandoBundleComponentJobEntity&gt; createUninstallComponentJobs(EntandoBundleJobEntity parentJob,
+            EntandoBundleJobEntity referenceJob) {
+<span class="fc" id="L150">        List&lt;EntandoBundleComponentJobEntity&gt; installJobs = compJobRepo.findAllByParentJob(referenceJob);</span>
+<span class="fc" id="L151">        return installJobs.stream()</span>
+<span class="fc" id="L152">                .map(cj -&gt; {</span>
+<span class="fc" id="L153">                    Installable&lt;?&gt; i = processorMap.get(cj.getComponentType()).process(cj);</span>
+<span class="fc" id="L154">                    EntandoBundleComponentJobEntity uninstallCopy = EntandoBundleComponentJobEntity.getNewCopy(cj);</span>
+<span class="fc" id="L155">                    uninstallCopy.setParentJob(parentJob);</span>
+<span class="fc" id="L156">                    uninstallCopy.setStatus(JobStatus.UNINSTALL_CREATED);</span>
+<span class="fc" id="L157">                    uninstallCopy.setInstallable(i);</span>
+<span class="fc" id="L158">                    return uninstallCopy;</span>
                 })
-<span class="fc" id="L158">                .sorted(Comparator.comparingInt(cj -&gt; ((EntandoBundleComponentJobEntity) cj).getInstallable().getPriority()).reversed())</span>
-<span class="fc" id="L159">                .collect(Collectors.toCollection(ArrayDeque::new));</span>
+<span class="fc" id="L160">                .sorted(Comparator.comparingInt(cj -&gt; ((EntandoBundleComponentJobEntity) cj).getInstallable().getPriority()).reversed())</span>
+<span class="fc" id="L161">                .collect(Collectors.toCollection(ArrayDeque::new));</span>
     }
 
     private JobResult executeUninstall(Installable&lt;?&gt; installable) {
 
-<span class="fc" id="L164">        CompletableFuture&lt;?&gt; future = installable.uninstall();</span>
-<span class="fc" id="L165">        CompletableFuture&lt;JobResult&gt; uninstallResult = future</span>
-<span class="fc" id="L166">                .thenApply(vd -&gt; {</span>
-<span class="fc" id="L167">                    log.debug(&quot;Installable '{}' uninstalled successfully&quot;, installable.getName());</span>
-<span class="fc" id="L168">                    return JobResult.builder().status(JobStatus.UNINSTALL_COMPLETED).build();</span>
-<span class="fc" id="L169">                }).exceptionally(th -&gt; {</span>
-<span class="fc" id="L170">                    log.error(&quot;Installable '{}' had errors during uninstall&quot;, installable.getName(), th.getCause());</span>
-<span class="fc" id="L171">                    String message = getMeaningfulErrorMessage(th);</span>
-<span class="fc" id="L172">                    return JobResult.builder()</span>
-<span class="fc" id="L173">                            .status(JobStatus.UNINSTALL_ERROR)</span>
-<span class="fc" id="L174">                            .exception(new Exception(message))</span>
-<span class="fc" id="L175">                            .build();</span>
+<span class="fc" id="L166">        CompletableFuture&lt;?&gt; future = installable.uninstall();</span>
+<span class="fc" id="L167">        CompletableFuture&lt;JobResult&gt; uninstallResult = future</span>
+<span class="fc" id="L168">                .thenApply(vd -&gt; {</span>
+<span class="fc" id="L169">                    log.debug(&quot;Installable '{}' uninstalled successfully&quot;, installable.getName());</span>
+<span class="fc" id="L170">                    return JobResult.builder().status(JobStatus.UNINSTALL_COMPLETED).build();</span>
+<span class="fc" id="L171">                }).exceptionally(th -&gt; {</span>
+<span class="fc" id="L172">                    log.error(&quot;Installable '{}' had errors during uninstall&quot;, installable.getName(), th.getCause());</span>
+<span class="fc" id="L173">                    String message = getMeaningfulErrorMessage(th);</span>
+<span class="fc" id="L174">                    return JobResult.builder()</span>
+<span class="fc" id="L175">                            .status(JobStatus.UNINSTALL_ERROR)</span>
+<span class="fc" id="L176">                            .exception(new Exception(message))</span>
+<span class="fc" id="L177">                            .build();</span>
                 });
 
-<span class="fc" id="L178">        return uninstallResult.join();</span>
+<span class="fc" id="L180">        return uninstallResult.join();</span>
     }
 
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

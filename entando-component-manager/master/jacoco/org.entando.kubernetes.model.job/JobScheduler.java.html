@@ -11,60 +11,59 @@ public class JobScheduler {
     Deque&lt;EntandoBundleComponentJobEntity&gt; jobQueue;
     Deque&lt;EntandoBundleComponentJobEntity&gt; processedJobStack;
 
-
-<span class="fc" id="L15">    public JobScheduler() {</span>
-<span class="fc" id="L16">        this.jobQueue = new ArrayDeque&lt;&gt;();</span>
-<span class="fc" id="L17">        this.processedJobStack = new ArrayDeque&lt;&gt;();</span>
-<span class="fc" id="L18">    }</span>
+<span class="fc" id="L14">    public JobScheduler() {</span>
+<span class="fc" id="L15">        this.jobQueue = new ArrayDeque&lt;&gt;();</span>
+<span class="fc" id="L16">        this.processedJobStack = new ArrayDeque&lt;&gt;();</span>
+<span class="fc" id="L17">    }</span>
 
     public void clearJobQueue() {
-<span class="nc" id="L21">        this.jobQueue.clear();</span>
-<span class="nc" id="L22">    }</span>
+<span class="nc" id="L20">        this.jobQueue.clear();</span>
+<span class="nc" id="L21">    }</span>
 
     public void clearProcessedStack() {
-<span class="fc" id="L25">        this.processedJobStack.clear();</span>
-<span class="fc" id="L26">    }</span>
+<span class="fc" id="L24">        this.processedJobStack.clear();</span>
+<span class="fc" id="L25">    }</span>
 
     public void addToQueue(EntandoBundleComponentJobEntity job) {
-<span class="fc" id="L29">        jobQueue.addLast(job);</span>
-<span class="fc" id="L30">    }</span>
+<span class="fc" id="L28">        jobQueue.addLast(job);</span>
+<span class="fc" id="L29">    }</span>
 
     public void queueAll(Collection&lt;EntandoBundleComponentJobEntity&gt; jobs) {
-<span class="fc bfc" id="L33" title="All 2 branches covered.">        for (EntandoBundleComponentJobEntity job : jobs) {</span>
-<span class="fc" id="L34">            this.addToQueue(job);</span>
-<span class="fc" id="L35">        }</span>
-<span class="fc" id="L36">    }</span>
+<span class="fc bfc" id="L32" title="All 2 branches covered.">        for (EntandoBundleComponentJobEntity job : jobs) {</span>
+<span class="fc" id="L33">            this.addToQueue(job);</span>
+<span class="fc" id="L34">        }</span>
+<span class="fc" id="L35">    }</span>
 
     public Optional&lt;EntandoBundleComponentJobEntity&gt; extractFromQueue() {
-<span class="fc" id="L39">        EntandoBundleComponentJobEntity nextComponentJob = null;</span>
-<span class="fc bfc" id="L40" title="All 2 branches covered.">        if (!jobQueue.isEmpty()) {</span>
-<span class="fc" id="L41">            nextComponentJob = jobQueue.removeFirst();</span>
+<span class="fc" id="L38">        EntandoBundleComponentJobEntity nextComponentJob = null;</span>
+<span class="fc bfc" id="L39" title="All 2 branches covered.">        if (!jobQueue.isEmpty()) {</span>
+<span class="fc" id="L40">            nextComponentJob = jobQueue.removeFirst();</span>
         }
-<span class="fc" id="L43">        return Optional.ofNullable(nextComponentJob);</span>
+<span class="fc" id="L42">        return Optional.ofNullable(nextComponentJob);</span>
     }
 
     public void recordProcessedComponentJob(EntandoBundleComponentJobEntity componentJob) {
-<span class="fc" id="L47">        processedJobStack.addLast(componentJob);</span>
-<span class="fc" id="L48">    }</span>
+<span class="fc" id="L46">        processedJobStack.addLast(componentJob);</span>
+<span class="fc" id="L47">    }</span>
 
     public void activateRollbackMode() {
-<span class="fc" id="L51">        Deque&lt;EntandoBundleComponentJobEntity&gt; rollbackQueue = new ArrayDeque&lt;&gt;();</span>
-<span class="fc" id="L52">        Iterator&lt;EntandoBundleComponentJobEntity&gt; jobIterator = this.processedJobStack</span>
-<span class="fc" id="L53">                .descendingIterator();</span>
-<span class="fc bfc" id="L54" title="All 2 branches covered.">        while(jobIterator.hasNext()) {</span>
-<span class="fc" id="L55">            EntandoBundleComponentJobEntity duplicateJob = EntandoBundleComponentJobEntity.getNewCopy(jobIterator.next());</span>
-<span class="fc" id="L56">            duplicateJob.setStartedAt(null);</span>
-<span class="fc" id="L57">            duplicateJob.setFinishedAt(null);</span>
-<span class="fc" id="L58">            rollbackQueue.addLast(duplicateJob);</span>
-<span class="fc" id="L59">        }</span>
-<span class="fc" id="L60">        this.jobQueue = rollbackQueue;</span>
-<span class="fc" id="L61">        this.clearProcessedStack();</span>
-<span class="fc" id="L62">    }</span>
+<span class="fc" id="L50">        Deque&lt;EntandoBundleComponentJobEntity&gt; rollbackQueue = new ArrayDeque&lt;&gt;();</span>
+<span class="fc" id="L51">        Iterator&lt;EntandoBundleComponentJobEntity&gt; jobIterator = this.processedJobStack</span>
+<span class="fc" id="L52">                .descendingIterator();</span>
+<span class="fc bfc" id="L53" title="All 2 branches covered.">        while (jobIterator.hasNext()) {</span>
+<span class="fc" id="L54">            EntandoBundleComponentJobEntity duplicateJob = EntandoBundleComponentJobEntity.getNewCopy(jobIterator.next());</span>
+<span class="fc" id="L55">            duplicateJob.setStartedAt(null);</span>
+<span class="fc" id="L56">            duplicateJob.setFinishedAt(null);</span>
+<span class="fc" id="L57">            rollbackQueue.addLast(duplicateJob);</span>
+<span class="fc" id="L58">        }</span>
+<span class="fc" id="L59">        this.jobQueue = rollbackQueue;</span>
+<span class="fc" id="L60">        this.clearProcessedStack();</span>
+<span class="fc" id="L61">    }</span>
 
     public Optional&lt;EntandoBundleComponentJobEntity&gt; componentJobWithError() {
-<span class="nc" id="L65">        return this.processedJobStack.stream()</span>
-<span class="nc" id="L66">                .filter(trJob -&gt; trJob.getStatus().isOfType(JobType.ERROR))</span>
-<span class="nc" id="L67">                .findFirst();</span>
+<span class="nc" id="L64">        return this.processedJobStack.stream()</span>
+<span class="nc" id="L65">                .filter(trJob -&gt; trJob.getStatus().isOfType(JobType.ERROR))</span>
+<span class="nc" id="L66">                .findFirst();</span>
     }
 }
-</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.4.201905082037</span></div></body></html>
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
