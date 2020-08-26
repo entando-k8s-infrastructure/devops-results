@@ -62,25 +62,33 @@ public class EntandoClusterInfrastructureController extends AbstractDbAwareContr
 
 <span class="fc" id="L63">        ServiceDeploymentResult entandoK8SService = deployEntandoK8SService(entandoClusterInfrastructure,</span>
                 keycloakConnectionConfig);
-<span class="pc bpc" id="L65" title="1 of 2 branches missed.">        if (entandoClusterInfrastructure.getSpec().isDefault()) {</span>
-<span class="fc" id="L66">            k8sClient.secrets().overwriteControllerSecret(new SecretBuilder()</span>
-<span class="fc" id="L67">                    .withNewMetadata()</span>
-<span class="fc" id="L68">                    .withName(EntandoOperatorConfig.getEntandoInfrastructureSecretName())</span>
-<span class="fc" id="L69">                    .endMetadata()</span>
-<span class="fc" id="L70">                    .addToStringData(&quot;entandoK8SServiceClientId&quot;, clientIdOf(entandoClusterInfrastructure))</span>
-<span class="fc" id="L71">                    .addToStringData(&quot;entandoK8SServiceInternalUrl&quot;, entandoK8SService.getInternalBaseUrl())</span>
-<span class="fc" id="L72">                    .addToStringData(&quot;entandoK8SServiceExternalUrl&quot;, entandoK8SService.getExternalBaseUrl())</span>
-<span class="fc" id="L73">                    .build());</span>
+<span class="fc" id="L65">        overwriteClusterInfrastructureSecret(entandoClusterInfrastructure, entandoK8SService,</span>
+<span class="fc" id="L66">                entandoClusterInfrastructure.getMetadata().getName() + &quot;-connection-secret&quot;);</span>
+<span class="pc bpc" id="L67" title="1 of 2 branches missed.">        if (entandoClusterInfrastructure.getSpec().isDefault()) {</span>
+<span class="fc" id="L68">            overwriteClusterInfrastructureSecret(entandoClusterInfrastructure, entandoK8SService,</span>
+<span class="fc" id="L69">                    EntandoOperatorConfig.getEntandoInfrastructureSecretName());</span>
         }
-<span class="fc" id="L75">    }</span>
+<span class="fc" id="L71">    }</span>
+
+    private void overwriteClusterInfrastructureSecret(EntandoClusterInfrastructure entandoClusterInfrastructure,
+            ServiceDeploymentResult entandoK8SService, String secretName) {
+<span class="fc" id="L75">        k8sClient.secrets().overwriteControllerSecret(new SecretBuilder()</span>
+<span class="fc" id="L76">                .withNewMetadata()</span>
+<span class="fc" id="L77">                .withName(secretName)</span>
+<span class="fc" id="L78">                .endMetadata()</span>
+<span class="fc" id="L79">                .addToStringData(&quot;entandoK8SServiceClientId&quot;, clientIdOf(entandoClusterInfrastructure))</span>
+<span class="fc" id="L80">                .addToStringData(&quot;entandoK8SServiceInternalUrl&quot;, entandoK8SService.getInternalBaseUrl())</span>
+<span class="fc" id="L81">                .addToStringData(&quot;entandoK8SServiceExternalUrl&quot;, entandoK8SService.getExternalBaseUrl())</span>
+<span class="fc" id="L82">                .build());</span>
+<span class="fc" id="L83">    }</span>
 
     private ServiceDeploymentResult deployEntandoK8SService(EntandoClusterInfrastructure entandoClusterInfrastructure,
             KeycloakConnectionConfig keycloakConnectionConfig) {
-<span class="fc" id="L79">        EntandoK8SServiceDeployable deployable = new EntandoK8SServiceDeployable(entandoClusterInfrastructure, keycloakConnectionConfig);</span>
-<span class="fc" id="L80">        DeployCommand&lt;ServiceDeploymentResult&gt; command = new DeployCommand&lt;&gt;(deployable);</span>
-<span class="fc" id="L81">        ServiceDeploymentResult result = command.execute(k8sClient, Optional.of(keycloakClient));</span>
-<span class="fc" id="L82">        k8sClient.entandoResources().updateStatus(entandoClusterInfrastructure, command.getStatus());</span>
-<span class="fc" id="L83">        return result;</span>
+<span class="fc" id="L87">        EntandoK8SServiceDeployable deployable = new EntandoK8SServiceDeployable(entandoClusterInfrastructure, keycloakConnectionConfig);</span>
+<span class="fc" id="L88">        DeployCommand&lt;ServiceDeploymentResult&gt; command = new DeployCommand&lt;&gt;(deployable);</span>
+<span class="fc" id="L89">        ServiceDeploymentResult result = command.execute(k8sClient, Optional.of(keycloakClient));</span>
+<span class="fc" id="L90">        k8sClient.entandoResources().updateStatus(entandoClusterInfrastructure, command.getStatus());</span>
+<span class="fc" id="L91">        return result;</span>
     }
 
 }
