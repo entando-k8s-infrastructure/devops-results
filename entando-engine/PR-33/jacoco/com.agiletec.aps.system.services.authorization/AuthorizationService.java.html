@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AuthorizationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.services.authorization</a> &gt; <span class="el_source">AuthorizationService.java</span></div><h1>AuthorizationService.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package com.agiletec.aps.system.services.authorization;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.annotation.PostConstruct;
+
+import com.agiletec.aps.system.common.IManager;
+import com.agiletec.aps.system.exception.ApsSystemException;
+import com.agiletec.aps.system.services.group.GroupUtilizer;
+import com.agiletec.aps.system.services.user.IUserManager;
+import com.agiletec.aps.system.services.user.User;
+import com.agiletec.aps.system.services.user.UserDetails;
+import org.entando.entando.aps.system.exception.RestServerError;
+import org.entando.entando.aps.system.services.DtoBuilder;
+import org.entando.entando.aps.system.services.IDtoBuilder;
+import org.entando.entando.aps.system.services.group.GroupServiceUtilizer;
+import org.entando.entando.aps.system.services.user.model.UserDto;
+import org.entando.entando.aps.system.services.user.model.UserDtoBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+<span class="fc" id="L36">public class AuthorizationService implements IAuthorizationService, GroupServiceUtilizer&lt;UserDto&gt; {</span>
+
+<span class="fc" id="L38">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+    private IAuthorizationManager authorizationManager;
+    private IUserManager userManager;
+    private IDtoBuilder&lt;UserDetails, UserDto&gt; dtoBuilder;
+
+    protected IAuthorizationManager getAuthorizationManager() {
+<span class="fc" id="L44">        return authorizationManager;</span>
+    }
+
+    public void setAuthorizationManager(IAuthorizationManager authorizationManager) {
+<span class="fc" id="L48">        this.authorizationManager = authorizationManager;</span>
+<span class="fc" id="L49">    }</span>
+
+    protected IDtoBuilder&lt;UserDetails, UserDto&gt; getDtoBuilder() {
+<span class="fc" id="L52">        return dtoBuilder;</span>
+    }
+
+    public void setDtoBuilder(IDtoBuilder&lt;UserDetails, UserDto&gt; dtoBuilder) {
+<span class="fc" id="L56">        this.dtoBuilder = dtoBuilder;</span>
+<span class="fc" id="L57">    }</span>
+
+    protected IUserManager getUserManager() {
+<span class="fc" id="L60">        return userManager;</span>
+    }
+
+    public void setUserManager(IUserManager userManager) {
+<span class="fc" id="L64">        this.userManager = userManager;</span>
+<span class="fc" id="L65">    }</span>
+
+    @PostConstruct
+    public void setUp() {
+<span class="fc" id="L69">        setDtoBuilder(new UserDtoBuilder());</span>
+<span class="fc" id="L70">    }</span>
+
+    @Override
+    public String getManagerName() {
+<span class="fc" id="L74">        return ((IManager) this.getAuthorizationManager()).getName();</span>
+    }
+
+    @Override
+    public List&lt;UserDto&gt; getGroupUtilizer(String groupCode) {
+        try {
+
+<span class="fc" id="L81">            List&lt;String&gt; usernames = ((GroupUtilizer&lt;String&gt;) this.getAuthorizationManager()).getGroupUtilizers(groupCode);</span>
+<span class="fc" id="L82">            List&lt;UserDto&gt; dtoList = new ArrayList&lt;&gt;();</span>
+<span class="pc bpc" id="L83" title="1 of 2 branches missed.">            if (null != usernames) {</span>
+<span class="fc" id="L84">                usernames.stream().forEach(i -&gt; {</span>
+                    try {
+<span class="nc" id="L86">                        dtoList.add(this.getDtoBuilder().convert(this.getUserManager().getUser(i)));</span>
+<span class="nc" id="L87">                    } catch (ApsSystemException e) {</span>
+<span class="nc" id="L88">                        logger.error(&quot;error loading {}&quot;, i, e);</span>
+
+<span class="nc" id="L90">                    }</span>
+<span class="nc" id="L91">                });</span>
+            }
+<span class="fc" id="L93">            return dtoList;</span>
+<span class="nc" id="L94">        } catch (ApsSystemException ex) {</span>
+<span class="nc" id="L95">            logger.error(&quot;Error loading user references for group {}&quot;, groupCode, ex);</span>
+<span class="nc" id="L96">            throw new RestServerError(&quot;Error loading user references by group&quot;, ex);</span>
+        }
+    }
+
+    @Override
+    public List&lt;UserDto&gt; getRoleUtilizer(String roleCode) {
+        try {
+<span class="fc" id="L103">            List&lt;String&gt; usernames = this.getAuthorizationManager().getUsersByRole(roleCode, false);</span>
+<span class="fc" id="L104">            List&lt;UserDto&gt; dtoList = new ArrayList&lt;&gt;();</span>
+<span class="pc bpc" id="L105" title="1 of 2 branches missed.">            if (null != usernames) {</span>
+<span class="fc" id="L106">                usernames.stream().forEach(i -&gt; {</span>
+                    try {
+<span class="fc" id="L108">                        dtoList.add(this.getDtoBuilder().convert(this.getUserManager().getUser(i)));</span>
+<span class="nc" id="L109">                    } catch (ApsSystemException e) {</span>
+<span class="nc" id="L110">                        logger.error(&quot;error loading {}&quot;, i, e);</span>
+
+<span class="fc" id="L112">                    }</span>
+<span class="fc" id="L113">                });</span>
+            }
+<span class="fc" id="L115">            return dtoList;</span>
+<span class="nc" id="L116">        } catch (ApsSystemException ex) {</span>
+<span class="nc" id="L117">            logger.error(&quot;Error loading user references for role {}&quot;, roleCode, ex);</span>
+<span class="nc" id="L118">            throw new RestServerError(&quot;Error loading user references by role&quot;, ex);</span>
+        }
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
