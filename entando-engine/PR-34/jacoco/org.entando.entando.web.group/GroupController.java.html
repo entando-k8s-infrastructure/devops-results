@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GroupController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.web.group</a> &gt; <span class="el_source">GroupController.java</span></div><h1>GroupController.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.entando.web.group;
+
+import com.agiletec.aps.system.exception.ApsSystemException;
+import com.agiletec.aps.system.services.role.Permission;
+import com.agiletec.aps.util.SafeLogger;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import org.entando.entando.aps.system.services.group.IGroupService;
+import org.entando.entando.aps.system.services.group.model.GroupDto;
+import org.entando.entando.web.common.annotation.RestAccessControl;
+import org.entando.entando.web.common.exceptions.ValidationConflictException;
+import org.entando.entando.web.common.exceptions.ValidationGenericException;
+import org.entando.entando.web.common.model.PagedMetadata;
+import org.entando.entando.web.common.model.RestListRequest;
+import org.entando.entando.web.common.model.RestResponse;
+import org.entando.entando.web.group.model.GroupRequest;
+import org.entando.entando.web.group.validator.GroupValidator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import org.entando.entando.web.common.model.PagedRestResponse;
+import org.entando.entando.web.common.model.SimpleRestResponse;
+
+@RestController
+@RequestMapping(value = &quot;/groups&quot;)
+<span class="fc" id="L48">public class GroupController {</span>
+
+<span class="fc" id="L50">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+
+    @Autowired
+    private IGroupService groupService;
+
+    @Autowired
+    private GroupValidator groupValidator;
+
+    public IGroupService getGroupService() {
+<span class="fc" id="L59">        return groupService;</span>
+    }
+
+    public void setGroupService(IGroupService groupService) {
+<span class="fc" id="L63">        this.groupService = groupService;</span>
+<span class="fc" id="L64">    }</span>
+
+    public GroupValidator getGroupValidator() {
+<span class="fc" id="L67">        return groupValidator;</span>
+    }
+
+    public void setGroupValidator(GroupValidator groupValidator) {
+<span class="fc" id="L71">        this.groupValidator = groupValidator;</span>
+<span class="fc" id="L72">    }</span>
+
+    @RestAccessControl(permission = Permission.ENTER_BACKEND)
+    @RequestMapping(method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;PagedRestResponse&lt;GroupDto&gt;&gt; getGroups(RestListRequest requestList) throws JsonProcessingException {
+<span class="fc" id="L77">        this.getGroupValidator().validateRestListRequest(requestList, GroupDto.class);</span>
+<span class="fc" id="L78">        PagedMetadata&lt;GroupDto&gt; result = this.getGroupService().getGroups(requestList);</span>
+<span class="fc" id="L79">        this.getGroupValidator().validateRestListResult(requestList, result);</span>
+<span class="fc" id="L80">        logger.debug(&quot;Main Response -&gt; {}&quot;, result);</span>
+<span class="fc" id="L81">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+    }
+
+    @RestAccessControl(permission = Permission.ENTER_BACKEND)
+    @RequestMapping(value = &quot;/{groupCode}&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;SimpleRestResponse&lt;GroupDto&gt;&gt; getGroup(@PathVariable String groupCode) {
+<span class="fc" id="L87">        GroupDto group = this.getGroupService().getGroup(groupCode);</span>
+<span class="fc" id="L88">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(group), HttpStatus.OK);</span>
+    }
+
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @RequestMapping(value = &quot;/{groupCode}/references/{holder}&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;PagedRestResponse&lt;?&gt;&gt; getGroupReferences(@PathVariable String groupCode, @PathVariable String holder, RestListRequest requestList) {
+<span class="fc" id="L94">        PagedMetadata&lt;?&gt; result = this.getGroupService().getGroupReferences(groupCode, holder, requestList);</span>
+<span class="fc" id="L95">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+    }
+
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @RequestMapping(value = &quot;/{groupCode}&quot;, method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;SimpleRestResponse&lt;GroupDto&gt;&gt; updateGroup(@PathVariable String groupCode, @Valid @RequestBody GroupRequest groupRequest, BindingResult bindingResult) {
+        //field validations
+<span class="pc bpc" id="L102" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L103">            throw new ValidationGenericException(bindingResult);</span>
+        }
+<span class="fc" id="L105">        this.getGroupValidator().validateBodyName(groupCode, groupRequest, bindingResult);</span>
+<span class="pc bpc" id="L106" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L107">            throw new ValidationGenericException(bindingResult);</span>
+        }
+
+<span class="nc" id="L110">        GroupDto group = this.getGroupService().updateGroup(groupCode, groupRequest.getName());</span>
+<span class="nc" id="L111">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(group), HttpStatus.OK);</span>
+    }
+
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @RequestMapping(method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;SimpleRestResponse&lt;GroupDto&gt;&gt; addGroup(@Valid @RequestBody GroupRequest groupRequest, BindingResult bindingResult) throws ApsSystemException {
+        //field validations
+<span class="fc bfc" id="L118" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L119">            throw new ValidationGenericException(bindingResult);</span>
+        }
+        //business validations
+<span class="fc" id="L122">        getGroupValidator().validate(groupRequest, bindingResult);</span>
+<span class="pc bpc" id="L123" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L124">            throw new ValidationConflictException(bindingResult);</span>
+        }
+<span class="nc" id="L126">        GroupDto dto = this.getGroupService().addGroup(groupRequest);</span>
+<span class="nc" id="L127">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(dto), HttpStatus.OK);</span>
+    }
+
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @RequestMapping(value = &quot;/{groupName}&quot;, method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;SimpleRestResponse&lt;Map&gt;&gt; deleteGroup(@PathVariable String groupName) throws ApsSystemException {
+<span class="fc" id="L133">        SafeLogger.from(logger).info(&quot;deleting {}&quot;, groupName);</span>
+<span class="fc" id="L134">        this.getGroupService().removeGroup(groupName);</span>
+<span class="fc" id="L135">        Map&lt;String, String&gt; result = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L136">        result.put(&quot;code&quot;, groupName);</span>
+<span class="fc" id="L137">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
