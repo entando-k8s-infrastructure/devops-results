@@ -74,74 +74,73 @@ import org.springframework.validation.BeanPropertyBindingResult;
     @Override
     public LanguageDto getLanguage(String code) {
         try {
-<span class="fc" id="L77">            Lang lang = this.getLangManager().getAssignableLangs().stream().filter(i -&gt; i.getCode().equals(code)).findFirst().orElse(null);</span>
-<span class="fc bfc" id="L78" title="All 2 branches covered.">            if (null == lang) {</span>
-<span class="fc" id="L79">                SafeLogger.from(logger).warn(&quot;no lang found with code {}&quot;, code);</span>
-<span class="fc" id="L80">                throw new ResourceNotFoundException(LanguageValidator.ERRCODE_LANGUAGE_DOES_NOT_EXISTS, &quot;language&quot;, code);</span>
-            }
-<span class="fc" id="L82">            return this.getLanguageDtoBuilder().convert(lang);</span>
-<span class="nc" id="L83">        } catch (ApsSystemException ex) {</span>
-<span class="nc" id="L84">            throw new RestServerError(&quot;error in getting language &quot; + code, ex);</span>
+<span class="fc" id="L77">            Lang lang = mustGetLang(code);</span>
+<span class="fc" id="L78">            return this.getLanguageDtoBuilder().convert(lang);</span>
+<span class="nc" id="L79">        } catch (ApsSystemException ex) {</span>
+<span class="nc" id="L80">            throw new RestServerError(&quot;error in getting language &quot; + code, ex);</span>
         }
     }
 
     @Override
     public LanguageDto updateLanguage(String code, boolean status) {
-<span class="fc bfc" id="L90" title="All 2 branches covered.">        if (status) {</span>
-<span class="fc" id="L91">            return this.enableLang(code);</span>
+<span class="fc bfc" id="L86" title="All 2 branches covered.">        if (status) {</span>
+<span class="fc" id="L87">            return this.enableLang(code);</span>
         } else {
-<span class="fc" id="L93">            return this.disableLang(code);</span>
+<span class="fc" id="L89">            return this.disableLang(code);</span>
         }
     }
 
     protected LanguageDto disableLang(String code) {
         try {
-<span class="fc" id="L99">            Lang sysLang = this.getLangManager().getAssignableLangs().stream().filter(i -&gt; i.getCode().equals(code)).findFirst().orElse(null);</span>
-<span class="fc bfc" id="L100" title="All 2 branches covered.">            if (null == sysLang) {</span>
-<span class="fc" id="L101">                SafeLogger.from(logger).warn(&quot;no lang found with code {}&quot;, code);</span>
-<span class="fc" id="L102">                throw new ResourceNotFoundException(LanguageValidator.ERRCODE_LANGUAGE_DOES_NOT_EXISTS, &quot;language&quot;, code);</span>
-            }
+<span class="fc" id="L95">            Lang sysLang = mustGetLang(code);</span>
             //idempotent
-<span class="fc" id="L105">            Lang lang = this.getLangManager().getLang(code);</span>
-<span class="fc bfc" id="L106" title="All 2 branches covered.">            if (null != this.getLangManager().getLang(code)) {</span>
-<span class="fc" id="L107">                BeanPropertyBindingResult validations = this.validateDisable(lang);</span>
-<span class="fc bfc" id="L108" title="All 2 branches covered.">                if (validations.hasErrors()) {</span>
-<span class="fc" id="L109">                    throw new ValidationConflictException(validations);</span>
+<span class="fc" id="L97">            Lang lang = this.getLangManager().getLang(code);</span>
+<span class="fc bfc" id="L98" title="All 2 branches covered.">            if (null != this.getLangManager().getLang(code)) {</span>
+<span class="fc" id="L99">                BeanPropertyBindingResult validations = this.validateDisable(lang);</span>
+<span class="fc bfc" id="L100" title="All 2 branches covered.">                if (validations.hasErrors()) {</span>
+<span class="fc" id="L101">                    throw new ValidationConflictException(validations);</span>
                 }
             }
-<span class="fc" id="L112">            this.getLangManager().removeLang(code);</span>
-<span class="fc" id="L113">            return this.getLanguageDtoBuilder().convert(sysLang);</span>
-<span class="nc" id="L114">        } catch (ApsSystemException ex) {</span>
-<span class="nc" id="L115">            throw new RestServerError(&quot;error disabling language &quot; + code, ex);</span>
+<span class="fc" id="L104">            this.getLangManager().removeLang(code);</span>
+<span class="fc" id="L105">            return this.getLanguageDtoBuilder().convert(sysLang);</span>
+<span class="nc" id="L106">        } catch (ApsSystemException ex) {</span>
+<span class="nc" id="L107">            throw new RestServerError(&quot;error disabling language &quot; + code, ex);</span>
         }
     }
 
     protected LanguageDto enableLang(String code) {
         try {
-<span class="fc" id="L121">            Lang lang = this.getLangManager().getAssignableLangs().stream().filter(i -&gt; i.getCode().equals(code)).findFirst().orElse(null);</span>
-<span class="fc bfc" id="L122" title="All 2 branches covered.">            if (null == lang) {</span>
-<span class="fc" id="L123">                SafeLogger.from(logger).warn(&quot;no lang found with code {}&quot;, code);</span>
-<span class="fc" id="L124">                throw new ResourceNotFoundException(LanguageValidator.ERRCODE_LANGUAGE_DOES_NOT_EXISTS, &quot;language&quot;, code);</span>
-            }
+<span class="fc" id="L113">            Lang lang = mustGetLang(code);</span>
             //idempotent
-<span class="fc bfc" id="L127" title="All 2 branches covered.">            if (null == this.getLangManager().getLang(code)) {</span>
-<span class="fc" id="L128">                SafeLogger.from(logger).warn(&quot;the lang {} is already active&quot;, code);</span>
-<span class="fc" id="L129">                this.getLangManager().addLang(lang.getCode());</span>
+<span class="fc bfc" id="L115" title="All 2 branches covered.">            if (null == this.getLangManager().getLang(code)) {</span>
+<span class="fc" id="L116">                SafeLogger.from(logger).warn(&quot;the lang {} is already active&quot;, code);</span>
+<span class="fc" id="L117">                this.getLangManager().addLang(lang.getCode());</span>
             }
-<span class="fc" id="L131">            return this.getLanguageDtoBuilder().convert(lang);</span>
-<span class="nc" id="L132">        } catch (ApsSystemException ex) {</span>
-<span class="nc" id="L133">            throw new RestServerError(&quot;error enabling lang &quot; + code, ex);</span>
+<span class="fc" id="L119">            return this.getLanguageDtoBuilder().convert(lang);</span>
+<span class="nc" id="L120">        } catch (ApsSystemException ex) {</span>
+<span class="nc" id="L121">            throw new RestServerError(&quot;error enabling lang &quot; + code, ex);</span>
         }
     }
 
     protected BeanPropertyBindingResult validateDisable(Lang lang) {
-<span class="fc" id="L138">        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(lang, &quot;lang&quot;);</span>
-<span class="fc bfc" id="L139" title="All 2 branches covered.">        if (lang.isDefault()) {</span>
-<span class="fc" id="L140">            bindingResult.reject(LanguageValidator.ERRCODE_LANGUAGE_CANNOT_DISABLE_DEFAULT, new Object[]{lang.getCode(), lang.getDescr()}, &quot;language.cannot.disable.default&quot;);</span>
+<span class="fc" id="L126">        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(lang, &quot;lang&quot;);</span>
+<span class="fc bfc" id="L127" title="All 2 branches covered.">        if (lang.isDefault()) {</span>
+<span class="fc" id="L128">            bindingResult.reject(LanguageValidator.ERRCODE_LANGUAGE_CANNOT_DISABLE_DEFAULT, new Object[]{lang.getCode(), lang.getDescr()}, &quot;language.cannot.disable.default&quot;);</span>
         }
-<span class="fc" id="L142">        return bindingResult;</span>
+<span class="fc" id="L130">        return bindingResult;</span>
 
     }
 
+    private Lang mustGetLang(String code) throws ApsSystemException {
+<span class="fc" id="L135">        Lang lang = this.getLangManager().getAssignableLangs().stream()</span>
+<span class="fc" id="L136">                .filter(i -&gt; i.getCode().equals(code))</span>
+<span class="fc" id="L137">                .findFirst().orElse(null);</span>
+<span class="fc bfc" id="L138" title="All 2 branches covered.">        if (null == lang) {</span>
+<span class="fc" id="L139">            SafeLogger.from(logger).warn(&quot;no lang found with code {}&quot;, code);</span>
+            // TODO: $$$ CONSIDER USING A DEDICATED EXCEPTION CLASS
+<span class="fc" id="L141">            throw new ResourceNotFoundException(LanguageValidator.ERRCODE_LANGUAGE_DOES_NOT_EXISTS, &quot;language&quot;, code);</span>
+        }
+<span class="fc" id="L143">        return lang;</span>
+    }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
