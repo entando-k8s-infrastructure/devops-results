@@ -970,22 +970,34 @@ public class CoreLogging {
 <span class="nc" id="L970">					: Stream.of(arguments).map(a -&gt; maySanitize(sanitizationLevel, a)).toArray();</span>
 		}
 
+		// TODO: $$$ REMOTE THIS TODO
 		public static Object maySanitize(SanitizationLevel sanitizationLevel, Object o) {
-<span class="nc bnc" id="L974" title="All 4 branches missed.">			switch (sanitizationLevel) {</span>
+<span class="nc bnc" id="L975" title="All 4 branches missed.">			switch (sanitizationLevel) {</span>
 				case UNSAFE_MODE:
-<span class="nc" id="L976">					return o;</span>
+<span class="nc" id="L977">					return o;</span>
 				case PRECISE_SANITIZATION:
-<span class="nc bnc" id="L978" title="All 2 branches missed.">					if (o instanceof Throwable) {</span>
-<span class="nc" id="L979">						return o;</span>
+<span class="nc bnc" id="L979" title="All 2 branches missed.">					if (o instanceof Throwable) {</span>
+<span class="nc" id="L980">						return o;</span>
 					} else {
-//						return maySanitize(sanitizationLevel, o.toString());
-<span class="nc" id="L982">						return o.toString().replace(&quot;\n&quot;, &quot;\\n&quot;).replace(&quot;\r&quot;, &quot;\\r&quot;).replace(&quot;\t&quot;, &quot;\\t&quot;);</span>
+<span class="nc" id="L982">						return maySanitize(sanitizationLevel, o.toString());</span>
 					}
 				case SANITIZE_ALL:
-//					return maySanitize(sanitizationLevel, o.toString());
-<span class="nc" id="L986">					return o.toString().replace(&quot;\n&quot;, &quot;\\n&quot;).replace(&quot;\r&quot;, &quot;\\r&quot;).replace(&quot;\t&quot;, &quot;\\t&quot;);</span>
+<span class="nc" id="L985">					return maySanitize(sanitizationLevel, o.toString());</span>
 				default:
-<span class="nc" id="L988">					return o;</span>
+<span class="nc" id="L987">					return o;</span>
+			}
+		}
+
+		public Object sanitizeObject(Object o) {
+<span class="nc bnc" id="L992" title="All 4 branches missed.">			switch (sanitizationLevel) {</span>
+				case UNSAFE_MODE:
+<span class="nc" id="L994">					return o;</span>
+				case PRECISE_SANITIZATION:
+<span class="nc" id="L996">					return o.toString().replace(&quot;\n&quot;, &quot;\\n&quot;).replace(&quot;\r&quot;, &quot;\\r&quot;).replace(&quot;\t&quot;, &quot;\\t&quot;);</span>
+				case SANITIZE_ALL:
+<span class="nc" id="L998">					return o.toString().replace(&quot;\n&quot;, &quot;\\n&quot;).replace(&quot;\r&quot;, &quot;\\r&quot;).replace(&quot;\t&quot;, &quot;\\t&quot;);</span>
+				default:
+<span class="nc" id="L1000">					return o;</span>
 			}
 		}
 	}
@@ -998,11 +1010,11 @@ public class CoreLogging {
 	public static class UnsafeLogger {
 
 		public static SanitizingLogger newInstance(Class&lt;?&gt; clazz) {
-<span class="nc" id="L1001">			return from(LoggerFactory.getLogger(clazz));</span>
+<span class="nc" id="L1013">			return from(LoggerFactory.getLogger(clazz));</span>
 		}
 
 		public static SanitizingLogger from(Logger logger) {
-<span class="nc" id="L1005">			return new SanitizingLogger(logger, SanitizationLevel.UNSAFE_MODE);</span>
+<span class="nc" id="L1017">			return new SanitizingLogger(logger, SanitizationLevel.UNSAFE_MODE);</span>
 		}
 
 		private UnsafeLogger() {
@@ -1017,11 +1029,11 @@ public class CoreLogging {
 	public static class SafeLogger {
 
 		public static SanitizingLogger newInstance(Class&lt;?&gt; clazz) {
-<span class="fc" id="L1020">			return from(LoggerFactory.getLogger(clazz));</span>
+<span class="fc" id="L1032">			return from(LoggerFactory.getLogger(clazz));</span>
 		}
 
 		public static SanitizingLogger from(Logger logger) {
-<span class="fc" id="L1024">			return new SanitizingLogger(logger, SanitizationLevel.PRECISE_SANITIZATION);</span>
+<span class="fc" id="L1036">			return new SanitizingLogger(logger, SanitizationLevel.PRECISE_SANITIZATION);</span>
 		}
 
 		private SafeLogger() {
@@ -1036,11 +1048,11 @@ public class CoreLogging {
 	public static class SafestLogger {
 
 		public static SanitizingLogger newInstance(Class&lt;?&gt; clazz) {
-<span class="nc" id="L1039">			return from(LoggerFactory.getLogger(clazz));</span>
+<span class="nc" id="L1051">			return from(LoggerFactory.getLogger(clazz));</span>
 		}
 
 		public static SanitizingLogger from(Logger logger) {
-<span class="nc" id="L1043">			return new SanitizingLogger(logger, SanitizationLevel.SANITIZE_ALL);</span>
+<span class="nc" id="L1055">			return new SanitizingLogger(logger, SanitizationLevel.SANITIZE_ALL);</span>
 		}
 
 		private SafestLogger() {
@@ -1055,18 +1067,18 @@ public class CoreLogging {
 		public final SanitizingLogger safest;
 
 		public static StandardLogger newInstance(Class&lt;?&gt; clazz) {
-<span class="nc" id="L1058">			return from(LoggerFactory.getLogger(clazz));</span>
+<span class="nc" id="L1070">			return from(LoggerFactory.getLogger(clazz));</span>
 		}
 
 		public static StandardLogger from(Logger logger) {
-<span class="nc" id="L1062">			return new StandardLogger(logger, SanitizationLevel.UNSAFE_MODE);</span>
+<span class="nc" id="L1074">			return new StandardLogger(logger, SanitizationLevel.UNSAFE_MODE);</span>
 		}
 
 		private StandardLogger(Logger logger, SanitizationLevel sanitizationLevel) {
-<span class="nc" id="L1066">			super(logger, sanitizationLevel);</span>
-<span class="nc" id="L1067">			this.safe = SafeLogger.from(logger);</span>
-<span class="nc" id="L1068">			this.safest = SafestLogger.from(logger);</span>
-<span class="nc" id="L1069">		}</span>
+<span class="nc" id="L1078">			super(logger, sanitizationLevel);</span>
+<span class="nc" id="L1079">			this.safe = SafeLogger.from(logger);</span>
+<span class="nc" id="L1080">			this.safest = SafestLogger.from(logger);</span>
+<span class="nc" id="L1081">		}</span>
 	}
 
 	private CoreLogging() {
