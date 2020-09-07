@@ -13,7 +13,9 @@
  */
 package org.entando.entando.aps.system.services.role;
 
-import com.agiletec.aps.util.CoreLogging.SafeLogger;
+import com.agiletec.aps.util.SenLogging.SanitizedLogger;
+import com.agiletec.aps.util.SenLogging.SenLogFactory;
+import com.agiletec.aps.util.SenLogging.SenLogger;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -42,8 +44,6 @@ import org.entando.entando.web.common.model.PagedMetadata;
 import org.entando.entando.web.common.model.RestListRequest;
 import org.entando.entando.web.role.model.RoleRequest;
 import org.entando.entando.web.role.validator.RoleValidator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.validation.BeanPropertyBindingResult;
 
 <span class="fc" id="L49">public class RoleService implements IRoleService {</span>
@@ -54,7 +54,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
     private static final String KEY_FILTER_PERMISSION_CODE = &quot;code&quot;;
     private static final String KEY_FILTER_PERMISSION_DESCR = &quot;descr&quot;;
 
-<span class="fc" id="L57">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+<span class="fc" id="L57">    private final SenLogger logger = SenLogFactory.getLogger(getClass());</span>
 
     private IRoleManager roleManager;
     private RoleDtoBuilder dtoBuilder;
@@ -223,7 +223,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
         try {
 <span class="fc" id="L224">            Role role = this.getRoleManager().getRole(roleCode);</span>
 <span class="pc bpc" id="L225" title="1 of 2 branches missed.">            if (null == role) {</span>
-<span class="nc" id="L226">                SafeLogger.from(logger).info(&quot;role {} does not exists&quot;, roleCode);</span>
+<span class="nc" id="L226">                logger.withBasicSan().info(&quot;role {} does not exists&quot;, roleCode);</span>
 <span class="nc" id="L227">                return;</span>
             }
 <span class="fc" id="L229">            BeanPropertyBindingResult validationResult = this.validateRoleForDelete(role);</span>
@@ -241,7 +241,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
     public RoleDto getRole(String roleCode) {
 <span class="fc" id="L242">        Role role = this.getRoleManager().getRole(roleCode);</span>
 <span class="fc bfc" id="L243" title="All 2 branches covered.">        if (null == role) {</span>
-<span class="fc" id="L244">            SafeLogger.from(logger).warn(&quot;no role found with code {}&quot;, roleCode);</span>
+<span class="fc" id="L244">            SanitizedLogger.from(logger).warn(&quot;no role found with code {}&quot;, roleCode);</span>
 <span class="fc" id="L245">            throw new ResourceNotFoundException(RoleValidator.ERRCODE_ROLE_NOT_FOUND, &quot;role&quot;, roleCode);</span>
         }
 <span class="fc" id="L247">        RoleDto dto = this.getDtoBuilder().toDto(role, this.getRoleManager().getPermissionsCodes());</span>
@@ -259,7 +259,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
     public PagedMetadata&lt;UserDto&gt; getRoleReferences(String roleCode, RestListRequest restRequest) {
 <span class="fc" id="L260">        Role role = this.getRoleManager().getRole(roleCode);</span>
 <span class="pc bpc" id="L261" title="1 of 2 branches missed.">        if (null == role) {</span>
-<span class="nc" id="L262">            SafeLogger.from(logger).warn(&quot;no role found with code {}&quot;, roleCode);</span>
+<span class="nc" id="L262">            SanitizedLogger.from(logger).warn(&quot;no role found with code {}&quot;, roleCode);</span>
 <span class="nc" id="L263">            throw new ResourceNotFoundException(RoleValidator.ERRCODE_ROLE_NOT_FOUND, &quot;role&quot;, roleCode);</span>
         }
 <span class="fc" id="L265">        List&lt;UserDto&gt; dtoList = this.getAuthorizationService().getRoleUtilizer(roleCode);</span>
