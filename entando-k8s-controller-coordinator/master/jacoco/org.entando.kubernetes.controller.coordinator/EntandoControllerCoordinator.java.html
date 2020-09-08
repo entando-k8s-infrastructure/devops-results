@@ -45,58 +45,64 @@ import org.entando.kubernetes.model.plugin.EntandoPlugin;
 
 public class EntandoControllerCoordinator {
 
+    public static final String ALL_NAMESPACES = &quot;*&quot;;
     private final KubernetesClient client;
-<span class="fc" id="L49">    private final Map&lt;Class&lt;? extends EntandoBaseCustomResource&gt;, List&lt;?&gt;&gt; observers =</span>
+<span class="fc" id="L50">    private final Map&lt;Class&lt;? extends EntandoBaseCustomResource&gt;, List&lt;?&gt;&gt; observers =</span>
             new ConcurrentHashMap&lt;&gt;();
     private final EntandoResourceOperationsRegistry entandoResourceOperationsRegistry;
     private final EntandoDatabaseServiceController abstractDbAwareController;
 
     @Inject
-<span class="fc" id="L55">    public EntandoControllerCoordinator(KubernetesClient client) {</span>
-<span class="fc" id="L56">        this.entandoResourceOperationsRegistry = new EntandoResourceOperationsRegistry(client);</span>
-<span class="fc" id="L57">        this.client = client;</span>
-<span class="fc" id="L58">        abstractDbAwareController = new EntandoDatabaseServiceController(client);</span>
-<span class="fc" id="L59">    }</span>
+<span class="fc" id="L56">    public EntandoControllerCoordinator(KubernetesClient client) {</span>
+<span class="fc" id="L57">        this.entandoResourceOperationsRegistry = new EntandoResourceOperationsRegistry(client);</span>
+<span class="fc" id="L58">        this.client = client;</span>
+<span class="fc" id="L59">        abstractDbAwareController = new EntandoDatabaseServiceController(client);</span>
+<span class="fc" id="L60">    }</span>
 
     public void onStartup(@Observes StartupEvent event) {
-<span class="fc" id="L62">        addObservers(EntandoKeycloakServer.class, this::startImage);</span>
-<span class="fc" id="L63">        addObservers(EntandoClusterInfrastructure.class, this::startImage);</span>
-<span class="fc" id="L64">        addObservers(EntandoApp.class, this::startImage);</span>
-<span class="fc" id="L65">        addObservers(EntandoPlugin.class, this::startImage);</span>
-<span class="fc" id="L66">        addObservers(EntandoAppPluginLink.class, this::startImage);</span>
-<span class="fc" id="L67">        addObservers(EntandoCompositeApp.class, this::startImage);</span>
-<span class="fc" id="L68">        addObservers(EntandoDatabaseService.class, this.abstractDbAwareController::processEvent);</span>
-<span class="fc" id="L69">        KubeUtils.ready(EntandoControllerCoordinator.class.getSimpleName());</span>
-<span class="fc" id="L70">    }</span>
+<span class="fc" id="L63">        addObservers(EntandoKeycloakServer.class, this::startImage);</span>
+<span class="fc" id="L64">        addObservers(EntandoClusterInfrastructure.class, this::startImage);</span>
+<span class="fc" id="L65">        addObservers(EntandoApp.class, this::startImage);</span>
+<span class="fc" id="L66">        addObservers(EntandoPlugin.class, this::startImage);</span>
+<span class="fc" id="L67">        addObservers(EntandoAppPluginLink.class, this::startImage);</span>
+<span class="fc" id="L68">        addObservers(EntandoCompositeApp.class, this::startImage);</span>
+<span class="fc" id="L69">        addObservers(EntandoDatabaseService.class, this.abstractDbAwareController::processEvent);</span>
+<span class="fc" id="L70">        KubeUtils.ready(EntandoControllerCoordinator.class.getSimpleName());</span>
+<span class="fc" id="L71">    }</span>
 
     @SuppressWarnings(&quot;unchecked&quot;)
     public &lt;R extends EntandoBaseCustomResource,
             L extends CustomResourceList&lt;R&gt;,
             D extends DoneableEntandoCustomResource&lt;D, R&gt;&gt; List&lt;EntandoResourceObserver&lt;R, L, D&gt;&gt; getObserver(Class&lt;R&gt; clss) {
-<span class="fc" id="L76">        return (List&lt;EntandoResourceObserver&lt;R, L, D&gt;&gt;) observers.get(clss);</span>
+<span class="fc" id="L77">        return (List&lt;EntandoResourceObserver&lt;R, L, D&gt;&gt;) observers.get(clss);</span>
     }
 
     @SuppressWarnings(&quot;unchecked&quot;)
     private &lt;R extends EntandoBaseCustomResource&gt; void addObservers(Class&lt;R&gt; type, BiConsumer&lt;Action, R&gt; consumer) {
-<span class="fc" id="L81">        CustomResourceOperationsImpl operations = this.entandoResourceOperationsRegistry.getOperations(type);</span>
-<span class="fc" id="L82">        List&lt;String&gt; namespaces = new ArrayList&lt;&gt;(EntandoOperatorConfig.getNamespacesToObserve());</span>
-<span class="fc" id="L83">        EntandoOperatorConfig.getOperatorNamespaceToObserve().ifPresent(s -&gt; namespaces.add(s));</span>
-<span class="pc bpc" id="L84" title="1 of 2 branches missed.">        if (namespaces.isEmpty()) {</span>
-<span class="nc" id="L85">            namespaces.add(client.getNamespace());</span>
+<span class="fc" id="L82">        CustomResourceOperationsImpl operations = this.entandoResourceOperationsRegistry.getOperations(type);</span>
+<span class="fc" id="L83">        List&lt;String&gt; namespaces = new ArrayList&lt;&gt;(EntandoOperatorConfig.getNamespacesToObserve());</span>
+<span class="fc" id="L84">        EntandoOperatorConfig.getOperatorNamespaceToObserve().ifPresent(s -&gt; namespaces.add(s));</span>
+<span class="pc bpc" id="L85" title="1 of 2 branches missed.">        if (namespaces.isEmpty()) {</span>
+<span class="nc" id="L86">            namespaces.add(client.getNamespace());</span>
         }
-<span class="fc" id="L87">        List&lt;EntandoResourceObserver&lt;?, ?, ?&gt;&gt; observersForType = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L88" title="All 2 branches covered.">        for (String namespace : namespaces) {</span>
-<span class="fc" id="L89">            CustomResourceOperationsImpl namespacedOperations = (CustomResourceOperationsImpl) operations.inNamespace(namespace);</span>
-<span class="fc" id="L90">            observersForType.add(new EntandoResourceObserver&lt;&gt;(namespacedOperations, consumer));</span>
-<span class="fc" id="L91">        }</span>
-<span class="fc" id="L92">        observers.put(type, observersForType);</span>
-<span class="fc" id="L93">    }</span>
+<span class="fc" id="L88">        List&lt;EntandoResourceObserver&lt;?, ?, ?&gt;&gt; observersForType = new ArrayList&lt;&gt;();</span>
+<span class="pc bpc" id="L89" title="1 of 2 branches missed.">        if (namespaces.stream().anyMatch(s -&gt; s.equals(ALL_NAMESPACES))) {</span>
+            //This code is essentially impossible to test in a shared cluster
+<span class="nc" id="L91">            observersForType.add(new EntandoResourceObserver&lt;&gt;((CustomResourceOperationsImpl) operations.inAnyNamespace(), consumer));</span>
+        } else {
+<span class="fc bfc" id="L93" title="All 2 branches covered.">            for (String namespace : namespaces) {</span>
+<span class="fc" id="L94">                CustomResourceOperationsImpl namespacedOperations = (CustomResourceOperationsImpl) operations.inNamespace(namespace);</span>
+<span class="fc" id="L95">                observersForType.add(new EntandoResourceObserver&lt;&gt;(namespacedOperations, consumer));</span>
+<span class="fc" id="L96">            }</span>
+        }
+<span class="fc" id="L98">        observers.put(type, observersForType);</span>
+<span class="fc" id="L99">    }</span>
 
     private &lt;T extends EntandoBaseCustomResource&gt; void startImage(Action action, T resource) {
-<span class="fc" id="L96">        ControllerExecutor executor = new ControllerExecutor(client.getNamespace(), client);</span>
-<span class="fc" id="L97">        executor.startControllerFor(action, resource, executor.resolveLatestImageFor(resource.getClass()).orElseThrow(</span>
+<span class="fc" id="L102">        ControllerExecutor executor = new ControllerExecutor(client.getNamespace(), client);</span>
+<span class="fc" id="L103">        executor.startControllerFor(action, resource, executor.resolveLatestImageFor(resource.getClass()).orElseThrow(</span>
                 IllegalStateException::new));
-<span class="fc" id="L99">    }</span>
+<span class="fc" id="L105">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
