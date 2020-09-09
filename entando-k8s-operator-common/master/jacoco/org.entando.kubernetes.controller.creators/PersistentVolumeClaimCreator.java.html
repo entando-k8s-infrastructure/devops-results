@@ -26,52 +26,63 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.entando.kubernetes.controller.common.ParameterizedStorageCalculator;
+import org.entando.kubernetes.controller.common.StorageCalculator;
 import org.entando.kubernetes.controller.k8sclient.PersistentVolumeClaimClient;
 import org.entando.kubernetes.controller.spi.Deployable;
-import org.entando.kubernetes.controller.spi.DeployableContainer;
+import org.entando.kubernetes.controller.spi.ParameterizableContainer;
 import org.entando.kubernetes.controller.spi.PersistentVolumeAware;
-import org.entando.kubernetes.model.EntandoCustomResource;
+import org.entando.kubernetes.model.EntandoBaseCustomResource;
 
 public class PersistentVolumeClaimCreator extends AbstractK8SResourceCreator {
 
     private List&lt;PersistentVolumeClaim&gt; persistentVolumeClaims;
 
-    public PersistentVolumeClaimCreator(EntandoCustomResource entandoCustomResource) {
-<span class="fc" id="L40">        super(entandoCustomResource);</span>
-<span class="fc" id="L41">    }</span>
+    public PersistentVolumeClaimCreator(EntandoBaseCustomResource&lt;?&gt; entandoCustomResource) {
+<span class="fc" id="L42">        super(entandoCustomResource);</span>
+<span class="fc" id="L43">    }</span>
 
     public boolean needsPersistentVolumeClaaims(Deployable&lt;?&gt; deployable) {
-<span class="fc" id="L44">        return deployable.getContainers().stream()</span>
-<span class="fc" id="L45">                .anyMatch(PersistentVolumeAware.class::isInstance);</span>
+<span class="fc" id="L46">        return deployable.getContainers().stream()</span>
+<span class="fc" id="L47">                .anyMatch(PersistentVolumeAware.class::isInstance);</span>
     }
 
     public void createPersistentVolumeClaimsFor(PersistentVolumeClaimClient k8sClient, Deployable&lt;?&gt; deployable) {
-<span class="fc" id="L49">        this.persistentVolumeClaims = deployable.getContainers().stream()</span>
-<span class="fc" id="L50">                .filter(PersistentVolumeAware.class::isInstance)</span>
-<span class="fc" id="L51">                .map(deployableContainer -&gt; k8sClient</span>
-<span class="fc" id="L52">                        .createPersistentVolumeClaimIfAbsent(entandoCustomResource,</span>
-<span class="fc" id="L53">                                newPersistentVolumeClaim(deployable, deployableContainer)))</span>
-<span class="fc" id="L54">                .collect(Collectors.toList());</span>
+<span class="fc" id="L51">        this.persistentVolumeClaims = deployable.getContainers().stream()</span>
+<span class="fc" id="L52">                .filter(PersistentVolumeAware.class::isInstance)</span>
+<span class="fc" id="L53">                .map(PersistentVolumeAware.class::cast)</span>
+<span class="fc" id="L54">                .map(deployableContainer -&gt; k8sClient</span>
+<span class="fc" id="L55">                        .createPersistentVolumeClaimIfAbsent(entandoCustomResource,</span>
+<span class="fc" id="L56">                                newPersistentVolumeClaim(deployable, deployableContainer)))</span>
+<span class="fc" id="L57">                .collect(Collectors.toList());</span>
 
-<span class="fc" id="L56">    }</span>
+<span class="fc" id="L59">    }</span>
 
     public List&lt;PersistentVolumeClaimStatus&gt; reloadPersistentVolumeClaims(PersistentVolumeClaimClient k8sClient) {
-<span class="fc" id="L59">        return Optional.ofNullable(persistentVolumeClaims).orElse(Collections.emptyList()).stream()</span>
-<span class="fc" id="L60">                .map(persistentVolumeClaim -&gt; k8sClient.loadPersistentVolumeClaim(entandoCustomResource,</span>
-<span class="fc" id="L61">                        persistentVolumeClaim.getMetadata().getName()).getStatus())</span>
-<span class="fc" id="L62">                .collect(Collectors.toList());</span>
+<span class="fc" id="L62">        return Optional.ofNullable(persistentVolumeClaims).orElse(Collections.emptyList()).stream()</span>
+<span class="fc" id="L63">                .map(persistentVolumeClaim -&gt; k8sClient.loadPersistentVolumeClaim(entandoCustomResource,</span>
+<span class="fc" id="L64">                        persistentVolumeClaim.getMetadata().getName()).getStatus())</span>
+<span class="fc" id="L65">                .collect(Collectors.toList());</span>
     }
 
-    private PersistentVolumeClaim newPersistentVolumeClaim(Deployable&lt;?&gt; deployable, DeployableContainer container) {
+    private PersistentVolumeClaim newPersistentVolumeClaim(Deployable&lt;?&gt; deployable, PersistentVolumeAware container) {
+<span class="fc" id="L69">        StorageCalculator resourceCalculator = buildStorageCalculator(container);</span>
+<span class="fc" id="L70">        return new PersistentVolumeClaimBuilder()</span>
+<span class="fc" id="L71">                .withMetadata(fromCustomResource(true, resolveName(container.getNameQualifier(), &quot;-pvc&quot;),</span>
+<span class="fc" id="L72">                        deployable.getNameQualifier()))</span>
+<span class="fc" id="L73">                .withNewSpec().withAccessModes(&quot;ReadWriteOnce&quot;)</span>
+<span class="fc" id="L74">                .withNewResources()</span>
+<span class="fc" id="L75">                .withRequests(singletonMap(&quot;storage&quot;, new Quantity(resourceCalculator.getStorageRequest())))</span>
+<span class="fc" id="L76">                .withLimits(singletonMap(&quot;storage&quot;, new Quantity(resourceCalculator.getStorageLimit())))</span>
+<span class="fc" id="L77">                .endResources().endSpec()</span>
+<span class="fc" id="L78">                .build();</span>
+    }
 
-<span class="fc" id="L67">        return new PersistentVolumeClaimBuilder()</span>
-<span class="fc" id="L68">                .withMetadata(fromCustomResource(true, resolveName(container.getNameQualifier(), &quot;-pvc&quot;),</span>
-<span class="fc" id="L69">                        deployable.getNameQualifier()))</span>
-<span class="fc" id="L70">                .withNewSpec().withAccessModes(&quot;ReadWriteOnce&quot;)</span>
-<span class="fc" id="L71">                .withNewResources()</span>
-<span class="fc" id="L72">                .withRequests(singletonMap(&quot;storage&quot;, new Quantity(&quot;2Gi&quot;)))</span>
-<span class="fc" id="L73">                .endResources().endSpec()</span>
-<span class="fc" id="L74">                .build();</span>
+    private StorageCalculator buildStorageCalculator(PersistentVolumeAware deployableContainer) {
+<span class="fc bfc" id="L82" title="All 2 branches covered.">        return deployableContainer instanceof ParameterizableContainer</span>
+<span class="fc" id="L83">                ? new ParameterizedStorageCalculator((ParameterizableContainer) deployableContainer)</span>
+<span class="fc" id="L84">                : new StorageCalculator(deployableContainer);</span>
+
     }
 
 }
