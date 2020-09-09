@@ -17,21 +17,48 @@ public class JobTracker&lt;T extends TrackableJob&gt; {
 
     public void startTracking(JobStatus js) {
 <span class="fc" id="L19">        this.job.setStatus(js);</span>
-<span class="fc" id="L20">        this.job.setStartedAt(LocalDateTime.now());</span>
-<span class="fc" id="L21">        repo.save(this.job);</span>
-<span class="fc" id="L22">    }</span>
+<span class="fc" id="L20">        this.updateJobProgress(0.0);</span>
+<span class="fc" id="L21">        this.job.setStartedAt(LocalDateTime.now());</span>
+<span class="fc" id="L22">        this.job = updateJob(this.job);</span>
+<span class="fc" id="L23">    }</span>
 
-    public void stopTrackingTime(JobResult result) {
-<span class="fc" id="L25">        this.job.setStatus(result.getStatus());</span>
-<span class="fc" id="L26">        this.job.setFinishedAt(LocalDateTime.now());</span>
-<span class="fc bfc" id="L27" title="All 2 branches covered.">        if (result.hasException()) {</span>
-<span class="fc" id="L28">            this.job.setErrorMessage(result.getErrorMessage());</span>
+    public void setProgress(double progress) {
+<span class="fc" id="L26">        this.updateJobProgress(progress);</span>
+<span class="fc" id="L27">        this.job = updateJob(this.job);</span>
+<span class="fc" id="L28">    }</span>
+
+    public void finishTracking(JobResult result) {
+<span class="fc" id="L31">        this.job.setStatus(result.getStatus());</span>
+<span class="fc" id="L32">        this.job.setFinishedAt(LocalDateTime.now());</span>
+<span class="fc bfc" id="L33" title="All 2 branches covered.">        if (result.hasException()) {</span>
+<span class="fc" id="L34">            this.job.setErrorMessage(result.getErrorMessage());</span>
         }
-<span class="fc" id="L30">        repo.save(this.job);</span>
-<span class="fc" id="L31">    }</span>
+<span class="fc bfc" id="L36" title="All 2 branches covered.">        if (result.getProgress() != null) {</span>
+<span class="fc" id="L37">            this.setProgress(result.getProgress());</span>
+        }
+<span class="fc" id="L39">        this.job = updateJob(this.job);</span>
+<span class="fc" id="L40">    }</span>
 
     public T getJob() {
-<span class="fc" id="L34">        return this.job;</span>
+<span class="fc" id="L43">        return this.job;</span>
+    }
+
+    private void updateJobProgress(double progress) {
+<span class="fc bfc" id="L47" title="All 2 branches covered.">        if (this.job instanceof HasProgress) {</span>
+<span class="fc" id="L48">            ((HasProgress) this.job).setProgress(roundProgress(progress));</span>
+        }
+<span class="fc" id="L50">    }</span>
+
+    private T updateJob(T job) {
+<span class="fc" id="L53">        T updatedJob = repo.save(job);</span>
+<span class="fc bfc" id="L54" title="All 2 branches covered.">        if (job instanceof HasInstallable) {</span>
+<span class="fc" id="L55">            ((HasInstallable) updatedJob).setInstallable(((HasInstallable) job).getInstallable());</span>
+        }
+<span class="fc" id="L57">        return updatedJob;</span>
+    }
+
+    private double roundProgress(double progress) {
+<span class="fc" id="L61">        return Math.max(0.0, Math.min(1.0, Math.floor(progress * 100) / 100));</span>
     }
 
 }
