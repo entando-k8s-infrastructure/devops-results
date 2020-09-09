@@ -36,91 +36,90 @@ import org.entando.kubernetes.controller.spi.Ingressing;
 import org.entando.kubernetes.controller.spi.ServiceBackingContainer;
 import org.entando.kubernetes.controller.spi.ServiceResult;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
-import org.entando.kubernetes.model.EntandoCustomResource;
 
 public class ServiceCreator extends AbstractK8SResourceCreator {
 
     private Service primaryService;
 
     public ServiceCreator(EntandoBaseCustomResource&lt;?&gt; entandoCustomResource) {
-<span class="fc" id="L46">        super(entandoCustomResource);</span>
-<span class="fc" id="L47">    }</span>
+<span class="fc" id="L45">        super(entandoCustomResource);</span>
+<span class="fc" id="L46">    }</span>
 
     public ServiceCreator(EntandoBaseCustomResource&lt;?&gt; entandoCustomResource, Service primaryService) {
-<span class="nc" id="L50">        super(entandoCustomResource);</span>
-<span class="nc" id="L51">        this.primaryService = primaryService;</span>
-<span class="nc" id="L52">    }</span>
+<span class="nc" id="L49">        super(entandoCustomResource);</span>
+<span class="nc" id="L50">        this.primaryService = primaryService;</span>
+<span class="nc" id="L51">    }</span>
 
     private Service newService(Deployable&lt;?&gt; deployable) {
-<span class="fc" id="L55">        ObjectMeta objectMeta = fromCustomResource(true, resolveName(deployable.getNameQualifier(), &quot;-service&quot;),</span>
-<span class="fc" id="L56">                deployable.getNameQualifier());</span>
-<span class="fc" id="L57">        return new ServiceBuilder()</span>
-<span class="fc" id="L58">                .withMetadata(objectMeta)</span>
-<span class="fc" id="L59">                .withNewSpec()</span>
-<span class="fc" id="L60">                .withSelector(labelsFromResource(deployable.getNameQualifier()))</span>
-<span class="fc" id="L61">                .withType(&quot;ClusterIP&quot;)</span>
-<span class="fc" id="L62">                .withPorts(buildPorts(deployable))</span>
-<span class="fc" id="L63">                .endSpec()</span>
-<span class="fc" id="L64">                .build();</span>
+<span class="fc" id="L54">        ObjectMeta objectMeta = fromCustomResource(true, resolveName(deployable.getNameQualifier(), &quot;-service&quot;),</span>
+<span class="fc" id="L55">                deployable.getNameQualifier());</span>
+<span class="fc" id="L56">        return new ServiceBuilder()</span>
+<span class="fc" id="L57">                .withMetadata(objectMeta)</span>
+<span class="fc" id="L58">                .withNewSpec()</span>
+<span class="fc" id="L59">                .withSelector(labelsFromResource(deployable.getNameQualifier()))</span>
+<span class="fc" id="L60">                .withType(&quot;ClusterIP&quot;)</span>
+<span class="fc" id="L61">                .withPorts(buildPorts(deployable))</span>
+<span class="fc" id="L62">                .endSpec()</span>
+<span class="fc" id="L63">                .build();</span>
     }
 
     private List&lt;ServicePort&gt; buildPorts(Deployable&lt;?&gt; deployable) {
-<span class="fc" id="L68">        return deployable.getContainers().stream().filter(ServiceBackingContainer.class::isInstance)</span>
-<span class="fc" id="L69">                .map(ServiceBackingContainer.class::cast)</span>
-<span class="fc" id="L70">                .map(this::newServicePort).collect(Collectors.toList());</span>
+<span class="fc" id="L67">        return deployable.getContainers().stream().filter(ServiceBackingContainer.class::isInstance)</span>
+<span class="fc" id="L68">                .map(ServiceBackingContainer.class::cast)</span>
+<span class="fc" id="L69">                .map(this::newServicePort).collect(Collectors.toList());</span>
     }
 
     private ServicePort newServicePort(ServiceBackingContainer deployableContainer) {
-<span class="fc" id="L74">        return new ServicePortBuilder()</span>
-<span class="fc" id="L75">                .withName(deployableContainer.getNameQualifier() + &quot;-port&quot;)</span>
-<span class="fc" id="L76">                .withPort(deployableContainer.getPort())</span>
-<span class="fc" id="L77">                .withProtocol(&quot;TCP&quot;)</span>
-<span class="fc" id="L78">                .withTargetPort(new IntOrString(deployableContainer.getPort()))</span>
-<span class="fc" id="L79">                .build();</span>
+<span class="fc" id="L73">        return new ServicePortBuilder()</span>
+<span class="fc" id="L74">                .withName(deployableContainer.getNameQualifier() + &quot;-port&quot;)</span>
+<span class="fc" id="L75">                .withPort(deployableContainer.getPort())</span>
+<span class="fc" id="L76">                .withProtocol(&quot;TCP&quot;)</span>
+<span class="fc" id="L77">                .withTargetPort(new IntOrString(deployableContainer.getPort()))</span>
+<span class="fc" id="L78">                .build();</span>
     }
 
     public &lt;T extends ServiceResult&gt; void createService(ServiceClient services, Deployable&lt;T&gt; deployable) {
-<span class="fc" id="L83">        primaryService = services.createOrReplaceService(entandoCustomResource, newService(deployable));</span>
-<span class="fc" id="L84">    }</span>
+<span class="fc" id="L82">        primaryService = services.createOrReplaceService(entandoCustomResource, newService(deployable));</span>
+<span class="fc" id="L83">    }</span>
 
     public ServiceStatus reloadPrimaryService(ServiceClient services) {
-<span class="pc bpc" id="L87" title="1 of 2 branches missed.">        if (this.primaryService == null) {</span>
-<span class="nc" id="L88">            return null;</span>
+<span class="pc bpc" id="L86" title="1 of 2 branches missed.">        if (this.primaryService == null) {</span>
+<span class="nc" id="L87">            return null;</span>
         }
-<span class="fc" id="L90">        this.primaryService = services.loadService(entandoCustomResource, primaryService.getMetadata().getName());</span>
-<span class="fc" id="L91">        return this.primaryService.getStatus();</span>
+<span class="fc" id="L89">        this.primaryService = services.loadService(entandoCustomResource, primaryService.getMetadata().getName());</span>
+<span class="fc" id="L90">        return this.primaryService.getStatus();</span>
     }
 
     public Service newDelegatingService(ServiceClient services, Ingressing&lt;?&gt; ingressingDeployable) {
-<span class="nc" id="L95">        ObjectMeta metaData = new ObjectMetaBuilder()</span>
-<span class="nc" id="L96">                .withLabels(labelsFromResource(ingressingDeployable.getNameQualifier()))</span>
-<span class="nc" id="L97">                .withName(ingressingDeployable.getIngressName() + &quot;-to-&quot; + primaryService.getMetadata().getName())</span>
-<span class="nc" id="L98">                .withNamespace(ingressingDeployable.getIngressNamespace())</span>
-<span class="nc" id="L99">                .withOwnerReferences(KubeUtils.buildOwnerReference(this.entandoCustomResource)).build();</span>
-<span class="nc" id="L100">        Service delegatingService = services.createOrReplaceService(entandoCustomResource, new ServiceBuilder()</span>
-<span class="nc" id="L101">                .withMetadata(metaData)</span>
-<span class="nc" id="L102">                .withNewSpec()</span>
-<span class="nc" id="L103">                .withPorts(new ArrayList&lt;&gt;(primaryService.getSpec().getPorts()))</span>
-<span class="nc" id="L104">                .endSpec()</span>
-<span class="nc" id="L105">                .build());</span>
-<span class="nc" id="L106">        services.createOrReplaceEndpoints(entandoCustomResource, new EndpointsBuilder()</span>
-<span class="nc" id="L107">                .withMetadata(metaData)</span>
-<span class="nc" id="L108">                .addNewSubset()</span>
-<span class="nc" id="L109">                .addNewAddress().withIp(primaryService.getSpec().getClusterIP()).endAddress()</span>
-<span class="nc" id="L110">                .withPorts(toEndpointPorts(primaryService.getSpec().getPorts()))</span>
-<span class="nc" id="L111">                .endSubset()</span>
-<span class="nc" id="L112">                .build());</span>
-<span class="nc" id="L113">        return delegatingService;</span>
+<span class="nc" id="L94">        ObjectMeta metaData = new ObjectMetaBuilder()</span>
+<span class="nc" id="L95">                .withLabels(labelsFromResource(ingressingDeployable.getNameQualifier()))</span>
+<span class="nc" id="L96">                .withName(ingressingDeployable.getIngressName() + &quot;-to-&quot; + primaryService.getMetadata().getName())</span>
+<span class="nc" id="L97">                .withNamespace(ingressingDeployable.getIngressNamespace())</span>
+<span class="nc" id="L98">                .withOwnerReferences(KubeUtils.buildOwnerReference(this.entandoCustomResource)).build();</span>
+<span class="nc" id="L99">        Service delegatingService = services.createOrReplaceService(entandoCustomResource, new ServiceBuilder()</span>
+<span class="nc" id="L100">                .withMetadata(metaData)</span>
+<span class="nc" id="L101">                .withNewSpec()</span>
+<span class="nc" id="L102">                .withPorts(new ArrayList&lt;&gt;(primaryService.getSpec().getPorts()))</span>
+<span class="nc" id="L103">                .endSpec()</span>
+<span class="nc" id="L104">                .build());</span>
+<span class="nc" id="L105">        services.createOrReplaceEndpoints(entandoCustomResource, new EndpointsBuilder()</span>
+<span class="nc" id="L106">                .withMetadata(metaData)</span>
+<span class="nc" id="L107">                .addNewSubset()</span>
+<span class="nc" id="L108">                .addNewAddress().withIp(primaryService.getSpec().getClusterIP()).endAddress()</span>
+<span class="nc" id="L109">                .withPorts(toEndpointPorts(primaryService.getSpec().getPorts()))</span>
+<span class="nc" id="L110">                .endSubset()</span>
+<span class="nc" id="L111">                .build());</span>
+<span class="nc" id="L112">        return delegatingService;</span>
     }
 
     private List&lt;EndpointPort&gt; toEndpointPorts(List&lt;ServicePort&gt; ports) {
-<span class="nc" id="L117">        return ports.stream().map(servicePort -&gt; new EndpointPort(servicePort.getName(), servicePort.getPort(), servicePort.getProtocol()))</span>
-<span class="nc" id="L118">                .collect(Collectors.toList());</span>
+<span class="nc" id="L116">        return ports.stream().map(servicePort -&gt; new EndpointPort(servicePort.getName(), servicePort.getPort(), servicePort.getProtocol()))</span>
+<span class="nc" id="L117">                .collect(Collectors.toList());</span>
 
     }
 
     public Service getService() {
-<span class="fc" id="L123">        return primaryService;</span>
+<span class="fc" id="L122">        return primaryService;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
