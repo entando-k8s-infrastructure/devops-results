@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>DatabaseDeployable.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando K8S Operator Common Library</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.controller.database</a> &gt; <span class="el_source">DatabaseDeployable.java</span></div><h1>DatabaseDeployable.java</h1><pre class="source lang-java linenums">/*
+ *
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ *  This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ */
+
+package org.entando.kubernetes.controller.database;
+
+import static java.util.Optional.ofNullable;
+
+import io.fabric8.kubernetes.api.model.EnvVar;
+import io.fabric8.kubernetes.api.model.Pod;
+import io.fabric8.kubernetes.api.model.Secret;
+import io.fabric8.kubernetes.api.model.Service;
+import io.fabric8.kubernetes.api.model.apps.Deployment;
+import io.fabric8.kubernetes.api.model.extensions.Ingress;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import org.entando.kubernetes.controller.KubeUtils;
+import org.entando.kubernetes.controller.spi.Deployable;
+import org.entando.kubernetes.controller.spi.DeployableContainer;
+import org.entando.kubernetes.controller.spi.HasHealthCommand;
+import org.entando.kubernetes.controller.spi.PersistentVolumeAware;
+import org.entando.kubernetes.controller.spi.Secretive;
+import org.entando.kubernetes.controller.spi.ServiceBackingContainer;
+import org.entando.kubernetes.model.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.EntandoCustomResource;
+
+public class DatabaseDeployable implements Deployable&lt;DatabaseServiceResult&gt;, Secretive {
+
+<span class="fc" id="L44">    private final Map&lt;DbmsDockerVendorStrategy, VariableInitializer&gt; variableInitializers = new ConcurrentHashMap&lt;&gt;();</span>
+    private final DbmsDockerVendorStrategy dbmsVendor;
+    private final EntandoBaseCustomResource&lt;?&gt; customResource;
+    private final List&lt;DeployableContainer&gt; containers;
+    private final String nameQualifier;
+
+<span class="fc" id="L50">    public DatabaseDeployable(DbmsDockerVendorStrategy dbmsVendor, EntandoBaseCustomResource&lt;?&gt; customResource, String nameQualifier) {</span>
+<span class="fc" id="L51">        variableInitializers.put(DbmsDockerVendorStrategy.MYSQL, vars -&gt;</span>
+                //No DB creation. Dbs are created during schema creation
+<span class="fc" id="L53">                vars.add(new EnvVar(&quot;MYSQL_ROOT_PASSWORD&quot;, null,</span>
+<span class="fc" id="L54">                        KubeUtils.secretKeyRef(getDatabaseAdminSecretName(), KubeUtils.PASSSWORD_KEY)))</span>
+        );
+<span class="fc" id="L56">        variableInitializers.put(DbmsDockerVendorStrategy.POSTGRESQL, vars -&gt; {</span>
+<span class="fc" id="L57">            vars.add(new EnvVar(&quot;POSTGRESQL_DATABASE&quot;, getDatabaseName(), null));</span>
+            // This username will not be used, as we will be creating schema/user pairs,
+            // but without it the DB isn't created.
+<span class="fc" id="L60">            vars.add(new EnvVar(&quot;POSTGRESQL_USER&quot;, getDatabaseName() + &quot;_user&quot;, null));</span>
+<span class="fc" id="L61">            vars.add(new EnvVar(&quot;POSTGRESQL_PASSWORD&quot;, null,</span>
+<span class="fc" id="L62">                    KubeUtils.secretKeyRef(getDatabaseAdminSecretName(), KubeUtils.PASSSWORD_KEY)));</span>
+<span class="fc" id="L63">            vars.add(new EnvVar(&quot;POSTGRESQL_ADMIN_PASSWORD&quot;, null,</span>
+<span class="fc" id="L64">                    KubeUtils.secretKeyRef(getDatabaseAdminSecretName(), KubeUtils.PASSSWORD_KEY)));</span>
+
+<span class="fc" id="L66">        });</span>
+<span class="fc" id="L67">        this.dbmsVendor = dbmsVendor;</span>
+<span class="fc" id="L68">        this.customResource = customResource;</span>
+<span class="fc" id="L69">        containers = Arrays.asList(new DatabaseContainer(this.variableInitializers, dbmsVendor, nameQualifier));</span>
+<span class="fc" id="L70">        this.nameQualifier = nameQualifier;</span>
+<span class="fc" id="L71">    }</span>
+
+    @Override
+    public Optional&lt;Long&gt; getFileSystemUserAndGroupId() {
+<span class="fc" id="L75">        return dbmsVendor.getFileSystemUserGroupid();</span>
+    }
+
+    @Override
+    public List&lt;DeployableContainer&gt; getContainers() {
+<span class="fc" id="L80">        return containers;</span>
+    }
+
+    @Override
+    public String getNameQualifier() {
+<span class="fc" id="L85">        return nameQualifier;</span>
+    }
+
+    @Override
+    public EntandoBaseCustomResource&lt;?&gt; getCustomResource() {
+<span class="fc" id="L90">        return customResource;</span>
+    }
+
+    @Override
+    public DatabaseServiceResult createResult(Deployment deployment, Service service, Ingress ingress, Pod pod) {
+<span class="fc" id="L95">        return new DatabaseServiceResult(service, dbmsVendor, getDatabaseName(), getDatabaseAdminSecretName(), pod);</span>
+    }
+
+    @Override
+    public List&lt;Secret&gt; buildSecrets() {
+<span class="fc" id="L100">        Secret secret = KubeUtils.generateSecret(customResource, getDatabaseAdminSecretName(),</span>
+<span class="fc" id="L101">                dbmsVendor.getDefaultAdminUsername());</span>
+<span class="fc" id="L102">        return Arrays.asList(secret);</span>
+    }
+
+    private String getDatabaseAdminSecretName() {
+<span class="fc" id="L106">        return customResource.getMetadata().getName() + &quot;-&quot; + getNameQualifier()</span>
+                + &quot;-admin-secret&quot;;
+    }
+
+    private String getDatabaseName() {
+<span class="fc" id="L111">        return KubeUtils</span>
+<span class="fc" id="L112">                .snakeCaseOf(customResource.getMetadata().getName() + &quot;_&quot; + getNameQualifier());</span>
+    }
+
+    interface VariableInitializer {
+
+        void addEnvironmentVariables(List&lt;EnvVar&gt; vars);
+    }
+
+    public static class DatabaseContainer implements ServiceBackingContainer, PersistentVolumeAware, HasHealthCommand {
+
+        private final Map&lt;DbmsDockerVendorStrategy, VariableInitializer&gt; variableInitializers;
+        private final DbmsDockerVendorStrategy dbmsVendor;
+        private final String nameQualifier;
+
+        public DatabaseContainer(Map&lt;DbmsDockerVendorStrategy, VariableInitializer&gt; variableInitializers,
+                DbmsDockerVendorStrategy dbmsVendor,
+<span class="fc" id="L128">                String nameQualifier) {</span>
+<span class="fc" id="L129">            this.variableInitializers = variableInitializers;</span>
+<span class="fc" id="L130">            this.dbmsVendor = dbmsVendor;</span>
+<span class="fc" id="L131">            this.nameQualifier = nameQualifier;</span>
+<span class="fc" id="L132">        }</span>
+
+        @Override
+        public String determineImageToUse() {
+<span class="fc" id="L136">            return dbmsVendor.getImageName();</span>
+        }
+
+        @Override
+        public String getNameQualifier() {
+<span class="fc" id="L141">            return nameQualifier;</span>
+        }
+
+        @Override
+        public int getPort() {
+<span class="fc" id="L146">            return dbmsVendor.getPort();</span>
+        }
+
+        @Override
+        public String getVolumeMountPath() {
+<span class="fc" id="L151">            return dbmsVendor.getVolumeMountPath();</span>
+        }
+
+        @Override
+        public String getHealthCheckCommand() {
+<span class="fc" id="L156">            return dbmsVendor.getHealthCheck();</span>
+        }
+
+        @Override
+        public void addEnvironmentVariables(List&lt;EnvVar&gt; vars) {
+<span class="fc" id="L161">            ofNullable(variableInitializers.get(dbmsVendor))</span>
+<span class="pc" id="L162">                    .orElseThrow(() -&gt; new IllegalStateException(dbmsVendor + &quot; not supported for container creation&quot;))</span>
+<span class="fc" id="L163">                    .addEnvironmentVariables(vars);</span>
+<span class="fc" id="L164">        }</span>
+
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
