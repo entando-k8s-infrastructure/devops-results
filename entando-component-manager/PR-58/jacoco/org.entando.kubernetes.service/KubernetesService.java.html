@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>KubernetesService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.service</a> &gt; <span class="el_source">KubernetesService.java</span></div><h1>KubernetesService.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.service;
+
+import static org.entando.kubernetes.model.EntandoDeploymentPhase.FAILED;
+import static org.entando.kubernetes.model.EntandoDeploymentPhase.SUCCESSFUL;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
+import org.awaitility.core.ConditionFactory;
+import org.awaitility.core.ConditionTimeoutException;
+import org.entando.kubernetes.client.k8ssvc.K8SServiceClient;
+import org.entando.kubernetes.exception.k8ssvc.EntandoAppPluginLinkingProcessException;
+import org.entando.kubernetes.exception.k8ssvc.PluginNotFoundException;
+import org.entando.kubernetes.exception.k8ssvc.PluginNotReadyException;
+import org.entando.kubernetes.model.DbmsVendor;
+import org.entando.kubernetes.model.bundle.descriptor.DockerImage;
+import org.entando.kubernetes.model.bundle.descriptor.PluginDescriptor;
+import org.entando.kubernetes.model.debundle.EntandoDeBundle;
+import org.entando.kubernetes.model.link.EntandoAppPluginLink;
+import org.entando.kubernetes.model.plugin.EntandoPlugin;
+import org.entando.kubernetes.model.plugin.EntandoPluginBuilder;
+import org.entando.kubernetes.model.plugin.ExpectedRole;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+<span class="fc" id="L33">@Slf4j</span>
+@Component
+public class KubernetesService {
+
+    public static final String ENTANDOPLUGIN_CRD_NAME = &quot;entandoplugins.entando.org&quot;;
+    public static final String KUBERNETES_NAMESPACE_PATH = &quot;/var/run/secrets/kubernetes.io/serviceaccount/namespace&quot;;
+
+    private final ConditionFactory waitingConditionFactory;
+    private final K8SServiceClient k8sServiceClient;
+    private final String entandoAppName;
+    private final String entandoAppNamespace;
+
+    public KubernetesService(@Value(&quot;${entando.app.name}&quot;) String entandoAppName,
+            @Value(&quot;${entando.app.namespace}&quot;) String entandoAppNamespace,
+            K8SServiceClient k8SServiceClient,
+<span class="fc" id="L48">            ConditionFactory waitingConditionFactory) {</span>
+<span class="fc" id="L49">        this.waitingConditionFactory = waitingConditionFactory;</span>
+<span class="fc" id="L50">        this.k8sServiceClient = k8SServiceClient;</span>
+<span class="fc" id="L51">        this.entandoAppName = entandoAppName;</span>
+<span class="fc" id="L52">        this.entandoAppNamespace = getCurrentKubernetesNamespace().orElse(entandoAppNamespace);</span>
+<span class="fc" id="L53">    }</span>
+
+    public List&lt;EntandoPlugin&gt; getLinkedPlugins() {
+<span class="nc" id="L56">        return getCurrentAppLinks()</span>
+<span class="nc" id="L57">                .stream().map(k8sServiceClient::getPluginForLink)</span>
+<span class="nc" id="L58">                .collect(Collectors.toList());</span>
+    }
+
+    public EntandoPlugin getLinkedPlugin(String pluginId) {
+<span class="nc" id="L62">        return getCurrentAppLinkToPlugin(pluginId)</span>
+<span class="nc" id="L63">                .map(k8sServiceClient::getPluginForLink)</span>
+<span class="nc" id="L64">                .orElseThrow(PluginNotFoundException::new);</span>
+    }
+
+    public boolean isLinkedPlugin(String pluginId) {
+<span class="nc" id="L68">        return getCurrentAppLinkToPlugin(pluginId).isPresent();</span>
+    }
+
+    public boolean isPluginReady(EntandoPlugin plugin) {
+<span class="fc" id="L72">        return k8sServiceClient.isPluginReadyToServeApp(plugin, entandoAppName);</span>
+    }
+
+    private List&lt;EntandoAppPluginLink&gt; getCurrentAppLinks() {
+<span class="fc" id="L76">        return k8sServiceClient.getAppLinks(entandoAppName);</span>
+    }
+
+    private Optional&lt;EntandoAppPluginLink&gt; getCurrentAppLinkToPlugin(String pluginId) {
+<span class="fc" id="L80">        return getCurrentAppLinks()</span>
+<span class="fc" id="L81">                .stream()</span>
+<span class="fc" id="L82">                .filter(el -&gt; el.getSpec().getEntandoPluginName().equals(pluginId))</span>
+<span class="fc" id="L83">                .findFirst();</span>
+    }
+
+    public void unlinkPlugin(String pluginId) {
+<span class="fc" id="L87">        getCurrentAppLinkToPlugin(pluginId).ifPresent(k8sServiceClient::unlink);</span>
+<span class="fc" id="L88">    }</span>
+
+    public EntandoPlugin generatePluginFromDescriptor(PluginDescriptor descriptor) {
+<span class="fc" id="L91">        return new EntandoPluginBuilder()</span>
+<span class="fc" id="L92">                .withNewMetadata()</span>
+<span class="fc" id="L93">                .withName(extractNameFromDescriptor(descriptor))</span>
+<span class="fc" id="L94">                .withLabels(extractLabelsFromDescriptor(descriptor))</span>
+<span class="fc" id="L95">                .endMetadata()</span>
+<span class="fc" id="L96">                .withNewSpec()</span>
+<span class="fc" id="L97">                .withDbms(DbmsVendor.valueOf(descriptor.getDbms().toUpperCase()))</span>
+<span class="fc" id="L98">                .withImage(descriptor.getImage())</span>
+<span class="fc" id="L99">                .withIngressPath(extractIngressPathFromDescriptor(descriptor))</span>
+<span class="fc" id="L100">                .withRoles(extractRolesFromDescriptor(descriptor))</span>
+<span class="fc" id="L101">                .withHealthCheckPath(descriptor.getHealthCheckPath())</span>
+<span class="fc" id="L102">                .endSpec()</span>
+<span class="fc" id="L103">                .build();</span>
+    }
+
+    public List&lt;ExpectedRole&gt; extractRolesFromDescriptor(PluginDescriptor descriptor) {
+<span class="fc" id="L107">        return descriptor.getRoles().stream()</span>
+<span class="fc" id="L108">                .distinct()</span>
+<span class="fc" id="L109">                .map(ExpectedRole::new)</span>
+<span class="fc" id="L110">                .collect(Collectors.toList());</span>
+    }
+
+    public String extractNameFromDescriptor(PluginDescriptor descriptor) {
+<span class="fc" id="L114">        return composeNameFromDockerImage(descriptor.getDockerImage());</span>
+    }
+
+    public String extractIngressPathFromDescriptor(PluginDescriptor descriptor) {
+<span class="fc" id="L118">        return composeIngressPathFromDockerImage(descriptor.getDockerImage());</span>
+    }
+
+    public Map&lt;String, String&gt; extractLabelsFromDescriptor(PluginDescriptor descriptor) {
+<span class="fc" id="L122">        DockerImage dockerImage = descriptor.getDockerImage();</span>
+<span class="fc" id="L123">        return getLabelsFromImage(dockerImage);</span>
+    }
+
+    private String composeNameFromDockerImage(DockerImage image) {
+<span class="fc" id="L127">        return String.join(&quot;.&quot;,</span>
+<span class="fc" id="L128">                makeKubernetesCompatible(image.getOrganization()),</span>
+<span class="fc" id="L129">                makeKubernetesCompatible(image.getName()),</span>
+<span class="fc" id="L130">                makeKubernetesCompatible(image.getVersion()));</span>
+    }
+
+    private String composeIngressPathFromDockerImage(DockerImage image) {
+<span class="fc" id="L134">        return &quot;/&quot; + String.join(&quot;/&quot;,</span>
+<span class="fc" id="L135">                makeKubernetesCompatible(image.getOrganization()),</span>
+<span class="fc" id="L136">                makeKubernetesCompatible(image.getName()),</span>
+<span class="fc" id="L137">                makeKubernetesCompatible(image.getVersion()));</span>
+    }
+
+    public Map&lt;String, String&gt; getLabelsFromImage(DockerImage dockerImage) {
+<span class="fc" id="L141">        Map&lt;String, String&gt; labels = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L142">        labels.put(&quot;organization&quot;, dockerImage.getOrganization());</span>
+<span class="fc" id="L143">        labels.put(&quot;name&quot;, dockerImage.getName());</span>
+<span class="fc" id="L144">        labels.put(&quot;version&quot;, dockerImage.getVersion());</span>
+<span class="fc" id="L145">        return labels;</span>
+    }
+
+    private String makeKubernetesCompatible(String value) {
+<span class="fc" id="L149">        value = value.toLowerCase();</span>
+<span class="fc" id="L150">        value = value.replace(&quot;_&quot;, &quot;.&quot;);</span>
+<span class="fc" id="L151">        return value;</span>
+    }
+
+    public EntandoAppPluginLink linkPlugin(EntandoPlugin plugin) {
+<span class="fc" id="L155">        EntandoPlugin newPlugin = new EntandoPluginBuilder()</span>
+<span class="fc" id="L156">                .withMetadata(plugin.getMetadata())</span>
+<span class="fc" id="L157">                .withSpec(plugin.getSpec())</span>
+<span class="fc" id="L158">                .build();</span>
+
+<span class="fc" id="L160">        newPlugin.getMetadata().setNamespace(null);</span>
+
+<span class="fc" id="L162">        return k8sServiceClient.linkAppWithPlugin(entandoAppName, entandoAppNamespace, newPlugin);</span>
+    }
+
+    public void linkPluginAndWaitForSuccess(EntandoPlugin plugin) {
+<span class="fc" id="L166">        EntandoAppPluginLink createdLink = this.linkPlugin(plugin);</span>
+        try {
+<span class="fc" id="L168">            this.waitingConditionFactory.until(() -&gt; this.hasLinkingProcessCompletedSuccessfully(createdLink, plugin));</span>
+<span class="nc" id="L169">        } catch (ConditionTimeoutException e) {</span>
+<span class="nc" id="L170">            throw new PluginNotReadyException(plugin.getMetadata().getName());</span>
+<span class="fc" id="L171">        }</span>
+
+<span class="fc" id="L173">    }</span>
+
+    public boolean hasLinkingProcessCompletedSuccessfully(EntandoAppPluginLink link, EntandoPlugin plugin) {
+<span class="fc" id="L176">        boolean result = false;</span>
+<span class="fc" id="L177">        Optional&lt;EntandoAppPluginLink&gt; linkByName = k8sServiceClient.getLinkByName(link.getMetadata().getName());</span>
+<span class="fc bfc" id="L178" title="All 2 branches covered.">        if (linkByName.isPresent()) {</span>
+<span class="fc bfc" id="L179" title="All 2 branches covered.">            if (linkByName.get().getStatus().getEntandoDeploymentPhase().equals(FAILED)) {</span>
+<span class="fc" id="L180">                String msg = String.format(&quot;Linking procedure between app %s and plugin %s failed&quot;, entandoAppName,</span>
+<span class="fc" id="L181">                        plugin.getMetadata().getName());</span>
+<span class="fc" id="L182">                throw new EntandoAppPluginLinkingProcessException(msg);</span>
+            }
+<span class="pc bpc" id="L184" title="1 of 2 branches missed.">            result = linkByName.get().getStatus().getEntandoDeploymentPhase().equals(SUCCESSFUL)</span>
+<span class="pc bpc" id="L185" title="1 of 2 branches missed.">                    &amp;&amp; isPluginReady(plugin);</span>
+        }
+<span class="fc" id="L187">        return result;</span>
+    }
+
+    public List&lt;EntandoDeBundle&gt; getBundlesInDefaultNamespace() {
+<span class="nc" id="L191">        return k8sServiceClient.getBundlesInObservedNamespaces();</span>
+    }
+
+    public Optional&lt;EntandoDeBundle&gt; getBundleByName(String name) {
+<span class="fc" id="L195">        return k8sServiceClient.getBundleWithName(name);</span>
+    }
+
+    public Optional&lt;EntandoDeBundle&gt; getBundleByNameAndDigitalExchange(String name, String deId) {
+<span class="nc" id="L199">        return k8sServiceClient.getBundleWithNameAndNamespace(name, deId);</span>
+    }
+
+    private Optional&lt;String&gt; getCurrentKubernetesNamespace() {
+<span class="fc" id="L203">        Path namespacePath = Paths.get(KUBERNETES_NAMESPACE_PATH);</span>
+<span class="fc" id="L204">        String namespace = null;</span>
+<span class="pc bpc" id="L205" title="1 of 2 branches missed.">        if (namespacePath.toFile().exists()) {</span>
+            try {
+<span class="fc" id="L207">                namespace = new String(Files.readAllBytes(namespacePath));</span>
+<span class="nc" id="L208">            } catch (IOException e) {</span>
+<span class="nc" id="L209">                log.error(String.format(&quot;An error occurred while reading the namespace from file %s&quot;,</span>
+<span class="nc" id="L210">                        namespacePath.toString()), e);</span>
+<span class="fc" id="L211">            }</span>
+        }
+<span class="fc" id="L213">        return Optional.ofNullable(namespace);</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
