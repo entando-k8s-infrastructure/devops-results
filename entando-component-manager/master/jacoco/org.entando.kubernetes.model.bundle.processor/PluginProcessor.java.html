@@ -12,13 +12,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.entando.kubernetes.exception.EntandoComponentManagerException;
 import org.entando.kubernetes.model.bundle.descriptor.BundleDescriptor;
 import org.entando.kubernetes.model.bundle.descriptor.ComponentSpecDescriptor;
+import org.entando.kubernetes.model.bundle.descriptor.PluginDescriptor;
 import org.entando.kubernetes.model.bundle.installable.Installable;
 import org.entando.kubernetes.model.bundle.installable.PluginInstallable;
 import org.entando.kubernetes.model.bundle.reader.BundleReader;
 import org.entando.kubernetes.model.digitalexchange.ComponentType;
 import org.entando.kubernetes.model.job.EntandoBundleComponentJobEntity;
-import org.entando.kubernetes.model.plugin.EntandoPlugin;
-import org.entando.kubernetes.model.plugin.EntandoPluginBuilder;
 import org.entando.kubernetes.service.KubernetesService;
 import org.springframework.stereotype.Service;
 
@@ -29,54 +28,49 @@ import org.springframework.stereotype.Service;
  *
  * @author Sergio Marcelino
  */
-<span class="fc" id="L32">@Slf4j</span>
+<span class="fc" id="L31">@Slf4j</span>
 @Service
 @RequiredArgsConstructor
-public class PluginProcessor implements ComponentProcessor&lt;EntandoPlugin&gt; {
+public class PluginProcessor implements ComponentProcessor&lt;PluginDescriptor&gt; {
 
     private final KubernetesService kubernetesService;
 
     @Override
     public ComponentType getSupportedComponentType() {
-<span class="fc" id="L41">        return ComponentType.PLUGIN;</span>
+<span class="fc" id="L40">        return ComponentType.PLUGIN;</span>
     }
 
     @Override
-    public List&lt;Installable&lt;EntandoPlugin&gt;&gt; process(BundleReader npr) {
+    public List&lt;Installable&lt;PluginDescriptor&gt;&gt; process(BundleReader npr) {
         try {
-<span class="fc" id="L47">            BundleDescriptor descriptor = npr.readBundleDescriptor();</span>
-<span class="fc" id="L48">            Optional&lt;List&lt;String&gt;&gt; optionalPlugins = ofNullable(descriptor.getComponents())</span>
-<span class="fc" id="L49">                    .map(ComponentSpecDescriptor::getPlugins);</span>
+<span class="fc" id="L46">            BundleDescriptor descriptor = npr.readBundleDescriptor();</span>
+<span class="fc" id="L47">            Optional&lt;List&lt;String&gt;&gt; optionalPlugins = ofNullable(descriptor.getComponents())</span>
+<span class="fc" id="L48">                    .map(ComponentSpecDescriptor::getPlugins);</span>
 
-<span class="fc" id="L51">            List&lt;Installable&lt;EntandoPlugin&gt;&gt; installableList = new ArrayList&lt;&gt;();</span>
-<span class="pc bpc" id="L52" title="1 of 2 branches missed.">            if (optionalPlugins.isPresent()) {</span>
-<span class="fc bfc" id="L53" title="All 2 branches covered.">                for (String filename : optionalPlugins.get()) {</span>
-<span class="fc" id="L54">                    EntandoPlugin plugin = npr</span>
-<span class="fc" id="L55">                            .readDescriptorFile(filename, org.entando.kubernetes.model.plugin.EntandoPlugin.class);</span>
-<span class="fc" id="L56">                    installableList.add(new PluginInstallable(kubernetesService, plugin));</span>
-<span class="fc" id="L57">                }</span>
+<span class="fc" id="L50">            List&lt;Installable&lt;PluginDescriptor&gt;&gt; installableList = new ArrayList&lt;&gt;();</span>
+<span class="pc bpc" id="L51" title="1 of 2 branches missed.">            if (optionalPlugins.isPresent()) {</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">                for (String filename : optionalPlugins.get()) {</span>
+<span class="fc" id="L53">                    PluginDescriptor plugin = npr.readDescriptorFile(filename, PluginDescriptor.class);</span>
+<span class="fc" id="L54">                    installableList.add(new PluginInstallable(kubernetesService, plugin));</span>
+<span class="fc" id="L55">                }</span>
             }
-<span class="fc" id="L59">            return installableList;</span>
-<span class="nc" id="L60">        } catch (IOException e) {</span>
-<span class="nc" id="L61">            throw new EntandoComponentManagerException(&quot;Error reading bundle&quot;, e);</span>
+<span class="fc" id="L57">            return installableList;</span>
+<span class="nc" id="L58">        } catch (IOException e) {</span>
+<span class="nc" id="L59">            throw new EntandoComponentManagerException(&quot;Error reading bundle&quot;, e);</span>
         }
     }
 
     @Override
-    public List&lt;Installable&lt;EntandoPlugin&gt;&gt; process(List&lt;EntandoBundleComponentJobEntity&gt; components) {
-<span class="fc" id="L67">        return components.stream()</span>
-<span class="pc bpc" id="L68" title="1 of 2 branches missed.">                .filter(c -&gt; c.getComponentType() == ComponentType.PLUGIN)</span>
-<span class="fc" id="L69">                .map(c -&gt; new PluginInstallable(kubernetesService, this.buildDescriptorFromComponentJob(c)))</span>
-<span class="fc" id="L70">                .collect(Collectors.toList());</span>
+    public List&lt;Installable&lt;PluginDescriptor&gt;&gt; process(List&lt;EntandoBundleComponentJobEntity&gt; components) {
+<span class="fc" id="L65">        return components.stream()</span>
+<span class="pc bpc" id="L66" title="1 of 2 branches missed.">                .filter(c -&gt; c.getComponentType() == ComponentType.PLUGIN)</span>
+<span class="fc" id="L67">                .map(c -&gt; new PluginInstallable(kubernetesService, buildDescriptorFromComponentJob(c)))</span>
+<span class="fc" id="L68">                .collect(Collectors.toList());</span>
     }
 
     @Override
-    public EntandoPlugin buildDescriptorFromComponentJob(EntandoBundleComponentJobEntity component) {
-<span class="fc" id="L75">        return new EntandoPluginBuilder()</span>
-<span class="fc" id="L76">                .withNewMetadata()</span>
-<span class="fc" id="L77">                .withName(component.getComponentId())</span>
-<span class="fc" id="L78">                .endMetadata()</span>
-<span class="fc" id="L79">                .build();</span>
+    public PluginDescriptor buildDescriptorFromComponentJob(EntandoBundleComponentJobEntity component) {
+<span class="fc" id="L73">        return PluginDescriptor.builder().image(component.getComponentId()).build();</span>
     }
 
 }
