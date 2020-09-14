@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SeoPageService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Plugin: SEO</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.plugins.jpseo.aps.system.services.page</a> &gt; <span class="el_source">SeoPageService.java</span></div><h1>SeoPageService.java</h1><pre class="source lang-java linenums">package org.entando.entando.plugins.jpseo.aps.system.services.page;
+
+import com.agiletec.aps.system.exception.ApsSystemException;
+import com.agiletec.aps.system.services.lang.Lang;
+import com.agiletec.aps.system.services.lang.LangManager;
+import com.agiletec.aps.system.services.page.IPage;
+import com.agiletec.aps.system.services.page.PageManager;
+import com.agiletec.aps.util.ApsProperties;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.entando.entando.aps.system.exception.ResourceNotFoundException;
+import org.entando.entando.aps.system.exception.RestServerError;
+import org.entando.entando.aps.system.services.page.PageService;
+import org.entando.entando.aps.system.services.page.model.PageDto;
+import org.entando.entando.plugins.jpseo.web.page.model.SeoData;
+import org.entando.entando.plugins.jpseo.web.page.model.SeoDataByLang;
+import org.entando.entando.plugins.jpseo.web.page.model.SeoMetaTag;
+import org.entando.entando.plugins.jpseo.web.page.model.SeoPageRequest;
+import org.entando.entando.web.common.exceptions.ValidationGenericException;
+import org.entando.entando.web.page.model.PagePositionRequest;
+import org.entando.entando.web.page.model.PageRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.DataBinder;
+
+@Service(&quot;SeoPageService&quot;)
+<span class="nc" id="L36">public class SeoPageService extends PageService {</span>
+
+<span class="fc" id="L38">    private static final Logger logger = LoggerFactory.getLogger(SeoPageService.class);</span>
+
+    @Autowired
+    private PageManager pageManager;
+
+    @Autowired
+    private LangManager langManager;
+
+    @Override
+    public SeoPageDto getPage(String pageCode, String status) {
+<span class="nc" id="L48">        IPage page = super.loadPage(pageCode, status);</span>
+<span class="nc bnc" id="L49" title="All 2 branches missed.">        if (null == page) {</span>
+<span class="nc" id="L50">            logger.warn(&quot;no page found with code {} and status {}&quot;, pageCode, status);</span>
+<span class="nc" id="L51">            DataBinder binder = new DataBinder(pageCode);</span>
+<span class="nc" id="L52">            BindingResult bindingResult = binder.getBindingResult();</span>
+<span class="nc bnc" id="L53" title="All 2 branches missed.">            String errorCode = status.equals(STATUS_DRAFT) ? ERRCODE_PAGE_NOT_FOUND : ERRCODE_PAGE_ONLY_DRAFT;</span>
+<span class="nc" id="L54">            bindingResult.reject(errorCode, new String[]{pageCode, status}, &quot;page.NotFound&quot;);</span>
+<span class="nc" id="L55">            throw new ResourceNotFoundException(bindingResult);</span>
+        }
+
+<span class="nc" id="L58">        return mapPageToSeoPageDto(pageCode, page);</span>
+    }
+
+
+    private SeoPageDto mapPageToSeoPageDto(String pageCode, IPage page) {
+
+<span class="nc" id="L64">        String token = this.getPageTokenManager().encrypt(pageCode);</span>
+<span class="nc" id="L65">        PageDto pageDto = this.getDtoBuilder().convert(page);</span>
+<span class="nc" id="L66">        pageDto.setToken(token);</span>
+<span class="nc" id="L67">        pageDto.setReferences(super.getReferencesInfo(page));</span>
+
+<span class="nc" id="L69">        pageDto.setDisplayedInMenu(page.isShowable());</span>
+
+        SeoPageMetadata seoMetadata;
+<span class="nc bnc" id="L72" title="All 2 branches missed.">        if (page.getMetadata() instanceof SeoPageMetadata) {</span>
+<span class="nc" id="L73">            seoMetadata = (SeoPageMetadata) page.getMetadata();</span>
+        } else {
+<span class="nc" id="L75">            seoMetadata = new SeoPageMetadata();</span>
+        }
+<span class="nc" id="L77">        SeoPageDto seoPageDto = mapPageDtoToSeoPageDto(pageDto, seoMetadata);</span>
+<span class="nc" id="L78">        return seoPageDto;</span>
+    }
+
+    private SeoPageDto mapPageDtoToSeoPageDto(PageDto pageDto, SeoPageMetadata seoMetadata) {
+<span class="nc" id="L82">        SeoPageDto seoPageDto = new SeoPageDto();</span>
+<span class="nc" id="L83">        seoPageDto.setCharset(pageDto.getCharset());</span>
+<span class="nc" id="L84">        seoPageDto.setCode(pageDto.getCode());</span>
+<span class="nc" id="L85">        seoPageDto.setSeo(pageDto.isSeo());</span>
+<span class="nc" id="L86">        seoPageDto.setChildren(pageDto.getChildren());</span>
+<span class="nc" id="L87">        seoPageDto.setContentType(pageDto.getContentType());</span>
+<span class="nc" id="L88">        seoPageDto.setDisplayedInMenu(pageDto.isDisplayedInMenu());</span>
+<span class="nc" id="L89">        seoPageDto.setFullPath(pageDto.getFullPath());</span>
+<span class="nc" id="L90">        seoPageDto.setFullTitles(pageDto.getFullTitles());</span>
+<span class="nc" id="L91">        seoPageDto.setJoinGroups(pageDto.getJoinGroups());</span>
+<span class="nc" id="L92">        seoPageDto.setToken(pageDto.getToken());</span>
+<span class="nc" id="L93">        seoPageDto.setLastModified(pageDto.getLastModified());</span>
+<span class="nc" id="L94">        seoPageDto.setNumWidget(pageDto.getNumWidget());</span>
+<span class="nc" id="L95">        seoPageDto.setParentCode(pageDto.getParentCode());</span>
+<span class="nc" id="L96">        seoPageDto.setStatus(pageDto.getStatus());</span>
+<span class="nc" id="L97">        seoPageDto.setTitles(pageDto.getTitles());</span>
+<span class="nc" id="L98">        seoPageDto.setPageModel(pageDto.getPageModel());</span>
+<span class="nc" id="L99">        seoPageDto.setOwnerGroup(pageDto.getOwnerGroup());</span>
+<span class="nc" id="L100">        seoPageDto.setOnlineInstance(pageDto.isOnlineInstance());</span>
+<span class="nc" id="L101">        SeoData seoData = new SeoData();</span>
+<span class="nc" id="L102">        seoData.setFriendlyCode(seoMetadata.getFriendlyCode());</span>
+<span class="nc" id="L103">        seoData.setUseExtraDescriptions(seoMetadata.isUseExtraDescriptions());</span>
+<span class="nc" id="L104">        seoData.setUseExtraTitles(seoMetadata.isUseExtraTitles());</span>
+
+<span class="nc" id="L106">        Map&lt;String, SeoDataByLang&gt; seoDataByLangMap = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L107">        ApsProperties descriptions = seoMetadata.getDescriptions();</span>
+<span class="nc" id="L108">        ApsProperties keywords = seoMetadata.getKeywords();</span>
+
+<span class="nc" id="L110">        langManager.getLangs()</span>
+<span class="nc" id="L111">                .forEach(e -&gt; {</span>
+<span class="nc" id="L112">                    String lang = e.getCode();</span>
+<span class="nc" id="L113">                    boolean inheritDescriptionFromDefaultLang = false;</span>
+<span class="nc" id="L114">                    boolean inheritKeywordsFromDefaultLang = false;</span>
+<span class="nc" id="L115">                    String seoMetadataDescription = &quot;&quot;;</span>
+<span class="nc" id="L116">                    String seoMetadataKeyword = &quot;&quot;;</span>
+<span class="nc bnc" id="L117" title="All 2 branches missed.">                    if (null != descriptions) {</span>
+<span class="nc" id="L118">                        PageMetatag descriptionMetaTag = (PageMetatag) descriptions.get(lang);</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">                        if (null != descriptionMetaTag) {</span>
+<span class="nc" id="L120">                            seoMetadataDescription = descriptionMetaTag.getValue();</span>
+<span class="nc" id="L121">                            inheritDescriptionFromDefaultLang = descriptionMetaTag.isUseDefaultLangValue();</span>
+                        }
+                    }
+<span class="nc bnc" id="L124" title="All 2 branches missed.">                    if (null != keywords) {</span>
+<span class="nc" id="L125">                        PageMetatag keywordsMetaTag = (PageMetatag) keywords.get(lang);</span>
+<span class="nc bnc" id="L126" title="All 2 branches missed.">                        if (null != keywordsMetaTag) {</span>
+<span class="nc" id="L127">                            seoMetadataKeyword = keywordsMetaTag.getValue();</span>
+<span class="nc" id="L128">                            inheritKeywordsFromDefaultLang = keywordsMetaTag.isUseDefaultLangValue();</span>
+                        }
+                    }
+
+<span class="nc" id="L132">                    SeoDataByLang seoDataByLang = new SeoDataByLang(</span>
+                            seoMetadataDescription,
+                            seoMetadataKeyword,
+<span class="nc" id="L135">                            pageMetaTagList(lang, seoMetadata.getComplexParameters()),</span>
+                            inheritDescriptionFromDefaultLang,
+                            inheritKeywordsFromDefaultLang);
+<span class="nc" id="L138">                    seoDataByLangMap.put(lang, seoDataByLang);</span>
+<span class="nc" id="L139">                });</span>
+<span class="nc" id="L140">        seoData.setSeoDataByLang(seoDataByLangMap);</span>
+<span class="nc" id="L141">        seoPageDto.setSeoData(seoData);</span>
+<span class="nc" id="L142">        return seoPageDto;</span>
+    }
+
+    private List&lt;SeoMetaTag&gt; pageMetaTagList(String lang, Map&lt;String, Map&lt;String, PageMetatag&gt;&gt; complexParameters) {
+<span class="nc" id="L146">        List&lt;SeoMetaTag&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc bnc" id="L147" title="All 2 branches missed.">        if (complexParameters != null) {</span>
+<span class="nc" id="L148">            complexParameters.forEach((cpLang, v) -&gt; {</span>
+<span class="nc bnc" id="L149" title="All 2 branches missed.">                if (cpLang.equals(lang)) {</span>
+<span class="nc" id="L150">                    v.entrySet().forEach(metatag -&gt; {</span>
+<span class="nc" id="L151">                        result.add(new SeoMetaTag(metatag.getValue().getKey(),</span>
+<span class="nc" id="L152">                                metatag.getValue().getKeyAttribute(),</span>
+<span class="nc" id="L153">                                metatag.getValue().getValue(),</span>
+<span class="nc" id="L154">                                metatag.getValue().isUseDefaultLangValue())</span>
+                        );
+<span class="nc" id="L156">                    });</span>
+                }
+<span class="nc" id="L158">            });</span>
+        }
+<span class="nc" id="L160">        return result;</span>
+    }
+
+    @Override
+    public SeoPageDto addPage(PageRequest pageRequest) {
+<span class="nc" id="L165">        super.validateRequest(pageRequest);</span>
+<span class="nc" id="L166">        final SeoPageRequest seoPageRequest = (SeoPageRequest) pageRequest;</span>
+<span class="nc" id="L167">        SeoData seoData = seoPageRequest.getSeoData();</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">        if (seoData == null) seoData = new SeoData();</span>
+<span class="nc" id="L169">        final SeoPageMetadata seoPageMetadata = mapSeoDataToSeoPageMetadata(seoData, pageRequest);</span>
+<span class="nc" id="L170">        IPage page = super.createPage(pageRequest);</span>
+<span class="nc" id="L171">        page.setMetadata(seoPageMetadata);</span>
+        try {
+<span class="nc" id="L173">            pageManager.addPage(page);</span>
+<span class="nc" id="L174">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L175">            logger.error(&quot;error addding seo page: {}&quot;, e);</span>
+<span class="nc" id="L176">        }</span>
+<span class="nc" id="L177">        IPage addedPage = this.getPageManager().getDraftPage(page.getCode());</span>
+<span class="nc" id="L178">        return mapPageToSeoPageDto(addedPage.getCode(), page);</span>
+    }
+
+    @Override
+    public SeoPageDto updatePage(String pageCode, PageRequest pageRequest) {
+<span class="nc" id="L183">        IPage oldPage = this.getPageManager().getDraftPage(pageCode);</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">        if (null == oldPage) {</span>
+<span class="nc" id="L185">            throw new ResourceNotFoundException(null, &quot;page&quot;, pageCode);</span>
+        } else {
+<span class="nc" id="L187">            this.validateRequest(pageRequest);</span>
+<span class="nc bnc" id="L188" title="All 2 branches missed.">            if (!oldPage.getGroup().equals(pageRequest.getOwnerGroup())) {</span>
+<span class="nc" id="L189">                BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(oldPage, &quot;page&quot;);</span>
+<span class="nc" id="L190">                bindingResult.reject(&quot;2&quot;, new String[]{oldPage.getGroup(), pageRequest.getOwnerGroup()},</span>
+                        &quot;page.update.group.invalid&quot;);
+<span class="nc" id="L192">                throw new ValidationGenericException(bindingResult);</span>
+            } else {
+                try {
+<span class="nc bnc" id="L195" title="All 2 branches missed.">                    if (!oldPage.getParentCode().equals(pageRequest.getParentCode())) {</span>
+<span class="nc" id="L196">                        PagePositionRequest pagePositionRequest = new PagePositionRequest();</span>
+<span class="nc" id="L197">                        pagePositionRequest.setParentCode(pageRequest.getParentCode());</span>
+<span class="nc" id="L198">                        pagePositionRequest.setCode(pageCode);</span>
+<span class="nc" id="L199">                        int position = this.getPages(pageCode).size() + 1;</span>
+<span class="nc" id="L200">                        pagePositionRequest.setPosition(position);</span>
+<span class="nc" id="L201">                        this.movePage(pageCode, pagePositionRequest);</span>
+<span class="nc" id="L202">                        oldPage = this.getPageManager().getDraftPage(pageCode);</span>
+                    }
+<span class="nc" id="L204">                    final SeoPageRequest seoPageRequest = (SeoPageRequest) pageRequest;</span>
+<span class="nc" id="L205">                    SeoData seoData = seoPageRequest.getSeoData();</span>
+<span class="nc bnc" id="L206" title="All 2 branches missed.">                    if (seoData == null) seoData = new SeoData();</span>
+<span class="nc" id="L207">                    final SeoPageMetadata seoPageMetadata = mapSeoDataToSeoPageMetadata(seoData, pageRequest);</span>
+<span class="nc" id="L208">                    IPage newPage = super.updatePage(oldPage, pageRequest);</span>
+<span class="nc" id="L209">                    newPage.setMetadata(seoPageMetadata);</span>
+<span class="nc" id="L210">                    pageManager.updatePage(newPage);</span>
+<span class="nc" id="L211">                    IPage updatedPage = this.getPageManager().getDraftPage(pageCode);</span>
+<span class="nc" id="L212">                    updatedPage.setPosition(oldPage.getPosition());</span>
+<span class="nc" id="L213">                    return mapPageToSeoPageDto(pageCode, updatedPage);</span>
+<span class="nc" id="L214">                } catch (ApsSystemException e) {</span>
+<span class="nc" id="L215">                    this.logger.error(&quot;Error updating page {}&quot;, pageCode, e);</span>
+<span class="nc" id="L216">                    throw new RestServerError(&quot;error in update page&quot;, e);</span>
+                }
+            }
+        }
+    }
+
+    private SeoPageMetadata mapSeoDataToSeoPageMetadata(SeoData seoData,
+            PageRequest pageRequest) {
+<span class="nc" id="L224">        SeoPageMetadata seoPageMetadata = new SeoPageMetadata();</span>
+<span class="nc" id="L225">        seoPageMetadata.setModel(getPageModelManager().getPageModel(pageRequest.getPageModel()));</span>
+<span class="nc" id="L226">        seoPageMetadata.setGroup(pageRequest.getOwnerGroup());</span>
+<span class="nc" id="L227">        final Map&lt;String, String&gt; titles = pageRequest.getTitles();</span>
+<span class="nc bnc" id="L228" title="All 2 branches missed.">        if (null != seoData.getFriendlyCode()) {</span>
+<span class="nc" id="L229">            seoPageMetadata.setFriendlyCode(seoData.getFriendlyCode());</span>
+        } else {
+<span class="nc" id="L231">            seoPageMetadata.setFriendlyCode(&quot;&quot;);</span>
+        }
+<span class="nc bnc" id="L233" title="All 2 branches missed.">        if (null != seoData.getUseExtraDescriptions()) {</span>
+<span class="nc" id="L234">            seoPageMetadata.setUseExtraDescriptions(seoData.getUseExtraDescriptions());</span>
+        }
+<span class="nc bnc" id="L236" title="All 2 branches missed.">        if (null != seoData.getUseExtraTitles()) {</span>
+<span class="nc" id="L237">            seoPageMetadata.setUseExtraTitles(seoData.getUseExtraTitles());</span>
+        }
+<span class="nc" id="L239">        seoPageMetadata.setCharset(pageRequest.getCharset());</span>
+<span class="nc" id="L240">        seoPageMetadata.setMimeType(pageRequest.getContentType());</span>
+<span class="nc" id="L241">        seoPageMetadata.setShowable(pageRequest.isDisplayedInMenu());</span>
+<span class="nc" id="L242">        Set&lt;String&gt; extraGroups = pageRequest.getJoinGroups().stream().collect(Collectors.toSet());</span>
+
+<span class="nc" id="L244">        seoPageMetadata.setExtraGroups(extraGroups);</span>
+<span class="nc" id="L245">        ApsProperties keywordsAps = new ApsProperties();</span>
+<span class="nc" id="L246">        ApsProperties descriptionsAps = new ApsProperties();</span>
+<span class="nc" id="L247">        ApsProperties titlesAps = new ApsProperties();</span>
+
+<span class="nc" id="L249">        Map&lt;String, Map&lt;String, PageMetatag&gt;&gt; langMetaTags = new HashMap();</span>
+<span class="nc" id="L250">        String defaultLang = langManager.getDefaultLang().getCode();</span>
+<span class="nc" id="L251">        List&lt;Lang&gt; systemLangs = langManager.getLangs();</span>
+<span class="nc" id="L252">        List&lt;String&gt; systemLangsString = systemLangs.stream().map(f -&gt; f.getCode()).collect(Collectors.toList());</span>
+
+<span class="nc bnc" id="L254" title="All 2 branches missed.">        if (null != seoData.getSeoDataByLang()) {</span>
+<span class="nc" id="L255">            seoData.getSeoDataByLang().forEach((lang, seoDataByLang) -&gt; {</span>
+<span class="nc" id="L256">                Boolean inheritKeywords = false;</span>
+<span class="nc" id="L257">                Boolean inheritDescription = false;</span>
+<span class="nc bnc" id="L258" title="All 2 branches missed.">                if (systemLangsString.contains(lang)) {</span>
+<span class="nc bnc" id="L259" title="All 2 branches missed.">                    if (!lang.equals(defaultLang)) {</span>
+<span class="nc" id="L260">                        inheritKeywords = seoDataByLang.isInheritKeywordsFromDefaultLang();</span>
+<span class="nc" id="L261">                        inheritDescription = seoDataByLang.isInheritDescriptionFromDefaultLang();</span>
+                    }
+<span class="nc bnc" id="L263" title="All 2 branches missed.">                    if (null != seoDataByLang.getKeywords()) {</span>
+<span class="nc" id="L264">                        PageMetatag keywordsPageMetaTag = new PageMetatag(lang, &quot;keywords&quot;,</span>
+<span class="nc" id="L265">                                seoDataByLang.getKeywords().trim(),</span>
+<span class="nc" id="L266">                                inheritKeywords);</span>
+<span class="nc" id="L267">                        keywordsAps.put(lang, keywordsPageMetaTag);</span>
+                    }
+<span class="nc bnc" id="L269" title="All 2 branches missed.">                    if (null != seoDataByLang.getDescription()) {</span>
+<span class="nc" id="L270">                        PageMetatag descriptionPageMetaTag = new PageMetatag(lang, &quot;description&quot;,</span>
+<span class="nc" id="L271">                                seoDataByLang.getDescription().trim(), inheritDescription);</span>
+<span class="nc" id="L272">                        descriptionsAps.put(lang, descriptionPageMetaTag);</span>
+                    }
+<span class="nc bnc" id="L274" title="All 2 branches missed.">                    if (null != seoDataByLang.getMetaTags()) {</span>
+<span class="nc" id="L275">                        langMetaTags.put(lang, mapLangMetaTags(seoDataByLang.getMetaTags()));</span>
+                    }
+                } else {
+<span class="nc" id="L278">                    logger.warn(&quot;Lang not valid :{}. SeoDataByLang not added&quot;, lang);</span>
+                }
+<span class="nc" id="L280">            });</span>
+        }
+
+<span class="nc" id="L283">        seoPageMetadata.setKeywords(keywordsAps);</span>
+<span class="nc" id="L284">        seoPageMetadata.setDescriptions(descriptionsAps);</span>
+
+<span class="nc" id="L286">        titles.forEach((key, value) -&gt;</span>
+        {
+<span class="nc bnc" id="L288" title="All 2 branches missed.">            if (systemLangsString.contains(key)) {</span>
+<span class="nc" id="L289">                titlesAps.setProperty(key, value);</span>
+            } else {
+<span class="nc" id="L291">                logger.warn(&quot;Lang not valid :{}. Title not added&quot;, key);</span>
+            }
+<span class="nc" id="L293">        });</span>
+
+<span class="nc" id="L295">        seoPageMetadata.setTitles(titlesAps);</span>
+<span class="nc" id="L296">        seoPageMetadata.setComplexParameters(langMetaTags);</span>
+<span class="nc" id="L297">        seoPageMetadata.setUpdatedAt(new Date());</span>
+<span class="nc" id="L298">        return seoPageMetadata;</span>
+    }
+
+    private Map&lt;String, PageMetatag&gt; mapLangMetaTags(List&lt;SeoMetaTag&gt; metaTags) {
+<span class="nc" id="L302">        final List&lt;PageMetatag&gt; pageMetatagList = metaTags.stream().map(metaTag -&gt; {</span>
+<span class="nc" id="L303">            PageMetatag pageMetatag = new PageMetatag(metaTag.getType(), metaTag.getKey(),</span>
+<span class="nc" id="L304">                    metaTag.getValue(), metaTag.getType(), metaTag.getUseDefaultLang());</span>
+<span class="nc" id="L305">            return pageMetatag;</span>
+<span class="nc" id="L306">        }).collect(Collectors.toList());</span>
+
+<span class="nc" id="L308">        return convertPageMetatagListToMap(pageMetatagList);</span>
+    }
+
+    public Map&lt;String, PageMetatag&gt; convertPageMetatagListToMap(List&lt;PageMetatag&gt; list) {
+<span class="nc" id="L312">        Map&lt;String, PageMetatag&gt; map = list.stream().collect(Collectors.toMap(PageMetatag::getKey, meta -&gt; meta));</span>
+<span class="nc" id="L313">        return map;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
