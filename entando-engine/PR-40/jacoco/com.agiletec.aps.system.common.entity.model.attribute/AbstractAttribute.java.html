@@ -1,0 +1,608 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AbstractAttribute.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.aps.system.common.entity.model.attribute</a> &gt; <span class="el_source">AbstractAttribute.java</span></div><h1>AbstractAttribute.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package com.agiletec.aps.system.common.entity.model.attribute;
+
+import com.agiletec.aps.util.ApsProperties;
+import com.agiletec.aps.util.ApsPropertiesDOM;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+
+import java.util.Map;
+import java.util.Optional;
+import org.jdom.Element;
+import org.jdom.output.XMLOutputter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.agiletec.aps.system.common.entity.model.AttributeFieldError;
+import com.agiletec.aps.system.common.entity.model.AttributeTracer;
+import com.agiletec.aps.system.common.entity.model.FieldError;
+import com.agiletec.aps.system.common.entity.model.IApsEntity;
+import com.agiletec.aps.system.common.entity.model.attribute.util.BaseAttributeValidationRules;
+import com.agiletec.aps.system.common.entity.model.attribute.util.IAttributeValidationRules;
+import com.agiletec.aps.system.common.entity.parse.attribute.AttributeHandlerInterface;
+import com.agiletec.aps.system.common.searchengine.IndexableAttributeInterface;
+import com.agiletec.aps.system.exception.ApsSystemException;
+import com.agiletec.aps.system.services.lang.ILangManager;
+
+/**
+ * This abstract class must be used when implementing Entity Attributes.
+ *
+ * @author W.Ambu - E.Santoboni
+ */
+<span class="fc" id="L47">public abstract class AbstractAttribute implements AttributeInterface, Serializable {</span>
+
+<span class="fc" id="L49">    private static final Logger _logger = LoggerFactory.getLogger(AbstractAttribute.class);</span>
+
+    private String _name;
+    private ApsProperties _names;
+    private String _description;
+    private String _type;
+    private String _defaultLangCode;
+    private String _renderingLangCode;
+    private boolean _searchable;
+    private String _indexingType;
+    private IApsEntity _parentEntity;
+    private AttributeHandlerInterface _handler;
+    private String[] _disablingCodes;
+    private String[] _roles;
+<span class="fc" id="L63">    private boolean _active = true;</span>
+    private IAttributeValidationRules _validationRules;
+
+    private String _attributeManagerClassName;
+
+    private transient ILangManager _langManager;
+
+    @Override
+    public boolean isMultilingual() {
+<span class="fc" id="L72">        return false;</span>
+    }
+
+    @Override
+    public boolean isTextAttribute() {
+<span class="fc" id="L77">        return false;</span>
+    }
+
+    @Override
+    public String getName() {
+<span class="fc" id="L82">        return _name;</span>
+    }
+
+    @Override
+    public ApsProperties getNames() {
+<span class="fc" id="L87">        return _names;</span>
+    }
+
+    @Override
+    public void setNames(ApsProperties _names) {
+<span class="fc" id="L92">        this._names = _names;</span>
+<span class="fc" id="L93">    }</span>
+
+    @Override
+    public String getDescription() {
+<span class="fc" id="L97">        return _description;</span>
+    }
+
+    @Override
+    public void setDescription(String description) {
+<span class="fc" id="L102">        this._description = description;</span>
+<span class="fc" id="L103">    }</span>
+
+    @Override
+    public void setName(String name) {
+<span class="fc" id="L107">        this._name = name;</span>
+<span class="fc" id="L108">    }</span>
+
+    /**
+     * The returned type corresponds to the attribute code as found in the
+     * declaration of the attribute type.
+     */
+    @Override
+    public String getType() {
+<span class="fc" id="L116">        return _type;</span>
+    }
+
+    @Override
+    public void setType(String typeName) {
+<span class="fc" id="L121">        this._type = typeName;</span>
+<span class="fc" id="L122">    }</span>
+
+    @Override
+    public void setDefaultLangCode(String langCode) {
+<span class="fc" id="L126">        this._defaultLangCode = langCode;</span>
+<span class="fc" id="L127">    }</span>
+
+    /**
+     * Return the code of the default language.
+     *
+     * @return The code of the default language.
+     */
+    public String getDefaultLangCode() {
+<span class="fc" id="L135">        return _defaultLangCode;</span>
+    }
+
+    /**
+     * Set up the language to use in the rendering process.
+     *
+     * @param langCode The code of the rendering language.
+     */
+    @Override
+    public void setRenderingLang(String langCode) {
+<span class="fc" id="L145">        _renderingLangCode = langCode;</span>
+<span class="fc" id="L146">    }</span>
+
+    /**
+     * Return the code of the language used in the rendering process.
+     *
+     * @return The code of the language used for rendering.
+     */
+    public String getRenderingLang() {
+<span class="fc" id="L154">        return _renderingLangCode;</span>
+    }
+
+    @Override
+    @Deprecated
+    public boolean isSearcheable() {
+<span class="nc" id="L160">        return this.isSearchable();</span>
+    }
+
+    @Override
+    @Deprecated
+    public void setSearcheable(boolean searchable) {
+<span class="nc" id="L166">        this.setSearchable(searchable);</span>
+<span class="nc" id="L167">    }</span>
+
+    /**
+     * Test whether the attribute is searchable (using a query on the DB) or
+     * not. The information held by a searchable attribute is replicated in an
+     * appropriate table used for SQL queries.
+     *
+     * @return True if the attribute is a searchable one.
+     */
+    @Override
+    public boolean isSearchable() {
+<span class="fc" id="L178">        return _searchable;</span>
+    }
+
+    /**
+     * Set up the searchable status of an attribute. When set to 'true' then the
+     * information held by the current attribute is replicated in an appropriate
+     * table used for SQL queries.
+     *
+     * @param searchable True if the attribute is of searchable type, false
+     * otherwise.
+     */
+    @Override
+    public void setSearchable(boolean searchable) {
+<span class="fc" id="L191">        this._searchable = searchable;</span>
+<span class="fc" id="L192">    }</span>
+
+    @Override
+    public Object getAttributePrototype() {
+<span class="fc" id="L196">        AbstractAttribute clone = null;</span>
+        try {
+<span class="fc" id="L198">            Class attributeClass = Class.forName(this.getClass().getName());</span>
+<span class="fc" id="L199">            clone = (AbstractAttribute) attributeClass.newInstance();</span>
+<span class="fc" id="L200">            clone.setName(this.getName());</span>
+<span class="fc" id="L201">            clone.setNames(this.getNames());</span>
+<span class="fc" id="L202">            clone.setDescription(this.getDescription());</span>
+<span class="fc" id="L203">            clone.setType(this.getType());</span>
+<span class="fc" id="L204">            clone.setSearchable(this.isSearchable());</span>
+<span class="fc" id="L205">            clone.setDefaultLangCode(this.getDefaultLangCode());</span>
+<span class="fc" id="L206">            clone.setIndexingType(this.getIndexingType());</span>
+<span class="fc" id="L207">            clone.setParentEntity(this.getParentEntity());</span>
+<span class="fc" id="L208">            AttributeHandlerInterface handler = (AttributeHandlerInterface) this.getHandler().getAttributeHandlerPrototype();</span>
+<span class="fc" id="L209">            clone.setHandler(handler);</span>
+<span class="pc bpc" id="L210" title="1 of 2 branches missed.">            if (this.getDisablingCodes() != null) {</span>
+<span class="nc" id="L211">                String[] disablingCodes = new String[this.getDisablingCodes().length];</span>
+<span class="nc bnc" id="L212" title="All 2 branches missed.">                for (int i = 0; i &lt; this.getDisablingCodes().length; i++) {</span>
+<span class="nc" id="L213">                    disablingCodes[i] = this.getDisablingCodes()[i];</span>
+                }
+<span class="nc" id="L215">                clone.setDisablingCodes(disablingCodes);</span>
+            }
+<span class="pc bpc" id="L217" title="1 of 2 branches missed.">            if (this.getRoles() != null) {</span>
+<span class="nc" id="L218">                String[] roles = new String[this.getRoles().length];</span>
+<span class="nc bnc" id="L219" title="All 2 branches missed.">                for (int i = 0; i &lt; this.getRoles().length; i++) {</span>
+<span class="nc" id="L220">                    roles[i] = this.getRoles()[i];</span>
+                }
+<span class="nc" id="L222">                clone.setRoles(roles);</span>
+            }
+<span class="fc" id="L224">            clone.setValidationRules(this.getValidationRules().clone());</span>
+<span class="fc" id="L225">            clone.setLangManager(this.getLangManager());</span>
+<span class="fc" id="L226">            clone.setAttributeManagerClassName(this.getAttributeManagerClassName());</span>
+<span class="nc" id="L227">        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException t) {</span>
+<span class="nc" id="L228">            String message = &quot;Error detected while creating the attribute prototype '&quot; + this.getName() + &quot;' type '&quot; + this.getType() + &quot;'&quot;;</span>
+<span class="nc" id="L229">            _logger.error(&quot;Error detected while creating the attribute prototype '{}' type '{}'&quot;, this.getName(), this.getType(), t);</span>
+<span class="nc" id="L230">            throw new RuntimeException(message, t);</span>
+<span class="fc" id="L231">        }</span>
+<span class="fc" id="L232">        return clone;</span>
+    }
+
+    @Override
+    public void setAttributeConfig(Element attributeElement) throws ApsSystemException {
+        try {
+<span class="fc" id="L238">            String name = this.extractXmlAttribute(attributeElement, &quot;name&quot;, true);</span>
+<span class="fc" id="L239">            this.setName(name);</span>
+<span class="nc" id="L240">            String namesXml = (new XMLOutputter()).outputString(attributeElement.getChild(&quot;names&quot;).getChild(&quot;properties&quot;));</span>
+<span class="nc" id="L241">            ApsProperties names = new ApsProperties();</span>
+<span class="nc" id="L242">            names.loadFromXml(namesXml);</span>
+<span class="nc" id="L243">            this.setNames(names);</span>
+<span class="nc" id="L244">            String description = this.extractXmlAttribute(attributeElement, &quot;description&quot;, false);</span>
+<span class="nc" id="L245">            this.setDescription(description);</span>
+<span class="nc" id="L246">            String searchable = this.extractXmlAttribute(attributeElement, &quot;searchable&quot;, false);</span>
+            //to guaranted compatibility with previsous version of Entando 4.0.1 *** Start Block
+<span class="nc bnc" id="L248" title="All 2 branches missed.">            if (null == searchable) {</span>
+<span class="nc" id="L249">                searchable = this.extractXmlAttribute(attributeElement, &quot;searcheable&quot;, false);</span>
+            }
+            //to guaranted compatibility with previsous version of Entando 4.0.1 *** End Block
+<span class="nc bnc" id="L252" title="All 4 branches missed.">            this.setSearchable(null != searchable &amp;&amp; searchable.equalsIgnoreCase(&quot;true&quot;));</span>
+<span class="nc" id="L253">            IAttributeValidationRules validationCondition = this.getValidationRules();</span>
+<span class="nc" id="L254">            validationCondition.setConfig(attributeElement);</span>
+            //to guaranted compatibility with previsous version of jAPS 2.0.12 *** Start Block
+<span class="nc" id="L256">            String required = this.extractXmlAttribute(attributeElement, &quot;required&quot;, false);</span>
+<span class="nc bnc" id="L257" title="All 4 branches missed.">            if (null != required &amp;&amp; required.equalsIgnoreCase(&quot;true&quot;)) {</span>
+<span class="nc" id="L258">                this.setRequired(true);</span>
+            }
+            //to guaranted compatibility with previsous version of jAPS 2.0.12 *** End Block
+<span class="nc" id="L261">            String indexingType = this.extractXmlAttribute(attributeElement, &quot;indexingtype&quot;, false);</span>
+<span class="nc bnc" id="L262" title="All 2 branches missed.">            if (null != indexingType) {</span>
+<span class="nc" id="L263">                this.setIndexingType(indexingType);</span>
+            } else {
+<span class="nc" id="L265">                this.setIndexingType(IndexableAttributeInterface.INDEXING_TYPE_NONE);</span>
+            }
+<span class="nc" id="L267">            Element disablingCodesElements = attributeElement.getChild(&quot;disablingCodes&quot;);</span>
+<span class="nc bnc" id="L268" title="All 2 branches missed.">            if (null != disablingCodesElements) {</span>
+<span class="nc" id="L269">                String[] disablingCodes = this.extractValues(disablingCodesElements, &quot;code&quot;);</span>
+<span class="nc" id="L270">                this.setDisablingCodes(disablingCodes);</span>
+<span class="nc" id="L271">            } else {</span>
+                //to guaranted compatibility with previsous version of jAPS 2.0.12 *** Start Block
+<span class="nc" id="L273">                String disablingCodesStr = this.extractXmlAttribute(attributeElement, &quot;disablingCodes&quot;, false);</span>
+<span class="nc bnc" id="L274" title="All 2 branches missed.">                if (disablingCodesStr != null) {</span>
+<span class="nc" id="L275">                    String[] disablingCodes = disablingCodesStr.split(&quot;,&quot;);</span>
+<span class="nc" id="L276">                    this.setDisablingCodes(disablingCodes);</span>
+                }
+                //to guaranted compatibility with previsous version of jAPS 2.0.12 *** End Block
+            }
+<span class="nc" id="L280">            Element rolesElements = attributeElement.getChild(&quot;roles&quot;);</span>
+<span class="nc bnc" id="L281" title="All 2 branches missed.">            if (null != rolesElements) {</span>
+<span class="nc" id="L282">                String[] roles = this.extractValues(rolesElements, &quot;role&quot;);</span>
+<span class="nc" id="L283">                this.setRoles(roles);</span>
+            }
+<span class="fc" id="L285">        } catch (Throwable t) {</span>
+<span class="fc" id="L286">            String message = &quot;Error detected while creating the attribute config '&quot;</span>
+<span class="fc" id="L287">                    + this.getName() + &quot;' type '&quot; + this.getType() + &quot;'&quot;;</span>
+<span class="fc" id="L288">            _logger.error(&quot;Error detected while creating the attribute config '{}' type '{}'&quot;, this.getName(), this.getType(), t);</span>
+<span class="fc" id="L289">            throw new RuntimeException(message, t);</span>
+<span class="nc" id="L290">        }</span>
+<span class="nc" id="L291">    }</span>
+
+    private String[] extractValues(Element elements, String subElementName) {
+<span class="nc bnc" id="L294" title="All 2 branches missed.">        if (null == elements) {</span>
+<span class="nc" id="L295">            return null;</span>
+        }
+<span class="nc" id="L297">        List&lt;String&gt; values = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L298">        List&lt;Element&gt; subElements = elements.getChildren(subElementName);</span>
+<span class="nc bnc" id="L299" title="All 4 branches missed.">        if (null == subElements || subElements.isEmpty()) {</span>
+<span class="nc" id="L300">            return null;</span>
+        }
+<span class="nc bnc" id="L302" title="All 2 branches missed.">        for (int i = 0; i &lt; subElements.size(); i++) {</span>
+<span class="nc" id="L303">            String text = subElements.get(i).getText();</span>
+<span class="nc bnc" id="L304" title="All 4 branches missed.">            if (null != text &amp;&amp; text.trim().length() &gt; 0) {</span>
+<span class="nc" id="L305">                values.add(text.trim());</span>
+            }
+        }
+<span class="nc" id="L308">        String[] array = new String[values.size()];</span>
+<span class="nc bnc" id="L309" title="All 2 branches missed.">        for (int i = 0; i &lt; values.size(); i++) {</span>
+<span class="nc" id="L310">            array[i] = values.get(i);</span>
+        }
+<span class="nc" id="L312">        return array;</span>
+    }
+
+    @Override
+    public Element getJDOMConfigElement() {
+<span class="nc" id="L317">        Element configElement = this.createRootElement(this.getTypeConfigElementName());</span>
+<span class="nc bnc" id="L318" title="All 2 branches missed.">        if (null != this.getNames()) {</span>
+<span class="nc" id="L319">            Element names = new Element(&quot;names&quot;);</span>
+<span class="nc" id="L320">            ApsPropertiesDOM propertiesDom = new ApsPropertiesDOM();</span>
+<span class="nc" id="L321">            propertiesDom.buildJDOM(this.getNames());</span>
+<span class="nc" id="L322">            names.addContent(propertiesDom.getRootElement());</span>
+<span class="nc" id="L323">            configElement.addContent(names);</span>
+        }
+<span class="nc bnc" id="L325" title="All 4 branches missed.">        if (null != this.getDescription() &amp;&amp; this.getDescription().trim().length() &gt; 0) {</span>
+<span class="nc" id="L326">            configElement.setAttribute(&quot;description&quot;, this.getDescription());</span>
+        }
+<span class="nc bnc" id="L328" title="All 2 branches missed.">        if (this.isSearchable()) {</span>
+<span class="nc" id="L329">            configElement.setAttribute(&quot;searchable&quot;, &quot;true&quot;);</span>
+        }
+<span class="nc bnc" id="L331" title="All 4 branches missed.">        if (null != this.getValidationRules() &amp;&amp; !this.getValidationRules().isEmpty()) {</span>
+<span class="nc" id="L332">            Element validationElement = this.getValidationRules().getJDOMConfigElement();</span>
+<span class="nc" id="L333">            configElement.addContent(validationElement);</span>
+        }
+<span class="nc bnc" id="L335" title="All 4 branches missed.">        if (null != this.getIndexingType() &amp;&amp; !this.getIndexingType().equals(IndexableAttributeInterface.INDEXING_TYPE_NONE)) {</span>
+<span class="nc" id="L336">            configElement.setAttribute(&quot;indexingtype&quot;, this.getIndexingType());</span>
+        }
+<span class="nc" id="L338">        this.addArrayElement(configElement, this.getDisablingCodes(), &quot;disablingCodes&quot;, &quot;code&quot;);</span>
+<span class="nc" id="L339">        this.addArrayElement(configElement, this.getRoles(), &quot;roles&quot;, &quot;role&quot;);</span>
+<span class="nc" id="L340">        return configElement;</span>
+    }
+
+    protected Element createRootElement(String elementName) {
+<span class="nc" id="L344">        Element attributeElement = new Element(elementName);</span>
+<span class="nc" id="L345">        attributeElement.setAttribute(&quot;name&quot;, this.getName());</span>
+<span class="nc" id="L346">        attributeElement.setAttribute(&quot;attributetype&quot;, this.getType());</span>
+<span class="nc" id="L347">        return attributeElement;</span>
+    }
+
+    private void addArrayElement(Element configElement, String[] values, String elementName, String subElementName) {
+<span class="nc bnc" id="L351" title="All 2 branches missed.">        if (null != values) {</span>
+<span class="nc" id="L352">            Element arrayElem = new Element(elementName);</span>
+<span class="nc bnc" id="L353" title="All 2 branches missed.">            for (int i = 0; i &lt; values.length; i++) {</span>
+<span class="nc" id="L354">                Element stringElem = new Element(subElementName);</span>
+<span class="nc" id="L355">                stringElem.setText(values[i]);</span>
+<span class="nc" id="L356">                arrayElem.addContent(stringElem);</span>
+            }
+<span class="nc" id="L358">            configElement.addContent(arrayElem);</span>
+        }
+<span class="nc" id="L360">    }</span>
+
+    protected String getTypeConfigElementName() {
+<span class="nc" id="L363">        return &quot;attribute&quot;;</span>
+    }
+
+    /**
+     * Get the attribute matching the given criteria from a XML string.
+     *
+     * @param currElement The element where to extract the value of the
+     * attribute from
+     * @param attributeName Name of the requested attribute.
+     * @param required Select a mandatory condition of the attribute to search
+     * for.
+     * @return The value of the requested attribute.
+     * @throws ApsSystemException when a attribute declared mandatory is not
+     * present in the given XML element.
+     */
+    protected String extractXmlAttribute(Element currElement, String attributeName,
+            boolean required) throws ApsSystemException {
+<span class="fc" id="L380">        String value = currElement.getAttributeValue(attributeName);</span>
+<span class="pc bpc" id="L381" title="2 of 4 branches missed.">        if (required &amp;&amp; value == null) {</span>
+<span class="nc" id="L382">            throw new ApsSystemException(&quot;Attribute '&quot; + attributeName + &quot;' not found in the tag &lt;&quot; + currElement.getName() + &quot;&gt;&quot;);</span>
+        }
+<span class="fc" id="L384">        return value;</span>
+    }
+
+    @Override
+    public String getIndexingType() {
+<span class="fc" id="L389">        return _indexingType;</span>
+    }
+
+    @Override
+    public void setIndexingType(String indexingType) {
+<span class="fc" id="L394">        this._indexingType = indexingType;</span>
+<span class="fc" id="L395">    }</span>
+
+    @Override
+    public boolean isSimple() {
+<span class="fc" id="L399">        return true;</span>
+    }
+
+    @Override
+    public boolean isRequired() {
+<span class="nc" id="L404">        return this.getValidationRules().isRequired();</span>
+    }
+
+    @Override
+    public void setRequired(boolean required) {
+<span class="fc" id="L409">        this.getValidationRules().setRequired(required);</span>
+<span class="fc" id="L410">    }</span>
+
+    @Override
+    public IApsEntity getParentEntity() {
+<span class="fc" id="L414">        return _parentEntity;</span>
+    }
+
+    @Override
+    public void setParentEntity(IApsEntity parentEntity) {
+<span class="fc" id="L419">        this._parentEntity = parentEntity;</span>
+<span class="fc" id="L420">    }</span>
+
+    @Override
+    public AttributeHandlerInterface getHandler() {
+<span class="fc" id="L424">        return _handler;</span>
+    }
+
+    @Override
+    public void setHandler(AttributeHandlerInterface handler) {
+<span class="fc" id="L429">        this._handler = handler;</span>
+<span class="fc" id="L430">    }</span>
+
+    @Override
+    public void disable(String disablingCode) {
+<span class="nc bnc" id="L434" title="All 4 branches missed.">        if (_disablingCodes != null &amp;&amp; disablingCode != null) {</span>
+<span class="nc bnc" id="L435" title="All 2 branches missed.">            for (int i = 0; i &lt; _disablingCodes.length; i++) {</span>
+<span class="nc bnc" id="L436" title="All 2 branches missed.">                if (disablingCode.equals(_disablingCodes[i])) {</span>
+<span class="nc" id="L437">                    this._active = false;</span>
+<span class="nc" id="L438">                    return;</span>
+                }
+            }
+        }
+<span class="nc" id="L442">    }</span>
+
+    @Override
+    public void activate() {
+<span class="nc" id="L446">        this._active = true;</span>
+<span class="nc" id="L447">    }</span>
+
+    @Override
+    public boolean isActive() {
+<span class="nc" id="L451">        return _active;</span>
+    }
+
+    @Override
+    public void setDisablingCodes(String[] disablingCodes) {
+<span class="nc" id="L456">        this._disablingCodes = disablingCodes;</span>
+<span class="nc" id="L457">    }</span>
+
+    @Override
+    public String[] getDisablingCodes() {
+<span class="fc" id="L461">        return this._disablingCodes;</span>
+    }
+
+    @Override
+    public String[] getRoles() {
+<span class="fc" id="L466">        return _roles;</span>
+    }
+
+    @Override
+    public void setRoles(String[] roles) {
+<span class="nc" id="L471">        this._roles = roles;</span>
+<span class="nc" id="L472">    }</span>
+
+    protected IAttributeValidationRules getValidationRuleNewIntance() {
+<span class="fc" id="L475">        return new BaseAttributeValidationRules();</span>
+    }
+
+    @Override
+    public IAttributeValidationRules getValidationRules() {
+<span class="fc bfc" id="L480" title="All 2 branches covered.">        if (null == this._validationRules) {</span>
+<span class="fc" id="L481">            this.setValidationRules(this.getValidationRuleNewIntance());</span>
+        }
+<span class="fc" id="L483">        return _validationRules;</span>
+    }
+
+    @Override
+    public void setValidationRules(IAttributeValidationRules validationRules) {
+<span class="fc" id="L488">        this._validationRules = validationRules;</span>
+<span class="fc" id="L489">    }</span>
+
+    /**
+     * Create and return the Jaxb structure of the attribute. This method return
+     * the object only if the value of the attribute is not null, and it can be
+     * overriten by custom attributes class.
+     *
+     * @param langCode The lang code
+     * @return The jaxb structure of the atttribute
+     */
+    protected AbstractJAXBAttribute createJAXBAttribute(String langCode) {
+<span class="nc bnc" id="L500" title="All 2 branches missed.">        if (null == this.getValue()) {</span>
+<span class="nc" id="L501">            return null;</span>
+        }
+<span class="nc" id="L503">        return this.createBaseJAXBAttribute();</span>
+    }
+
+    /**
+     * Create and return the base Jaxb structure of the attribute. This method
+     * can't be overriten by other attributes class.
+     *
+     * @return The base jaxb structure of the attribute.
+     */
+    protected final AbstractJAXBAttribute createBaseJAXBAttribute() {
+<span class="nc" id="L513">        AbstractJAXBAttribute jaxbAttribute = this.getJAXBAttributeInstance();</span>
+<span class="nc" id="L514">        jaxbAttribute.setDescription(this.getDescription());</span>
+<span class="nc" id="L515">        jaxbAttribute.setNames(new HashMap&lt;&gt;());</span>
+<span class="nc" id="L516">        Optional&lt;ApsProperties&gt; apsNames = Optional.ofNullable(this.getNames());</span>
+<span class="nc" id="L517">        apsNames.ifPresent(values -&gt; values.keySet().forEach((lang) -&gt; {</span>
+<span class="nc" id="L518">            jaxbAttribute.getNames().put((String) lang, (String) values.get(lang));</span>
+<span class="nc" id="L519">        }));</span>
+<span class="nc" id="L520">        jaxbAttribute.setName(this.getName());</span>
+<span class="nc" id="L521">        jaxbAttribute.setType(this.getType());</span>
+<span class="nc bnc" id="L522" title="All 4 branches missed.">        if (null != this.getRoles() &amp;&amp; this.getRoles().length &gt; 0) {</span>
+<span class="nc" id="L523">            List&lt;String&gt; roles = Arrays.asList(this.getRoles());</span>
+<span class="nc" id="L524">            jaxbAttribute.setRoles(roles);</span>
+        }
+<span class="nc" id="L526">        return jaxbAttribute;</span>
+    }
+
+    protected abstract AbstractJAXBAttribute getJAXBAttributeInstance();
+
+    @Override
+    public void valueFrom(AbstractJAXBAttribute jaxbAttribute, String langCode) {
+<span class="nc" id="L533">        this.setName(jaxbAttribute.getName());</span>
+<span class="nc" id="L534">    }</span>
+
+    @Override
+    public DefaultJAXBAttributeType getJAXBAttributeType() {
+<span class="nc" id="L538">        DefaultJAXBAttributeType jaxbAttributeType = this.getJAXBAttributeTypeInstance();</span>
+<span class="nc" id="L539">        jaxbAttributeType.setName(this.getName());</span>
+<span class="nc" id="L540">        jaxbAttributeType.setNames(new HashMap&lt;&gt;());</span>
+<span class="nc" id="L541">        Optional&lt;ApsProperties&gt; apsNames = Optional.ofNullable(this.getNames());</span>
+<span class="nc" id="L542">        apsNames.ifPresent(values -&gt; values.keySet().forEach((lang) -&gt; {</span>
+<span class="nc" id="L543">            jaxbAttributeType.getNames().put((String) lang, (String) values.get(lang));</span>
+<span class="nc" id="L544">        }));</span>
+<span class="nc" id="L545">        jaxbAttributeType.setDescription(this.getDescription());</span>
+<span class="nc" id="L546">        jaxbAttributeType.setType(this.getType());</span>
+<span class="nc bnc" id="L547" title="All 2 branches missed.">        if (this.isSearchable()) {</span>
+<span class="nc" id="L548">            jaxbAttributeType.setSearchable(true);</span>
+        }
+<span class="nc bnc" id="L550" title="All 4 branches missed.">        if (null != this.getIndexingType() &amp;&amp; this.getIndexingType().equalsIgnoreCase(IndexableAttributeInterface.INDEXING_TYPE_TEXT)) {</span>
+<span class="nc" id="L551">            jaxbAttributeType.setIndexable(true);</span>
+        }
+<span class="nc bnc" id="L553" title="All 4 branches missed.">        if (null != this.getRoles() &amp;&amp; this.getRoles().length &gt; 0) {</span>
+<span class="nc" id="L554">            List&lt;String&gt; roles = Arrays.asList(this.getRoles());</span>
+<span class="nc" id="L555">            jaxbAttributeType.setRoles(roles);</span>
+        }
+<span class="nc bnc" id="L557" title="All 4 branches missed.">        if (null != this.getValidationRules() &amp;&amp; !this.getValidationRules().isEmpty()) {</span>
+<span class="nc" id="L558">            jaxbAttributeType.setValidationRules(this.getValidationRules());</span>
+        }
+<span class="nc" id="L560">        return jaxbAttributeType;</span>
+    }
+
+    protected DefaultJAXBAttributeType getJAXBAttributeTypeInstance() {
+<span class="nc" id="L564">        return new DefaultJAXBAttributeType();</span>
+    }
+
+    @Override
+    public List&lt;AttributeFieldError&gt; validate(AttributeTracer tracer) {
+<span class="nc" id="L569">        List&lt;AttributeFieldError&gt; errors = new ArrayList&lt;&gt;();</span>
+        try {
+<span class="nc bnc" id="L571" title="All 2 branches missed.">            if (this.getStatus().equals(Status.INCOMPLETE)) {</span>
+<span class="nc" id="L572">                errors.add(new AttributeFieldError(this, FieldError.INVALID, tracer));</span>
+            } else {
+<span class="nc" id="L574">                IAttributeValidationRules validationRules = this.getValidationRules();</span>
+<span class="nc bnc" id="L575" title="All 2 branches missed.">                if (null == validationRules) {</span>
+<span class="nc" id="L576">                    return errors;</span>
+                }
+<span class="nc" id="L578">                List&lt;AttributeFieldError&gt; validationRulesErrors = validationRules.validate(this, tracer, this.getLangManager());</span>
+<span class="nc bnc" id="L579" title="All 2 branches missed.">                if (null != validationRulesErrors) {</span>
+<span class="nc" id="L580">                    errors.addAll(validationRulesErrors);</span>
+                }
+            }
+<span class="nc" id="L583">        } catch (Throwable t) {</span>
+<span class="nc" id="L584">            _logger.error(&quot;Error validating Attribute '{}'&quot;, this.getName(), t);</span>
+<span class="nc" id="L585">            throw new RuntimeException(&quot;Error validating Attribute '&quot; + this.getName() + &quot;'&quot;, t);</span>
+<span class="nc" id="L586">        }</span>
+<span class="nc" id="L587">        return errors;</span>
+    }
+
+    @Override
+    public String getAttributeManagerClassName() {
+<span class="fc" id="L592">        return _attributeManagerClassName;</span>
+    }
+
+    public void setAttributeManagerClassName(String attributeManagerClassName) {
+<span class="fc" id="L596">        this._attributeManagerClassName = attributeManagerClassName;</span>
+<span class="fc" id="L597">    }</span>
+
+    protected ILangManager getLangManager() {
+<span class="fc" id="L600">        return _langManager;</span>
+    }
+
+    public void setLangManager(ILangManager langManager) {
+<span class="fc" id="L604">        this._langManager = langManager;</span>
+<span class="fc" id="L605">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
