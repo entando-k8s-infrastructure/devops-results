@@ -111,22 +111,23 @@ import org.entando.entando.web.common.model.SimpleRestResponse;
     @RestAccessControl(permission = Permission.SUPERUSER)
     @RequestMapping(value = &quot;/report/{reportCode}&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;DumpReportDto&gt;&gt; getDumpReport(@PathVariable String reportCode) {
-<span class="fc" id="L114">        logger.debug(&quot;Required dump report -&gt; code {}&quot;, reportCode);</span>
-<span class="fc" id="L115">        DumpReportDto result = this.getDatabaseService().getDumpReportDto(reportCode);</span>
-<span class="fc" id="L116">        logger.debug(&quot;Extracted dump report -&gt; {}&quot;, result);</span>
-<span class="fc" id="L117">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+<span class="fc" id="L114">        String safeReportCode = StorageManagerUtil.mustBeValidFilename(reportCode);</span>
+<span class="fc" id="L115">        logger.debug(&quot;Required dump report -&gt; code {}&quot;, safeReportCode);</span>
+<span class="fc" id="L116">        DumpReportDto result = this.getDatabaseService().getDumpReportDto(safeReportCode);</span>
+<span class="fc" id="L117">        logger.debug(&quot;Extracted dump report -&gt; {}&quot;, result);</span>
+<span class="fc" id="L118">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.SUPERUSER)
     @RequestMapping(value = &quot;/report/{reportCode}&quot;, method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;Map&lt;String, String&gt;&gt;&gt; deleteDumpReport(@PathVariable String reportCode) {
-<span class="fc" id="L123">        String safeReportCode = StorageManagerUtil.mustBeValidFilename(reportCode);</span>
-<span class="fc" id="L124">        logger.debug(&quot;Deleting dump report -&gt; code {}&quot;, safeReportCode);</span>
-<span class="fc" id="L125">        this.getDatabaseService().deleteDumpReport((safeReportCode));</span>
-<span class="fc" id="L126">        logger.debug(&quot;Deleted dump report -&gt; {}&quot;, safeReportCode);</span>
-<span class="fc" id="L127">        Map&lt;String, String&gt; response = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L128">        response.put(&quot;code&quot;, safeReportCode);</span>
-<span class="fc" id="L129">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(response), HttpStatus.OK);</span>
+<span class="fc" id="L124">        String safeReportCode = StorageManagerUtil.mustBeValidFilename(reportCode);</span>
+<span class="fc" id="L125">        logger.debug(&quot;Deleting dump report -&gt; code {}&quot;, safeReportCode);</span>
+<span class="fc" id="L126">        this.getDatabaseService().deleteDumpReport((safeReportCode));</span>
+<span class="fc" id="L127">        logger.debug(&quot;Deleted dump report -&gt; {}&quot;, safeReportCode);</span>
+<span class="fc" id="L128">        Map&lt;String, String&gt; response = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L129">        response.put(&quot;code&quot;, safeReportCode);</span>
+<span class="fc" id="L130">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(response), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.SUPERUSER)
@@ -136,33 +137,33 @@ import org.entando.entando.web.common.model.SimpleRestResponse;
             @PathVariable String dataSource,
             @PathVariable String tableName
     ) {
-<span class="nc" id="L139">        String safeReportCode = StorageManagerUtil.mustBeValidFilename(reportCode);</span>
-<span class="nc" id="L140">        logger.debug(&quot;Required dump report -&gt; code {} - database {} - table {}&quot;, safeReportCode, dataSource, tableName);</span>
-<span class="nc" id="L141">        byte[] base64 = this.getDatabaseService().getTableDump(safeReportCode, dataSource, tableName);</span>
-<span class="nc" id="L142">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L143">        response.put(&quot;base64&quot;, base64);</span>
-<span class="nc" id="L144">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L145">        metadata.put(&quot;reportCode&quot;, safeReportCode);</span>
-<span class="nc" id="L146">        metadata.put(&quot;dataSource&quot;, dataSource);</span>
-<span class="nc" id="L147">        metadata.put(&quot;tableName&quot;, tableName);</span>
-<span class="nc" id="L148">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(response, metadata), HttpStatus.OK);</span>
+<span class="nc" id="L140">        String safeReportCode = StorageManagerUtil.mustBeValidFilename(reportCode);</span>
+<span class="nc" id="L141">        logger.debug(&quot;Required dump report -&gt; code {} - database {} - table {}&quot;, safeReportCode, dataSource, tableName);</span>
+<span class="nc" id="L142">        byte[] base64 = this.getDatabaseService().getTableDump(safeReportCode, dataSource, tableName);</span>
+<span class="nc" id="L143">        Map&lt;String, Object&gt; response = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L144">        response.put(&quot;base64&quot;, base64);</span>
+<span class="nc" id="L145">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L146">        metadata.put(&quot;reportCode&quot;, safeReportCode);</span>
+<span class="nc" id="L147">        metadata.put(&quot;dataSource&quot;, dataSource);</span>
+<span class="nc" id="L148">        metadata.put(&quot;tableName&quot;, tableName);</span>
+<span class="nc" id="L149">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(response, metadata), HttpStatus.OK);</span>
     }
 
     public DatabaseValidator getDatabaseValidator() {
-<span class="fc" id="L152">        return databaseValidator;</span>
+<span class="fc" id="L153">        return databaseValidator;</span>
     }
 
     public void setDatabaseValidator(DatabaseValidator databaseValidator) {
-<span class="fc" id="L156">        this.databaseValidator = databaseValidator;</span>
-<span class="fc" id="L157">    }</span>
+<span class="fc" id="L157">        this.databaseValidator = databaseValidator;</span>
+<span class="fc" id="L158">    }</span>
 
     public IDatabaseService getDatabaseService() {
-<span class="fc" id="L160">        return databaseService;</span>
+<span class="fc" id="L161">        return databaseService;</span>
     }
 
     public void setDatabaseService(IDatabaseService databaseService) {
-<span class="fc" id="L164">        this.databaseService = databaseService;</span>
-<span class="fc" id="L165">    }</span>
+<span class="fc" id="L165">        this.databaseService = databaseService;</span>
+<span class="fc" id="L166">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
