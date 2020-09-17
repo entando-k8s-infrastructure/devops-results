@@ -13,8 +13,6 @@
  */
 package org.entando.entando.aps.system.services.role;
 
-import com.agiletec.aps.util.ApsLogging.ApsLogFactory;
-import com.agiletec.aps.util.ApsLogging.ApsLogger;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -23,7 +21,7 @@ import javax.annotation.PostConstruct;
 
 import com.agiletec.aps.system.common.FieldSearchFilter;
 import com.agiletec.aps.system.common.model.dao.SearcherDaoPaginatedResult;
-import com.agiletec.aps.system.exception.ApsSystemException;
+import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.system.services.authorization.IAuthorizationService;
 import com.agiletec.aps.system.services.role.IRoleManager;
 import com.agiletec.aps.system.services.role.Permission;
@@ -43,6 +41,8 @@ import org.entando.entando.web.common.model.PagedMetadata;
 import org.entando.entando.web.common.model.RestListRequest;
 import org.entando.entando.web.role.model.RoleRequest;
 import org.entando.entando.web.role.validator.RoleValidator;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 import org.springframework.validation.BeanPropertyBindingResult;
 
 <span class="fc" id="L48">public class RoleService implements IRoleService {</span>
@@ -53,7 +53,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
     private static final String KEY_FILTER_PERMISSION_CODE = &quot;code&quot;;
     private static final String KEY_FILTER_PERMISSION_DESCR = &quot;descr&quot;;
 
-<span class="fc" id="L56">    private final ApsLogger logger = ApsLogFactory.getLogger(getClass());</span>
+<span class="fc" id="L56">    private final EntLogger logger = EntLogFactory.getSantiziedLogger(getClass());</span>
 
     private IRoleManager roleManager;
     private RoleDtoBuilder dtoBuilder;
@@ -194,7 +194,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
 <span class="fc" id="L194">            this.getRoleManager().updateRole(role);</span>
 <span class="fc" id="L195">            RoleDto dto = this.getDtoBuilder().toDto(role, this.getRoleManager().getPermissionsCodes());</span>
 <span class="fc" id="L196">            return dto;</span>
-<span class="nc" id="L197">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L197">        } catch (EntException e) {</span>
 <span class="nc" id="L198">            logger.error(&quot;Error updating a role&quot;, e);</span>
 <span class="nc" id="L199">            throw new RestServerError(&quot;error in update role&quot;, e);</span>
         }
@@ -211,7 +211,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
 <span class="fc" id="L211">            this.getRoleManager().addRole(role);</span>
 <span class="fc" id="L212">            RoleDto dto = this.getDtoBuilder().toDto(role, this.getRoleManager().getPermissionsCodes());</span>
 <span class="fc" id="L213">            return dto;</span>
-<span class="nc" id="L214">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L214">        } catch (EntException e) {</span>
 <span class="nc" id="L215">            logger.error(&quot;Error adding a role&quot;, e);</span>
 <span class="nc" id="L216">            throw new RestServerError(&quot;error in add role&quot;, e);</span>
         }
@@ -222,7 +222,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
         try {
 <span class="fc" id="L223">            Role role = this.getRoleManager().getRole(roleCode);</span>
 <span class="pc bpc" id="L224" title="1 of 2 branches missed.">            if (null == role) {</span>
-<span class="nc" id="L225">                logger.withBasicSan().info(&quot;role {} does not exists&quot;, roleCode);</span>
+<span class="nc" id="L225">                logger.info(&quot;role {} does not exists&quot;, roleCode);</span>
 <span class="nc" id="L226">                return;</span>
             }
 <span class="fc" id="L228">            BeanPropertyBindingResult validationResult = this.validateRoleForDelete(role);</span>
@@ -230,7 +230,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
 <span class="nc" id="L230">                throw new ValidationGenericException(validationResult);</span>
             }
 <span class="fc" id="L232">            this.getRoleManager().removeRole(role);</span>
-<span class="nc" id="L233">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L233">        } catch (EntException e) {</span>
 <span class="nc" id="L234">            logger.error(&quot;Error in delete role {}&quot;, roleCode, e);</span>
 <span class="nc" id="L235">            throw new RestServerError(&quot;error in delete role&quot;, e);</span>
 <span class="fc" id="L236">        }</span>
@@ -240,7 +240,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
     public RoleDto getRole(String roleCode) {
 <span class="fc" id="L241">        Role role = this.getRoleManager().getRole(roleCode);</span>
 <span class="fc bfc" id="L242" title="All 2 branches covered.">        if (null == role) {</span>
-<span class="fc" id="L243">            logger.withBasicSan().warn(&quot;no role found with code {}&quot;, roleCode);</span>
+<span class="fc" id="L243">            logger.warn(&quot;no role found with code {}&quot;, roleCode);</span>
 <span class="fc" id="L244">            throw new ResourceNotFoundException(RoleValidator.ERRCODE_ROLE_NOT_FOUND, &quot;role&quot;, roleCode);</span>
         }
 <span class="fc" id="L246">        RoleDto dto = this.getDtoBuilder().toDto(role, this.getRoleManager().getPermissionsCodes());</span>
@@ -258,7 +258,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
     public PagedMetadata&lt;UserDto&gt; getRoleReferences(String roleCode, RestListRequest restRequest) {
 <span class="fc" id="L259">        Role role = this.getRoleManager().getRole(roleCode);</span>
 <span class="pc bpc" id="L260" title="1 of 2 branches missed.">        if (null == role) {</span>
-<span class="nc" id="L261">            logger.withBasicSan().warn(&quot;no role found with code {}&quot;, roleCode);</span>
+<span class="nc" id="L261">            logger.warn(&quot;no role found with code {}&quot;, roleCode);</span>
 <span class="nc" id="L262">            throw new ResourceNotFoundException(RoleValidator.ERRCODE_ROLE_NOT_FOUND, &quot;role&quot;, roleCode);</span>
         }
 <span class="fc" id="L264">        List&lt;UserDto&gt; dtoList = this.getAuthorizationService().getRoleUtilizer(roleCode);</span>
@@ -350,7 +350,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
 <span class="fc" id="L350">        return permissions;</span>
     }
 
-    protected List&lt;UserDto&gt; userReferences(String code) throws ApsSystemException {
+    protected List&lt;UserDto&gt; userReferences(String code) throws EntException {
 <span class="nc" id="L354">        return this.getAuthorizationService().getRoleUtilizer(code);</span>
 
     }

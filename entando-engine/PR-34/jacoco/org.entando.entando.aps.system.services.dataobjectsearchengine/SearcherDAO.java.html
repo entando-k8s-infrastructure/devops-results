@@ -14,7 +14,7 @@
 package org.entando.entando.aps.system.services.dataobjectsearchengine;
 
 import com.agiletec.aps.system.common.tree.ITreeNode;
-import com.agiletec.aps.system.exception.ApsSystemException;
+import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.system.services.category.ICategoryManager;
 import com.agiletec.aps.system.services.group.Group;
 import org.apache.lucene.document.DateTools;
@@ -29,8 +29,8 @@ import org.apache.lucene.store.SimpleFSDirectory;
 import org.apache.lucene.util.BytesRef;
 import org.entando.entando.aps.system.services.searchengine.FacetedContentsResult;
 import org.entando.entando.aps.system.services.searchengine.SearchEngineFilter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,7 +44,7 @@ import java.util.*;
  */
 <span class="fc" id="L45">public class SearcherDAO implements ISearcherDAO {</span>
 
-<span class="fc" id="L47">    private static final Logger logger = LoggerFactory.getLogger(SearcherDAO.class);</span>
+<span class="fc" id="L47">    private static final EntLogger logger = EntLogFactory.getSantiziedLogger(SearcherDAO.class);</span>
 
     private ICategoryManager categoryManager;
 
@@ -54,10 +54,10 @@ import java.util.*;
      * Inizializzazione del searcher.
      *
      * @param dir La cartella locale contenitore dei dati persistenti.
-     * @throws ApsSystemException In caso di errore
+     * @throws EntException In caso di errore
      */
     @Override
-    public void init(File dir) throws ApsSystemException {
+    public void init(File dir) throws EntException {
 <span class="fc" id="L61">        this.indexDir = dir;</span>
 <span class="fc" id="L62">    }</span>
 
@@ -68,19 +68,19 @@ import java.util.*;
 <span class="fc" id="L68">        return searcher;</span>
     }
 
-    private void releaseResources(IndexSearcher searcher) throws ApsSystemException {
+    private void releaseResources(IndexSearcher searcher) throws EntException {
         try {
 <span class="pc bpc" id="L73" title="1 of 2 branches missed.">            if (searcher != null) {</span>
 <span class="fc" id="L74">                searcher.getIndexReader().close();</span>
             }
 <span class="nc" id="L76">        } catch (IOException e) {</span>
-<span class="nc" id="L77">            throw new ApsSystemException(&quot;Error closing searcher&quot;, e);</span>
+<span class="nc" id="L77">            throw new EntException(&quot;Error closing searcher&quot;, e);</span>
 <span class="fc" id="L78">        }</span>
 <span class="fc" id="L79">    }</span>
 
     @Override
     public FacetedContentsResult searchFacetedContents(SearchEngineFilter[] filters,
-            Collection&lt;ITreeNode&gt; categories, Collection&lt;String&gt; allowedGroups) throws ApsSystemException {
+            Collection&lt;ITreeNode&gt; categories, Collection&lt;String&gt; allowedGroups) throws EntException {
 <span class="fc" id="L84">        return searchContents(filters, categories, allowedGroups, true);</span>
     }
 
@@ -97,16 +97,16 @@ import java.util.*;
      * ricerca produrrà un'insieme di identificativi di contenuto non filtrati
      * per gruppo.
      * @return La lista di identificativi dataobject.
-     * @throws ApsSystemException
+     * @throws EntException
      */
     @Override
     public List&lt;String&gt; searchContentsId(SearchEngineFilter[] filters,
-            Collection&lt;ITreeNode&gt; categories, Collection&lt;String&gt; allowedGroups) throws ApsSystemException {
+            Collection&lt;ITreeNode&gt; categories, Collection&lt;String&gt; allowedGroups) throws EntException {
 <span class="fc" id="L105">        return this.searchContents(filters, categories, allowedGroups, false).getContentsId();</span>
     }
 
     protected FacetedContentsResult searchContents(SearchEngineFilter[] filters,
-            Collection&lt;ITreeNode&gt; categories, Collection&lt;String&gt; allowedGroups, boolean faceted) throws ApsSystemException {
+            Collection&lt;ITreeNode&gt; categories, Collection&lt;String&gt; allowedGroups, boolean faceted) throws EntException {
 <span class="fc" id="L110">        FacetedContentsResult result = new FacetedContentsResult();</span>
 <span class="fc" id="L111">        List&lt;String&gt; contentsId = new ArrayList&lt;String&gt;();</span>
 <span class="fc" id="L112">        IndexSearcher searcher = null;</span>
@@ -153,7 +153,7 @@ import java.util.*;
 <span class="nc" id="L153">            logger.error(&quot;no index was found in the Directory&quot;, inf);</span>
 <span class="nc" id="L154">        } catch (Throwable t) {</span>
 <span class="nc" id="L155">            logger.error(&quot;Error extracting documents&quot;, t);</span>
-<span class="nc" id="L156">            throw new ApsSystemException(&quot;Error extracting documents&quot;, t);</span>
+<span class="nc" id="L156">            throw new EntException(&quot;Error extracting documents&quot;, t);</span>
         } finally {
 <span class="fc" id="L158">            this.releaseResources(searcher);</span>
         }

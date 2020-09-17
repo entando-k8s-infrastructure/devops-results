@@ -18,7 +18,7 @@ import static org.entando.entando.web.user.validator.UserValidator.createSelfDel
 import static org.entando.entando.web.user.validator.UserValidator.isAdminUser;
 import static org.entando.entando.web.user.validator.UserValidator.isUserDeletingHimself;
 
-import com.agiletec.aps.system.exception.ApsSystemException;
+import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.system.services.role.Permission;
 import com.agiletec.aps.system.services.user.UserDetails;
 import com.agiletec.aps.system.services.user.UserGroupPermissions;
@@ -42,8 +42,8 @@ import org.entando.entando.web.user.model.UserAuthoritiesRequest;
 import org.entando.entando.web.user.model.UserPasswordRequest;
 import org.entando.entando.web.user.model.UserRequest;
 import org.entando.entando.web.user.validator.UserValidator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -71,7 +71,7 @@ import org.springframework.web.bind.annotation.SessionAttributes;
 @SessionAttributes(&quot;user&quot;)
 <span class="fc" id="L72">public class UserController {</span>
 
-<span class="fc" id="L74">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+<span class="fc" id="L74">    private final EntLogger logger = EntLogFactory.getSantiziedLogger(getClass());</span>
 
     @Autowired
     private IUserService userService;
@@ -117,7 +117,7 @@ import org.springframework.web.bind.annotation.SessionAttributes;
 
     @RestAccessControl(permission = Permission.MANAGE_USERS)
     @RequestMapping(method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity&lt;SimpleRestResponse&lt;UserDto&gt;&gt; addUser(@Valid @RequestBody UserRequest userRequest, BindingResult bindingResult) throws ApsSystemException {
+    public ResponseEntity&lt;SimpleRestResponse&lt;UserDto&gt;&gt; addUser(@Valid @RequestBody UserRequest userRequest, BindingResult bindingResult) throws EntException {
 <span class="fc" id="L121">        logger.debug(&quot;adding user with request {}&quot;, userRequest);</span>
         //field validations
 <span class="pc bpc" id="L123" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
@@ -166,7 +166,7 @@ import org.springframework.web.bind.annotation.SessionAttributes;
 
     @RestAccessControl(permission = Permission.MANAGE_USERS)
     @RequestMapping(value = &quot;/{target:.+}&quot;, method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity&lt;SimpleRestResponse&lt;Map&gt;&gt; deleteUser(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String target, BindingResult bindingResult) throws ApsSystemException {
+    public ResponseEntity&lt;SimpleRestResponse&lt;Map&gt;&gt; deleteUser(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String target, BindingResult bindingResult) throws EntException {
 <span class="fc" id="L170">        logger.debug(&quot;deleting {}&quot;, target);</span>
 <span class="fc bfc" id="L171" title="All 2 branches covered.">        if (isAdminUser(target)) {</span>
 <span class="fc" id="L172">            throw new ValidationGenericException(createDeleteAdminError());</span>
@@ -211,7 +211,7 @@ import org.springframework.web.bind.annotation.SessionAttributes;
 
     @RestAccessControl(permission = Permission.MANAGE_USERS)
     @RequestMapping(value = &quot;/{target:.+}/authorities&quot;, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity&lt;SimpleRestResponse&lt;List&lt;UserAuthorityDto&gt;&gt;&gt; addUserAuthorities(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String target, @Valid @RequestBody UserAuthoritiesRequest authRequest, BindingResult bindingResult) throws ApsSystemException {
+    public ResponseEntity&lt;SimpleRestResponse&lt;List&lt;UserAuthorityDto&gt;&gt;&gt; addUserAuthorities(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String target, @Valid @RequestBody UserAuthoritiesRequest authRequest, BindingResult bindingResult) throws EntException {
 <span class="fc" id="L215">        logger.debug(&quot;user {} requesting add authorities for username {} with req {}&quot;, user.getUsername(), target, authRequest);</span>
         //field validations
 <span class="pc bpc" id="L217" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
@@ -232,7 +232,7 @@ import org.springframework.web.bind.annotation.SessionAttributes;
 
     @RestAccessControl(permission = Permission.MANAGE_USERS)
     @RequestMapping(value = &quot;/{target:.+}/authorities&quot;, method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity&lt;SimpleRestResponse&gt; deleteUserAuthorities(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String target) throws ApsSystemException {
+    public ResponseEntity&lt;SimpleRestResponse&gt; deleteUserAuthorities(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String target) throws EntException {
 <span class="fc" id="L236">        logger.debug(&quot;user {} requesting delete authorities for username {}&quot;, user.getUsername(), target);</span>
 <span class="fc" id="L237">        DataBinder binder = new DataBinder(target);</span>
 <span class="fc" id="L238">        BindingResult bindingResult = binder.getBindingResult();</span>

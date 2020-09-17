@@ -16,7 +16,7 @@ package org.entando.entando.aps.system.services.user;
 import com.agiletec.aps.system.common.FieldSearchFilter;
 import com.agiletec.aps.system.common.entity.model.EntitySearchFilter;
 import com.agiletec.aps.system.common.model.dao.SearcherDaoPaginatedResult;
-import com.agiletec.aps.system.exception.ApsSystemException;
+import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.system.services.authorization.Authorization;
 import com.agiletec.aps.system.services.authorization.IAuthorizationManager;
 import com.agiletec.aps.system.services.user.*;
@@ -38,8 +38,8 @@ import org.entando.entando.web.user.model.UserAuthoritiesRequest;
 import org.entando.entando.web.user.model.UserPasswordRequest;
 import org.entando.entando.web.user.model.UserRequest;
 import org.entando.entando.web.user.validator.UserValidator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.BindingResult;
@@ -50,7 +50,7 @@ import org.springframework.validation.BindingResult;
  */
 <span class="fc" id="L51">public class UserService implements IUserService {</span>
 
-<span class="fc" id="L53">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+<span class="fc" id="L53">    private final EntLogger logger = EntLogFactory.getSantiziedLogger(getClass());</span>
 
     private static final String ERRCODE_USER_NOT_FOUND = &quot;1&quot;;
 
@@ -124,7 +124,7 @@ import org.springframework.validation.BindingResult;
 <span class="pc bpc" id="L124" title="1 of 2 branches missed.">            if (null != auths) {</span>
 <span class="fc" id="L125">                auths.forEach(auth -&gt; dtos.add(new UserAuthorityDto(auth)));</span>
             }
-<span class="nc" id="L127">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L127">        } catch (EntException e) {</span>
 <span class="nc" id="L128">            logger.error(&quot;Error extracting auths for user {}&quot;, username, e);</span>
 <span class="nc" id="L129">            throw new RestServerError(&quot;Error extracting auths for user &quot; + username, e);</span>
 <span class="fc" id="L130">        }</span>
@@ -143,7 +143,7 @@ import org.springframework.validation.BindingResult;
 <span class="pc bpc" id="L143" title="1 of 2 branches missed.">                if (!this.getAuthorizationManager().isAuthOnGroupAndRole(user, authorization.getGroup(), authorization.getRole(), true)) {</span>
 <span class="fc" id="L144">                    this.getAuthorizationManager().addUserAuthorization(username, authorization.getGroup(), authorization.getRole());</span>
                 }
-<span class="nc" id="L146">            } catch (ApsSystemException ex) {</span>
+<span class="nc" id="L146">            } catch (EntException ex) {</span>
 <span class="nc" id="L147">                logger.error(&quot;Error in add authorities for {}&quot;, username, ex);</span>
 <span class="nc" id="L148">                throw new RestServerError(&quot;Error in add authorities&quot;, ex);</span>
 <span class="fc" id="L149">            }</span>
@@ -162,7 +162,7 @@ import org.springframework.validation.BindingResult;
     public void deleteUserAuthorities(String username) {
         try {
 <span class="fc" id="L164">            this.getAuthorizationManager().deleteUserAuthorizations(username);</span>
-<span class="nc" id="L165">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L165">        } catch (EntException e) {</span>
 <span class="nc" id="L166">            logger.error(&quot;Error in delete authorities for {}&quot;, username, e);</span>
 <span class="nc" id="L167">            throw new RestServerError(&quot;Error in delete authorities&quot;, e);</span>
 <span class="fc" id="L168">        }</span>
@@ -229,7 +229,7 @@ import org.springframework.validation.BindingResult;
 <span class="pc bpc" id="L229" title="2 of 4 branches missed.">                if (userNames.size() == 0 || !userNames.contains(user.getUsername())) {</span>
 <span class="nc" id="L230">                    return false;</span>
                 }
-<span class="nc" id="L232">            } catch (ApsSystemException ex) {</span>
+<span class="nc" id="L232">            } catch (EntException ex) {</span>
 <span class="nc" id="L233">                logger.error(&quot;error in filter users by profile attribute&quot;, ex);</span>
 <span class="nc" id="L234">                throw new RestServerError(&quot;error in filter users by profile attribute&quot;, ex);</span>
 <span class="fc" id="L235">            }</span>
@@ -258,7 +258,7 @@ import org.springframework.validation.BindingResult;
             }
 <span class="fc" id="L259">            UserDetails modifiedUser = this.getUserManager().getUser(userRequest.getUsername());</span>
 <span class="fc" id="L260">            return dtoBuilder.convert(modifiedUser);</span>
-<span class="nc" id="L261">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L261">        } catch (EntException e) {</span>
 <span class="nc" id="L262">            logger.error(&quot;Error in updating user {}&quot;, userRequest.getUsername(), e);</span>
 <span class="nc" id="L263">            throw new RestServerError(&quot;Error in updating user&quot;, e);</span>
         }
@@ -277,7 +277,7 @@ import org.springframework.validation.BindingResult;
 <span class="fc" id="L277">            this.getUserManager().addUser(newUser);</span>
 <span class="fc" id="L278">            UserDetails addedUser = this.getUserManager().getUser(username);</span>
 <span class="fc" id="L279">            return dtoBuilder.convert(addedUser);</span>
-<span class="nc" id="L280">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L280">        } catch (EntException e) {</span>
 <span class="nc" id="L281">            logger.error(&quot;Error in adding user {}&quot;, userRequest.getUsername(), e);</span>
 <span class="nc" id="L282">            throw new RestServerError(&quot;Error in adding user&quot;, e);</span>
         }
@@ -287,7 +287,7 @@ import org.springframework.validation.BindingResult;
     public void removeUser(String username) {
         try {
 <span class="fc" id="L289">            this.getUserManager().removeUser(username);</span>
-<span class="nc" id="L290">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L290">        } catch (EntException e) {</span>
 <span class="nc" id="L291">            logger.error(&quot;Error in deleting user {}&quot;, username, e);</span>
 <span class="nc" id="L292">            throw new RestServerError(&quot;Error in deleting user&quot;, e);</span>
 <span class="fc" id="L293">        }</span>
@@ -299,7 +299,7 @@ import org.springframework.validation.BindingResult;
 <span class="fc" id="L299">            this.getUserManager().changePassword(passwordRequest.getUsername(), passwordRequest.getNewPassword());</span>
 <span class="fc" id="L300">            UserDetails user = this.loadUser(passwordRequest.getUsername());</span>
 <span class="fc" id="L301">            return dtoBuilder.convert(user);</span>
-<span class="nc" id="L302">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L302">        } catch (EntException e) {</span>
 <span class="nc" id="L303">            logger.error(&quot;Error in updating password for user {}&quot;, passwordRequest.getUsername(), e);</span>
 <span class="nc" id="L304">            throw new RestServerError(&quot;Error in updating password&quot;, e);</span>
         }
@@ -328,7 +328,7 @@ import org.springframework.validation.BindingResult;
 <span class="fc" id="L328">            return user;</span>
 <span class="fc" id="L329">        } catch (ResourceNotFoundException e) {</span>
 <span class="fc" id="L330">            throw e;</span>
-<span class="nc" id="L331">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L331">        } catch (EntException e) {</span>
 <span class="nc" id="L332">            logger.error(&quot;Error in loading user {}&quot;, username, e);</span>
 <span class="nc" id="L333">            throw new RestServerError(&quot;Error in loading user&quot;, e);</span>
         }

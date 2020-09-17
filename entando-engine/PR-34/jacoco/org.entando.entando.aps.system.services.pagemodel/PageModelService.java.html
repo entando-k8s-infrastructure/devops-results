@@ -15,16 +15,16 @@ package org.entando.entando.aps.system.services.pagemodel;
 
 import com.agiletec.aps.system.common.FieldSearchFilter;
 import com.agiletec.aps.system.common.model.dao.SearcherDaoPaginatedResult;
-import com.agiletec.aps.system.exception.ApsSystemException;
+import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.system.services.page.Widget;
 import com.agiletec.aps.system.services.pagemodel.*;
-import com.agiletec.aps.util.ApsLogging.ApsLogFactory;
-import com.agiletec.aps.util.ApsLogging.ApsLogger;
 import com.agiletec.aps.util.ApsProperties;
 import org.entando.entando.aps.system.exception.*;
 import org.entando.entando.aps.system.services.IDtoBuilder;
 import org.entando.entando.aps.system.services.page.model.PageDto;
 import org.entando.entando.aps.system.services.pagemodel.model.PageModelDto;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
 import org.entando.entando.web.common.assembler.PagedMetadataMapper;
 import org.entando.entando.web.common.model.*;
 import org.entando.entando.web.component.ComponentUsageEntity;
@@ -46,7 +46,7 @@ import org.entando.entando.web.common.exceptions.ValidationGenericException;
 @Service
 public class PageModelService implements IPageModelService, ApplicationContextAware {
 
-<span class="fc" id="L49">    private final ApsLogger logger = ApsLogFactory.getLogger(getClass());</span>
+<span class="fc" id="L49">    private final EntLogger logger = EntLogFactory.getSantiziedLogger(getClass());</span>
 
     private final IPageModelManager pageModelManager;
 
@@ -98,7 +98,7 @@ public class PageModelService implements IPageModelService, ApplicationContextAw
     public PageModelDto getPageModel(String code) {
 <span class="fc" id="L99">        PageModel pageModel = this.pageModelManager.getPageModel(code);</span>
 <span class="fc bfc" id="L100" title="All 2 branches covered.">        if (null == pageModel) {</span>
-<span class="fc" id="L101">            logger.withBasicSan().warn(&quot;no pageModel found with code {}&quot;, code);</span>
+<span class="fc" id="L101">            logger.warn(&quot;no pageModel found with code {}&quot;, code);</span>
 <span class="fc" id="L102">            throw new ResourceNotFoundException(PageModelValidator.ERRCODE_PAGEMODEL_NOT_FOUND, &quot;pageModel&quot;, code);</span>
         }
 <span class="fc" id="L104">        PageModelDto dto = this.dtoBuilder.convert(pageModel);</span>
@@ -158,7 +158,7 @@ public class PageModelService implements IPageModelService, ApplicationContextAw
 <span class="nc" id="L158">        } catch (ValidationGenericException e) {</span>
 <span class="nc" id="L159">            throw e;</span>
 <span class="nc" id="L160">        } catch (Exception e) {</span>
-<span class="nc" id="L161">            logger.withBasicSan().error(&quot;Error in delete pagemodel {}&quot;, code, e);</span>
+<span class="nc" id="L161">            logger.error(&quot;Error in delete pagemodel {}&quot;, code, e);</span>
 <span class="nc" id="L162">            throw new RestServerError(&quot;error in delete pagemodel&quot;, e);</span>
 <span class="fc" id="L163">        }</span>
 <span class="fc" id="L164">    }</span>
@@ -167,12 +167,12 @@ public class PageModelService implements IPageModelService, ApplicationContextAw
     public PagedMetadata&lt;?&gt; getPageModelReferences(String pageModelCode, String managerName, RestListRequest restRequest) {
 <span class="fc" id="L168">        PageModel pageModel = this.pageModelManager.getPageModel(pageModelCode);</span>
 <span class="fc bfc" id="L169" title="All 2 branches covered.">        if (null == pageModel) {</span>
-<span class="fc" id="L170">            logger.withBasicSan().warn(&quot;no pageModel found with code {}&quot;, pageModelCode);</span>
+<span class="fc" id="L170">            logger.warn(&quot;no pageModel found with code {}&quot;, pageModelCode);</span>
 <span class="fc" id="L171">            throw new ResourceNotFoundException(PageModelValidator.ERRCODE_PAGEMODEL_NOT_FOUND, &quot;pageModel&quot;, pageModelCode);</span>
         }
 <span class="fc" id="L173">        PageModelServiceUtilizer&lt;?&gt; utilizer = this.getPageModelServiceUtilizer(managerName);</span>
 <span class="pc bpc" id="L174" title="1 of 2 branches missed.">        if (null == utilizer) {</span>
-<span class="nc" id="L175">            logger.withBasicSan().warn(&quot;no references found for {}&quot;, managerName);</span>
+<span class="nc" id="L175">            logger.warn(&quot;no references found for {}&quot;, managerName);</span>
 
 <span class="nc" id="L177">            throw new ResourceNotFoundException(PageModelValidator.ERRCODE_PAGEMODEL_REFERENCES, &quot;reference&quot;, managerName);</span>
         }
@@ -273,7 +273,7 @@ public class PageModelService implements IPageModelService, ApplicationContextAw
 <span class="fc" id="L273">        return bindingResult;</span>
     }
 
-    protected BeanPropertyBindingResult validateDelete(PageModel pageModel) throws ApsSystemException {
+    protected BeanPropertyBindingResult validateDelete(PageModel pageModel) throws EntException {
 <span class="fc" id="L277">        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(pageModel, &quot;pageModel&quot;);</span>
 <span class="fc" id="L278">        Map&lt;String, List&lt;Object&gt;&gt; references = this.getReferencingObjects(pageModel);</span>
 <span class="pc bpc" id="L279" title="1 of 2 branches missed.">        if (references.size() &gt; 0) {</span>
@@ -309,7 +309,7 @@ public class PageModelService implements IPageModelService, ApplicationContextAw
 <span class="fc" id="L309">    }</span>
 
     @SuppressWarnings(&quot;unchecked&quot;)
-    public Map&lt;String, List&lt;Object&gt;&gt; getReferencingObjects(PageModel pageModel) throws ApsSystemException {
+    public Map&lt;String, List&lt;Object&gt;&gt; getReferencingObjects(PageModel pageModel) throws EntException {
 <span class="fc" id="L313">        Map&lt;String, List&lt;Object&gt;&gt; references = new HashMap&lt;&gt;();</span>
         try {
 <span class="fc" id="L315">            String[] defNames = applicationContext.getBeanNamesForType(PageModelUtilizer.class);</span>
@@ -330,7 +330,7 @@ public class PageModelService implements IPageModelService, ApplicationContextAw
                 }
             }
 <span class="nc" id="L332">        } catch (Throwable t) {</span>
-<span class="nc" id="L333">            throw new ApsSystemException(&quot;Error on getReferencingObjects methods&quot;, t);</span>
+<span class="nc" id="L333">            throw new EntException(&quot;Error on getReferencingObjects methods&quot;, t);</span>
 <span class="fc" id="L334">        }</span>
 <span class="fc" id="L335">        return references;</span>
     }
@@ -357,7 +357,7 @@ public class PageModelService implements IPageModelService, ApplicationContextAw
                     }
                 }
             }
-<span class="nc" id="L360">        } catch (ApsSystemException ex) {</span>
+<span class="nc" id="L360">        } catch (EntException ex) {</span>
 <span class="nc" id="L361">            logger.error(&quot;error loading references for pageModel {}&quot;, pageModel.getCode(), ex);</span>
 <span class="nc" id="L362">            throw new RestServerError(&quot;error in getReferencingObjects &quot;, ex);</span>
 <span class="fc" id="L363">        }</span>
