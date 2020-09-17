@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PluginInstallable.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Component Manager</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.model.bundle.installable</a> &gt; <span class="el_source">PluginInstallable.java</span></div><h1>PluginInstallable.java</h1><pre class="source lang-java linenums">package org.entando.kubernetes.model.bundle.installable;
+
+import static org.entando.kubernetes.service.digitalexchange.BundleUtilities.extractNameFromDescriptor;
+
+import java.util.concurrent.CompletableFuture;
+import lombok.extern.slf4j.Slf4j;
+import org.entando.kubernetes.model.bundle.descriptor.DockerImage;
+import org.entando.kubernetes.model.bundle.descriptor.PluginDescriptor;
+import org.entando.kubernetes.model.digitalexchange.ComponentType;
+import org.entando.kubernetes.model.plugin.EntandoPlugin;
+import org.entando.kubernetes.service.KubernetesService;
+import org.entando.kubernetes.service.digitalexchange.BundleUtilities;
+
+<span class="fc" id="L14">@Slf4j</span>
+public class PluginInstallable extends Installable&lt;PluginDescriptor&gt; {
+
+    private final KubernetesService kubernetesService;
+
+    public PluginInstallable(KubernetesService kubernetesService, PluginDescriptor plugin) {
+<span class="fc" id="L20">        super(plugin);</span>
+<span class="fc" id="L21">        this.kubernetesService = kubernetesService;</span>
+<span class="fc" id="L22">    }</span>
+
+    @Override
+    public CompletableFuture&lt;Void&gt; install() {
+<span class="fc" id="L26">        return CompletableFuture.runAsync(() -&gt; {</span>
+<span class="fc" id="L27">            log.info(&quot;Deploying plugin {}&quot;, getName());</span>
+<span class="fc" id="L28">            EntandoPlugin plugin = BundleUtilities.generatePluginFromDescriptor(representation);</span>
+<span class="fc" id="L29">            kubernetesService.linkPluginAndWaitForSuccess(plugin);</span>
+<span class="fc" id="L30">        });</span>
+    }
+
+
+    @Override
+    public CompletableFuture&lt;Void&gt; uninstall() {
+<span class="fc" id="L36">        return CompletableFuture.runAsync(() -&gt; {</span>
+<span class="fc" id="L37">            log.info(&quot;Removing link to plugin {}&quot;, getName());</span>
+<span class="fc" id="L38">            PluginDescriptor descriptor = PluginDescriptor.builder().image(getName()).build();</span>
+<span class="fc" id="L39">            kubernetesService.unlinkPlugin(extractNameFromDescriptor(descriptor));</span>
+<span class="fc" id="L40">        });</span>
+    }
+
+    @Override
+    public ComponentType getComponentType() {
+<span class="fc" id="L45">        return ComponentType.PLUGIN;</span>
+    }
+
+    @Override
+    public String getName() {
+<span class="fc" id="L50">        return this.representation.getDockerImage().toString();</span>
+    }
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
