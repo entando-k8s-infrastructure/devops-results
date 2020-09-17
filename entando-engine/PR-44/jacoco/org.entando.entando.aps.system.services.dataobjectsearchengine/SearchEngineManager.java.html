@@ -22,7 +22,7 @@ import com.agiletec.aps.system.common.entity.model.attribute.AttributeInterface;
 import com.agiletec.aps.system.common.notify.ApsEvent;
 import com.agiletec.aps.system.common.searchengine.IndexableAttributeInterface;
 import com.agiletec.aps.system.common.tree.ITreeNode;
-import com.agiletec.aps.system.exception.ApsSystemException;
+import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.util.DateConverter;
 
 import java.util.ArrayList;
@@ -105,13 +105,13 @@ import org.slf4j.LoggerFactory;
 <span class="fc" id="L105">	}</span>
 
 	@Override
-	public Thread startReloadDataObjectsReferences() throws ApsSystemException {
+	public Thread startReloadDataObjectsReferences() throws EntException {
 <span class="fc" id="L109">		String newTempSubDirectory = &quot;indexdir&quot; + DateConverter.getFormattedDate(new Date(), &quot;yyyyMMddHHmmss&quot;);</span>
 <span class="fc" id="L110">		return this.startReloadDataObjectsReferences(newTempSubDirectory);</span>
 	}
 
 	@Override
-	public Thread startReloadDataObjectsReferences(String subDirectory) throws ApsSystemException {
+	public Thread startReloadDataObjectsReferences(String subDirectory) throws EntException {
 <span class="fc" id="L115">		IndexLoaderThread loaderThread = null;</span>
 <span class="pc bpc" id="L116" title="3 of 4 branches missed.">		if (this.getStatus() == STATUS_READY || this.getStatus() == STATUS_NEED_TO_RELOAD_INDEXES) {</span>
 			try {
@@ -124,7 +124,7 @@ import org.slf4j.LoggerFactory;
 <span class="fc" id="L124">				loaderThread.start();</span>
 <span class="fc" id="L125">				_logger.info(&quot;Reload Contents References job started&quot;);</span>
 <span class="nc" id="L126">			} catch (Throwable t) {</span>
-<span class="nc" id="L127">				throw new ApsSystemException(&quot;Error reloading Contents References&quot;, t);</span>
+<span class="nc" id="L127">				throw new EntException(&quot;Error reloading Contents References&quot;, t);</span>
 <span class="fc" id="L128">			}</span>
 		} else {
 <span class="nc" id="L130">			_logger.info(&quot;Reload Contents References job suspended: current status: {}&quot;, this.getStatus());</span>
@@ -167,20 +167,20 @@ import org.slf4j.LoggerFactory;
 	}
 
 	@Override
-	public void addEntityToIndex(IApsEntity entity) throws ApsSystemException {
+	public void addEntityToIndex(IApsEntity entity) throws EntException {
 		try {
 <span class="fc" id="L172">			this._indexerDao.add(entity);</span>
-<span class="nc" id="L173">		} catch (ApsSystemException e) {</span>
+<span class="nc" id="L173">		} catch (EntException e) {</span>
 <span class="nc" id="L174">			_logger.error(&quot;Error saving content to index&quot;, e);</span>
 <span class="nc" id="L175">			throw e;</span>
 <span class="fc" id="L176">		}</span>
 <span class="fc" id="L177">	}</span>
 
 	@Override
-	public void deleteIndexedEntity(String entityId) throws ApsSystemException {
+	public void deleteIndexedEntity(String entityId) throws EntException {
 		try {
 <span class="fc" id="L182">			this._indexerDao.delete(IIndexerDAO.DATAOBJECT_ID_FIELD_NAME, entityId);</span>
-<span class="nc" id="L183">		} catch (ApsSystemException e) {</span>
+<span class="nc" id="L183">		} catch (EntException e) {</span>
 <span class="nc" id="L184">			_logger.error(&quot;Error deleting content {} from index&quot;, entityId, e);</span>
 <span class="nc" id="L185">			throw e;</span>
 <span class="fc" id="L186">		}</span>
@@ -214,13 +214,13 @@ import org.slf4j.LoggerFactory;
 
 	@Override
 	public List&lt;String&gt; searchId(String sectionCode, String langCode,
-			String word, Collection&lt;String&gt; allowedGroups) throws ApsSystemException {
+			String word, Collection&lt;String&gt; allowedGroups) throws EntException {
 <span class="nc" id="L218">		return this.searchEntityId(langCode, word, allowedGroups);</span>
 	}
 
 	@Override
 	public List&lt;String&gt; searchEntityId(String langCode, String word,
-			Collection&lt;String&gt; allowedGroups) throws ApsSystemException {
+			Collection&lt;String&gt; allowedGroups) throws EntException {
 <span class="fc" id="L224">		SearchEngineFilter[] filters = new SearchEngineFilter[0];</span>
 <span class="pc bpc" id="L225" title="2 of 4 branches missed.">		if (StringUtils.isNotEmpty(langCode) &amp;&amp; StringUtils.isNotEmpty(word)) {</span>
 <span class="fc" id="L226">			SearchEngineFilter filter = new SearchEngineFilter(langCode, word);</span>
@@ -241,30 +241,30 @@ import org.slf4j.LoggerFactory;
 	}
 
 	//@Override
-	public List&lt;String&gt; searchId(String sectionCode, SearchEngineFilter[] filters, Collection&lt;String&gt; allowedGroups) throws ApsSystemException {
+	public List&lt;String&gt; searchId(String sectionCode, SearchEngineFilter[] filters, Collection&lt;String&gt; allowedGroups) throws EntException {
 <span class="nc" id="L245">		return this.searchEntityId(filters, null, allowedGroups);</span>
 	}
 
 	//@Override
-	public List&lt;String&gt; searchEntityId(SearchEngineFilter[] filters, Collection&lt;ITreeNode&gt; categories, Collection&lt;String&gt; allowedGroups) throws ApsSystemException {
+	public List&lt;String&gt; searchEntityId(SearchEngineFilter[] filters, Collection&lt;ITreeNode&gt; categories, Collection&lt;String&gt; allowedGroups) throws EntException {
 <span class="fc" id="L250">		List&lt;String&gt; contentsId = null;</span>
 		try {
 <span class="fc" id="L252">			contentsId = _searcherDao.searchContentsId(filters, categories, allowedGroups);</span>
 <span class="nc" id="L253">		} catch (Throwable t) {</span>
 <span class="nc" id="L254">			_logger.error(&quot;Error searching content id list. &quot;, t);</span>
-<span class="nc" id="L255">			throw new ApsSystemException(&quot;Error searching content id list&quot;, t);</span>
+<span class="nc" id="L255">			throw new EntException(&quot;Error searching content id list&quot;, t);</span>
 <span class="fc" id="L256">		}</span>
 <span class="fc" id="L257">		return contentsId;</span>
 	}
 
 	//@Override
-	public FacetedContentsResult searchFacetedEntities(SearchEngineFilter[] filters, Collection&lt;ITreeNode&gt; categories, Collection&lt;String&gt; allowedGroups) throws ApsSystemException {
+	public FacetedContentsResult searchFacetedEntities(SearchEngineFilter[] filters, Collection&lt;ITreeNode&gt; categories, Collection&lt;String&gt; allowedGroups) throws EntException {
 <span class="fc" id="L262">		FacetedContentsResult contentsId = null;</span>
 		try {
 <span class="fc" id="L264">			contentsId = _searcherDao.searchFacetedContents(filters, categories, allowedGroups);</span>
 <span class="nc" id="L265">		} catch (Throwable t) {</span>
 <span class="nc" id="L266">			_logger.error(&quot;Error searching faceted dataobject&quot;, t);</span>
-<span class="nc" id="L267">			throw new ApsSystemException(&quot;Error searching faceted dataobject&quot;, t);</span>
+<span class="nc" id="L267">			throw new EntException(&quot;Error searching faceted dataobject&quot;, t);</span>
 <span class="fc" id="L268">		}</span>
 <span class="fc" id="L269">		return contentsId;</span>
 	}
@@ -279,11 +279,11 @@ import org.slf4j.LoggerFactory;
 <span class="fc" id="L279">	}</span>
 
 	@Override
-	public void updateIndexedEntity(IApsEntity entity) throws ApsSystemException {
+	public void updateIndexedEntity(IApsEntity entity) throws EntException {
 		try {
 <span class="fc" id="L284">			this.deleteIndexedEntity(entity.getId());</span>
 <span class="fc" id="L285">			this.addEntityToIndex(entity);</span>
-<span class="nc" id="L286">		} catch (ApsSystemException e) {</span>
+<span class="nc" id="L286">		} catch (EntException e) {</span>
 <span class="nc" id="L287">			_logger.error(&quot;Error updating content&quot;, e);</span>
 <span class="nc" id="L288">			throw e;</span>
 <span class="fc" id="L289">		}</span>
