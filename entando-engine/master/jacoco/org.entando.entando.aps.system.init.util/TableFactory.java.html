@@ -27,7 +27,7 @@ import org.entando.entando.aps.system.init.model.SystemInstallationReport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.agiletec.aps.system.exception.ApsSystemException;
+import org.entando.entando.ent.exception.EntException;
 import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.dao.DaoManager;
 import com.j256.ormlite.db.MysqlDatabaseType;
@@ -51,14 +51,14 @@ public class TableFactory {
 <span class="fc" id="L51">		this.setType(type);</span>
 <span class="fc" id="L52">	}</span>
 	
-	public void createTables(List&lt;String&gt; tableClassNames, DataSourceInstallationReport schemaReport) throws ApsSystemException {
+	public void createTables(List&lt;String&gt; tableClassNames, DataSourceInstallationReport schemaReport) throws EntException {
 <span class="fc" id="L55">		ConnectionSource connectionSource = null;</span>
 		try {
 <span class="fc" id="L57">			connectionSource = this.createConnectionSource();</span>
 <span class="fc" id="L58">			this.createTables(tableClassNames, connectionSource, schemaReport);</span>
 <span class="nc" id="L59">		} catch (Throwable t) {</span>
 <span class="nc" id="L60">			_logger.error(&quot;Error creating tables to db {}&quot;, this.getDatabaseName(), t);</span>
-<span class="nc" id="L61">			throw new ApsSystemException(&quot;Error creating tables to db &quot; + this.getDatabaseName(), t);</span>
+<span class="nc" id="L61">			throw new EntException(&quot;Error creating tables to db &quot; + this.getDatabaseName(), t);</span>
 		} finally {
 <span class="pc bpc" id="L63" title="1 of 2 branches missed.">			if (connectionSource != null) {</span>
 				try {
@@ -68,14 +68,14 @@ public class TableFactory {
 		}
 <span class="fc" id="L69">	}</span>
 	
-	public void dropTables(List&lt;String&gt; tableClassNames) throws ApsSystemException {
+	public void dropTables(List&lt;String&gt; tableClassNames) throws EntException {
 <span class="nc" id="L72">		ConnectionSource connectionSource = null;</span>
 		try {
 <span class="nc" id="L74">			connectionSource = this.createConnectionSource();</span>
 <span class="nc" id="L75">			this.dropTables(tableClassNames, connectionSource);</span>
 <span class="nc" id="L76">		} catch (Throwable t) {</span>
 <span class="nc" id="L77">			_logger.error(&quot;Error dropping tables to db {}&quot;, this.getDatabaseName(), t);</span>
-<span class="nc" id="L78">			throw new ApsSystemException(&quot;Error dropping tables to db &quot; + this.getDatabaseName(), t);</span>
+<span class="nc" id="L78">			throw new EntException(&quot;Error dropping tables to db &quot; + this.getDatabaseName(), t);</span>
 		} finally {
 <span class="nc bnc" id="L80" title="All 2 branches missed.">			if (connectionSource != null) {</span>
 				try {
@@ -85,7 +85,7 @@ public class TableFactory {
 		}
 <span class="nc" id="L86">	}</span>
 
-	private ConnectionSource createConnectionSource() throws ApsSystemException {
+	private ConnectionSource createConnectionSource() throws EntException {
 <span class="fc" id="L89">		ConnectionSource connectionSource = null;</span>
 		try {
 <span class="fc" id="L91">			DataSource dataSource = this.getDataSource();</span>
@@ -112,7 +112,7 @@ public class TableFactory {
 			}
 <span class="nc" id="L113">		} catch (Throwable t) {</span>
 <span class="nc" id="L114">			_logger.error(&quot;Error creating connectionSource to db {}&quot;, this.getDatabaseName(), t);</span>
-<span class="nc" id="L115">			throw new ApsSystemException(&quot;Error creating connectionSource to db &quot; + this.getDatabaseName(), t);</span>
+<span class="nc" id="L115">			throw new EntException(&quot;Error creating connectionSource to db &quot; + this.getDatabaseName(), t);</span>
 <span class="fc" id="L116">		}</span>
 <span class="fc" id="L117">		return connectionSource;</span>
 	}
@@ -123,7 +123,7 @@ public class TableFactory {
 	}
 	
 	private void createTables(List&lt;String&gt; tableClassNames,
-			ConnectionSource connectionSource, DataSourceInstallationReport schemaReport) throws ApsSystemException {
+			ConnectionSource connectionSource, DataSourceInstallationReport schemaReport) throws EntException {
 		try {
 <span class="fc" id="L128">			List&lt;String&gt; tables = schemaReport.getDataSourceTables().get(this.getDatabaseName());</span>
 <span class="pc bpc" id="L129" title="1 of 2 branches missed.">			if (null == tables) {</span>
@@ -145,13 +145,13 @@ public class TableFactory {
 <span class="nc" id="L145">					schemaReport.getDatabaseStatus().put(this.getDatabaseName(), SystemInstallationReport.Status.INCOMPLETE);</span>
 <span class="nc" id="L146">					String message = &quot;Error creating table &quot; + this.getDatabaseName() + &quot;/&quot; + tableClassName + &quot; - &quot; + t.getMessage();</span>
 <span class="nc" id="L147">					_logger.error(&quot;Error creating table {}/{}&quot;,this.getDatabaseName(), tableClassName, t);</span>
-<span class="nc" id="L148">					throw new ApsSystemException(message, t);</span>
+<span class="nc" id="L148">					throw new EntException(message, t);</span>
 <span class="fc" id="L149">				}</span>
 			}
 <span class="nc" id="L151">		} catch (Throwable t) {</span>
 <span class="nc" id="L152">			schemaReport.getDatabaseStatus().put(this.getDatabaseName(), SystemInstallationReport.Status.INCOMPLETE);</span>
 <span class="nc" id="L153">			_logger.error(&quot;Error on setup Database - {}&quot;, this.getDatabaseName(), t);</span>
-<span class="nc" id="L154">			throw new ApsSystemException(&quot;Error on setup Database&quot;, t);</span>
+<span class="nc" id="L154">			throw new EntException(&quot;Error on setup Database&quot;, t);</span>
 <span class="fc" id="L155">		}</span>
 <span class="fc" id="L156">	}</span>
 
@@ -181,12 +181,12 @@ public class TableFactory {
 <span class="nc bnc" id="L181" title="All 2 branches missed.">			if (result &gt; 0) {</span>
 <span class="nc" id="L182">				TableUtils.dropTable(connectionSource, tableClass, true);</span>
 			}
-<span class="nc" id="L184">			throw new ApsSystemException(&quot;Error creating table &quot; + logTableName, t);</span>
+<span class="nc" id="L184">			throw new EntException(&quot;Error creating table &quot; + logTableName, t);</span>
 <span class="fc" id="L185">		}</span>
 <span class="fc" id="L186">	}</span>
 	
 	private void dropTables(List&lt;String&gt; tableClassNames,
-			ConnectionSource connectionSource) throws ApsSystemException {
+			ConnectionSource connectionSource) throws EntException {
 		try {
 <span class="nc bnc" id="L191" title="All 2 branches missed.">			for (int i = 0; i &lt; tableClassNames.size(); i++) {</span>
 <span class="nc" id="L192">				String tableClassName = tableClassNames.get(i);</span>
@@ -196,12 +196,12 @@ public class TableFactory {
 <span class="nc" id="L196">				} catch (Throwable t) {</span>
 <span class="nc" id="L197">					String message = &quot;Error dropping table &quot; + this.getDatabaseName() + &quot;/&quot; + tableClassName + &quot; - &quot; + t.getMessage();</span>
 <span class="nc" id="L198">					_logger.error(&quot;Error dropping table {}/{}&quot;,this.getDatabaseName(), tableClassName, t);</span>
-<span class="nc" id="L199">					throw new ApsSystemException(message, t);</span>
+<span class="nc" id="L199">					throw new EntException(message, t);</span>
 <span class="nc" id="L200">				}</span>
 			}
 <span class="nc" id="L202">		} catch (Throwable t) {</span>
 <span class="nc" id="L203">			_logger.error(&quot;Error on setup Database - {}&quot;, this.getDatabaseName(), t);</span>
-<span class="nc" id="L204">			throw new ApsSystemException(&quot;Error on setup Database&quot;, t);</span>
+<span class="nc" id="L204">			throw new EntException(&quot;Error on setup Database&quot;, t);</span>
 <span class="nc" id="L205">		}</span>
 <span class="nc" id="L206">	}</span>
 
