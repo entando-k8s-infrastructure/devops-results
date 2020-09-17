@@ -41,6 +41,7 @@ import org.entando.entando.plugins.jacms.web.resource.request.ListResourceReques
 import org.entando.entando.plugins.jacms.web.resource.request.UpdateResourceRequest;
 import org.entando.entando.plugins.jacms.web.resource.validator.ResourcesValidator;
 import org.entando.entando.web.common.annotation.RestAccessControl;
+import org.entando.entando.web.common.exceptions.ResourcePermissionsException;
 import org.entando.entando.web.common.model.PagedMetadata;
 import org.entando.entando.web.common.model.PagedRestResponse;
 import org.entando.entando.web.common.model.RestResponse;
@@ -49,6 +50,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.DataBinder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -57,7 +60,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-<span class="pc bpc" id="L60" title="3 of 6 branches missed.">@RequiredArgsConstructor</span>
+<span class="pc bpc" id="L63" title="3 of 6 branches missed.">@RequiredArgsConstructor</span>
 @RestController
 public class ResourcesController {
     public static final String ERRCODE_RESOURCE_NOT_FOUND = &quot;1&quot;;
@@ -65,8 +68,9 @@ public class ResourcesController {
     public static final String ERRCODE_GROUP_NOT_FOUND = &quot;3&quot;;
     public static final String ERRCODE_INVALID_FILE_TYPE = &quot;4&quot;;
     public static final String ERRCODE_INVALID_RESOURCE_TYPE = &quot;5&quot;;
+    public static final String ERRCODE_RESOURCE_FORBIDDEN = &quot;6&quot;;
 
-<span class="fc" id="L69">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+<span class="fc" id="L73">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
 
     @NonNull private final ResourcesService service;
     @NonNull private final ResourcesValidator resourceValidator;
@@ -79,12 +83,12 @@ public class ResourcesController {
     @GetMapping(&quot;/plugins/cms/assets&quot;)
     @RestAccessControl(permission = {Permission.MANAGE_RESOURCES, Permission.CONTENT_SUPERVISOR, Permission.CONTENT_EDITOR})
     public ResponseEntity&lt;PagedRestResponse&lt;AssetDto&gt;&gt; listAssets(ListResourceRequest requestList) {
-<span class="nc" id="L82">        logger.debug(&quot;REST request - list image resources&quot;);</span>
+<span class="fc" id="L86">        logger.debug(&quot;REST request - list image resources&quot;);</span>
 
-<span class="nc" id="L84">        resourceValidator.validateRestListRequest(requestList, AssetDto.class);</span>
-<span class="nc" id="L85">        PagedMetadata&lt;AssetDto&gt; result = service.listAssets(requestList,HttpSessionHelper.extractCurrentUser(httpSession));</span>
-<span class="nc" id="L86">        resourceValidator.validateRestListResult(requestList, result);</span>
-<span class="nc" id="L87">        return ResponseEntity.ok(new PagedRestResponse&lt;&gt;(result));</span>
+<span class="fc" id="L88">        resourceValidator.validateRestListRequest(requestList, AssetDto.class);</span>
+<span class="fc" id="L89">        PagedMetadata&lt;AssetDto&gt; result = service.listAssets(requestList,HttpSessionHelper.extractCurrentUser(httpSession));</span>
+<span class="fc" id="L90">        resourceValidator.validateRestListResult(requestList, result);</span>
+<span class="fc" id="L91">        return ResponseEntity.ok(new PagedRestResponse&lt;&gt;(result));</span>
     }
 
     @ApiOperation(value = &quot;LIST Resources&quot;, nickname = &quot;listResources&quot;, tags = {&quot;resources-controller&quot;})
@@ -95,40 +99,40 @@ public class ResourcesController {
     @RestAccessControl(permission = {Permission.MANAGE_RESOURCES, Permission.CONTENT_SUPERVISOR, Permission.CONTENT_EDITOR})
     public ResponseEntity&lt;RestResponse&lt;List&lt;AssetDto&gt;, Map&lt;String, Object&gt;&gt;&gt; listAssetsFolder(
             @RequestParam(value = &quot;folderPath&quot;, required = false) String folderPath) {
-<span class="nc" id="L98">        logger.debug(&quot;REST request - list resources folder&quot;);</span>
+<span class="fc" id="L102">        logger.debug(&quot;REST request - list resources folder&quot;);</span>
 
-<span class="nc" id="L100">        folderPath = sanitizeFolderPath(folderPath);</span>
+<span class="fc" id="L104">        folderPath = sanitizeFolderPath(folderPath);</span>
 
-<span class="nc" id="L102">        ListAssetsFolderResponse result = service.listAssetsFolder(folderPath);</span>
+<span class="fc" id="L106">        ListAssetsFolderResponse result = service.listAssetsFolder(folderPath);</span>
 
-<span class="nc" id="L104">        Map&lt;String, Object&gt; metadata = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L105">        metadata.put(&quot;folderPath&quot;, result.getFolderPath());</span>
-<span class="nc" id="L106">        metadata.put(&quot;subfolders&quot;, result.getSubfolders());</span>
+<span class="fc" id="L108">        Map&lt;String, Object&gt; metadata = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L109">        metadata.put(&quot;folderPath&quot;, result.getFolderPath());</span>
+<span class="fc" id="L110">        metadata.put(&quot;subfolders&quot;, result.getSubfolders());</span>
 
-<span class="nc" id="L108">        return ResponseEntity.ok(new RestResponse&lt;&gt;(result.getAssets(), metadata));</span>
+<span class="fc" id="L112">        return ResponseEntity.ok(new RestResponse&lt;&gt;(result.getAssets(), metadata));</span>
     }
 
     private String sanitizeFolderPath(String folderPath) {
 
-<span class="nc bnc" id="L113" title="All 2 branches missed.">        if (folderPath == null) {</span>
-<span class="nc" id="L114">            return null;</span>
+<span class="fc bfc" id="L117" title="All 2 branches covered.">        if (folderPath == null) {</span>
+<span class="fc" id="L118">            return null;</span>
         }
 
-<span class="nc" id="L117">        String result = folderPath.trim().replaceAll(&quot;/+&quot;, &quot;/&quot;);</span>
+<span class="fc" id="L121">        String result = folderPath.trim().replaceAll(&quot;/+&quot;, &quot;/&quot;);</span>
 
-<span class="nc bnc" id="L119" title="All 4 branches missed.">        if (result.equals(&quot;/&quot;) || result.equals(&quot;&quot;)) {</span>
-<span class="nc" id="L120">            return null;</span>
+<span class="fc bfc" id="L123" title="All 4 branches covered.">        if (result.equals(&quot;/&quot;) || result.equals(&quot;&quot;)) {</span>
+<span class="fc" id="L124">            return null;</span>
         }
 
-<span class="nc bnc" id="L123" title="All 2 branches missed.">        if (result.startsWith(&quot;/&quot;)) {</span>
-<span class="nc" id="L124">            result = result.substring(1);</span>
+<span class="fc bfc" id="L127" title="All 2 branches covered.">        if (result.startsWith(&quot;/&quot;)) {</span>
+<span class="fc" id="L128">            result = result.substring(1);</span>
         }
 
-<span class="nc bnc" id="L127" title="All 2 branches missed.">        if (result.endsWith(&quot;/&quot;)) {</span>
-<span class="nc" id="L128">            result = result.substring(0, result.length()-1);</span>
+<span class="fc bfc" id="L131" title="All 2 branches covered.">        if (result.endsWith(&quot;/&quot;)) {</span>
+<span class="fc" id="L132">            result = result.substring(0, result.length()-1);</span>
         }
 
-<span class="nc" id="L131">        return result;</span>
+<span class="fc" id="L135">        return result;</span>
     }
 
     @ApiOperation(value = &quot;CREATE Resource&quot;, nickname = &quot;createResource&quot;, tags = {&quot;resources-controller&quot;})
@@ -140,20 +144,20 @@ public class ResourcesController {
     public ResponseEntity&lt;SimpleRestResponse&lt;AssetDto&gt;&gt; createAsset(
             @RequestParam(value = &quot;metadata&quot;) String request,
             @RequestParam(value = &quot;file&quot;) MultipartFile file) throws JsonProcessingException {
-<span class="fc" id="L143">        logger.debug(&quot;REST request - create new resource&quot;);</span>
+<span class="fc" id="L147">        logger.debug(&quot;REST request - create new resource&quot;);</span>
 
-<span class="fc" id="L145">        CreateResourceRequest resourceRequest = new ObjectMapper().readValue(request, CreateResourceRequest.class);</span>
+<span class="fc" id="L149">        CreateResourceRequest resourceRequest = new ObjectMapper().readValue(request, CreateResourceRequest.class);</span>
 
-<span class="fc" id="L147">        List&lt;String&gt; categoriesList = Optional.ofNullable(resourceRequest.getCategories()).orElse(Collections.emptyList())</span>
-<span class="fc" id="L148">                .stream()</span>
-<span class="fc" id="L149">                .map(String::trim)</span>
-<span class="pc bnc" id="L150" title="All 2 branches missed.">                .filter(c -&gt; c.length() &gt; 0)</span>
-<span class="fc" id="L151">                .collect(Collectors.toList());</span>
+<span class="fc" id="L151">        List&lt;String&gt; categoriesList = Optional.ofNullable(resourceRequest.getCategories()).orElse(Collections.emptyList())</span>
+<span class="fc" id="L152">                .stream()</span>
+<span class="fc" id="L153">                .map(String::trim)</span>
+<span class="pc bpc" id="L154" title="1 of 2 branches missed.">                .filter(c -&gt; c.length() &gt; 0)</span>
+<span class="fc" id="L155">                .collect(Collectors.toList());</span>
 
-<span class="fc" id="L153">        AssetDto result = service</span>
-<span class="fc" id="L154">                .createAsset(resourceRequest.getType(), file, resourceRequest.getGroup(), categoriesList, resourceRequest.getFolderPath(),</span>
-<span class="fc" id="L155">                        extractCurrentUser(httpSession));</span>
-<span class="fc" id="L156">        return ResponseEntity.ok(new SimpleRestResponse&lt;&gt;(result));</span>
+<span class="fc" id="L157">        AssetDto result = service</span>
+<span class="fc" id="L158">                .createAsset(resourceRequest.getType(), file, resourceRequest.getGroup(), categoriesList, resourceRequest.getFolderPath(),</span>
+<span class="fc" id="L159">                        extractCurrentUser(httpSession));</span>
+<span class="fc" id="L160">        return ResponseEntity.ok(new SimpleRestResponse&lt;&gt;(result));</span>
     }
 
     @ApiOperation(value = &quot;CLONE Resource&quot;, nickname = &quot;cloneResource&quot;, tags = {&quot;resources-controller&quot;})
@@ -163,9 +167,9 @@ public class ResourcesController {
     @PostMapping(&quot;/plugins/cms/assets/{resourceId}/clone&quot;)
     @RestAccessControl(permission = Permission.MANAGE_RESOURCES)
     public ResponseEntity&lt;SimpleRestResponse&lt;AssetDto&gt;&gt; cloneAsset(@PathVariable(&quot;resourceId&quot;) String resourceId) {
-<span class="nc" id="L166">        logger.debug(&quot;REST request - clone resource&quot;);</span>
-<span class="nc" id="L167">        AssetDto result = service.cloneAsset(resourceId);</span>
-<span class="nc" id="L168">        return ResponseEntity.ok(new SimpleRestResponse&lt;&gt;(result));</span>
+<span class="fc" id="L170">        logger.debug(&quot;REST request - clone resource&quot;);</span>
+<span class="fc" id="L171">        AssetDto result = service.cloneAsset(resourceId);</span>
+<span class="fc" id="L172">        return ResponseEntity.ok(new SimpleRestResponse&lt;&gt;(result));</span>
     }
 
     @ApiOperation(value = &quot;EDIT Resource&quot;, nickname = &quot;editResource&quot;, tags = {&quot;resources-controller&quot;})
@@ -177,34 +181,41 @@ public class ResourcesController {
     public ResponseEntity&lt;SimpleRestResponse&lt;AssetDto&gt;&gt; editAsset(@PathVariable(&quot;resourceId&quot;) String resourceId,
             @RequestParam(value = &quot;metadata&quot;) String request,
             @RequestParam(value = &quot;file&quot;, required = false) MultipartFile file) throws JsonProcessingException {
-<span class="nc" id="L180">        logger.debug(&quot;REST request - edit image resource with id {}&quot;, resourceId);</span>
+<span class="fc" id="L184">        logger.debug(&quot;REST request - edit image resource with id {}&quot;, resourceId);</span>
 
-<span class="nc" id="L182">        UpdateResourceRequest resourceRequest = new ObjectMapper().readValue(request, UpdateResourceRequest.class);</span>
+<span class="fc" id="L186">        UpdateResourceRequest resourceRequest = new ObjectMapper().readValue(request, UpdateResourceRequest.class);</span>
 
-<span class="nc" id="L184">        List&lt;String&gt; categoriesList = Optional.ofNullable(resourceRequest.getCategories()).orElse(Collections.emptyList())</span>
-<span class="nc" id="L185">                .stream()</span>
-<span class="nc" id="L186">                .map(String::trim)</span>
-<span class="nc bnc" id="L187" title="All 2 branches missed.">                .filter(c -&gt; c.length() &gt; 0)</span>
-<span class="nc" id="L188">                .collect(Collectors.toList());</span>
+<span class="fc" id="L188">        List&lt;String&gt; categoriesList = Optional.ofNullable(resourceRequest.getCategories()).orElse(Collections.emptyList())</span>
+<span class="fc" id="L189">                .stream()</span>
+<span class="fc" id="L190">                .map(String::trim)</span>
+<span class="pc bpc" id="L191" title="1 of 2 branches missed.">                .filter(c -&gt; c.length() &gt; 0)</span>
+<span class="fc" id="L192">                .collect(Collectors.toList());</span>
 
-<span class="nc" id="L190">        AssetDto result = service.editAsset(resourceId, file, resourceRequest.getDescription(), categoriesList, sanitizeFolderPath(resourceRequest.getFolderPath()));</span>
-<span class="nc" id="L191">        return ResponseEntity.ok(new SimpleRestResponse&lt;&gt;(result));</span>
+<span class="fc" id="L194">        AssetDto result = service.editAsset(resourceId, file, resourceRequest.getDescription(), categoriesList, sanitizeFolderPath(resourceRequest.getFolderPath()));</span>
+<span class="fc" id="L195">        return ResponseEntity.ok(new SimpleRestResponse&lt;&gt;(result));</span>
     }
 
     @ApiOperation(value = &quot;DELETE Resource&quot;, nickname = &quot;deleteResource&quot;, tags = {&quot;resources-controller&quot;})
     @ApiResponses(value = {
             @ApiResponse(code = 200, message = &quot;OK&quot;),
-            @ApiResponse(code = 401, message = &quot;Unauthorized&quot;)})
+            @ApiResponse(code = 401, message = &quot;Unauthorized&quot;),
+            @ApiResponse(code = 403, message = &quot;Forbidden&quot;),
+            @ApiResponse(code = 404, message = &quot;Not Found&quot;)})
     @DeleteMapping(&quot;/plugins/cms/assets/{resourceId}&quot;)
     @RestAccessControl(permission = Permission.MANAGE_RESOURCES)
-    public ResponseEntity&lt;SimpleRestResponse&lt;Map&gt;&gt; deleteAsset(@PathVariable(&quot;resourceId&quot;) String resourceId) throws ApsSystemException {
-<span class="fc" id="L201">        logger.debug(&quot;REST request - delete resource with id {}&quot;, resourceId);</span>
-<span class="pc bpc" id="L202" title="1 of 2 branches missed.">        if (!resourceValidator.isResourceDeletableByUser(resourceId, extractCurrentUser(httpSession))) {</span>
-<span class="nc" id="L203">            throw new ResourceNotFoundException(ResourcesValidator.ERRCODE_RESOURCE_NOT_DELETABLE, &quot;RESOURCE&quot;, resourceId);</span>
+    public ResponseEntity&lt;SimpleRestResponse&lt;Map&lt;String, String&gt;&gt;&gt; deleteAsset(@PathVariable(&quot;resourceId&quot;) String resourceId) throws ApsSystemException {
+<span class="fc" id="L207">        logger.debug(&quot;REST request - delete resource with id {}&quot;, resourceId);</span>
+<span class="fc bfc" id="L208" title="All 2 branches covered.">        if (!resourceValidator.resourceExists(resourceId)) {</span>
+<span class="fc" id="L209">            throw new ResourceNotFoundException(ERRCODE_RESOURCE_NOT_FOUND, &quot;asset&quot;, resourceId);</span>
         }
-<span class="fc" id="L205">        service.deleteAsset(resourceId);</span>
-<span class="fc" id="L206">        return ResponseEntity.ok(new SimpleRestResponse&lt;&gt;(new HashMap()));</span>
+<span class="fc bfc" id="L211" title="All 2 branches covered.">        if (!resourceValidator.isResourceDeletableByUser(resourceId, extractCurrentUser(httpSession))) {</span>
+<span class="fc" id="L212">            DataBinder binder = new DataBinder(resourceId);</span>
+<span class="fc" id="L213">            BindingResult bindingResult = binder.getBindingResult();</span>
+<span class="fc" id="L214">            bindingResult.reject(ERRCODE_RESOURCE_FORBIDDEN, new String[]{resourceId}, &quot;plugins.jacms.resources.resourceManager.error.delete&quot;);</span>
+<span class="fc" id="L215">            throw new ResourcePermissionsException(bindingResult);</span>
+        }
+<span class="fc" id="L217">        service.deleteAsset(resourceId);</span>
+<span class="fc" id="L218">        return ResponseEntity.ok(new SimpleRestResponse&lt;&gt;(new HashMap()));</span>
     }
-
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
