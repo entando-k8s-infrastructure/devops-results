@@ -245,74 +245,75 @@ public class DefaultKeycloakClient implements SimpleKeycloakClient {
 <span class="nc" id="L245">            client.setImplicitFlowEnabled(true);</span>
 <span class="nc" id="L246">            client.setDirectAccessGrantsEnabled(true);</span>
 <span class="nc" id="L247">            client.setAuthorizationServicesEnabled(false);</span>
-<span class="nc" id="L248">            try (Response response = realmResource.clients().create(client)) {</span>
-<span class="nc" id="L249">                String id = response.getLocation().getPath().replaceAll(&quot;.*/([^/]+)$&quot;, &quot;$1&quot;);</span>
-<span class="nc" id="L250">                realmResource.clients().get(id).generateNewSecret();</span>
-<span class="nc" id="L251">                return id;</span>
+<span class="nc" id="L248">            client.setWebOrigins(config.getWebOrigins());</span>
+<span class="nc" id="L249">            try (Response response = realmResource.clients().create(client)) {</span>
+<span class="nc" id="L250">                String id = response.getLocation().getPath().replaceAll(&quot;.*/([^/]+)$&quot;, &quot;$1&quot;);</span>
+<span class="nc" id="L251">                realmResource.clients().get(id).generateNewSecret();</span>
+<span class="nc" id="L252">                return id;</span>
             }
         }
     }
 
     private Optional&lt;ClientRepresentation&gt; findClient(KeycloakClientConfig config) {
-<span class="fc" id="L257">        return keycloak.realm(config.getRealm()).clients()</span>
-<span class="fc" id="L258">                .findByClientId(config.getClientId())</span>
-<span class="fc" id="L259">                .stream().findFirst();</span>
+<span class="fc" id="L258">        return keycloak.realm(config.getRealm()).clients()</span>
+<span class="fc" id="L259">                .findByClientId(config.getClientId())</span>
+<span class="fc" id="L260">                .stream().findFirst();</span>
     }
 
     @Override
     public void updateClient(KeycloakClientConfig config) {
-<span class="nc" id="L264">        findClient(config).ifPresent(client -&gt; updateClient(config, client.getId()));</span>
-<span class="nc" id="L265">    }</span>
+<span class="nc" id="L265">        findClient(config).ifPresent(client -&gt; updateClient(config, client.getId()));</span>
+<span class="nc" id="L266">    }</span>
 
     @SuppressWarnings(&quot;squid:S1155&quot;)//Because having a double negative in an if statement reduces readibility
     private void updateClient(KeycloakClientConfig config, String id) {
-<span class="fc" id="L269">        RealmResource realmResource = keycloak.realm(config.getRealm());</span>
-<span class="fc" id="L270">        ClientResource clientResource = realmResource.clients().get(id);</span>
-<span class="fc" id="L271">        List&lt;ExpectedRole&gt; desiredRoles = config.getRoles().stream().filter(distinctByKey(ExpectedRole::getCode))</span>
-<span class="fc" id="L272">                .collect(Collectors.toList());</span>
-<span class="fc" id="L273">        List&lt;RoleRepresentation&gt; currentRoles = clientResource.roles().list();</span>
-<span class="fc" id="L274">        Set&lt;String&gt; desiredRoleNames = desiredRoles.stream()</span>
-<span class="fc" id="L275">                .map(ExpectedRole::getName)</span>
-<span class="fc" id="L276">                .collect(Collectors.toSet());</span>
-<span class="fc" id="L277">        List&lt;String&gt; currentRoleNames = currentRoles.stream()</span>
-<span class="fc" id="L278">                .map(RoleRepresentation::getName)</span>
-<span class="fc" id="L279">                .collect(Collectors.toList());</span>
-<span class="fc" id="L280">        currentRoleNames.stream()</span>
-<span class="pc bpc" id="L281" title="1 of 2 branches missed.">                .filter(roleName -&gt; !desiredRoleNames.contains(roleName))</span>
-<span class="fc" id="L282">                .forEach(clientResource.roles()::deleteRole);</span>
-<span class="pc bpc" id="L283" title="1 of 2 branches missed.">        desiredRoles.stream().filter(role -&gt; !currentRoleNames.contains(role.getName()))</span>
-<span class="fc" id="L284">                .map(DefaultKeycloakClient::toRoleRepresentation)</span>
-<span class="fc" id="L285">                .forEach(clientResource.roles()::create);</span>
-<span class="fc" id="L286">        config.getPermissions().forEach(role -&gt; assignServiceAccountRole(realmResource, clientResource, role));</span>
-<span class="fc" id="L287">        List&lt;String&gt; redirectUris = config.getRedirectUris();</span>
-<span class="pc bpc" id="L288" title="1 of 2 branches missed.">        if (redirectUris.size() &gt; 0) {</span>
-<span class="fc" id="L289">            ClientRepresentation clientRepresentation = clientResource.toRepresentation();</span>
-<span class="fc" id="L290">            clientRepresentation.getRedirectUris().addAll(redirectUris);</span>
-<span class="fc" id="L291">            clientResource.update(clientRepresentation);</span>
+<span class="fc" id="L270">        RealmResource realmResource = keycloak.realm(config.getRealm());</span>
+<span class="fc" id="L271">        ClientResource clientResource = realmResource.clients().get(id);</span>
+<span class="fc" id="L272">        List&lt;ExpectedRole&gt; desiredRoles = config.getRoles().stream().filter(distinctByKey(ExpectedRole::getCode))</span>
+<span class="fc" id="L273">                .collect(Collectors.toList());</span>
+<span class="fc" id="L274">        List&lt;RoleRepresentation&gt; currentRoles = clientResource.roles().list();</span>
+<span class="fc" id="L275">        Set&lt;String&gt; desiredRoleNames = desiredRoles.stream()</span>
+<span class="fc" id="L276">                .map(ExpectedRole::getName)</span>
+<span class="fc" id="L277">                .collect(Collectors.toSet());</span>
+<span class="fc" id="L278">        List&lt;String&gt; currentRoleNames = currentRoles.stream()</span>
+<span class="fc" id="L279">                .map(RoleRepresentation::getName)</span>
+<span class="fc" id="L280">                .collect(Collectors.toList());</span>
+<span class="fc" id="L281">        currentRoleNames.stream()</span>
+<span class="pc bpc" id="L282" title="1 of 2 branches missed.">                .filter(roleName -&gt; !desiredRoleNames.contains(roleName))</span>
+<span class="fc" id="L283">                .forEach(clientResource.roles()::deleteRole);</span>
+<span class="pc bpc" id="L284" title="1 of 2 branches missed.">        desiredRoles.stream().filter(role -&gt; !currentRoleNames.contains(role.getName()))</span>
+<span class="fc" id="L285">                .map(DefaultKeycloakClient::toRoleRepresentation)</span>
+<span class="fc" id="L286">                .forEach(clientResource.roles()::create);</span>
+<span class="fc" id="L287">        config.getPermissions().forEach(role -&gt; assignServiceAccountRole(realmResource, clientResource, role));</span>
+<span class="fc" id="L288">        List&lt;String&gt; redirectUris = config.getRedirectUris();</span>
+<span class="pc bpc" id="L289" title="1 of 2 branches missed.">        if (redirectUris.size() &gt; 0) {</span>
+<span class="fc" id="L290">            ClientRepresentation clientRepresentation = clientResource.toRepresentation();</span>
+<span class="fc" id="L291">            clientRepresentation.getRedirectUris().addAll(redirectUris);</span>
+<span class="fc" id="L292">            clientResource.update(clientRepresentation);</span>
 
         }
-<span class="fc" id="L294">    }</span>
+<span class="fc" id="L295">    }</span>
 
     private void assignServiceAccountRole(RealmResource realmResource, ClientResource clientResource, Permission serviceRole) {
-<span class="fc" id="L297">        findByClientId(realmResource, serviceRole.getClientId()).ifPresent(toAssociateClientResource -&gt; {</span>
-<span class="fc" id="L298">            String toAssociateClientUuid = toAssociateClientResource.toRepresentation().getId();</span>
-<span class="fc" id="L299">            RoleRepresentation role = toAssociateClientResource.roles().get(serviceRole.getRole()).toRepresentation();</span>
-<span class="fc" id="L300">            realmResource.users().get(clientResource.getServiceAccountUser().getId()).roles()</span>
-<span class="fc" id="L301">                    .clientLevel(toAssociateClientUuid)</span>
-<span class="fc" id="L302">                    .add(Collections.singletonList(role));</span>
-<span class="fc" id="L303">        });</span>
-<span class="fc" id="L304">    }</span>
+<span class="fc" id="L298">        findByClientId(realmResource, serviceRole.getClientId()).ifPresent(toAssociateClientResource -&gt; {</span>
+<span class="fc" id="L299">            String toAssociateClientUuid = toAssociateClientResource.toRepresentation().getId();</span>
+<span class="fc" id="L300">            RoleRepresentation role = toAssociateClientResource.roles().get(serviceRole.getRole()).toRepresentation();</span>
+<span class="fc" id="L301">            realmResource.users().get(clientResource.getServiceAccountUser().getId()).roles()</span>
+<span class="fc" id="L302">                    .clientLevel(toAssociateClientUuid)</span>
+<span class="fc" id="L303">                    .add(Collections.singletonList(role));</span>
+<span class="fc" id="L304">        });</span>
+<span class="fc" id="L305">    }</span>
 
     private Optional&lt;ClientResource&gt; findByClientId(RealmResource realmResource, String clientId) {
-<span class="fc" id="L307">        ClientsResource clientsResource = realmResource.clients();</span>
-<span class="fc" id="L308">        return clientsResource.findByClientId(clientId).stream().findFirst()</span>
-<span class="fc" id="L309">                .map(ClientRepresentation::getId)</span>
-<span class="fc" id="L310">                .map(clientsResource::get);</span>
+<span class="fc" id="L308">        ClientsResource clientsResource = realmResource.clients();</span>
+<span class="fc" id="L309">        return clientsResource.findByClientId(clientId).stream().findFirst()</span>
+<span class="fc" id="L310">                .map(ClientRepresentation::getId)</span>
+<span class="fc" id="L311">                .map(clientsResource::get);</span>
     }
 
     private static &lt;T&gt; Predicate&lt;T&gt; distinctByKey(Function&lt;? super T, ?&gt; keyExtractor) {
-<span class="fc" id="L314">        Set&lt;Object&gt; seen = ConcurrentHashMap.newKeySet();</span>
-<span class="fc" id="L315">        return t -&gt; seen.add(keyExtractor.apply(t));</span>
+<span class="fc" id="L315">        Set&lt;Object&gt; seen = ConcurrentHashMap.newKeySet();</span>
+<span class="fc" id="L316">        return t -&gt; seen.add(keyExtractor.apply(t));</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
