@@ -41,36 +41,38 @@ public class CategoryProcessor implements ComponentProcessor&lt;CategoryDescript
         try {
 <span class="fc" id="L42">            BundleDescriptor descriptor = npr.readBundleDescriptor();</span>
 
-<span class="fc" id="L44">            List&lt;String&gt; categoryDescriptors = ofNullable(descriptor.getComponents())</span>
+<span class="fc" id="L44">            List&lt;String&gt; categoryDescriptorFiles = ofNullable(descriptor.getComponents())</span>
 <span class="fc" id="L45">                    .map(ComponentSpecDescriptor::getCategories)</span>
 <span class="fc" id="L46">                    .orElse(Collections.emptyList());</span>
 
 <span class="fc" id="L48">            List&lt;Installable&lt;CategoryDescriptor&gt;&gt; installables = new LinkedList&lt;&gt;();</span>
 
-<span class="fc bfc" id="L50" title="All 2 branches covered.">            for (String fileName : categoryDescriptors) {</span>
-<span class="fc" id="L51">                CategoryDescriptor categoryDescriptor = npr.readDescriptorFile(fileName, CategoryDescriptor.class);</span>
-<span class="fc" id="L52">                installables.add(new CategoryInstallable(engineService, categoryDescriptor));</span>
-<span class="fc" id="L53">            }</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">            for (String fileName : categoryDescriptorFiles) {</span>
+<span class="fc" id="L51">                List&lt;CategoryDescriptor&gt; categoryDescriptorList = npr.readListOfDescriptorFile(fileName, CategoryDescriptor.class);</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">                for (CategoryDescriptor cd: categoryDescriptorList) {</span>
+<span class="fc" id="L53">                    installables.add(new CategoryInstallable(engineService, cd));</span>
+<span class="fc" id="L54">                }</span>
+<span class="fc" id="L55">            }</span>
 
-<span class="fc" id="L55">            return installables;</span>
-<span class="nc" id="L56">        } catch (IOException e) {</span>
-<span class="nc" id="L57">            throw new EntandoComponentManagerException(&quot;Error reading bundle&quot;, e);</span>
+<span class="fc" id="L57">            return installables;</span>
+<span class="nc" id="L58">        } catch (IOException e) {</span>
+<span class="nc" id="L59">            throw new EntandoComponentManagerException(&quot;Error reading bundle&quot;, e);</span>
         }
     }
 
     @Override
     public List&lt;Installable&lt;CategoryDescriptor&gt;&gt; process(List&lt;EntandoBundleComponentJobEntity&gt; components) {
-<span class="fc" id="L63">        return components.stream()</span>
-<span class="pc bpc" id="L64" title="1 of 2 branches missed.">                .filter(c -&gt; c.getComponentType() == ComponentType.CATEGORY)</span>
-<span class="fc" id="L65">                .map(c -&gt; new CategoryInstallable(engineService, this.buildDescriptorFromComponentJob(c)))</span>
-<span class="fc" id="L66">                .collect(Collectors.toList());</span>
+<span class="fc" id="L65">        return components.stream()</span>
+<span class="pc bpc" id="L66" title="1 of 2 branches missed.">                .filter(c -&gt; c.getComponentType() == ComponentType.CATEGORY)</span>
+<span class="fc" id="L67">                .map(c -&gt; new CategoryInstallable(engineService, this.buildDescriptorFromComponentJob(c)))</span>
+<span class="fc" id="L68">                .collect(Collectors.toList());</span>
     }
 
     @Override
     public CategoryDescriptor buildDescriptorFromComponentJob(EntandoBundleComponentJobEntity component) {
-<span class="fc" id="L71">        return CategoryDescriptor.builder()</span>
-<span class="fc" id="L72">                .code(component.getComponentId())</span>
-<span class="fc" id="L73">                .build();</span>
+<span class="fc" id="L73">        return CategoryDescriptor.builder()</span>
+<span class="fc" id="L74">                .code(component.getComponentId())</span>
+<span class="fc" id="L75">                .build();</span>
     }
 
 }
