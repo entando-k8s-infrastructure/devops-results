@@ -15,35 +15,43 @@ package org.entando.entando.web.group;
 
 import com.agiletec.aps.system.services.role.Permission;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
+import java.util.HashMap;
+import java.util.Map;
+import javax.validation.Valid;
 import org.entando.entando.aps.system.services.group.IGroupService;
 import org.entando.entando.aps.system.services.group.model.GroupDto;
 import org.entando.entando.web.common.annotation.RestAccessControl;
 import org.entando.entando.web.common.exceptions.ValidationConflictException;
 import org.entando.entando.web.common.exceptions.ValidationGenericException;
 import org.entando.entando.web.common.model.PagedMetadata;
+import org.entando.entando.web.common.model.PagedRestResponse;
 import org.entando.entando.web.common.model.RestListRequest;
+import org.entando.entando.web.common.model.SimpleRestResponse;
+import org.entando.entando.web.component.ComponentUsage;
 import org.entando.entando.web.group.model.GroupRequest;
 import org.entando.entando.web.group.validator.GroupValidator;
-import org.entando.entando.ent.util.EntLoggingX.EntLogger;
-import org.entando.entando.ent.util.EntLoggingX.EntLogFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.*;
-
-import javax.validation.Valid;
-import java.util.HashMap;
-import java.util.Map;
-import org.entando.entando.web.common.model.PagedRestResponse;
-import org.entando.entando.web.common.model.SimpleRestResponse;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping(value = &quot;/groups&quot;)
-<span class="fc" id="L44">public class GroupController {</span>
+<span class="fc" id="L51">public class GroupController {</span>
 
-<span class="fc" id="L46">    private final EntLogger logger = EntLogFactory.getSantiziedLogger(getClass());</span>
+    public static final String COMPONENT_ID = &quot;group&quot;;
+<span class="fc" id="L54">    private final EntLogger logger = EntLogFactory.getSantiziedLogger(getClass());</span>
 
     @Autowired
     private IGroupService groupService;
@@ -52,59 +60,78 @@ import org.entando.entando.web.common.model.SimpleRestResponse;
     private GroupValidator groupValidator;
 
     public IGroupService getGroupService() {
-<span class="fc" id="L55">        return groupService;</span>
+<span class="fc" id="L63">        return groupService;</span>
     }
 
     public void setGroupService(IGroupService groupService) {
-<span class="fc" id="L59">        this.groupService = groupService;</span>
-<span class="fc" id="L60">    }</span>
+<span class="fc" id="L67">        this.groupService = groupService;</span>
+<span class="fc" id="L68">    }</span>
 
     public GroupValidator getGroupValidator() {
-<span class="fc" id="L63">        return groupValidator;</span>
+<span class="fc" id="L71">        return groupValidator;</span>
     }
 
     public void setGroupValidator(GroupValidator groupValidator) {
-<span class="fc" id="L67">        this.groupValidator = groupValidator;</span>
-<span class="fc" id="L68">    }</span>
+<span class="fc" id="L75">        this.groupValidator = groupValidator;</span>
+<span class="fc" id="L76">    }</span>
 
     @RestAccessControl(permission = Permission.ENTER_BACKEND)
     @RequestMapping(method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity&lt;PagedRestResponse&lt;GroupDto&gt;&gt; getGroups(RestListRequest requestList) throws JsonProcessingException {
-<span class="fc" id="L73">        this.getGroupValidator().validateRestListRequest(requestList, GroupDto.class);</span>
-<span class="fc" id="L74">        PagedMetadata&lt;GroupDto&gt; result = this.getGroupService().getGroups(requestList);</span>
-<span class="fc" id="L75">        this.getGroupValidator().validateRestListResult(requestList, result);</span>
-<span class="fc" id="L76">        logger.debug(&quot;Main Response -&gt; {}&quot;, result);</span>
-<span class="fc" id="L77">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+    public ResponseEntity&lt;PagedRestResponse&lt;GroupDto&gt;&gt; getGroups(RestListRequest requestList)
+            throws JsonProcessingException {
+<span class="fc" id="L82">        this.getGroupValidator().validateRestListRequest(requestList, GroupDto.class);</span>
+<span class="fc" id="L83">        PagedMetadata&lt;GroupDto&gt; result = this.getGroupService().getGroups(requestList);</span>
+<span class="fc" id="L84">        this.getGroupValidator().validateRestListResult(requestList, result);</span>
+<span class="fc" id="L85">        logger.debug(&quot;Main Response -&gt; {}&quot;, result);</span>
+<span class="fc" id="L86">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.ENTER_BACKEND)
     @RequestMapping(value = &quot;/{groupCode}&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;GroupDto&gt;&gt; getGroup(@PathVariable String groupCode) {
-<span class="fc" id="L83">        GroupDto group = this.getGroupService().getGroup(groupCode);</span>
-<span class="fc" id="L84">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(group), HttpStatus.OK);</span>
+<span class="fc" id="L92">        GroupDto group = this.getGroupService().getGroup(groupCode);</span>
+<span class="fc" id="L93">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(group), HttpStatus.OK);</span>
+    }
+
+    @ApiOperation(&quot;Retrieve pageModel usage count&quot;)
+    @ApiResponses({
+            @ApiResponse(code = 200, message = &quot;OK&quot;)
+    })
+    @RestAccessControl(permission = Permission.SUPERUSER)
+    @RequestMapping(value = &quot;/{code}/usage&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;SimpleRestResponse&lt;ComponentUsage&gt;&gt; getComponentUsage(@PathVariable String code) {
+<span class="fc" id="L103">        logger.trace(&quot;get {} usage by code {}&quot;, COMPONENT_ID, code);</span>
+<span class="fc" id="L104">        ComponentUsage usage = ComponentUsage.builder()</span>
+<span class="fc" id="L105">                .type(COMPONENT_ID)</span>
+<span class="fc" id="L106">                .code(code)</span>
+<span class="fc" id="L107">                .usage(groupService.getComponentUsage(code))</span>
+<span class="fc" id="L108">                .build();</span>
+<span class="fc" id="L109">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(usage), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.SUPERUSER)
     @RequestMapping(value = &quot;/{groupCode}/references/{holder}&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity&lt;PagedRestResponse&lt;?&gt;&gt; getGroupReferences(@PathVariable String groupCode, @PathVariable String holder, RestListRequest requestList) {
-<span class="fc" id="L90">        PagedMetadata&lt;?&gt; result = this.getGroupService().getGroupReferences(groupCode, holder, requestList);</span>
-<span class="fc" id="L91">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+    public ResponseEntity&lt;PagedRestResponse&lt;?&gt;&gt; getGroupReferences(@PathVariable String groupCode,
+            @PathVariable String holder, RestListRequest requestList) {
+<span class="fc" id="L116">        PagedMetadata&lt;?&gt; result = this.getGroupService().getGroupReferences(groupCode, holder, requestList);</span>
+<span class="fc" id="L117">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.SUPERUSER)
     @RequestMapping(value = &quot;/{groupCode}&quot;, method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity&lt;SimpleRestResponse&lt;GroupDto&gt;&gt; updateGroup(@PathVariable String groupCode, @Valid @RequestBody GroupRequest groupRequest, BindingResult bindingResult) {
+    public ResponseEntity&lt;SimpleRestResponse&lt;GroupDto&gt;&gt; updateGroup(@PathVariable String groupCode,
+            @Valid @RequestBody GroupRequest groupRequest, BindingResult bindingResult) {
         //field validations
-<span class="pc bpc" id="L98" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L99">            throw new ValidationGenericException(bindingResult);</span>
+<span class="pc bpc" id="L125" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L126">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="fc" id="L101">        this.getGroupValidator().validateBodyName(groupCode, groupRequest, bindingResult);</span>
-<span class="pc bpc" id="L102" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="fc" id="L103">            throw new ValidationGenericException(bindingResult);</span>
+<span class="fc" id="L128">        this.getGroupValidator().validateBodyName(groupCode, groupRequest, bindingResult);</span>
+<span class="pc bpc" id="L129" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L130">            throw new ValidationGenericException(bindingResult);</span>
         }
 
-<span class="nc" id="L106">        GroupDto group = this.getGroupService().updateGroup(groupCode, groupRequest.getName());</span>
-<span class="nc" id="L107">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(group), HttpStatus.OK);</span>
+<span class="nc" id="L133">        GroupDto group = this.getGroupService().updateGroup(groupCode, groupRequest.getName());</span>
+<span class="nc" id="L134">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(group), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.SUPERUSER)
@@ -112,27 +139,28 @@ import org.entando.entando.web.common.model.SimpleRestResponse;
     public ResponseEntity&lt;SimpleRestResponse&lt;GroupDto&gt;&gt; addGroup(
             @Valid @RequestBody GroupRequest groupRequest,
             BindingResult bindingResult) {
+
         //field validations
-<span class="fc bfc" id="L116" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
-<span class="fc" id="L117">            throw new ValidationGenericException(bindingResult);</span>
+<span class="fc bfc" id="L144" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L145">            throw new ValidationGenericException(bindingResult);</span>
         }
         //business validations
-<span class="fc" id="L120">        getGroupValidator().validate(groupRequest, bindingResult);</span>
-<span class="pc bpc" id="L121" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="fc" id="L122">            throw new ValidationConflictException(bindingResult);</span>
+<span class="fc" id="L148">        getGroupValidator().validate(groupRequest, bindingResult);</span>
+<span class="pc bpc" id="L149" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L150">            throw new ValidationConflictException(bindingResult);</span>
         }
-<span class="nc" id="L124">        GroupDto dto = this.getGroupService().addGroup(groupRequest);</span>
-<span class="nc" id="L125">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(dto), HttpStatus.OK);</span>
+<span class="nc" id="L152">        GroupDto dto = this.getGroupService().addGroup(groupRequest);</span>
+<span class="nc" id="L153">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(dto), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.SUPERUSER)
     @RequestMapping(value = &quot;/{groupName}&quot;, method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;Map&lt;String, String&gt;&gt;&gt; deleteGroup(@PathVariable String groupName) {
-<span class="fc" id="L131">        logger.info(&quot;deleting {}&quot;, groupName);</span>
-<span class="fc" id="L132">        this.getGroupService().removeGroup(groupName);</span>
-<span class="fc" id="L133">        Map&lt;String, String&gt; result = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L134">        result.put(&quot;code&quot;, groupName);</span>
-<span class="fc" id="L135">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+<span class="fc" id="L159">        logger.info(&quot;deleting {}&quot;, groupName);</span>
+<span class="fc" id="L160">        this.getGroupService().removeGroup(groupName);</span>
+<span class="fc" id="L161">        Map&lt;String, String&gt; result = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L162">        result.put(&quot;code&quot;, groupName);</span>
+<span class="fc" id="L163">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
     }
 
 }
