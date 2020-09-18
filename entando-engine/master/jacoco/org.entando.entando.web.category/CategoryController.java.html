@@ -13,6 +13,9 @@
  */
 package org.entando.entando.web.category;
 
+import io.swagger.annotations.ApiOperation;
+import io.swagger.annotations.ApiResponse;
+import io.swagger.annotations.ApiResponses;
 import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.system.services.role.Permission;
 import org.entando.entando.aps.system.services.category.ICategoryService;
@@ -20,9 +23,13 @@ import org.entando.entando.aps.system.services.category.model.CategoryDto;
 import org.entando.entando.web.category.validator.CategoryValidator;
 import org.entando.entando.web.common.annotation.RestAccessControl;
 import org.entando.entando.web.common.exceptions.ValidationGenericException;
+import org.entando.entando.web.common.model.Filter;
 import org.entando.entando.web.common.model.PagedMetadata;
 import org.entando.entando.web.common.model.RestListRequest;
 import org.entando.entando.web.common.model.RestResponse;
+import org.entando.entando.web.component.ComponentUsage;
+import org.entando.entando.web.component.ComponentUsageEntity;
+import org.entando.entando.web.page.model.PageSearchRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,9 +51,10 @@ import org.entando.entando.web.common.model.SimpleRestResponse;
  */
 @RestController
 @RequestMapping(value = &quot;/categories&quot;)
-<span class="fc" id="L47">public class CategoryController {</span>
+<span class="fc" id="L54">public class CategoryController {</span>
 
-<span class="fc" id="L49">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+    public static final String COMPONENT_ID = &quot;category&quot;;
+<span class="fc" id="L57">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
 
     @Autowired
     private ICategoryService categoryService;
@@ -55,85 +63,103 @@ import org.entando.entando.web.common.model.SimpleRestResponse;
     private CategoryValidator categoryValidator;
 
     protected ICategoryService getCategoryService() {
-<span class="fc" id="L58">        return categoryService;</span>
+<span class="fc" id="L66">        return categoryService;</span>
     }
 
     public void setCategoryService(ICategoryService categoryService) {
-<span class="fc" id="L62">        this.categoryService = categoryService;</span>
-<span class="fc" id="L63">    }</span>
+<span class="fc" id="L70">        this.categoryService = categoryService;</span>
+<span class="fc" id="L71">    }</span>
 
     public CategoryValidator getCategoryValidator() {
-<span class="fc" id="L66">        return categoryValidator;</span>
+<span class="fc" id="L74">        return categoryValidator;</span>
     }
 
     public void setCategoryValidator(CategoryValidator categoryValidator) {
-<span class="fc" id="L70">        this.categoryValidator = categoryValidator;</span>
-<span class="fc" id="L71">    }</span>
+<span class="fc" id="L78">        this.categoryValidator = categoryValidator;</span>
+<span class="fc" id="L79">    }</span>
 
     @RequestMapping(method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;RestResponse&lt;List&lt;CategoryDto&gt;, Map&lt;String, String&gt;&gt;&gt; getCategories(@RequestParam(value = &quot;parentCode&quot;, required = false, defaultValue = &quot;home&quot;) String parentCode) {
-<span class="fc" id="L75">        logger.debug(&quot;getting category tree for parent {}&quot;, parentCode);</span>
-<span class="fc" id="L76">        List&lt;CategoryDto&gt; result = this.getCategoryService().getTree(parentCode);</span>
-<span class="fc" id="L77">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L78">        metadata.put(&quot;parentCode&quot;, parentCode);</span>
-<span class="fc" id="L79">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(result, metadata), HttpStatus.OK);</span>
+<span class="fc" id="L83">        logger.debug(&quot;getting category tree for parent {}&quot;, parentCode);</span>
+<span class="fc" id="L84">        List&lt;CategoryDto&gt; result = this.getCategoryService().getTree(parentCode);</span>
+<span class="fc" id="L85">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L86">        metadata.put(&quot;parentCode&quot;, parentCode);</span>
+<span class="fc" id="L87">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(result, metadata), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = { Permission.ENTER_BACKEND })
     @RequestMapping(value = &quot;/{categoryCode}&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;CategoryDto&gt;&gt; getCategory(@PathVariable String categoryCode) {
-<span class="fc" id="L85">        logger.debug(&quot;getting category {}&quot;, categoryCode);</span>
-<span class="fc" id="L86">        CategoryDto category = this.getCategoryService().getCategory(categoryCode);</span>
-<span class="fc" id="L87">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(category), HttpStatus.OK);</span>
+<span class="fc" id="L93">        logger.debug(&quot;getting category {}&quot;, categoryCode);</span>
+<span class="fc" id="L94">        CategoryDto category = this.getCategoryService().getCategory(categoryCode);</span>
+<span class="fc" id="L95">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(category), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.ENTER_BACKEND)
     @RequestMapping(value = &quot;/{categoryCode}/references/{holder}&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;PagedRestResponse&lt;?&gt;&gt; getCategoryReferences(@PathVariable String categoryCode, @PathVariable String holder, RestListRequest requestList) {
-<span class="fc" id="L93">        logger.debug(&quot;getting category references - {}&quot;, categoryCode);</span>
-<span class="fc" id="L94">        PagedMetadata&lt;?&gt; result = this.getCategoryService().getCategoryReferences(categoryCode, holder, requestList);</span>
-<span class="fc" id="L95">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+<span class="fc" id="L101">        logger.debug(&quot;getting category references - {}&quot;, categoryCode);</span>
+<span class="fc" id="L102">        PagedMetadata&lt;?&gt; result = this.getCategoryService().getCategoryReferences(categoryCode, holder, requestList);</span>
+<span class="fc" id="L103">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
     }
+
+    @ApiOperation(&quot;Retrieve categories usage count&quot;)
+    @ApiResponses({
+            @ApiResponse(code = 200, message = &quot;OK&quot;),
+            @ApiResponse(code = 400, message = &quot;Bad Request&quot;)
+    })
+    @RestAccessControl(permission = Permission.MANAGE_PAGES)
+    @RequestMapping(value = &quot;/{code}/usage&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity&lt;SimpleRestResponse&lt;ComponentUsage&gt;&gt; getComponentUsage(@PathVariable String code) {
+<span class="fc" id="L114">        logger.trace(&quot;get {} usage by code {}&quot;, COMPONENT_ID, code);</span>
+<span class="fc" id="L115">        ComponentUsage usage = ComponentUsage.builder()</span>
+<span class="fc" id="L116">                .type(COMPONENT_ID)</span>
+<span class="fc" id="L117">                .code(code)</span>
+<span class="fc" id="L118">                .usage(categoryService.getComponentUsage(code))</span>
+<span class="fc" id="L119">                .build();</span>
+<span class="fc" id="L120">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(usage), HttpStatus.OK);</span>
+    }
+
 
     @RestAccessControl(permission = Permission.MANAGE_CATEGORIES)
     @RequestMapping(method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;CategoryDto&gt;&gt; addCategory(@Valid @RequestBody CategoryDto categoryRequest, BindingResult bindingResult) throws EntException {
         //field validations
-<span class="fc" id="L102">        this.getCategoryValidator().validate(categoryRequest, bindingResult);</span>
-<span class="fc bfc" id="L103" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
-<span class="fc" id="L104">            throw new ValidationGenericException(bindingResult);</span>
+<span class="fc" id="L128">        this.getCategoryValidator().validate(categoryRequest, bindingResult);</span>
+<span class="fc bfc" id="L129" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L130">            throw new ValidationGenericException(bindingResult);</span>
         }
         //business validations
-<span class="fc" id="L107">        this.getCategoryValidator().validatePostReferences(categoryRequest, bindingResult);</span>
-<span class="fc" id="L108">        CategoryDto category = this.getCategoryService().addCategory(categoryRequest);</span>
-<span class="fc" id="L109">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(category), HttpStatus.OK);</span>
+<span class="fc" id="L133">        this.getCategoryValidator().validatePostReferences(categoryRequest, bindingResult);</span>
+<span class="fc" id="L134">        CategoryDto category = this.getCategoryService().addCategory(categoryRequest);</span>
+<span class="fc" id="L135">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(category), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.MANAGE_CATEGORIES)
     @RequestMapping(value = &quot;/{categoryCode}&quot;, method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;RestResponse&lt;CategoryDto, Map&lt;String, String&gt;&gt;&gt; updateCategory(@PathVariable String categoryCode, @Valid @RequestBody CategoryDto categoryRequest, BindingResult bindingResult) {
-<span class="fc" id="L115">        logger.debug(&quot;updating category {} with request {}&quot;, categoryCode, categoryRequest);</span>
+<span class="fc" id="L141">        logger.debug(&quot;updating category {} with request {}&quot;, categoryCode, categoryRequest);</span>
         //field validations
-<span class="fc bfc" id="L117" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
-<span class="fc" id="L118">            throw new ValidationGenericException(bindingResult);</span>
+<span class="fc bfc" id="L143" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L144">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="fc" id="L120">        this.getCategoryValidator().validatePutReferences(categoryCode, categoryRequest, bindingResult);</span>
-<span class="fc bfc" id="L121" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
-<span class="fc" id="L122">            throw new ValidationGenericException(bindingResult);</span>
+<span class="fc" id="L146">        this.getCategoryValidator().validatePutReferences(categoryCode, categoryRequest, bindingResult);</span>
+<span class="fc bfc" id="L147" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L148">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="fc" id="L124">        CategoryDto category = this.getCategoryService().updateCategory(categoryRequest);</span>
-<span class="fc" id="L125">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L126">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(category, metadata), HttpStatus.OK);</span>
+<span class="fc" id="L150">        CategoryDto category = this.getCategoryService().updateCategory(categoryRequest);</span>
+<span class="fc" id="L151">        Map&lt;String, String&gt; metadata = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L152">        return new ResponseEntity&lt;&gt;(new RestResponse&lt;&gt;(category, metadata), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.MANAGE_CATEGORIES)
     @RequestMapping(value = &quot;/{categoryCode}&quot;, method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;Map&lt;String, String&gt;&gt;&gt; deleteCategory(@PathVariable String categoryCode) throws EntException {
-<span class="fc" id="L132">        logger.debug(&quot;Deleting category -&gt; &quot; + categoryCode);</span>
-<span class="fc" id="L133">        this.getCategoryService().deleteCategory(categoryCode);</span>
-<span class="fc" id="L134">        Map&lt;String, String&gt; payload = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L135">        payload.put(&quot;code&quot;, categoryCode);</span>
-<span class="fc" id="L136">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(payload), HttpStatus.OK);</span>
+<span class="fc" id="L158">        logger.debug(&quot;Deleting category -&gt; &quot; + categoryCode);</span>
+<span class="fc" id="L159">        this.getCategoryService().deleteCategory(categoryCode);</span>
+<span class="fc" id="L160">        Map&lt;String, String&gt; payload = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L161">        payload.put(&quot;code&quot;, categoryCode);</span>
+<span class="fc" id="L162">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(payload), HttpStatus.OK);</span>
     }
 
 }
