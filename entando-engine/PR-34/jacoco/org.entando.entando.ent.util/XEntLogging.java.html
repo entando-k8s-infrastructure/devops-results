@@ -1,0 +1,1053 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>XEntLogging.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.ent.util</a> &gt; <span class="el_source">XEntLogging.java</span></div><h1>XEntLogging.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.entando.ent.util;
+
+import org.entando.entando.ent.exception.EntRuntimeException;
+import org.entando.entando.ent.util.XEntLogging.EntLogger.SanitizationLevel;
+import java.util.stream.Stream;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Marker;
+
+/**
+ * Sanitizes and Logs Data
+ * &lt;p&gt;
+ * Set of classes to help logging in Entando.
+ * &lt;p&gt;
+ * The classes supports simple sanitization in a scanner-friendly way.
+ */
+public class XEntLogging {
+
+	/**
+	 * The main Entando logging class
+	 * &lt;pre&gt;
+	 * Use this class instead of directly using slf4j.
+	 *
+	 * Please check the methods;
+	 *
+	 *  - from
+	 *  - withXXX
+	 *  &lt;/pre&gt;
+	 */
+	public static class EntLogger implements org.slf4j.Logger {
+
+		protected final org.slf4j.Logger delegate;
+
+		private final SanitizationLevel sanitizationLevel;
+
+		public SanitizationLevel getSanitizationLevel() {
+<span class="fc" id="L50">			return sanitizationLevel;</span>
+		}
+
+		/**
+		 * Returns a (cached) clone of the object with the same logger but BASIC_SANITIZATION level
+		 */
+		public EntLogger withBasicSan() {
+<span class="fc bfc" id="L57" title="All 2 branches covered.">			if (this.basicSan == null) {</span>
+<span class="fc" id="L58">				this.basicSan = EntLogFactory.from(SanitizationLevel.BASIC_SANITIZATION, delegate);</span>
+			}
+<span class="fc" id="L60">			return this.basicSan;</span>
+		}
+
+		/**
+		 * Returns a (cached) clone of the object with the same logger but FULL_SANITIZATION level
+		 */
+		public EntLogger withFullSan() {
+<span class="fc bfc" id="L67" title="All 2 branches covered.">			if (this.fullySan == null) {</span>
+<span class="fc" id="L68">				this.fullySan = EntLogFactory.from(SanitizationLevel.FULL_SANITIZATION, delegate);</span>
+			}
+<span class="fc" id="L70">			return this.fullySan;</span>
+		}
+
+<span class="fc" id="L73">		private EntLogger basicSan = null;</span>
+<span class="fc" id="L74">		private EntLogger fullySan = null;</span>
+
+<span class="fc" id="L76">		public enum SanitizationLevel {</span>
+			/**
+			 * Only fields that are supposed to carry user contents are sanitized. Format string and exceptions are not
+			 * sanitized
+			 */
+<span class="fc" id="L81">			BASIC_SANITIZATION,</span>
+			/**
+			 * Everything is sanitized, including the format strings and the exception
+			 */
+<span class="fc" id="L85">			FULL_SANITIZATION,</span>
+		}
+
+<span class="fc" id="L88">		private EntLogger(org.slf4j.Logger logger, SanitizationLevel sanitizationLevel) {</span>
+<span class="fc" id="L89">			this.delegate = logger;</span>
+<span class="fc" id="L90">			this.sanitizationLevel = sanitizationLevel;</span>
+
+<span class="pc bpc" id="L92" title="1 of 3 branches missed.">			switch (sanitizationLevel) {</span>
+				case BASIC_SANITIZATION:
+<span class="fc" id="L94">					basicSan = this;</span>
+<span class="fc" id="L95">					break;</span>
+				case FULL_SANITIZATION:
+<span class="fc" id="L97">					fullySan = this;</span>
+<span class="fc" id="L98">					break;</span>
+				default:
+<span class="nc" id="L100">					throw new EntRuntimeException(&quot;Internal Error: illegal sanitization level &quot; + sanitizationLevel);</span>
+			}
+<span class="fc" id="L102">		}</span>
+
+		/**
+		 * Return the name of this &lt;code&gt;Logger&lt;/code&gt; instance.
+		 *
+		 * @return name of this logger instance
+		 */
+		@Override
+		public String getName() {
+<span class="fc" id="L111">			return delegate.getName();</span>
+		}
+
+		/**
+		 * Is the logger instance enabled for the TRACE level?
+		 *
+		 * @return True if this Logger is enabled for the TRACE level, false otherwise.
+		 * @since 1.4
+		 */
+		@Override
+		public boolean isTraceEnabled() {
+<span class="fc" id="L122">			return delegate.isTraceEnabled();</span>
+		}
+
+		/**
+		 * Log a message at the TRACE level.
+		 *
+		 * @param msg the message string to be logged
+		 * @since 1.4
+		 */
+		@Override
+		public void trace(String msg) {
+<span class="fc bfc" id="L133" title="All 2 branches covered.">			if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L134">				delegate.trace(sanitizeString(msg));</span>
+			}
+<span class="fc" id="L136">		}</span>
+
+		/**
+		 * Log a message at the TRACE level according to the specified format and argument.
+		 * &lt;p/&gt;
+		 * &lt;p&gt;This form avoids superfluous object creation when the logger
+		 * is disabled for the TRACE level. &lt;/p&gt;
+		 *
+		 * @param format the format string
+		 * @param arg    the argument
+		 * @since 1.4
+		 */
+		@Override
+		public void trace(String format, Object arg) {
+<span class="fc bfc" id="L150" title="All 2 branches covered.">			if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L151">				delegate.trace(sanitizeSpec(format), sanitizeObject(arg));</span>
+			}
+<span class="fc" id="L153">		}</span>
+
+		/**
+		 * Log a message at the TRACE level according to the specified format and arguments.
+		 * &lt;p/&gt;
+		 * &lt;p&gt;This form avoids superfluous object creation when the logger
+		 * is disabled for the TRACE level. &lt;/p&gt;
+		 *
+		 * @param format the format string
+		 * @param arg1   the first argument
+		 * @param arg2   the second argument
+		 * @since 1.4
+		 */
+		@Override
+		public void trace(String format, Object arg1, Object arg2) {
+<span class="fc bfc" id="L168" title="All 2 branches covered.">			if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L169">				delegate.trace(sanitizeSpec(format), sanitizeObject(arg1), sanitizeObject(arg2));</span>
+			}
+<span class="fc" id="L171">		}</span>
+
+		/**
+		 * Log a message at the TRACE level according to the specified format and arguments.
+		 * &lt;p/&gt;
+		 * &lt;p&gt;This form avoids superfluous string concatenation when the logger
+		 * is disabled for the TRACE level. However, this variant incurs the hidden (and relatively small) cost of
+		 * creating an &lt;code&gt;Object[]&lt;/code&gt; before invoking the method, even if this logger is disabled for TRACE. The
+		 * variants taking {@link #trace(String, Object) one} and {@link #trace(String, Object, Object) two} arguments
+		 * exist solely in order to avoid this hidden cost.&lt;/p&gt;
+		 *
+		 * @param format    the format string
+		 * @param arguments a list of 3 or more arguments
+		 * @since 1.4
+		 */
+		@Override
+		public void trace(String format, Object... arguments) {
+<span class="fc bfc" id="L188" title="All 2 branches covered.">			if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L189">				delegate.trace(sanitizeSpec(format), sanitizeArgs(arguments));</span>
+			}
+<span class="fc" id="L191">		}</span>
+
+		/**
+		 * Log an exception (throwable) at the TRACE level with an accompanying message.
+		 *
+		 * @param msg the message accompanying the exception
+		 * @param t   the exception (throwable) to log
+		 * @since 1.4
+		 */
+		@Override
+		public void trace(String msg, Throwable t) {
+<span class="fc bfc" id="L202" title="All 2 branches covered.">			if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L203">				delegate.trace(sanitizeSpec(msg), t);</span>
+			}
+<span class="fc" id="L205">		}</span>
+
+		/**
+		 * Similar to {@link #isTraceEnabled()} method except that the marker data is also taken into account.
+		 *
+		 * @param marker The marker data to take into consideration
+		 * @return True if this Logger is enabled for the TRACE level, false otherwise.
+		 * @since 1.4
+		 */
+		@Override
+		public boolean isTraceEnabled(Marker marker) {
+<span class="fc" id="L216">			return delegate.isTraceEnabled(marker);</span>
+		}
+
+		/**
+		 * Log a message with the specific Marker at the TRACE level.
+		 *
+		 * @param marker the marker data specific to this log statement
+		 * @param msg    the message string to be logged
+		 * @since 1.4
+		 */
+		@Override
+		public void trace(Marker marker, String msg) {
+<span class="fc bfc" id="L228" title="All 2 branches covered.">			if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L229">				delegate.trace(marker, sanitizeString(msg));</span>
+			}
+<span class="fc" id="L231">		}</span>
+
+		/**
+		 * This method is similar to {@link #trace(String, Object)} method except that the marker data is also taken
+		 * into consideration.
+		 *
+		 * @param marker the marker data specific to this log statement
+		 * @param format the format string
+		 * @param arg    the argument
+		 * @since 1.4
+		 */
+		@Override
+		public void trace(Marker marker, String format, Object arg) {
+<span class="fc bfc" id="L244" title="All 2 branches covered.">			if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L245">				delegate.trace(marker, sanitizeSpec(format), sanitizeObject(arg));</span>
+			}
+<span class="fc" id="L247">		}</span>
+
+		/**
+		 * This method is similar to {@link #trace(String, Object, Object)} method except that the marker data is also
+		 * taken into consideration.
+		 *
+		 * @param marker the marker data specific to this log statement
+		 * @param format the format string
+		 * @param arg1   the first argument
+		 * @param arg2   the second argument
+		 * @since 1.4
+		 */
+		@Override
+		public void trace(Marker marker, String format, Object arg1, Object arg2) {
+<span class="fc bfc" id="L261" title="All 2 branches covered.">			if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L262">				delegate.trace(marker, sanitizeSpec(format), sanitizeObject(arg1), sanitizeObject(arg2));</span>
+			}
+<span class="fc" id="L264">		}</span>
+
+		/**
+		 * This method is similar to {@link #trace(String, Object...)} method except that the marker data is also taken
+		 * into consideration.
+		 *
+		 * @param marker   the marker data specific to this log statement
+		 * @param format   the format string
+		 * @param argArray an array of arguments
+		 * @since 1.4
+		 */
+		@Override
+		public void trace(Marker marker, String format, Object... argArray) {
+<span class="fc bfc" id="L277" title="All 2 branches covered.">			if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L278">				delegate.trace(marker, sanitizeSpec(format), sanitizeArgs(argArray));</span>
+			}
+<span class="fc" id="L280">		}</span>
+
+		/**
+		 * This method is similar to {@link #trace(String, Throwable)} method except that the marker data is also taken
+		 * into consideration.
+		 *
+		 * @param marker the marker data specific to this log statement
+		 * @param msg    the message accompanying the exception
+		 * @param t      the exception (throwable) to log
+		 * @since 1.4
+		 */
+		@Override
+		public void trace(Marker marker, String msg, Throwable t) {
+<span class="fc bfc" id="L293" title="All 2 branches covered.">			if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L294">				delegate.trace(marker, sanitizeString(msg), sanitizeSpec(t));</span>
+			}
+<span class="fc" id="L296">		}</span>
+
+		/**
+		 * Is the logger instance enabled for the DEBUG level?
+		 *
+		 * @return True if this Logger is enabled for the DEBUG level, false otherwise.
+		 */
+		@Override
+		public boolean isDebugEnabled() {
+<span class="fc" id="L305">			return delegate.isDebugEnabled();</span>
+		}
+
+		/**
+		 * Log a message at the DEBUG level.
+		 *
+		 * @param msg the message string to be logged
+		 */
+		@Override
+		public void debug(String msg) {
+<span class="fc bfc" id="L315" title="All 2 branches covered.">			if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L316">				delegate.debug(sanitizeString(msg));</span>
+			}
+<span class="fc" id="L318">		}</span>
+
+		/**
+		 * Log a message at the DEBUG level according to the specified format and argument.
+		 * &lt;p/&gt;
+		 * &lt;p&gt;This form avoids superfluous object creation when the logger
+		 * is disabled for the DEBUG level. &lt;/p&gt;
+		 *
+		 * @param format the format string
+		 * @param arg    the argument
+		 */
+		@Override
+		public void debug(String format, Object arg) {
+<span class="fc bfc" id="L331" title="All 2 branches covered.">			if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L332">				delegate.debug(sanitizeSpec(format), sanitizeObject(arg));</span>
+			}
+<span class="fc" id="L334">		}</span>
+
+		/**
+		 * Log a message at the DEBUG level according to the specified format and arguments.
+		 * &lt;p/&gt;
+		 * &lt;p&gt;This form avoids superfluous object creation when the logger
+		 * is disabled for the DEBUG level. &lt;/p&gt;
+		 *
+		 * @param format the format string
+		 * @param arg1   the first argument
+		 * @param arg2   the second argument
+		 */
+		@Override
+		public void debug(String format, Object arg1, Object arg2) {
+<span class="fc bfc" id="L348" title="All 2 branches covered.">			if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L349">				delegate.debug(sanitizeSpec(format), sanitizeObject(arg1), sanitizeObject(arg2));</span>
+			}
+<span class="fc" id="L351">		}</span>
+
+		/**
+		 * Log a message at the DEBUG level according to the specified format and arguments.
+		 * &lt;p/&gt;
+		 * &lt;p&gt;This form avoids superfluous string concatenation when the logger
+		 * is disabled for the DEBUG level. However, this variant incurs the hidden (and relatively small) cost of
+		 * creating an &lt;code&gt;Object[]&lt;/code&gt; before invoking the method, even if this logger is disabled for DEBUG. The
+		 * variants taking {@link #debug(String, Object) one} and {@link #debug(String, Object, Object) two} arguments
+		 * exist solely in order to avoid this hidden cost.&lt;/p&gt;
+		 *
+		 * @param format    the format string
+		 * @param arguments a list of 3 or more arguments
+		 */
+		@Override
+		public void debug(String format, Object... arguments) {
+<span class="fc bfc" id="L367" title="All 2 branches covered.">			if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L368">				delegate.debug(sanitizeSpec(format), sanitizeArgs(arguments));</span>
+			}
+<span class="fc" id="L370">		}</span>
+
+		/**
+		 * Log an exception (throwable) at the DEBUG level with an accompanying message.
+		 *
+		 * @param msg the message accompanying the exception
+		 * @param t   the exception (throwable) to log
+		 */
+		@Override
+		public void debug(String msg, Throwable t) {
+<span class="fc bfc" id="L380" title="All 2 branches covered.">			if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L381">				delegate.debug(sanitizeSpec(msg), sanitizeSpec(t));</span>
+			}
+<span class="fc" id="L383">		}</span>
+
+		/**
+		 * Similar to {@link #isDebugEnabled()} method except that the marker data is also taken into account.
+		 *
+		 * @param marker The marker data to take into consideration
+		 * @return True if this Logger is enabled for the DEBUG level, false otherwise.
+		 */
+		@Override
+		public boolean isDebugEnabled(Marker marker) {
+<span class="fc" id="L393">			return delegate.isDebugEnabled(marker);</span>
+		}
+
+		/**
+		 * Log a message with the specific Marker at the DEBUG level.
+		 *
+		 * @param marker the marker data specific to this log statement
+		 * @param msg    the message string to be logged
+		 */
+		@Override
+		public void debug(Marker marker, String msg) {
+<span class="fc bfc" id="L404" title="All 2 branches covered.">			if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L405">				delegate.debug(marker, sanitizeString(msg));</span>
+			}
+<span class="fc" id="L407">		}</span>
+
+		/**
+		 * This method is similar to {@link #debug(String, Object)} method except that the marker data is also taken
+		 * into consideration.
+		 *
+		 * @param marker the marker data specific to this log statement
+		 * @param format the format string
+		 * @param arg    the argument
+		 */
+		@Override
+		public void debug(Marker marker, String format, Object arg) {
+<span class="fc bfc" id="L419" title="All 2 branches covered.">			if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L420">				delegate.debug(marker, sanitizeSpec(format), sanitizeObject(arg));</span>
+			}
+<span class="fc" id="L422">		}</span>
+
+		/**
+		 * This method is similar to {@link #debug(String, Object, Object)} method except that the marker data is also
+		 * taken into consideration.
+		 *
+		 * @param marker the marker data specific to this log statement
+		 * @param format the format string
+		 * @param arg1   the first argument
+		 * @param arg2   the second argument
+		 */
+		@Override
+		public void debug(Marker marker, String format, Object arg1, Object arg2) {
+<span class="fc bfc" id="L435" title="All 2 branches covered.">			if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L436">				delegate.debug(marker, sanitizeSpec(format), sanitizeObject(arg1), sanitizeObject(arg2));</span>
+			}
+<span class="fc" id="L438">		}</span>
+
+		/**
+		 * This method is similar to {@link #debug(String, Object...)} method except that the marker data is also taken
+		 * into consideration.
+		 *
+		 * @param marker    the marker data specific to this log statement
+		 * @param format    the format string
+		 * @param arguments a list of 3 or more arguments
+		 */
+		@Override
+		public void debug(Marker marker, String format, Object... arguments) {
+<span class="fc bfc" id="L450" title="All 2 branches covered.">			if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L451">				delegate.debug(marker, sanitizeSpec(format), sanitizeArgs(arguments));</span>
+			}
+<span class="fc" id="L453">		}</span>
+
+		/**
+		 * This method is similar to {@link #debug(String, Throwable)} method except that the marker data is also taken
+		 * into consideration.
+		 *
+		 * @param marker the marker data specific to this log statement
+		 * @param msg    the message accompanying the exception
+		 * @param t      the exception (throwable) to log
+		 */
+		@Override
+		public void debug(Marker marker, String msg, Throwable t) {
+<span class="fc bfc" id="L465" title="All 2 branches covered.">			if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L466">				delegate.debug(marker, sanitizeString(msg), sanitizeSpec(t));</span>
+			}
+<span class="fc" id="L468">		}</span>
+
+		/**
+		 * Is the logger instance enabled for the INFO level?
+		 *
+		 * @return True if this Logger is enabled for the INFO level, false otherwise.
+		 */
+		@Override
+		public boolean isInfoEnabled() {
+<span class="fc" id="L477">			return delegate.isInfoEnabled();</span>
+		}
+
+		/**
+		 * Log a message at the INFO level.
+		 *
+		 * @param msg the message string to be logged
+		 */
+		@Override
+		public void info(String msg) {
+<span class="fc bfc" id="L487" title="All 2 branches covered.">			if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L488">				delegate.info(sanitizeString(msg));</span>
+			}
+<span class="fc" id="L490">		}</span>
+
+		/**
+		 * Log a message at the INFO level according to the specified format and argument.
+		 * &lt;p/&gt;
+		 * &lt;p&gt;This form avoids superfluous object creation when the logger
+		 * is disabled for the INFO level. &lt;/p&gt;
+		 *
+		 * @param format the format string
+		 * @param arg    the argument
+		 */
+		@Override
+		public final void info(String format, Object arg) {
+<span class="fc bfc" id="L503" title="All 2 branches covered.">			if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L504">				delegate.info(sanitizeSpec(format), sanitizeObject(arg));</span>
+			}
+<span class="fc" id="L506">		}</span>
+
+		/**
+		 * Log a message at the INFO level according to the specified format and arguments.
+		 * &lt;p/&gt;
+		 * &lt;p&gt;This form avoids superfluous object creation when the logger
+		 * is disabled for the INFO level. &lt;/p&gt;
+		 *
+		 * @param format the format string
+		 * @param arg1   the first argument
+		 * @param arg2   the second argument
+		 */
+		@Override
+		public void info(String format, Object arg1, Object arg2) {
+<span class="fc bfc" id="L520" title="All 2 branches covered.">			if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L521">				delegate.info(sanitizeSpec(format), sanitizeObject(arg1), sanitizeObject(arg2));</span>
+			}
+<span class="fc" id="L523">		}</span>
+
+		/**
+		 * Log a message at the INFO level according to the specified format and arguments.
+		 * &lt;p/&gt;
+		 * &lt;p&gt;This form avoids superfluous string concatenation when the logger
+		 * is disabled for the INFO level. However, this variant incurs the hidden (and relatively small) cost of
+		 * creating an &lt;code&gt;Object[]&lt;/code&gt; before invoking the method, even if this logger is disabled for INFO. The
+		 * variants taking {@link #info(String, Object) one} and {@link #info(String, Object, Object) two} arguments
+		 * exist solely in order to avoid this hidden cost.&lt;/p&gt;
+		 *
+		 * @param format    the format string
+		 * @param arguments a list of 3 or more arguments
+		 */
+		@Override
+		public void info(String format, Object... arguments) {
+<span class="fc bfc" id="L539" title="All 2 branches covered.">			if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L540">				delegate.info(sanitizeSpec(format), sanitizeArgs(arguments));</span>
+			}
+<span class="fc" id="L542">		}</span>
+
+		/**
+		 * Log an exception (throwable) at the INFO level with an accompanying message.
+		 *
+		 * @param msg the message accompanying the exception
+		 * @param t   the exception (throwable) to log
+		 */
+		@Override
+		public void info(String msg, Throwable t) {
+<span class="fc bfc" id="L552" title="All 2 branches covered.">			if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L553">				delegate.info(sanitizeSpec(msg), sanitizeSpec(t));</span>
+			}
+<span class="fc" id="L555">		}</span>
+
+		/**
+		 * Similar to {@link #isInfoEnabled()} method except that the marker data is also taken into consideration.
+		 *
+		 * @param marker The marker data to take into consideration
+		 * @return true if this logger is warn enabled, false otherwise
+		 */
+		@Override
+		public boolean isInfoEnabled(Marker marker) {
+<span class="fc" id="L565">			return delegate.isInfoEnabled(marker);</span>
+		}
+
+		/**
+		 * Log a message with the specific Marker at the INFO level.
+		 *
+		 * @param marker The marker specific to this log statement
+		 * @param msg    the message string to be logged
+		 */
+		@Override
+		public void info(Marker marker, String msg) {
+<span class="fc bfc" id="L576" title="All 2 branches covered.">			if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L577">				delegate.info(marker, sanitizeString(msg));</span>
+			}
+<span class="fc" id="L579">		}</span>
+
+		/**
+		 * This method is similar to {@link #info(String, Object)} method except that the marker data is also taken into
+		 * consideration.
+		 *
+		 * @param marker the marker data specific to this log statement
+		 * @param format the format string
+		 * @param arg    the argument
+		 */
+		@Override
+		public void info(Marker marker, String format, Object arg) {
+<span class="fc bfc" id="L591" title="All 2 branches covered.">			if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L592">				delegate.info(marker, sanitizeSpec(format), sanitizeObject(arg));</span>
+			}
+<span class="fc" id="L594">		}</span>
+
+		/**
+		 * This method is similar to {@link #info(String, Object, Object)} method except that the marker data is also
+		 * taken into consideration.
+		 *
+		 * @param marker the marker data specific to this log statement
+		 * @param format the format string
+		 * @param arg1   the first argument
+		 * @param arg2   the second argument
+		 */
+		@Override
+		public void info(Marker marker, String format, Object arg1, Object arg2) {
+<span class="fc bfc" id="L607" title="All 2 branches covered.">			if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L608">				delegate.info(marker, sanitizeSpec(format), sanitizeObject(arg1), sanitizeObject(arg2));</span>
+			}
+<span class="fc" id="L610">		}</span>
+
+		/**
+		 * This method is similar to {@link #info(String, Object...)} method except that the marker data is also taken
+		 * into consideration.
+		 *
+		 * @param marker    the marker data specific to this log statement
+		 * @param format    the format string
+		 * @param arguments a list of 3 or more arguments
+		 */
+		@Override
+		public void info(Marker marker, String format, Object... arguments) {
+<span class="fc bfc" id="L622" title="All 2 branches covered.">			if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L623">				delegate.info(marker, sanitizeSpec(format), sanitizeArgs(arguments));</span>
+			}
+<span class="fc" id="L625">		}</span>
+
+		/**
+		 * This method is similar to {@link #info(String, Throwable)} method except that the marker data is also taken
+		 * into consideration.
+		 *
+		 * @param marker the marker data for this log statement
+		 * @param msg    the message accompanying the exception
+		 * @param t      the exception (throwable) to log
+		 */
+		@Override
+		public void info(Marker marker, String msg, Throwable t) {
+<span class="fc bfc" id="L637" title="All 2 branches covered.">			if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L638">				delegate.info(marker, sanitizeString(msg), sanitizeSpec(t));</span>
+			}
+<span class="fc" id="L640">		}</span>
+
+		/**
+		 * Is the logger instance enabled for the WARN level?
+		 *
+		 * @return True if this Logger is enabled for the WARN level, false otherwise.
+		 */
+		@Override
+		public boolean isWarnEnabled() {
+<span class="fc" id="L649">			return delegate.isWarnEnabled();</span>
+		}
+
+		/**
+		 * Log a message at the WARN level.
+		 *
+		 * @param msg the message string to be logged
+		 */
+		@Override
+		public void warn(String msg) {
+<span class="fc bfc" id="L659" title="All 2 branches covered.">			if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L660">				delegate.warn(sanitizeString(msg));</span>
+			}
+<span class="fc" id="L662">		}</span>
+
+		/**
+		 * Log a message at the WARN level according to the specified format and argument.
+		 * &lt;p/&gt;
+		 * &lt;p&gt;This form avoids superfluous object creation when the logger
+		 * is disabled for the WARN level. &lt;/p&gt;
+		 *
+		 * @param format the format string
+		 * @param arg    the argument
+		 */
+		@Override
+		public void warn(String format, Object arg) {
+<span class="fc bfc" id="L675" title="All 2 branches covered.">			if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L676">				delegate.warn(sanitizeSpec(format), sanitizeObject(arg));</span>
+			}
+<span class="fc" id="L678">		}</span>
+
+		/**
+		 * Log a message at the WARN level according to the specified format and arguments.
+		 * &lt;p/&gt;
+		 * &lt;p&gt;This form avoids superfluous string concatenation when the logger
+		 * is disabled for the WARN level. However, this variant incurs the hidden (and relatively small) cost of
+		 * creating an &lt;code&gt;Object[]&lt;/code&gt; before invoking the method, even if this logger is disabled for WARN. The
+		 * variants taking {@link #warn(String, Object) one} and {@link #warn(String, Object, Object) two} arguments
+		 * exist solely in order to avoid this hidden cost.&lt;/p&gt;
+		 *
+		 * @param format    the format string
+		 * @param arguments a list of 3 or more arguments
+		 */
+		@Override
+		public void warn(String format, Object... arguments) {
+<span class="fc bfc" id="L694" title="All 2 branches covered.">			if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L695">				delegate.warn(sanitizeSpec(format), sanitizeArgs(arguments));</span>
+			}
+<span class="fc" id="L697">		}</span>
+
+		/**
+		 * Log a message at the WARN level according to the specified format and arguments.
+		 * &lt;p/&gt;
+		 * &lt;p&gt;This form avoids superfluous object creation when the logger
+		 * is disabled for the WARN level. &lt;/p&gt;
+		 *
+		 * @param format the format string
+		 * @param arg1   the first argument
+		 * @param arg2   the second argument
+		 */
+		@Override
+		public void warn(String format, Object arg1, Object arg2) {
+<span class="fc bfc" id="L711" title="All 2 branches covered.">			if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L712">				delegate.warn(sanitizeSpec(format), sanitizeObject(arg1), sanitizeObject(arg2));</span>
+			}
+<span class="fc" id="L714">		}</span>
+
+		/**
+		 * Log an exception (throwable) at the WARN level with an accompanying message.
+		 *
+		 * @param msg the message accompanying the exception
+		 * @param t   the exception (throwable) to log
+		 */
+		@Override
+		public void warn(String msg, Throwable t) {
+<span class="fc bfc" id="L724" title="All 2 branches covered.">			if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L725">				delegate.warn(sanitizeSpec(msg), t);</span>
+			}
+<span class="fc" id="L727">		}</span>
+
+		/**
+		 * Similar to {@link #isWarnEnabled()} method except that the marker data is also taken into consideration.
+		 *
+		 * @param marker The marker data to take into consideration
+		 * @return True if this Logger is enabled for the WARN level, false otherwise.
+		 */
+		@Override
+		public boolean isWarnEnabled(Marker marker) {
+<span class="fc" id="L737">			return delegate.isWarnEnabled(marker);</span>
+		}
+
+		/**
+		 * Log a message with the specific Marker at the WARN level.
+		 *
+		 * @param marker The marker specific to this log statement
+		 * @param msg    the message string to be logged
+		 */
+		@Override
+		public void warn(Marker marker, String msg) {
+<span class="fc bfc" id="L748" title="All 2 branches covered.">			if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L749">				delegate.warn(marker, sanitizeString(msg));</span>
+			}
+<span class="fc" id="L751">		}</span>
+
+		/**
+		 * This method is similar to {@link #warn(String, Object)} method except that the marker data is also taken into
+		 * consideration.
+		 *
+		 * @param marker the marker data specific to this log statement
+		 * @param format the format string
+		 * @param arg    the argument
+		 */
+		@Override
+		public void warn(Marker marker, String format, Object arg) {
+<span class="fc bfc" id="L763" title="All 2 branches covered.">			if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L764">				delegate.warn(marker, sanitizeSpec(format), sanitizeObject(arg));</span>
+			}
+<span class="fc" id="L766">		}</span>
+
+		/**
+		 * This method is similar to {@link #warn(String, Object, Object)} method except that the marker data is also
+		 * taken into consideration.
+		 *
+		 * @param marker the marker data specific to this log statement
+		 * @param format the format string
+		 * @param arg1   the first argument
+		 * @param arg2   the second argument
+		 */
+		@Override
+		public void warn(Marker marker, String format, Object arg1, Object arg2) {
+<span class="fc bfc" id="L779" title="All 2 branches covered.">			if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L780">				delegate.warn(marker, sanitizeSpec(format), sanitizeObject(arg1), sanitizeObject(arg2));</span>
+			}
+<span class="fc" id="L782">		}</span>
+
+		/**
+		 * This method is similar to {@link #warn(String, Object...)} method except that the marker data is also taken
+		 * into consideration.
+		 *
+		 * @param marker    the marker data specific to this log statement
+		 * @param format    the format string
+		 * @param arguments a list of 3 or more arguments
+		 */
+		@Override
+		public void warn(Marker marker, String format, Object... arguments) {
+<span class="fc bfc" id="L794" title="All 2 branches covered.">			if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L795">				delegate.warn(marker, sanitizeSpec(format), sanitizeArgs(arguments));</span>
+			}
+<span class="fc" id="L797">		}</span>
+
+		/**
+		 * This method is similar to {@link #warn(String, Throwable)} method except that the marker data is also taken
+		 * into consideration.
+		 *
+		 * @param marker the marker data for this log statement
+		 * @param msg    the message accompanying the exception
+		 * @param t      the exception (throwable) to log
+		 */
+		@Override
+		public void warn(Marker marker, String msg, Throwable t) {
+<span class="fc bfc" id="L809" title="All 2 branches covered.">			if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L810">				delegate.warn(marker, sanitizeString(msg), sanitizeSpec(t));</span>
+			}
+<span class="fc" id="L812">		}</span>
+
+		/**
+		 * Is the logger instance enabled for the ERROR level?
+		 *
+		 * @return True if this Logger is enabled for the ERROR level, false otherwise.
+		 */
+		@Override
+		public boolean isErrorEnabled() {
+<span class="fc" id="L821">			return delegate.isErrorEnabled();</span>
+		}
+
+		/**
+		 * Log a message at the ERROR level.
+		 *
+		 * @param msg the message string to be logged
+		 */
+		@Override
+		public void error(String msg) {
+<span class="pc bpc" id="L831" title="1 of 2 branches missed.">			if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L832">				delegate.error(sanitizeString(msg));</span>
+			}
+<span class="fc" id="L834">		}</span>
+
+		/**
+		 * Log a message at the ERROR level according to the specified format and argument.
+		 * &lt;p/&gt;
+		 * &lt;p&gt;This form avoids superfluous object creation when the logger
+		 * is disabled for the ERROR level. &lt;/p&gt;
+		 *
+		 * @param format the format string
+		 * @param arg    the argument
+		 */
+		@Override
+		public void error(String format, Object arg) {
+<span class="pc bpc" id="L847" title="1 of 2 branches missed.">			if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L848">				delegate.error(sanitizeSpec(format), sanitizeObject(arg));</span>
+			}
+<span class="fc" id="L850">		}</span>
+
+		/**
+		 * Log a message at the ERROR level according to the specified format and arguments.
+		 * &lt;p/&gt;
+		 * &lt;p&gt;This form avoids superfluous object creation when the logger
+		 * is disabled for the ERROR level. &lt;/p&gt;
+		 *
+		 * @param format the format string
+		 * @param arg1   the first argument
+		 * @param arg2   the second argument
+		 */
+		@Override
+		public void error(String format, Object arg1, Object arg2) {
+<span class="pc bpc" id="L864" title="1 of 2 branches missed.">			if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L865">				delegate.error(sanitizeSpec(format), sanitizeObject(arg1), sanitizeObject(arg2));</span>
+			}
+<span class="fc" id="L867">		}</span>
+
+		/**
+		 * Log a message at the ERROR level according to the specified format and arguments.
+		 * &lt;p/&gt;
+		 * &lt;p&gt;This form avoids superfluous string concatenation when the logger
+		 * is disabled for the ERROR level. However, this variant incurs the hidden (and relatively small) cost of
+		 * creating an &lt;code&gt;Object[]&lt;/code&gt; before invoking the method, even if this logger is disabled for ERROR. The
+		 * variants taking {@link #error(String, Object) one} and {@link #error(String, Object, Object) two} arguments
+		 * exist solely in order to avoid this hidden cost.&lt;/p&gt;
+		 *
+		 * @param format    the format string
+		 * @param arguments a list of 3 or more arguments
+		 */
+		@Override
+		public void error(String format, Object... arguments) {
+<span class="pc bpc" id="L883" title="1 of 2 branches missed.">			if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L884">				delegate.error(sanitizeSpec(format), sanitizeArgs(arguments));</span>
+			}
+<span class="fc" id="L886">		}</span>
+
+		/**
+		 * Log an exception (throwable) at the ERROR level with an accompanying message.
+		 *
+		 * @param msg the message accompanying the exception
+		 * @param t   the exception (throwable) to log
+		 */
+		@Override
+		public void error(String msg, Throwable t) {
+<span class="pc bpc" id="L896" title="1 of 2 branches missed.">			if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L897">				delegate.error(sanitizeSpec(msg), sanitizeSpec(t));</span>
+			}
+<span class="fc" id="L899">		}</span>
+
+		/**
+		 * Similar to {@link #isErrorEnabled()} method except that the marker data is also taken into consideration.
+		 *
+		 * @param marker The marker data to take into consideration
+		 * @return True if this Logger is enabled for the ERROR level, false otherwise.
+		 */
+		@Override
+		public boolean isErrorEnabled(Marker marker) {
+<span class="fc" id="L909">			return delegate.isErrorEnabled(marker);</span>
+		}
+
+		/**
+		 * Log a message with the specific Marker at the ERROR level.
+		 *
+		 * @param marker The marker specific to this log statement
+		 * @param msg    the message string to be logged
+		 */
+		@Override
+		public void error(Marker marker, String msg) {
+<span class="pc bpc" id="L920" title="1 of 2 branches missed.">			if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L921">				delegate.error(marker, sanitizeString(msg));</span>
+			}
+<span class="fc" id="L923">		}</span>
+
+		/**
+		 * This method is similar to {@link #error(String, Object)} method except that the marker data is also taken
+		 * into consideration.
+		 *
+		 * @param marker the marker data specific to this log statement
+		 * @param format the format string
+		 * @param arg    the argument
+		 */
+		@Override
+		public void error(Marker marker, String format, Object arg) {
+<span class="pc bpc" id="L935" title="1 of 2 branches missed.">			if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L936">				delegate.error(marker, sanitizeSpec(format), sanitizeObject(arg));</span>
+			}
+<span class="fc" id="L938">		}</span>
+
+		/**
+		 * This method is similar to {@link #error(String, Object, Object)} method except that the marker data is also
+		 * taken into consideration.
+		 *
+		 * @param marker the marker data specific to this log statement
+		 * @param format the format string
+		 * @param arg1   the first argument
+		 * @param arg2   the second argument
+		 */
+		@Override
+		public void error(Marker marker, String format, Object arg1, Object arg2) {
+<span class="pc bpc" id="L951" title="1 of 2 branches missed.">			if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L952">				delegate.error(marker, sanitizeSpec(format), sanitizeObject(arg1), sanitizeObject(arg2));</span>
+			}
+<span class="fc" id="L954">		}</span>
+
+		/**
+		 * This method is similar to {@link #error(String, Object...)} method except that the marker data is also taken
+		 * into consideration.
+		 *
+		 * @param marker    the marker data specific to this log statement
+		 * @param format    the format string
+		 * @param arguments a list of 3 or more arguments
+		 */
+		@Override
+		public void error(Marker marker, String format, Object... arguments) {
+<span class="pc bpc" id="L966" title="1 of 2 branches missed.">			if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L967">				delegate.error(marker, sanitizeSpec(format), sanitizeArgs(arguments));</span>
+			}
+<span class="fc" id="L969">		}</span>
+
+		/**
+		 * This method is similar to {@link #error(String, Throwable)} method except that the marker data is also taken
+		 * into consideration.
+		 *
+		 * @param marker the marker data specific to this log statement
+		 * @param msg    the message accompanying the exception
+		 * @param t      the exception (throwable) to log
+		 */
+		@Override
+		public void error(Marker marker, String msg, Throwable t) {
+<span class="pc bpc" id="L981" title="1 of 2 branches missed.">			if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L982">				delegate.error(marker, sanitizeString(msg), sanitizeSpec(t));</span>
+			}
+<span class="fc" id="L984">		}</span>
+
+		// LOCAL UTILS
+		protected final String sanitizeSpec(String s) {
+<span class="fc bfc" id="L988" title="All 2 branches covered.">			return (sanitizationLevel == SanitizationLevel.FULL_SANITIZATION)</span>
+<span class="fc" id="L989">					? sanitizeString(s)</span>
+<span class="fc" id="L990">					: s;</span>
+		}
+
+		protected final Object sanitizeSpec(Throwable t) {
+<span class="pc bpc" id="L994" title="1 of 2 branches missed.">			return (sanitizationLevel == SanitizationLevel.FULL_SANITIZATION)</span>
+<span class="nc" id="L995">					? sanitizeSpec(t.toString())</span>
+<span class="fc" id="L996">					: t;</span>
+		}
+
+		// LOCAL STATIC UTILS
+		protected final Object[] sanitizeArgs(Object... arguments) {
+<span class="fc" id="L1001">			return Stream.of(arguments).map(this::sanitizeObject).toArray();</span>
+		}
+
+		protected final Object sanitizeObject(Object o) {
+<span class="fc bfc" id="L1005" title="All 2 branches covered.">			if (o == null) return &quot;null&quot;;</span>
+
+<span class="pc bpc" id="L1007" title="1 of 3 branches missed.">			switch (sanitizationLevel) {</span>
+				case BASIC_SANITIZATION:
+<span class="fc bfc" id="L1009" title="All 2 branches covered.">					return (o instanceof Throwable) ? o : sanitizeString(o.toString());</span>
+				case FULL_SANITIZATION:
+<span class="fc" id="L1011">					return sanitizeString(o.toString());</span>
+				default:
+<span class="nc" id="L1013">					throw new EntRuntimeException(&quot;Internal Error: illegal sanitization level &quot; + sanitizationLevel);</span>
+			}
+		}
+
+		private static String sanitizeString(String s) {
+<span class="fc bfc" id="L1018" title="All 2 branches covered.">			return (s == null) ? null : s.replace(&quot;\n&quot;, &quot;_&quot;).replace(&quot;\r&quot;, &quot;_&quot;).replace(&quot;\t&quot;, &quot;_&quot;);</span>
+		}
+	}
+
+	/**
+	 * Shortcut for building ApsLogger objects with BASIC_SANITIZATION level
+	 */
+	public interface SanitizedLogger {
+
+		static EntLogger from(Logger logger) {
+<span class="fc" id="L1028">			return EntLogFactory.from(SanitizationLevel.BASIC_SANITIZATION, logger);</span>
+		}
+	}
+
+	/**
+	 * Standard Entando Logger factory
+	 */
+	public interface EntLogFactory {
+
+		static EntLogger getSantiziedLogger(Class&lt;?&gt; clazz) {
+<span class="fc" id="L1038">			return from(SanitizationLevel.BASIC_SANITIZATION, LoggerFactory.getLogger(clazz));</span>
+		}
+
+		static EntLogger getLogger(SanitizationLevel sanitizationLevel, Class&lt;?&gt; clazz) {
+<span class="fc" id="L1042">			return from(sanitizationLevel, LoggerFactory.getLogger(clazz));</span>
+		}
+
+		static EntLogger from(SanitizationLevel sanitizationLevel, Logger logger) {
+<span class="fc" id="L1046">			return new EntLogger(logger, sanitizationLevel);</span>
+		}
+	}
+
+	private XEntLogging() {
+	}
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
