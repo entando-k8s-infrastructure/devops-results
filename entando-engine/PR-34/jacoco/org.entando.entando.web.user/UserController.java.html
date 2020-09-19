@@ -18,6 +18,7 @@ import static org.entando.entando.web.user.validator.UserValidator.createSelfDel
 import static org.entando.entando.web.user.validator.UserValidator.isAdminUser;
 import static org.entando.entando.web.user.validator.UserValidator.isUserDeletingHimself;
 
+import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.system.services.role.Permission;
 import com.agiletec.aps.system.services.user.UserDetails;
 import com.agiletec.aps.system.services.user.UserGroupPermissions;
@@ -41,8 +42,8 @@ import org.entando.entando.web.user.model.UserAuthoritiesRequest;
 import org.entando.entando.web.user.model.UserPasswordRequest;
 import org.entando.entando.web.user.model.UserRequest;
 import org.entando.entando.web.user.validator.UserValidator;
-import org.entando.entando.ent.util.XEntLogging.XEntLogger;
-import org.entando.entando.ent.util.XEntLogging.EntLogFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -68,9 +69,9 @@ import org.springframework.web.bind.annotation.SessionAttributes;
 @RestController
 @RequestMapping(value = &quot;/users&quot;)
 @SessionAttributes(&quot;user&quot;)
-<span class="nc" id="L71">public class UserController {</span>
+<span class="nc" id="L72">public class UserController {</span>
 
-<span class="nc" id="L73">    private final XEntLogger logger = EntLogFactory.getSantiziedLogger(getClass());</span>
+<span class="nc" id="L74">    private final EntLogger logger = EntLogFactory.getSantiziedLogger(getClass());</span>
 
     @Autowired
     private IUserService userService;
@@ -79,198 +80,184 @@ import org.springframework.web.bind.annotation.SessionAttributes;
     private UserValidator userValidator;
 
     public IUserService getUserService() {
-<span class="nc" id="L82">        return userService;</span>
+<span class="nc" id="L83">        return userService;</span>
     }
 
     public void setUserService(IUserService userService) {
-<span class="nc" id="L86">        this.userService = userService;</span>
-<span class="nc" id="L87">    }</span>
+<span class="nc" id="L87">        this.userService = userService;</span>
+<span class="nc" id="L88">    }</span>
 
     public UserValidator getUserValidator() {
-<span class="nc" id="L90">        return userValidator;</span>
+<span class="nc" id="L91">        return userValidator;</span>
     }
 
     public void setUserValidator(UserValidator userValidator) {
-<span class="nc" id="L94">        this.userValidator = userValidator;</span>
-<span class="nc" id="L95">    }</span>
+<span class="nc" id="L95">        this.userValidator = userValidator;</span>
+<span class="nc" id="L96">    }</span>
 
     @RestAccessControl(permission = Permission.ENTER_BACKEND)
     @RequestMapping(method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;PagedRestResponse&lt;UserDto&gt;&gt; getUsers(RestListRequest requestList, @RequestParam(value = &quot;withProfile&quot;, required = false) String withProfile) {
-<span class="nc" id="L100">        logger.debug(&quot;getting users details with request {}&quot;, requestList);</span>
-<span class="nc" id="L101">        this.getUserValidator().validateRestListRequest(requestList, UserDto.class);</span>
-<span class="nc" id="L102">        PagedMetadata&lt;UserDto&gt; result = this.getUserService().getUsers(requestList, withProfile);</span>
-<span class="nc bnc" id="L103" title="All 2 branches missed.">        if (withProfile != null) {</span>
-<span class="nc" id="L104">            result.addAdditionalParams(&quot;withProfile&quot;, withProfile);</span>
+<span class="nc" id="L101">        logger.debug(&quot;getting users details with request {}&quot;, requestList);</span>
+<span class="nc" id="L102">        this.getUserValidator().validateRestListRequest(requestList, UserDto.class);</span>
+<span class="nc" id="L103">        PagedMetadata&lt;UserDto&gt; result = this.getUserService().getUsers(requestList, withProfile);</span>
+<span class="nc bnc" id="L104" title="All 2 branches missed.">        if (withProfile != null) {</span>
+<span class="nc" id="L105">            result.addAdditionalParams(&quot;withProfile&quot;, withProfile);</span>
         }
-<span class="nc" id="L106">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+<span class="nc" id="L107">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = {Permission.MANAGE_USERS, Permission.MANAGE_USER_PROFILES, Permission.VIEW_USERS})
     @RequestMapping(value = &quot;/{username:.+}&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;UserDto&gt;&gt; getUser(@PathVariable String username) {
-<span class="nc" id="L112">        logger.debug(&quot;getting user {} details&quot;, username);</span>
-<span class="nc" id="L113">        UserDto user = this.getUserService().getUser(username);</span>
-<span class="nc" id="L114">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(user), HttpStatus.OK);</span>
+<span class="nc" id="L113">        logger.debug(&quot;getting user {} details&quot;, username);</span>
+<span class="nc" id="L114">        UserDto user = this.getUserService().getUser(username);</span>
+<span class="nc" id="L115">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(user), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.MANAGE_USERS)
     @RequestMapping(method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity&lt;SimpleRestResponse&lt;UserDto&gt;&gt; addUser(
-            @Valid @RequestBody UserRequest userRequest,
-            BindingResult bindingResult) {
-<span class="nc" id="L122">        logger.debug(&quot;adding user with request {}&quot;, userRequest);</span>
+    public ResponseEntity&lt;SimpleRestResponse&lt;UserDto&gt;&gt; addUser(@Valid @RequestBody UserRequest userRequest, BindingResult bindingResult) throws EntException {
+<span class="nc" id="L121">        logger.debug(&quot;adding user with request {}&quot;, userRequest);</span>
         //field validations
-<span class="nc bnc" id="L124" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L125">            throw new ValidationGenericException(bindingResult);</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L124">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="nc" id="L127">        this.getUserValidator().validateUserPost(userRequest, bindingResult);</span>
-<span class="nc bnc" id="L128" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L129">            throw new ValidationGenericException(bindingResult);</span>
+<span class="nc" id="L126">        this.getUserValidator().validateUserPost(userRequest, bindingResult);</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L128">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="nc" id="L131">        UserDto dto = this.getUserService().addUser(userRequest);</span>
-<span class="nc" id="L132">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(dto), HttpStatus.OK);</span>
+<span class="nc" id="L130">        UserDto dto = this.getUserService().addUser(userRequest);</span>
+<span class="nc" id="L131">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(dto), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.MANAGE_USERS)
     @RequestMapping(value = &quot;/{target:.+}&quot;, method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;UserDto&gt;&gt; updateUser(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String target, @Valid @RequestBody UserRequest userRequest, BindingResult bindingResult) {
-<span class="nc" id="L138">        logger.debug(&quot;updating user {} with request {}&quot;, target, userRequest);</span>
+<span class="nc" id="L137">        logger.debug(&quot;updating user {} with request {}&quot;, target, userRequest);</span>
         //field validations
-<span class="nc bnc" id="L140" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L141">            throw new ValidationGenericException(bindingResult);</span>
+<span class="nc bnc" id="L139" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L140">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="nc" id="L143">        this.getUserValidator().validatePutBody(target, userRequest, bindingResult);</span>
-<span class="nc" id="L144">        this.getUserValidator().validateUpdateSelf(target, user.getUsername(), bindingResult);</span>
-<span class="nc bnc" id="L145" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L146">            throw new ValidationGenericException(bindingResult);</span>
+<span class="nc" id="L142">        this.getUserValidator().validatePutBody(target, userRequest, bindingResult);</span>
+<span class="nc" id="L143">        this.getUserValidator().validateUpdateSelf(target, user.getUsername(), bindingResult);</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L145">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="nc" id="L148">        UserDto userDto = this.getUserService().updateUser(userRequest);</span>
-<span class="nc" id="L149">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(userDto), HttpStatus.OK);</span>
+<span class="nc" id="L147">        UserDto userDto = this.getUserService().updateUser(userRequest);</span>
+<span class="nc" id="L148">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(userDto), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.MANAGE_USERS)
     @RequestMapping(value = &quot;/{username:.+}/password&quot;, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;UserDto&gt;&gt; updateUserPassword(@PathVariable String username, @Valid @RequestBody UserPasswordRequest passwordRequest, BindingResult bindingResult) {
-<span class="nc" id="L155">        logger.debug(&quot;changing pasword for user {} with request {}&quot;, username, passwordRequest);</span>
+<span class="nc" id="L154">        logger.debug(&quot;changing pasword for user {} with request {}&quot;, username, passwordRequest);</span>
         //field validations
-<span class="nc bnc" id="L157" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L158">            throw new ValidationGenericException(bindingResult);</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L157">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="nc" id="L160">        this.getUserValidator().validateChangePasswords(username, passwordRequest, bindingResult);</span>
-<span class="nc bnc" id="L161" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L162">            throw new ValidationGenericException(bindingResult);</span>
+<span class="nc" id="L159">        this.getUserValidator().validateChangePasswords(username, passwordRequest, bindingResult);</span>
+<span class="nc bnc" id="L160" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L161">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="nc" id="L164">        UserDto userDto = this.getUserService().updateUserPassword(passwordRequest);</span>
-<span class="nc" id="L165">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(userDto), HttpStatus.OK);</span>
+<span class="nc" id="L163">        UserDto userDto = this.getUserService().updateUserPassword(passwordRequest);</span>
+<span class="nc" id="L164">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(userDto), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.MANAGE_USERS)
     @RequestMapping(value = &quot;/{target:.+}&quot;, method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity&lt;SimpleRestResponse&lt;Map&lt;String, String&gt;&gt;&gt; deleteUser(
-    //-
-            @ModelAttribute(&quot;user&quot;) UserDetails user,
-            @PathVariable String target,
-            BindingResult bindingResult) {
-<span class="nc" id="L175">        logger.debug(&quot;deleting {}&quot;, target);</span>
-<span class="nc bnc" id="L176" title="All 2 branches missed.">        if (isAdminUser(target)) {</span>
-<span class="nc" id="L177">            throw new ValidationGenericException(createDeleteAdminError());</span>
+    public ResponseEntity&lt;SimpleRestResponse&lt;Map&gt;&gt; deleteUser(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String target, BindingResult bindingResult) throws EntException {
+<span class="nc" id="L170">        logger.debug(&quot;deleting {}&quot;, target);</span>
+<span class="nc bnc" id="L171" title="All 2 branches missed.">        if (isAdminUser(target)) {</span>
+<span class="nc" id="L172">            throw new ValidationGenericException(createDeleteAdminError());</span>
         }
-<span class="nc bnc" id="L179" title="All 2 branches missed.">        if (isUserDeletingHimself(target, user.getUsername())) {</span>
-<span class="nc" id="L180">            throw new ValidationGenericException(createSelfDeleteUserError(bindingResult));</span>
+<span class="nc bnc" id="L174" title="All 2 branches missed.">        if (isUserDeletingHimself(target, user.getUsername())) {</span>
+<span class="nc" id="L175">            throw new ValidationGenericException(createSelfDeleteUserError(bindingResult));</span>
         }
-<span class="nc" id="L182">        this.getUserService().removeUser(target);</span>
-<span class="nc" id="L183">        Map&lt;String, String&gt; result = new HashMap&lt;&gt;();</span>
-<span class="nc" id="L184">        result.put(&quot;code&quot;, target);</span>
-<span class="nc" id="L185">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+<span class="nc" id="L177">        this.getUserService().removeUser(target);</span>
+<span class="nc" id="L178">        Map&lt;String, String&gt; result = new HashMap&lt;&gt;();</span>
+<span class="nc" id="L179">        result.put(&quot;code&quot;, target);</span>
+<span class="nc" id="L180">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.MANAGE_USERS)
     @RequestMapping(value = &quot;/{target:.+}/authorities&quot;, method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;List&lt;UserAuthorityDto&gt;&gt;&gt; updateUserAuthorities(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String target, @Valid @RequestBody UserAuthoritiesRequest authRequest, BindingResult bindingResult) {
-<span class="nc" id="L191">        logger.debug(&quot;user {} requesting update authorities for username {} with req {}&quot;, user.getUsername(), target, authRequest);</span>
+<span class="nc" id="L186">        logger.debug(&quot;user {} requesting update authorities for username {} with req {}&quot;, user.getUsername(), target, authRequest);</span>
         //field validations
+<span class="nc bnc" id="L188" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L189">            throw new ValidationGenericException(bindingResult);</span>
+        }
+        //business validations
+<span class="nc" id="L192">        this.getUserValidator().validate(authRequest, bindingResult);</span>
 <span class="nc bnc" id="L193" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
 <span class="nc" id="L194">            throw new ValidationGenericException(bindingResult);</span>
         }
-        //business validations
-<span class="nc" id="L197">        this.getUserValidator().validate(authRequest, bindingResult);</span>
-<span class="nc bnc" id="L198" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L199">            throw new ValidationGenericException(bindingResult);</span>
+<span class="nc" id="L196">        this.getUserValidator().validateUpdateSelf(target, user.getUsername(), bindingResult);</span>
+<span class="nc bnc" id="L197" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L198">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="nc" id="L201">        this.getUserValidator().validateUpdateSelf(target, user.getUsername(), bindingResult);</span>
-<span class="nc bnc" id="L202" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L203">            throw new ValidationGenericException(bindingResult);</span>
-        }
-<span class="nc" id="L205">        List&lt;UserAuthorityDto&gt; authorities = this.getUserService().updateUserAuthorities(target, authRequest);</span>
-<span class="nc" id="L206">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(authorities), HttpStatus.OK);</span>
+<span class="nc" id="L200">        List&lt;UserAuthorityDto&gt; authorities = this.getUserService().updateUserAuthorities(target, authRequest);</span>
+<span class="nc" id="L201">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(authorities), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.MANAGE_USERS)
     @RequestMapping(value = &quot;/{target:.+}/authorities&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;List&lt;UserAuthorityDto&gt;&gt;&gt; getUserAuthorities(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String target) {
-<span class="nc" id="L212">        logger.debug(&quot;requesting authorities for username {}&quot;, target);</span>
-<span class="nc" id="L213">        List&lt;UserAuthorityDto&gt; authorities = this.getUserService().getUserAuthorities(target);</span>
-<span class="nc" id="L214">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(authorities), HttpStatus.OK);</span>
+<span class="nc" id="L207">        logger.debug(&quot;requesting authorities for username {}&quot;, target);</span>
+<span class="nc" id="L208">        List&lt;UserAuthorityDto&gt; authorities = this.getUserService().getUserAuthorities(target);</span>
+<span class="nc" id="L209">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(authorities), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.MANAGE_USERS)
     @RequestMapping(value = &quot;/{target:.+}/authorities&quot;, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity&lt;SimpleRestResponse&lt;List&lt;UserAuthorityDto&gt;&gt;&gt; addUserAuthorities(
-            @ModelAttribute(&quot;user&quot;) UserDetails user,
-            @PathVariable String target,
-            @Valid @RequestBody UserAuthoritiesRequest authRequest,
-            BindingResult bindingResult) {
-<span class="nc" id="L224">        logger.debug(&quot;user {} requesting add authorities for username {} with req {}&quot;,</span>
-<span class="nc" id="L225">                user.getUsername(), target, authRequest);</span>
+    public ResponseEntity&lt;SimpleRestResponse&lt;List&lt;UserAuthorityDto&gt;&gt;&gt; addUserAuthorities(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String target, @Valid @RequestBody UserAuthoritiesRequest authRequest, BindingResult bindingResult) throws EntException {
+<span class="nc" id="L215">        logger.debug(&quot;user {} requesting add authorities for username {} with req {}&quot;, user.getUsername(), target, authRequest);</span>
         //field validations
-<span class="nc bnc" id="L227" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L228">            throw new ValidationGenericException(bindingResult);</span>
+<span class="nc bnc" id="L217" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L218">            throw new ValidationGenericException(bindingResult);</span>
         }
         //business validations
-<span class="nc" id="L231">        getUserValidator().validate(authRequest, bindingResult);</span>
-<span class="nc bnc" id="L232" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L233">            throw new ValidationGenericException(bindingResult);</span>
+<span class="nc" id="L221">        getUserValidator().validate(authRequest, bindingResult);</span>
+<span class="nc bnc" id="L222" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L223">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="nc" id="L235">        this.getUserValidator().validateUpdateSelf(target, user.getUsername(), bindingResult);</span>
-<span class="nc bnc" id="L236" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L237">            throw new ValidationGenericException(bindingResult);</span>
+<span class="nc" id="L225">        this.getUserValidator().validateUpdateSelf(target, user.getUsername(), bindingResult);</span>
+<span class="nc bnc" id="L226" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L227">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="nc" id="L239">        List&lt;UserAuthorityDto&gt; authorities = this.getUserService().addUserAuthorities(target, authRequest);</span>
-<span class="nc" id="L240">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(authorities), HttpStatus.OK);</span>
+<span class="nc" id="L229">        List&lt;UserAuthorityDto&gt; authorities = this.getUserService().addUserAuthorities(target, authRequest);</span>
+<span class="nc" id="L230">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(authorities), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.MANAGE_USERS)
     @RequestMapping(value = &quot;/{target:.+}/authorities&quot;, method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity&lt;SimpleRestResponse&lt;ArrayList&lt;Object&gt;&gt;&gt; deleteUserAuthorities(
-            @ModelAttribute(&quot;user&quot;) UserDetails user,
-            @PathVariable String target) {
-        //-
-<span class="nc" id="L249">        logger.debug(&quot;user {} requesting delete authorities for username {}&quot;, user.getUsername(), target);</span>
-<span class="nc" id="L250">        DataBinder binder = new DataBinder(target);</span>
-<span class="nc" id="L251">        BindingResult bindingResult = binder.getBindingResult();</span>
+    public ResponseEntity&lt;SimpleRestResponse&gt; deleteUserAuthorities(@ModelAttribute(&quot;user&quot;) UserDetails user, @PathVariable String target) throws EntException {
+<span class="nc" id="L236">        logger.debug(&quot;user {} requesting delete authorities for username {}&quot;, user.getUsername(), target);</span>
+<span class="nc" id="L237">        DataBinder binder = new DataBinder(target);</span>
+<span class="nc" id="L238">        BindingResult bindingResult = binder.getBindingResult();</span>
         //field validations
-<span class="nc bnc" id="L253" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L254">            throw new ValidationGenericException(bindingResult);</span>
+<span class="nc bnc" id="L240" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L241">            throw new ValidationGenericException(bindingResult);</span>
         }
         //business validations
-<span class="nc" id="L257">        getUserValidator().validateUpdateSelf(target, user.getUsername(), bindingResult);</span>
-<span class="nc bnc" id="L258" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L259">            throw new ValidationGenericException(bindingResult);</span>
+<span class="nc" id="L244">        getUserValidator().validateUpdateSelf(target, user.getUsername(), bindingResult);</span>
+<span class="nc bnc" id="L245" title="All 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L246">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="nc" id="L261">        this.getUserService().deleteUserAuthorities(target);</span>
-<span class="nc" id="L262">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(new ArrayList&lt;&gt;()), HttpStatus.OK);</span>
+<span class="nc" id="L248">        this.getUserService().deleteUserAuthorities(target);</span>
+<span class="nc" id="L249">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(new ArrayList&lt;&gt;()), HttpStatus.OK);</span>
     }
 
 
     @GetMapping(&quot;/userProfiles/myGroupPermissions&quot;)
     public ResponseEntity&lt;SimpleRestResponse&lt;List&lt;UserGroupPermissions&gt;&gt;&gt; getMyGroupPermissions(HttpServletRequest request) {
 
-<span class="nc" id="L269">        UserDetails userDetails = HttpSessionHelper.extractCurrentUser(request);</span>
+<span class="nc" id="L256">        UserDetails userDetails = HttpSessionHelper.extractCurrentUser(request);</span>
 
-<span class="nc" id="L271">        List&lt;UserGroupPermissions&gt; currentUserPermissions = this.userService.getMyGroupPermissions(userDetails);</span>
+<span class="nc" id="L258">        List&lt;UserGroupPermissions&gt; currentUserPermissions = this.userService.getMyGroupPermissions(userDetails);</span>
 
-<span class="nc" id="L273">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(currentUserPermissions), HttpStatus.OK);</span>
+<span class="nc" id="L260">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(currentUserPermissions), HttpStatus.OK);</span>
     }
 
 }

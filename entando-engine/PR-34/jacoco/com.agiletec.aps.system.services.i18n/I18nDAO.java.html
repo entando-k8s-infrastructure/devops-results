@@ -23,8 +23,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import org.entando.entando.ent.util.XEntLogging.XEntLogger;
-import org.entando.entando.ent.util.XEntLogging.EntLogFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 
 import com.agiletec.aps.system.common.AbstractDAO;
 import org.entando.entando.ent.exception.EntException;
@@ -36,7 +36,7 @@ import com.agiletec.aps.util.ApsProperties;
  */
 <span class="nc" id="L37">public class I18nDAO extends AbstractDAO implements II18nDAO {</span>
 	
-<span class="nc" id="L39">	private static final XEntLogger _logger =  EntLogFactory.getSantiziedLogger(I18nDAO.class);</span>
+<span class="nc" id="L39">	private static final EntLogger _logger =  EntLogFactory.getSantiziedLogger(I18nDAO.class);</span>
 	
 	/**
 	 * Carica la mappa che contiene tutte le label in tutte le lingue.
@@ -97,7 +97,7 @@ import com.agiletec.aps.util.ApsProperties;
 		}
 <span class="nc" id="L98">	}</span>
 
-	private void addLabelGroup(String key, ApsProperties labels, Connection conn) {
+	private void addLabelGroup(String key, ApsProperties labels, Connection conn) throws EntException {
 <span class="nc" id="L101">		PreparedStatement stat = null;</span>
 		try {
 <span class="nc" id="L103">			stat = conn.prepareStatement(ADD_LABEL);</span>
@@ -142,7 +142,7 @@ import com.agiletec.aps.util.ApsProperties;
 		}
 <span class="nc" id="L143">	}</span>
 
-	private void deleteLabelGroup(String key, Connection conn) {
+	private void deleteLabelGroup(String key, Connection conn) throws EntException {
 <span class="nc" id="L146">		PreparedStatement stat = null;</span>
 		try {
 <span class="nc" id="L148">			stat = conn.prepareStatement(DELETE_LABEL);</span>
@@ -163,30 +163,31 @@ import com.agiletec.aps.util.ApsProperties;
 	 * @throws SQLException
 	 * @throws EntException
 	 */
-	private Map&lt;String, ApsProperties&gt; createLabels(ResultSet res) throws SQLException {
+	private Map&lt;String, ApsProperties&gt; createLabels(ResultSet res) 
+	throws SQLException, EntException {
 		//1  l.key,  2 l.langcode, 3  l.value&quot;
-<span class="nc" id="L168">		Map&lt;String, ApsProperties&gt; labels = new HashMap&lt;String, ApsProperties&gt;();</span>
-<span class="nc bnc" id="L169" title="All 2 branches missed.">		while (res.next()) {</span>
-<span class="nc" id="L170">			String key = res.getString(1);</span>
-<span class="nc" id="L171">			ApsProperties labelsProp = labels.get(key);</span>
-<span class="nc bnc" id="L172" title="All 2 branches missed.">			if (labelsProp == null) {</span>
-<span class="nc" id="L173">				labelsProp = new ApsProperties();</span>
-<span class="nc" id="L174">				labels.put(key, labelsProp);</span>
+<span class="nc" id="L169">		Map&lt;String, ApsProperties&gt; labels = new HashMap&lt;String, ApsProperties&gt;();</span>
+<span class="nc bnc" id="L170" title="All 2 branches missed.">		while (res.next()) {</span>
+<span class="nc" id="L171">			String key = res.getString(1);</span>
+<span class="nc" id="L172">			ApsProperties labelsProp = labels.get(key);</span>
+<span class="nc bnc" id="L173" title="All 2 branches missed.">			if (labelsProp == null) {</span>
+<span class="nc" id="L174">				labelsProp = new ApsProperties();</span>
+<span class="nc" id="L175">				labels.put(key, labelsProp);</span>
 			}
-<span class="nc" id="L176">			String langCode = res.getString(2);</span>
-<span class="nc" id="L177">			String value = res.getString(3);</span>
-<span class="nc" id="L178">			labelsProp.put(langCode, value);</span>
-<span class="nc" id="L179">		}</span>
-<span class="nc" id="L180">		return labels;</span>
+<span class="nc" id="L177">			String langCode = res.getString(2);</span>
+<span class="nc" id="L178">			String value = res.getString(3);</span>
+<span class="nc" id="L179">			labelsProp.put(langCode, value);</span>
+<span class="nc" id="L180">		}</span>
+<span class="nc" id="L181">		return labels;</span>
 	}
 
-<span class="nc" id="L183">	private final String LOAD_ALL_LABELS = </span>
+<span class="nc" id="L184">	private final String LOAD_ALL_LABELS = </span>
 		&quot;SELECT keycode, langcode, stringvalue FROM localstrings&quot;;
 
-<span class="nc" id="L186">	private final String ADD_LABEL =</span>
+<span class="nc" id="L187">	private final String ADD_LABEL =</span>
 		&quot;INSERT INTO localstrings (keycode, langcode, stringvalue) VALUES ( ? , ? , ? )&quot;;
 
-<span class="nc" id="L189">	private final String DELETE_LABEL =</span>
+<span class="nc" id="L190">	private final String DELETE_LABEL =</span>
 		&quot;DELETE FROM localstrings WHERE keycode = ? &quot;;
 
 }

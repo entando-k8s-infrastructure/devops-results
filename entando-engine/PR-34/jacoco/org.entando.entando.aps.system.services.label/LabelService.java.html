@@ -30,13 +30,13 @@ import org.entando.entando.web.common.exceptions.ValidationGenericException;
 import org.entando.entando.web.common.model.PagedMetadata;
 import org.entando.entando.web.common.model.RestListRequest;
 import org.entando.entando.web.label.LabelValidator;
-import org.entando.entando.ent.util.XEntLogging.XEntLogger;
-import org.entando.entando.ent.util.XEntLogging.EntLogFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 import org.springframework.validation.BeanPropertyBindingResult;
 
 <span class="nc" id="L37">public class LabelService implements ILabelService {</span>
 
-<span class="nc" id="L39">    private final XEntLogger logger = EntLogFactory.getSantiziedLogger(getClass());</span>
+<span class="nc" id="L39">    private final EntLogger logger = EntLogFactory.getSantiziedLogger(getClass());</span>
 
     private II18nManager i18nManager;
     private ILangManager langManager;
@@ -80,7 +80,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
 <span class="nc" id="L80">            ApsProperties labelGroup = this.getI18nManager().getLabelGroup(code);</span>
 <span class="nc bnc" id="L81" title="All 2 branches missed.">            if (null == labelGroup) {</span>
 <span class="nc" id="L82">                logger.warn(&quot;no label found with key {}&quot;, code);</span>
-<span class="nc" id="L83">                throw mkLabelNotFoundException(code);</span>
+<span class="nc" id="L83">                throw new ResourceNotFoundException(LabelValidator.ERRCODE_LABELGROUP_NOT_FOUND, &quot;label&quot;, code);</span>
             }
 <span class="nc" id="L85">            return this.getDtoBuilder().convert(code, labelGroup);</span>
 <span class="nc" id="L86">        } catch (EntException t) {</span>
@@ -96,7 +96,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
 <span class="nc" id="L96">            ApsProperties labelGroup = this.getI18nManager().getLabelGroup(code);</span>
 <span class="nc bnc" id="L97" title="All 2 branches missed.">            if (null == labelGroup) {</span>
 <span class="nc" id="L98">                logger.warn(&quot;no label found with key {}&quot;, code);</span>
-<span class="nc" id="L99">                throw mkLabelNotFoundException(code);</span>
+<span class="nc" id="L99">                throw new ResourceNotFoundException(LabelValidator.ERRCODE_LABELGROUP_NOT_FOUND, &quot;label&quot;, code);</span>
             }
 <span class="nc" id="L101">            BeanPropertyBindingResult validationResult = this.validateUpdateLabelGroup(labelRequest);</span>
 <span class="nc bnc" id="L102" title="All 2 branches missed.">            if (validationResult.hasErrors()) {</span>
@@ -136,7 +136,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
 <span class="nc" id="L136">            ApsProperties labelGroup = this.getI18nManager().getLabelGroup(code);</span>
 <span class="nc bnc" id="L137" title="All 2 branches missed.">            if (null == labelGroup) {</span>
 <span class="nc" id="L138">                logger.warn(&quot;no label found with key {}&quot;, code);</span>
-<span class="nc" id="L139">                throw mkLabelNotFoundException(code);</span>
+<span class="nc" id="L139">                return;</span>
             }
 <span class="nc" id="L141">            this.getI18nManager().deleteLabelGroup(code);</span>
 <span class="nc" id="L142">        } catch (EntException t) {</span>
@@ -199,27 +199,19 @@ import org.springframework.validation.BeanPropertyBindingResult;
 <span class="nc" id="L199">        return true;</span>
     }
 
-    private void validateLangEntry(Entry&lt;String, String&gt; entry, List&lt;String&gt; systemLangs, List&lt;String&gt; configuredLangs,
-            String defaultLangCode, BeanPropertyBindingResult bindingResult) {
+    private void validateLangEntry(Entry&lt;String, String&gt; entry, List&lt;String&gt; systemLangs, List&lt;String&gt; configuredLangs, String defaultLangCode, BeanPropertyBindingResult bindingResult) {
+<span class="nc" id="L203">        String currentLangCode = entry.getKey();</span>
+<span class="nc bnc" id="L204" title="All 2 branches missed.">        if (!systemLangs.contains(currentLangCode)) {</span>
+<span class="nc" id="L205">            bindingResult.reject(LabelValidator.ERRCODE_LABELGROUP_LANGS_INVALID_LANG, new String[]{currentLangCode}, &quot;labelGroup.langs.lang.invalid&quot;);</span>
+<span class="nc" id="L206">            return;</span>
+        }
+<span class="nc bnc" id="L208" title="All 2 branches missed.">        if (!configuredLangs.contains(currentLangCode)) {</span>
+<span class="nc" id="L209">            bindingResult.reject(LabelValidator.ERRCODE_LABELGROUP_LANGS_NOT_ACTIVE_LANG, new String[]{currentLangCode}, &quot;labelGroup.langs.lang.notActive&quot;);</span>
+        }
+<span class="nc bnc" id="L211" title="All 4 branches missed.">        if (currentLangCode.equals(defaultLangCode) &amp;&amp; StringUtils.isBlank(entry.getValue())) {</span>
+<span class="nc" id="L212">            bindingResult.reject(LabelValidator.ERRCODE_LABELGROUP_LANGS_TEXT_REQUIRED, new String[]{currentLangCode}, &quot;labelGroup.langs.defaultLang.textRequired&quot;);</span>
+        }
+<span class="nc" id="L214">    }</span>
 
-<span class="nc" id="L205">        String currentLangCode = entry.getKey();</span>
-<span class="nc bnc" id="L206" title="All 2 branches missed.">        if (!systemLangs.contains(currentLangCode)) {</span>
-<span class="nc" id="L207">            bindingResult.reject(LabelValidator.ERRCODE_LABELGROUP_LANGS_INVALID_LANG, new String[]{currentLangCode},</span>
-                    &quot;labelGroup.langs.lang.invalid&quot;);
-<span class="nc" id="L209">            return;</span>
-        }
-<span class="nc bnc" id="L211" title="All 2 branches missed.">        if (!configuredLangs.contains(currentLangCode)) {</span>
-<span class="nc" id="L212">            bindingResult.reject(LabelValidator.ERRCODE_LABELGROUP_LANGS_NOT_ACTIVE_LANG, new String[]{currentLangCode},</span>
-                    &quot;labelGroup.langs.lang.notActive&quot;);
-        }
-<span class="nc bnc" id="L215" title="All 4 branches missed.">        if (currentLangCode.equals(defaultLangCode) &amp;&amp; StringUtils.isBlank(entry.getValue())) {</span>
-<span class="nc" id="L216">            bindingResult.reject(LabelValidator.ERRCODE_LABELGROUP_LANGS_TEXT_REQUIRED, new String[]{currentLangCode},</span>
-                    &quot;labelGroup.langs.defaultLang.textRequired&quot;);
-        }
-<span class="nc" id="L219">    }</span>
-
-    private ResourceNotFoundException mkLabelNotFoundException(String code) {
-<span class="nc" id="L222">        return new ResourceNotFoundException(LabelValidator.ERRCODE_LABELGROUP_NOT_FOUND, &quot;label&quot;, code);</span>
-    }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
