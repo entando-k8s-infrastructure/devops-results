@@ -57,60 +57,82 @@ public class EntLogging {
         }
 
         /**
+         * Returns a (cached) clone of the object with the same logger but NO_SANITIZATION level
+         */
+        public EntLogger withNoSan() {
+<span class="pc bpc" id="L63" title="1 of 2 branches missed.">            if (this.noSan == null) {</span>
+<span class="nc" id="L64">                this.noSan = EntLogFactory.from(SanitizationLevel.NO_SANITIZATION, delegate);</span>
+            }
+<span class="fc" id="L66">            return this.noSan;</span>
+        }
+
+        /**
          * Returns a (cached) clone of the object with the same logger but BASIC_SANITIZATION level
          */
         public EntLogger withBasicSan() {
-<span class="fc bfc" id="L63" title="All 2 branches covered.">            if (this.basicSan == null) {</span>
-<span class="fc" id="L64">                this.basicSan = EntLogFactory.from(SanitizationLevel.BASIC_SANITIZATION, delegate);</span>
+<span class="fc bfc" id="L73" title="All 2 branches covered.">            if (this.basicSan == null) {</span>
+<span class="fc" id="L74">                this.basicSan = EntLogFactory.from(SanitizationLevel.BASIC_SANITIZATION, delegate);</span>
             }
-<span class="fc" id="L66">            return this.basicSan;</span>
+<span class="fc" id="L76">            return this.basicSan;</span>
         }
 
         /**
          * Returns a (cached) clone of the object with the same logger but FULL_SANITIZATION level
          */
         public EntLogger withFullSan() {
-<span class="fc bfc" id="L73" title="All 2 branches covered.">            if (this.fullySan == null) {</span>
-<span class="fc" id="L74">                this.fullySan = EntLogFactory.from(FULL_SANITIZATION, delegate);</span>
+<span class="fc bfc" id="L83" title="All 2 branches covered.">            if (this.fullySan == null) {</span>
+<span class="fc" id="L84">                this.fullySan = EntLogFactory.from(FULL_SANITIZATION, delegate);</span>
             }
-<span class="fc" id="L76">            return this.fullySan;</span>
+<span class="fc" id="L86">            return this.fullySan;</span>
         }
 
-<span class="fc" id="L79">        private EntLogger basicSan = null;</span>
-<span class="fc" id="L80">        private EntLogger fullySan = null;</span>
+<span class="fc" id="L89">        private EntLogger noSan = null;</span>
+<span class="fc" id="L90">        private EntLogger basicSan = null;</span>
+<span class="fc" id="L91">        private EntLogger fullySan = null;</span>
 
-<span class="fc" id="L82">        public enum SanitizationLevel {</span>
+<span class="fc" id="L93">        public enum SanitizationLevel {</span>
+            /**
+             * Nothing is sanitized
+             */
+<span class="fc" id="L97">            NO_SANITIZATION,</span>
             /**
              * Only fields that are supposed to carry user contents are sanitized. Format string and exceptions are not
              * sanitized
              */
-<span class="fc" id="L87">            BASIC_SANITIZATION,</span>
+<span class="fc" id="L102">            BASIC_SANITIZATION,</span>
             /**
              * Everything is sanitized, including the format strings and the exception
              */
-<span class="fc" id="L91">            FULL_SANITIZATION,</span>
+<span class="fc" id="L106">            FULL_SANITIZATION,</span>
         }
 
-<span class="fc" id="L94">        private EntLogger(org.slf4j.Logger logger, SanitizationLevel sanitizationLevel) {</span>
-<span class="fc" id="L95">            this.delegate = logger;</span>
-<span class="fc" id="L96">            this.sanitizationLevel = sanitizationLevel;</span>
+<span class="fc" id="L109">        private EntLogger(org.slf4j.Logger logger, SanitizationLevel sanitizationLevel) {</span>
+<span class="fc" id="L110">            this.delegate = logger;</span>
+<span class="fc" id="L111">            this.sanitizationLevel = sanitizationLevel;</span>
 
-<span class="fc" id="L98">            svs = new JavaSecS5145&lt;&gt;();</span>
-<span class="fc" id="L99">            ovs = new JavaSecS5145&lt;&gt;();</span>
-
-<span class="pc bpc" id="L101" title="1 of 3 branches missed.">            switch (sanitizationLevel) {</span>
+<span class="pc bpc" id="L113" title="1 of 4 branches missed.">            switch (sanitizationLevel) {</span>
+                case NO_SANITIZATION:
+<span class="fc" id="L115">                    noSan = this;</span>
+<span class="fc" id="L116">                    fms = new NopSanitizer&lt;&gt;();</span>
+<span class="fc" id="L117">                    svs = new NopSanitizer&lt;&gt;();</span>
+<span class="fc" id="L118">                    ovs = new NopSanitizer&lt;&gt;();</span>
+<span class="fc" id="L119">                    break;</span>
                 case BASIC_SANITIZATION:
-<span class="fc" id="L103">                    basicSan = this;</span>
-<span class="fc" id="L104">                    fms = new NopSanitizer&lt;&gt;();</span>
-<span class="fc" id="L105">                    break;</span>
+<span class="fc" id="L121">                    basicSan = this;</span>
+<span class="fc" id="L122">                    svs = new JavaSecS5145&lt;&gt;();</span>
+<span class="fc" id="L123">                    ovs = new JavaSecS5145&lt;&gt;();</span>
+<span class="fc" id="L124">                    fms = new NopSanitizer&lt;&gt;();</span>
+<span class="fc" id="L125">                    break;</span>
                 case FULL_SANITIZATION:
-<span class="fc" id="L107">                    fullySan = this;</span>
-<span class="fc" id="L108">                    fms = svs;</span>
-<span class="fc" id="L109">                    break;</span>
+<span class="fc" id="L127">                    fullySan = this;</span>
+<span class="fc" id="L128">                    svs = new JavaSecS5145&lt;&gt;();</span>
+<span class="fc" id="L129">                    ovs = new JavaSecS5145&lt;&gt;();</span>
+<span class="fc" id="L130">                    fms = svs;</span>
+<span class="fc" id="L131">                    break;</span>
                 default:
-<span class="nc" id="L111">                    throw new EntRuntimeException(&quot;Internal Error: illegal sanitization level &quot; + sanitizationLevel);</span>
+<span class="nc" id="L133">                    throw new EntRuntimeException(&quot;Internal Error: illegal sanitization level &quot; + sanitizationLevel);</span>
             }
-<span class="fc" id="L113">        }</span>
+<span class="fc" id="L135">        }</span>
 
         /**
          * Return the name of this &lt;code&gt;Logger&lt;/code&gt; instance.
@@ -119,7 +141,7 @@ public class EntLogging {
          */
         @Override
         public String getName() {
-<span class="fc" id="L122">            return delegate.getName();</span>
+<span class="fc" id="L144">            return delegate.getName();</span>
         }
 
         /**
@@ -130,7 +152,7 @@ public class EntLogging {
          */
         @Override
         public boolean isTraceEnabled() {
-<span class="fc" id="L133">            return delegate.isTraceEnabled();</span>
+<span class="fc" id="L155">            return delegate.isTraceEnabled();</span>
         }
 
         /**
@@ -141,10 +163,10 @@ public class EntLogging {
          */
         @Override
         public void trace(String msg) {
-<span class="fc bfc" id="L144" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
-<span class="fc" id="L145">                delegate.trace(ovs.sanitize(msg));</span>
+<span class="fc bfc" id="L166" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L167">                delegate.trace(ovs.sanitize(msg));</span>
             }
-<span class="fc" id="L147">        }</span>
+<span class="fc" id="L169">        }</span>
 
         /**
          * Log a message at the TRACE level according to the specified format and argument.
@@ -158,16 +180,16 @@ public class EntLogging {
          */
         @Override
         public void trace(String format, Object arg) {
-<span class="nc bnc" id="L161" title="All 2 branches missed.">            if (delegate.isTraceEnabled()) {</span>
-<span class="nc" id="L162">                delegate.trace(fms.sanitize(format), ovs.sanitize(arg));</span>
+<span class="pc bpc" id="L183" title="1 of 2 branches missed.">            if (delegate.isTraceEnabled()) {</span>
+<span class="nc" id="L184">                delegate.trace(fms.sanitize(format), ovs.sanitize(arg));</span>
             }
-<span class="nc" id="L164">        }</span>
+<span class="fc" id="L186">        }</span>
 
         public void trace(String format, String arg) {
-<span class="fc bfc" id="L167" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
-<span class="fc" id="L168">                delegate.trace(fms.sanitize(format), svs.sanitize(arg));</span>
+<span class="fc bfc" id="L189" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L190">                delegate.trace(fms.sanitize(format), svs.sanitize(arg));</span>
             }
-<span class="fc" id="L170">        }</span>
+<span class="fc" id="L192">        }</span>
 
         /**
          * Log a message at the TRACE level according to the specified format and arguments.
@@ -182,16 +204,16 @@ public class EntLogging {
          */
         @Override
         public void trace(String format, Object arg1, Object arg2) {
-<span class="fc bfc" id="L185" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
-<span class="fc" id="L186">                delegate.trace(fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
+<span class="fc bfc" id="L207" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L208">                delegate.trace(fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
             }
-<span class="fc" id="L188">        }</span>
+<span class="fc" id="L210">        }</span>
 
         public void trace(String format, Object arg1, Throwable arg2) {
-<span class="nc bnc" id="L191" title="All 2 branches missed.">            if (delegate.isTraceEnabled()) {</span>
-<span class="nc" id="L192">                delegate.trace(fms.sanitize(format), ovs.sanitize(arg1), arg2);</span>
+<span class="nc bnc" id="L213" title="All 2 branches missed.">            if (delegate.isTraceEnabled()) {</span>
+<span class="nc" id="L214">                delegate.trace(fms.sanitize(format), ovs.sanitize(arg1), arg2);</span>
             }
-<span class="nc" id="L194">        }</span>
+<span class="nc" id="L216">        }</span>
 
         /**
          * Log a message at the TRACE level according to the specified format and arguments.
@@ -208,10 +230,10 @@ public class EntLogging {
          */
         @Override
         public void trace(String format, Object... arguments) {
-<span class="fc bfc" id="L211" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
-<span class="fc" id="L212">                delegate.trace(fms.sanitize(format), sanitize(arguments));</span>
+<span class="fc bfc" id="L233" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L234">                delegate.trace(fms.sanitize(format), sanitize(arguments));</span>
             }
-<span class="fc" id="L214">        }</span>
+<span class="fc" id="L236">        }</span>
 
         /**
          * Log an exception (throwable) at the TRACE level with an accompanying message.
@@ -222,10 +244,10 @@ public class EntLogging {
          */
         @Override
         public void trace(String msg, Throwable t) {
-<span class="fc bfc" id="L225" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
-<span class="fc" id="L226">                delegate.trace(fms.sanitize(msg), t);</span>
+<span class="fc bfc" id="L247" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L248">                delegate.trace(fms.sanitize(msg), t);</span>
             }
-<span class="fc" id="L228">        }</span>
+<span class="fc" id="L250">        }</span>
 
         /**
          * Similar to {@link #isTraceEnabled()} method except that the marker data is also taken into account.
@@ -236,7 +258,7 @@ public class EntLogging {
          */
         @Override
         public boolean isTraceEnabled(Marker marker) {
-<span class="fc" id="L239">            return delegate.isTraceEnabled(marker);</span>
+<span class="fc" id="L261">            return delegate.isTraceEnabled(marker);</span>
         }
 
         /**
@@ -248,10 +270,10 @@ public class EntLogging {
          */
         @Override
         public void trace(Marker marker, String msg) {
-<span class="fc bfc" id="L251" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
-<span class="fc" id="L252">                delegate.trace(marker, ovs.sanitize(msg));</span>
+<span class="fc bfc" id="L273" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L274">                delegate.trace(marker, ovs.sanitize(msg));</span>
             }
-<span class="fc" id="L254">        }</span>
+<span class="fc" id="L276">        }</span>
 
         /**
          * This method is similar to {@link #trace(String, Object)} method except that the marker data is also taken
@@ -264,10 +286,10 @@ public class EntLogging {
          */
         @Override
         public void trace(Marker marker, String format, Object arg) {
-<span class="fc bfc" id="L267" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
-<span class="fc" id="L268">                delegate.trace(marker, fms.sanitize(format), ovs.sanitize(arg));</span>
+<span class="fc bfc" id="L289" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L290">                delegate.trace(marker, fms.sanitize(format), ovs.sanitize(arg));</span>
             }
-<span class="fc" id="L270">        }</span>
+<span class="fc" id="L292">        }</span>
 
         /**
          * This method is similar to {@link #trace(String, Object, Object)} method except that the marker data is also
@@ -281,16 +303,16 @@ public class EntLogging {
          */
         @Override
         public void trace(Marker marker, String format, Object arg1, Object arg2) {
-<span class="fc bfc" id="L284" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
-<span class="fc" id="L285">                delegate.trace(marker, fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
+<span class="fc bfc" id="L306" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L307">                delegate.trace(marker, fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
             }
-<span class="fc" id="L287">        }</span>
+<span class="fc" id="L309">        }</span>
 
         public void trace(Marker marker, String format, Object arg1, Throwable arg2) {
-<span class="nc bnc" id="L290" title="All 2 branches missed.">            if (delegate.isTraceEnabled()) {</span>
-<span class="nc" id="L291">                delegate.trace(marker, fms.sanitize(format), ovs.sanitize(arg1), arg2);</span>
+<span class="nc bnc" id="L312" title="All 2 branches missed.">            if (delegate.isTraceEnabled()) {</span>
+<span class="nc" id="L313">                delegate.trace(marker, fms.sanitize(format), ovs.sanitize(arg1), arg2);</span>
             }
-<span class="nc" id="L293">        }</span>
+<span class="nc" id="L315">        }</span>
 
         /**
          * This method is similar to {@link #trace(String, Object...)} method except that the marker data is also taken
@@ -303,10 +325,10 @@ public class EntLogging {
          */
         @Override
         public void trace(Marker marker, String format, Object... argArray) {
-<span class="fc bfc" id="L306" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
-<span class="fc" id="L307">                delegate.trace(marker, fms.sanitize(format), sanitize(argArray));</span>
+<span class="fc bfc" id="L328" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L329">                delegate.trace(marker, fms.sanitize(format), sanitize(argArray));</span>
             }
-<span class="fc" id="L309">        }</span>
+<span class="fc" id="L331">        }</span>
 
         /**
          * This method is similar to {@link #trace(String, Throwable)} method except that the marker data is also taken
@@ -319,10 +341,10 @@ public class EntLogging {
          */
         @Override
         public void trace(Marker marker, String msg, Throwable t) {
-<span class="fc bfc" id="L322" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
-<span class="fc" id="L323">                delegate.trace(marker, ovs.sanitize(msg), t);</span>
+<span class="fc bfc" id="L344" title="All 2 branches covered.">            if (delegate.isTraceEnabled()) {</span>
+<span class="fc" id="L345">                delegate.trace(marker, ovs.sanitize(msg), t);</span>
             }
-<span class="fc" id="L325">        }</span>
+<span class="fc" id="L347">        }</span>
 
         /**
          * Is the logger instance enabled for the DEBUG level?
@@ -331,7 +353,7 @@ public class EntLogging {
          */
         @Override
         public boolean isDebugEnabled() {
-<span class="fc" id="L334">            return delegate.isDebugEnabled();</span>
+<span class="fc" id="L356">            return delegate.isDebugEnabled();</span>
         }
 
         /**
@@ -341,10 +363,10 @@ public class EntLogging {
          */
         @Override
         public void debug(String msg) {
-<span class="fc bfc" id="L344" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
-<span class="fc" id="L345">                delegate.debug(ovs.sanitize(msg));</span>
+<span class="fc bfc" id="L366" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L367">                delegate.debug(ovs.sanitize(msg));</span>
             }
-<span class="fc" id="L347">        }</span>
+<span class="fc" id="L369">        }</span>
 
         /**
          * Log a message at the DEBUG level according to the specified format and argument.
@@ -357,10 +379,10 @@ public class EntLogging {
          */
         @Override
         public void debug(String format, Object arg) {
-<span class="fc bfc" id="L360" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
-<span class="fc" id="L361">                delegate.debug(fms.sanitize(format), ovs.sanitize(arg));</span>
+<span class="fc bfc" id="L382" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L383">                delegate.debug(fms.sanitize(format), ovs.sanitize(arg));</span>
             }
-<span class="fc" id="L363">        }</span>
+<span class="fc" id="L385">        }</span>
 
         /**
          * Log a message at the DEBUG level according to the specified format and arguments.
@@ -374,16 +396,16 @@ public class EntLogging {
          */
         @Override
         public void debug(String format, Object arg1, Object arg2) {
-<span class="fc bfc" id="L377" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
-<span class="fc" id="L378">                delegate.debug(fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
+<span class="fc bfc" id="L399" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L400">                delegate.debug(fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
             }
-<span class="fc" id="L380">        }</span>
+<span class="fc" id="L402">        }</span>
 
         public void debug(String format, Object arg1, Throwable arg2) {
-<span class="nc bnc" id="L383" title="All 2 branches missed.">            if (delegate.isDebugEnabled()) {</span>
-<span class="nc" id="L384">                delegate.debug(fms.sanitize(format), ovs.sanitize(arg1), arg2);</span>
+<span class="nc bnc" id="L405" title="All 2 branches missed.">            if (delegate.isDebugEnabled()) {</span>
+<span class="nc" id="L406">                delegate.debug(fms.sanitize(format), ovs.sanitize(arg1), arg2);</span>
             }
-<span class="nc" id="L386">        }</span>
+<span class="nc" id="L408">        }</span>
 
         /**
          * Log a message at the DEBUG level according to the specified format and arguments.
@@ -399,10 +421,10 @@ public class EntLogging {
          */
         @Override
         public void debug(String format, Object... arguments) {
-<span class="fc bfc" id="L402" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
-<span class="fc" id="L403">                delegate.debug(fms.sanitize(format), sanitize(arguments));</span>
+<span class="fc bfc" id="L424" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L425">                delegate.debug(fms.sanitize(format), sanitize(arguments));</span>
             }
-<span class="fc" id="L405">        }</span>
+<span class="fc" id="L427">        }</span>
 
         /**
          * Log an exception (throwable) at the DEBUG level with an accompanying message.
@@ -412,10 +434,10 @@ public class EntLogging {
          */
         @Override
         public void debug(String msg, Throwable t) {
-<span class="fc bfc" id="L415" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
-<span class="fc" id="L416">                delegate.debug(fms.sanitize(msg), t);</span>
+<span class="fc bfc" id="L437" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L438">                delegate.debug(fms.sanitize(msg), t);</span>
             }
-<span class="fc" id="L418">        }</span>
+<span class="fc" id="L440">        }</span>
 
         /**
          * Similar to {@link #isDebugEnabled()} method except that the marker data is also taken into account.
@@ -425,7 +447,7 @@ public class EntLogging {
          */
         @Override
         public boolean isDebugEnabled(Marker marker) {
-<span class="fc" id="L428">            return delegate.isDebugEnabled(marker);</span>
+<span class="fc" id="L450">            return delegate.isDebugEnabled(marker);</span>
         }
 
         /**
@@ -436,10 +458,10 @@ public class EntLogging {
          */
         @Override
         public void debug(Marker marker, String msg) {
-<span class="fc bfc" id="L439" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
-<span class="fc" id="L440">                delegate.debug(marker, ovs.sanitize(msg));</span>
+<span class="fc bfc" id="L461" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L462">                delegate.debug(marker, ovs.sanitize(msg));</span>
             }
-<span class="fc" id="L442">        }</span>
+<span class="fc" id="L464">        }</span>
 
         /**
          * This method is similar to {@link #debug(String, Object)} method except that the marker data is also taken
@@ -451,10 +473,10 @@ public class EntLogging {
          */
         @Override
         public void debug(Marker marker, String format, Object arg) {
-<span class="fc bfc" id="L454" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
-<span class="fc" id="L455">                delegate.debug(marker, fms.sanitize(format), ovs.sanitize(arg));</span>
+<span class="fc bfc" id="L476" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L477">                delegate.debug(marker, fms.sanitize(format), ovs.sanitize(arg));</span>
             }
-<span class="fc" id="L457">        }</span>
+<span class="fc" id="L479">        }</span>
 
         /**
          * This method is similar to {@link #debug(String, Object, Object)} method except that the marker data is also
@@ -467,16 +489,16 @@ public class EntLogging {
          */
         @Override
         public void debug(Marker marker, String format, Object arg1, Object arg2) {
-<span class="fc bfc" id="L470" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
-<span class="fc" id="L471">                delegate.debug(marker, fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
+<span class="fc bfc" id="L492" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L493">                delegate.debug(marker, fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
             }
-<span class="fc" id="L473">        }</span>
+<span class="fc" id="L495">        }</span>
 
         public void debug(Marker marker, String format, Object arg1, Throwable arg2) {
-<span class="nc bnc" id="L476" title="All 2 branches missed.">            if (delegate.isDebugEnabled()) {</span>
-<span class="nc" id="L477">                delegate.debug(marker, fms.sanitize(format), ovs.sanitize(arg1), arg2);</span>
+<span class="nc bnc" id="L498" title="All 2 branches missed.">            if (delegate.isDebugEnabled()) {</span>
+<span class="nc" id="L499">                delegate.debug(marker, fms.sanitize(format), ovs.sanitize(arg1), arg2);</span>
             }
-<span class="nc" id="L479">        }</span>
+<span class="nc" id="L501">        }</span>
 
         /**
          * This method is similar to {@link #debug(String, Object...)} method except that the marker data is also taken
@@ -488,10 +510,10 @@ public class EntLogging {
          */
         @Override
         public void debug(Marker marker, String format, Object... arguments) {
-<span class="fc bfc" id="L491" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
-<span class="fc" id="L492">                delegate.debug(marker, fms.sanitize(format), sanitize(arguments));</span>
+<span class="fc bfc" id="L513" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L514">                delegate.debug(marker, fms.sanitize(format), sanitize(arguments));</span>
             }
-<span class="fc" id="L494">        }</span>
+<span class="fc" id="L516">        }</span>
 
         /**
          * This method is similar to {@link #debug(String, Throwable)} method except that the marker data is also taken
@@ -503,10 +525,10 @@ public class EntLogging {
          */
         @Override
         public void debug(Marker marker, String msg, Throwable t) {
-<span class="fc bfc" id="L506" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
-<span class="fc" id="L507">                delegate.debug(marker, fms.sanitize(msg), t);</span>
+<span class="fc bfc" id="L528" title="All 2 branches covered.">            if (delegate.isDebugEnabled()) {</span>
+<span class="fc" id="L529">                delegate.debug(marker, fms.sanitize(msg), t);</span>
             }
-<span class="fc" id="L509">        }</span>
+<span class="fc" id="L531">        }</span>
 
         /**
          * Is the logger instance enabled for the INFO level?
@@ -515,7 +537,7 @@ public class EntLogging {
          */
         @Override
         public boolean isInfoEnabled() {
-<span class="fc" id="L518">            return delegate.isInfoEnabled();</span>
+<span class="fc" id="L540">            return delegate.isInfoEnabled();</span>
         }
 
         /**
@@ -525,10 +547,10 @@ public class EntLogging {
          */
         @Override
         public void info(String msg) {
-<span class="fc bfc" id="L528" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
-<span class="fc" id="L529">                delegate.info(ovs.sanitize(msg));</span>
+<span class="fc bfc" id="L550" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L551">                delegate.info(ovs.sanitize(msg));</span>
             }
-<span class="fc" id="L531">        }</span>
+<span class="fc" id="L553">        }</span>
 
         /**
          * Log a message at the INFO level according to the specified format and argument.
@@ -541,16 +563,16 @@ public class EntLogging {
          */
         @Override
         public void info(String format, Object arg) {
-<span class="nc bnc" id="L544" title="All 2 branches missed.">            if (delegate.isInfoEnabled()) {</span>
-<span class="nc" id="L545">                delegate.info(fms.sanitize(format), ovs.sanitize(arg));</span>
+<span class="pc bpc" id="L566" title="1 of 2 branches missed.">            if (delegate.isInfoEnabled()) {</span>
+<span class="nc" id="L567">                delegate.info(fms.sanitize(format), ovs.sanitize(arg));</span>
             }
-<span class="nc" id="L547">        }</span>
+<span class="fc" id="L569">        }</span>
 
         public void info(String format, String arg) {
-<span class="fc bfc" id="L550" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
-<span class="fc" id="L551">                delegate.info(fms.sanitize(format), svs.sanitize(arg));</span>
+<span class="fc bfc" id="L572" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L573">                delegate.info(fms.sanitize(format), svs.sanitize(arg));</span>
             }
-<span class="fc" id="L553">        }</span>
+<span class="fc" id="L575">        }</span>
 
         /**
          * Log a message at the INFO level according to the specified format and arguments.
@@ -564,16 +586,16 @@ public class EntLogging {
          */
         @Override
         public void info(String format, Object arg1, Object arg2) {
-<span class="fc bfc" id="L567" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
-<span class="fc" id="L568">                delegate.info(fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
+<span class="fc bfc" id="L589" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L590">                delegate.info(fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
             }
-<span class="fc" id="L570">        }</span>
+<span class="fc" id="L592">        }</span>
 
         public void info(String format, Object arg1, Throwable arg2) {
-<span class="nc bnc" id="L573" title="All 2 branches missed.">            if (delegate.isInfoEnabled()) {</span>
-<span class="nc" id="L574">                delegate.info(fms.sanitize(format), ovs.sanitize(arg1), arg2);</span>
+<span class="nc bnc" id="L595" title="All 2 branches missed.">            if (delegate.isInfoEnabled()) {</span>
+<span class="nc" id="L596">                delegate.info(fms.sanitize(format), ovs.sanitize(arg1), arg2);</span>
             }
-<span class="nc" id="L576">        }</span>
+<span class="nc" id="L598">        }</span>
 
         /**
          * Log a message at the INFO level according to the specified format and arguments.
@@ -589,10 +611,10 @@ public class EntLogging {
          */
         @Override
         public void info(String format, Object... arguments) {
-<span class="fc bfc" id="L592" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
-<span class="fc" id="L593">                delegate.info(fms.sanitize(format), sanitize(arguments));</span>
+<span class="fc bfc" id="L614" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L615">                delegate.info(fms.sanitize(format), sanitize(arguments));</span>
             }
-<span class="fc" id="L595">        }</span>
+<span class="fc" id="L617">        }</span>
 
         /**
          * Log an exception (throwable) at the INFO level with an accompanying message.
@@ -602,10 +624,10 @@ public class EntLogging {
          */
         @Override
         public void info(String msg, Throwable t) {
-<span class="fc bfc" id="L605" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
-<span class="fc" id="L606">                delegate.info(fms.sanitize(msg), t);</span>
+<span class="fc bfc" id="L627" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L628">                delegate.info(fms.sanitize(msg), t);</span>
             }
-<span class="fc" id="L608">        }</span>
+<span class="fc" id="L630">        }</span>
 
         /**
          * Similar to {@link #isInfoEnabled()} method except that the marker data is also taken into consideration.
@@ -615,7 +637,7 @@ public class EntLogging {
          */
         @Override
         public boolean isInfoEnabled(Marker marker) {
-<span class="fc" id="L618">            return delegate.isInfoEnabled(marker);</span>
+<span class="fc" id="L640">            return delegate.isInfoEnabled(marker);</span>
         }
 
         /**
@@ -626,10 +648,10 @@ public class EntLogging {
          */
         @Override
         public void info(Marker marker, String msg) {
-<span class="fc bfc" id="L629" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
-<span class="fc" id="L630">                delegate.info(marker, ovs.sanitize(msg));</span>
+<span class="fc bfc" id="L651" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L652">                delegate.info(marker, ovs.sanitize(msg));</span>
             }
-<span class="fc" id="L632">        }</span>
+<span class="fc" id="L654">        }</span>
 
         /**
          * This method is similar to {@link #info(String, Object)} method except that the marker data is also taken into
@@ -641,10 +663,10 @@ public class EntLogging {
          */
         @Override
         public void info(Marker marker, String format, Object arg) {
-<span class="fc bfc" id="L644" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
-<span class="fc" id="L645">                delegate.info(marker, fms.sanitize(format), ovs.sanitize(arg));</span>
+<span class="fc bfc" id="L666" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L667">                delegate.info(marker, fms.sanitize(format), ovs.sanitize(arg));</span>
             }
-<span class="fc" id="L647">        }</span>
+<span class="fc" id="L669">        }</span>
 
         /**
          * This method is similar to {@link #info(String, Object, Object)} method except that the marker data is also
@@ -657,10 +679,10 @@ public class EntLogging {
          */
         @Override
         public void info(Marker marker, String format, Object arg1, Object arg2) {
-<span class="fc bfc" id="L660" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
-<span class="fc" id="L661">                delegate.info(marker, fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
+<span class="fc bfc" id="L682" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L683">                delegate.info(marker, fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
             }
-<span class="fc" id="L663">        }</span>
+<span class="fc" id="L685">        }</span>
 
         /**
          * This method is similar to {@link #info(String, Object...)} method except that the marker data is also taken
@@ -672,10 +694,10 @@ public class EntLogging {
          */
         @Override
         public void info(Marker marker, String format, Object... arguments) {
-<span class="fc bfc" id="L675" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
-<span class="fc" id="L676">                delegate.info(marker, fms.sanitize(format), sanitize(arguments));</span>
+<span class="fc bfc" id="L697" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L698">                delegate.info(marker, fms.sanitize(format), sanitize(arguments));</span>
             }
-<span class="fc" id="L678">        }</span>
+<span class="fc" id="L700">        }</span>
 
         /**
          * This method is similar to {@link #info(String, Throwable)} method except that the marker data is also taken
@@ -687,10 +709,10 @@ public class EntLogging {
          */
         @Override
         public void info(Marker marker, String msg, Throwable t) {
-<span class="fc bfc" id="L690" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
-<span class="fc" id="L691">                delegate.info(marker, fms.sanitize(msg), t);</span>
+<span class="fc bfc" id="L712" title="All 2 branches covered.">            if (delegate.isInfoEnabled()) {</span>
+<span class="fc" id="L713">                delegate.info(marker, fms.sanitize(msg), t);</span>
             }
-<span class="fc" id="L693">        }</span>
+<span class="fc" id="L715">        }</span>
 
         /**
          * Is the logger instance enabled for the WARN level?
@@ -699,7 +721,7 @@ public class EntLogging {
          */
         @Override
         public boolean isWarnEnabled() {
-<span class="fc" id="L702">            return delegate.isWarnEnabled();</span>
+<span class="fc" id="L724">            return delegate.isWarnEnabled();</span>
         }
 
         /**
@@ -709,10 +731,10 @@ public class EntLogging {
          */
         @Override
         public void warn(String msg) {
-<span class="fc bfc" id="L712" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
-<span class="fc" id="L713">                delegate.warn(ovs.sanitize(msg));</span>
+<span class="fc bfc" id="L734" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L735">                delegate.warn(ovs.sanitize(msg));</span>
             }
-<span class="fc" id="L715">        }</span>
+<span class="fc" id="L737">        }</span>
 
         /**
          * Log a message at the WARN level according to the specified format and argument.
@@ -725,16 +747,16 @@ public class EntLogging {
          */
         @Override
         public void warn(String format, Object arg) {
-<span class="nc bnc" id="L728" title="All 2 branches missed.">            if (delegate.isWarnEnabled()) {</span>
-<span class="nc" id="L729">                delegate.warn(fms.sanitize(format), ovs.sanitize(arg));</span>
+<span class="nc bnc" id="L750" title="All 2 branches missed.">            if (delegate.isWarnEnabled()) {</span>
+<span class="nc" id="L751">                delegate.warn(fms.sanitize(format), ovs.sanitize(arg));</span>
             }
-<span class="nc" id="L731">        }</span>
+<span class="nc" id="L753">        }</span>
 
         public void warn(String format, String arg) {
-<span class="fc bfc" id="L734" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
-<span class="fc" id="L735">                delegate.warn(fms.sanitize(format), svs.sanitize(arg));</span>
+<span class="fc bfc" id="L756" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L757">                delegate.warn(fms.sanitize(format), svs.sanitize(arg));</span>
             }
-<span class="fc" id="L737">        }</span>
+<span class="fc" id="L759">        }</span>
 
         /**
          * Log a message at the WARN level according to the specified format and arguments.
@@ -750,10 +772,10 @@ public class EntLogging {
          */
         @Override
         public void warn(String format, Object... arguments) {
-<span class="fc bfc" id="L753" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
-<span class="fc" id="L754">                delegate.warn(fms.sanitize(format), sanitize(arguments));</span>
+<span class="fc bfc" id="L775" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L776">                delegate.warn(fms.sanitize(format), sanitize(arguments));</span>
             }
-<span class="fc" id="L756">        }</span>
+<span class="fc" id="L778">        }</span>
 
         /**
          * Log a message at the WARN level according to the specified format and arguments.
@@ -767,11 +789,11 @@ public class EntLogging {
          */
         @Override
         public void warn(String format, Object arg1, Object arg2) {
-<span class="fc bfc" id="L770" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
-<span class="fc" id="L771">                delegate.warn(fms.sanitize(format), ovs.sanitize(arg1),</span>
-<span class="fc" id="L772">                        ovs.sanitize(arg2));</span>
+<span class="fc bfc" id="L792" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L793">                delegate.warn(fms.sanitize(format), ovs.sanitize(arg1),</span>
+<span class="fc" id="L794">                        ovs.sanitize(arg2));</span>
             }
-<span class="fc" id="L774">        }</span>
+<span class="fc" id="L796">        }</span>
 
         /**
          * Log an exception (throwable) at the WARN level with an accompanying message.
@@ -781,10 +803,10 @@ public class EntLogging {
          */
         @Override
         public void warn(String msg, Throwable t) {
-<span class="fc bfc" id="L784" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
-<span class="fc" id="L785">                delegate.warn(fms.sanitize(msg), t);</span>
+<span class="fc bfc" id="L806" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L807">                delegate.warn(fms.sanitize(msg), t);</span>
             }
-<span class="fc" id="L787">        }</span>
+<span class="fc" id="L809">        }</span>
 
         /**
          * Similar to {@link #isWarnEnabled()} method except that the marker data is also taken into consideration.
@@ -794,7 +816,7 @@ public class EntLogging {
          */
         @Override
         public boolean isWarnEnabled(Marker marker) {
-<span class="fc" id="L797">            return delegate.isWarnEnabled(marker);</span>
+<span class="fc" id="L819">            return delegate.isWarnEnabled(marker);</span>
         }
 
         /**
@@ -805,10 +827,10 @@ public class EntLogging {
          */
         @Override
         public void warn(Marker marker, String msg) {
-<span class="fc bfc" id="L808" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
-<span class="fc" id="L809">                delegate.warn(marker, ovs.sanitize(msg));</span>
+<span class="fc bfc" id="L830" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L831">                delegate.warn(marker, ovs.sanitize(msg));</span>
             }
-<span class="fc" id="L811">        }</span>
+<span class="fc" id="L833">        }</span>
 
         /**
          * This method is similar to {@link #warn(String, Object)} method except that the marker data is also taken into
@@ -820,10 +842,10 @@ public class EntLogging {
          */
         @Override
         public void warn(Marker marker, String format, Object arg) {
-<span class="fc bfc" id="L823" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
-<span class="fc" id="L824">                delegate.warn(marker, fms.sanitize(format), ovs.sanitize(arg));</span>
+<span class="fc bfc" id="L845" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L846">                delegate.warn(marker, fms.sanitize(format), ovs.sanitize(arg));</span>
             }
-<span class="fc" id="L826">        }</span>
+<span class="fc" id="L848">        }</span>
 
         /**
          * This method is similar to {@link #warn(String, Object, Object)} method except that the marker data is also
@@ -836,10 +858,10 @@ public class EntLogging {
          */
         @Override
         public void warn(Marker marker, String format, Object arg1, Object arg2) {
-<span class="fc bfc" id="L839" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
-<span class="fc" id="L840">                delegate.warn(marker, fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
+<span class="fc bfc" id="L861" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L862">                delegate.warn(marker, fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
             }
-<span class="fc" id="L842">        }</span>
+<span class="fc" id="L864">        }</span>
 
         /**
          * This method is similar to {@link #warn(String, Object...)} method except that the marker data is also taken
@@ -851,10 +873,10 @@ public class EntLogging {
          */
         @Override
         public void warn(Marker marker, String format, Object... arguments) {
-<span class="fc bfc" id="L854" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
-<span class="fc" id="L855">                delegate.warn(marker, fms.sanitize(format), sanitize(arguments));</span>
+<span class="fc bfc" id="L876" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L877">                delegate.warn(marker, fms.sanitize(format), sanitize(arguments));</span>
             }
-<span class="fc" id="L857">        }</span>
+<span class="fc" id="L879">        }</span>
 
         /**
          * This method is similar to {@link #warn(String, Throwable)} method except that the marker data is also taken
@@ -866,10 +888,10 @@ public class EntLogging {
          */
         @Override
         public void warn(Marker marker, String msg, Throwable t) {
-<span class="fc bfc" id="L869" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
-<span class="fc" id="L870">                delegate.warn(marker, fms.sanitize(msg), t);</span>
+<span class="fc bfc" id="L891" title="All 2 branches covered.">            if (delegate.isWarnEnabled()) {</span>
+<span class="fc" id="L892">                delegate.warn(marker, fms.sanitize(msg), t);</span>
             }
-<span class="fc" id="L872">        }</span>
+<span class="fc" id="L894">        }</span>
 
         /**
          * Is the logger instance enabled for the ERROR level?
@@ -878,7 +900,7 @@ public class EntLogging {
          */
         @Override
         public boolean isErrorEnabled() {
-<span class="fc" id="L881">            return delegate.isErrorEnabled();</span>
+<span class="fc" id="L903">            return delegate.isErrorEnabled();</span>
         }
 
         /**
@@ -888,10 +910,10 @@ public class EntLogging {
          */
         @Override
         public void error(String msg) {
-<span class="pc bpc" id="L891" title="1 of 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
-<span class="fc" id="L892">                delegate.error(ovs.sanitize(msg));</span>
+<span class="pc bpc" id="L913" title="1 of 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L914">                delegate.error(ovs.sanitize(msg));</span>
             }
-<span class="fc" id="L894">        }</span>
+<span class="fc" id="L916">        }</span>
 
         /**
          * Log a message at the ERROR level according to the specified format and argument.
@@ -904,16 +926,16 @@ public class EntLogging {
          */
         @Override
         public void error(String format, Object arg) {
-<span class="nc bnc" id="L907" title="All 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
-<span class="nc" id="L908">                delegate.error(fms.sanitize(format), ovs.sanitize(arg));</span>
+<span class="nc bnc" id="L929" title="All 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
+<span class="nc" id="L930">                delegate.error(fms.sanitize(format), ovs.sanitize(arg));</span>
             }
-<span class="nc" id="L910">        }</span>
+<span class="nc" id="L932">        }</span>
 
         public void error(String format, String arg) {
-<span class="pc bpc" id="L913" title="1 of 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
-<span class="fc" id="L914">                delegate.error(fms.sanitize(format), svs.sanitize(arg));</span>
+<span class="fc bfc" id="L935" title="All 2 branches covered.">            if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L936">                delegate.error(fms.sanitize(format), svs.sanitize(arg));</span>
             }
-<span class="fc" id="L916">        }</span>
+<span class="fc" id="L938">        }</span>
 
         /**
          * Log a message at the ERROR level according to the specified format and arguments.
@@ -927,10 +949,10 @@ public class EntLogging {
          */
         @Override
         public void error(String format, Object arg1, Object arg2) {
-<span class="pc bpc" id="L930" title="1 of 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
-<span class="fc" id="L931">                delegate.error(fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
+<span class="fc bfc" id="L952" title="All 2 branches covered.">            if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L953">                delegate.error(fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
             }
-<span class="fc" id="L933">        }</span>
+<span class="fc" id="L955">        }</span>
 
         /**
          * Log a message at the ERROR level according to the specified format and arguments.
@@ -946,10 +968,10 @@ public class EntLogging {
          */
         @Override
         public void error(String format, Object... arguments) {
-<span class="pc bpc" id="L949" title="1 of 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
-<span class="fc" id="L950">                delegate.error(fms.sanitize(format), sanitize(arguments));</span>
+<span class="fc bfc" id="L971" title="All 2 branches covered.">            if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L972">                delegate.error(fms.sanitize(format), sanitize(arguments));</span>
             }
-<span class="fc" id="L952">        }</span>
+<span class="fc" id="L974">        }</span>
 
         /**
          * Log an exception (throwable) at the ERROR level with an accompanying message.
@@ -959,10 +981,10 @@ public class EntLogging {
          */
         @Override
         public void error(String msg, Throwable t) {
-<span class="pc bpc" id="L962" title="1 of 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
-<span class="fc" id="L963">                delegate.error(fms.sanitize(msg), t);</span>
+<span class="fc bfc" id="L984" title="All 2 branches covered.">            if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L985">                delegate.error(fms.sanitize(msg), t);</span>
             }
-<span class="fc" id="L965">        }</span>
+<span class="fc" id="L987">        }</span>
 
         /**
          * Similar to {@link #isErrorEnabled()} method except that the marker data is also taken into consideration.
@@ -972,7 +994,7 @@ public class EntLogging {
          */
         @Override
         public boolean isErrorEnabled(Marker marker) {
-<span class="fc" id="L975">            return delegate.isErrorEnabled(marker);</span>
+<span class="fc" id="L997">            return delegate.isErrorEnabled(marker);</span>
         }
 
         /**
@@ -983,10 +1005,10 @@ public class EntLogging {
          */
         @Override
         public void error(Marker marker, String msg) {
-<span class="pc bpc" id="L986" title="1 of 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
-<span class="fc" id="L987">                delegate.error(marker, ovs.sanitize(msg));</span>
+<span class="pc bpc" id="L1008" title="1 of 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L1009">                delegate.error(marker, ovs.sanitize(msg));</span>
             }
-<span class="fc" id="L989">        }</span>
+<span class="fc" id="L1011">        }</span>
 
         /**
          * This method is similar to {@link #error(String, Object)} method except that the marker data is also taken
@@ -998,10 +1020,10 @@ public class EntLogging {
          */
         @Override
         public void error(Marker marker, String format, Object arg) {
-<span class="pc bpc" id="L1001" title="1 of 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
-<span class="fc" id="L1002">                delegate.error(marker, fms.sanitize(format), ovs.sanitize(arg));</span>
+<span class="pc bpc" id="L1023" title="1 of 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L1024">                delegate.error(marker, fms.sanitize(format), ovs.sanitize(arg));</span>
             }
-<span class="fc" id="L1004">        }</span>
+<span class="fc" id="L1026">        }</span>
 
         /**
          * This method is similar to {@link #error(String, Object, Object)} method except that the marker data is also
@@ -1014,10 +1036,10 @@ public class EntLogging {
          */
         @Override
         public void error(Marker marker, String format, Object arg1, Object arg2) {
-<span class="pc bpc" id="L1017" title="1 of 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
-<span class="fc" id="L1018">                delegate.error(marker, fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
+<span class="pc bpc" id="L1039" title="1 of 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L1040">                delegate.error(marker, fms.sanitize(format), ovs.sanitize(arg1), ovs.sanitize(arg2));</span>
             }
-<span class="fc" id="L1020">        }</span>
+<span class="fc" id="L1042">        }</span>
 
         /**
          * This method is similar to {@link #error(String, Object...)} method except that the marker data is also taken
@@ -1029,10 +1051,10 @@ public class EntLogging {
          */
         @Override
         public void error(Marker marker, String format, Object... arguments) {
-<span class="pc bpc" id="L1032" title="1 of 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
-<span class="fc" id="L1033">                delegate.error(marker, fms.sanitize(format), sanitize(arguments));</span>
+<span class="pc bpc" id="L1054" title="1 of 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L1055">                delegate.error(marker, fms.sanitize(format), sanitize(arguments));</span>
             }
-<span class="fc" id="L1035">        }</span>
+<span class="fc" id="L1057">        }</span>
 
         /**
          * This method is similar to {@link #error(String, Throwable)} method except that the marker data is also taken
@@ -1044,25 +1066,25 @@ public class EntLogging {
          */
         @Override
         public void error(Marker marker, String msg, Throwable t) {
-<span class="pc bpc" id="L1047" title="1 of 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
-<span class="fc" id="L1048">                delegate.error(marker, fms.sanitize(msg), t);</span>
+<span class="pc bpc" id="L1069" title="1 of 2 branches missed.">            if (delegate.isErrorEnabled()) {</span>
+<span class="fc" id="L1070">                delegate.error(marker, fms.sanitize(msg), t);</span>
             }
-<span class="fc" id="L1050">        }</span>
+<span class="fc" id="L1072">        }</span>
 
         // INSTANCE UTILS FOR GENERIC OBJECT
         public Object[] sanitize(Object... arguments) {
-<span class="fc" id="L1054">            int l = arguments.length - 1;</span>
-<span class="fc" id="L1055">            Object[] res = new Object[l + 1];</span>
+<span class="fc" id="L1076">            int l = arguments.length - 1;</span>
+<span class="fc" id="L1077">            Object[] res = new Object[l + 1];</span>
 
-<span class="fc bfc" id="L1057" title="All 2 branches covered.">            for (int i = 0; i &lt;= l; i++) {</span>
-<span class="fc" id="L1058">                Object a = arguments[i];</span>
-<span class="pc bpc" id="L1059" title="1 of 4 branches missed.">                if (a instanceof Throwable &amp;&amp; i == l) {</span>
-<span class="fc" id="L1060">                    res[i] = a;</span>
+<span class="fc bfc" id="L1079" title="All 2 branches covered.">            for (int i = 0; i &lt;= l; i++) {</span>
+<span class="fc" id="L1080">                Object a = arguments[i];</span>
+<span class="pc bpc" id="L1081" title="1 of 4 branches missed.">                if (a instanceof Throwable &amp;&amp; i == l) {</span>
+<span class="fc" id="L1082">                    res[i] = a;</span>
                 } else {
-<span class="fc" id="L1062">                    res[i] = svs.sanitize(&quot;&quot; + a);</span>
+<span class="fc" id="L1084">                    res[i] = svs.sanitize(&quot;&quot; + a);</span>
                 }
             }
-<span class="fc" id="L1065">            return res;</span>
+<span class="fc" id="L1087">            return res;</span>
         }
     }
 
@@ -1072,7 +1094,7 @@ public class EntLogging {
     public interface SanitizedLogger {
 
         static EntLogger from(Logger logger) {
-<span class="fc" id="L1075">            return EntLogFactory.from(SanitizationLevel.BASIC_SANITIZATION, logger);</span>
+<span class="fc" id="L1097">            return EntLogFactory.from(SanitizationLevel.BASIC_SANITIZATION, logger);</span>
         }
     }
 
@@ -1082,15 +1104,15 @@ public class EntLogging {
     public interface EntLogFactory {
 
         static EntLogger getSanitizedLogger(Class&lt;?&gt; clazz) {
-<span class="fc" id="L1085">            return from(SanitizationLevel.BASIC_SANITIZATION, LoggerFactory.getLogger(clazz));</span>
+<span class="fc" id="L1107">            return from(SanitizationLevel.BASIC_SANITIZATION, LoggerFactory.getLogger(clazz));</span>
         }
 
         static EntLogger getLogger(SanitizationLevel sanitizationLevel, Class&lt;?&gt; clazz) {
-<span class="fc" id="L1089">            return from(sanitizationLevel, LoggerFactory.getLogger(clazz));</span>
+<span class="fc" id="L1111">            return from(sanitizationLevel, LoggerFactory.getLogger(clazz));</span>
         }
 
         static EntLogger from(SanitizationLevel sanitizationLevel, Logger logger) {
-<span class="fc" id="L1093">            return new EntLogger(logger, sanitizationLevel);</span>
+<span class="fc" id="L1115">            return new EntLogger(logger, sanitizationLevel);</span>
         }
     }
 
