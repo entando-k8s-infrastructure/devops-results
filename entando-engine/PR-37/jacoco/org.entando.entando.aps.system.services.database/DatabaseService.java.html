@@ -28,8 +28,8 @@ import static org.entando.entando.aps.system.services.storage.StorageManagerUtil
 import org.entando.entando.web.common.model.PagedMetadata;
 import org.entando.entando.web.common.model.RestListRequest;
 import org.entando.entando.web.database.validator.DatabaseValidator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 import org.springframework.validation.BeanPropertyBindingResult;
 
 import java.io.File;
@@ -42,7 +42,7 @@ import java.util.List;
  */
 <span class="fc" id="L43">public class DatabaseService implements IDatabaseService {</span>
 
-<span class="fc" id="L45">    private final Logger logger = LoggerFactory.getLogger(this.getClass());</span>
+<span class="fc" id="L45">    private final EntLogger logger = EntLogFactory.getSanitizedLogger(this.getClass());</span>
 
     private IDatabaseManager databaseManager;
     private IComponentManager componentManager;
@@ -151,45 +151,46 @@ import java.util.List;
 <span class="fc" id="L151">            String safeReportCode = mustBeValidFilename(reportCode);</span>
 
 <span class="fc bfc" id="L153" title="All 2 branches covered.">            if (null == stream) {</span>
-<span class="fc" id="L154">                logger.warn(&quot;no dump found with code {}, dataSource {}, table {}&quot;, reportCode, dataSource, tableName);</span>
-<span class="fc" id="L155">                BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(tableName, &quot;tableName&quot;);</span>
-<span class="fc" id="L156">                bindingResult.reject(DatabaseValidator.ERRCODE_NO_TABLE_DUMP_FOUND, new Object[]{reportCode, dataSource, tableName}, &quot;database.dump.table.notFound&quot;);</span>
-<span class="fc" id="L157">                throw new ResourceNotFoundException(&quot;code - dataSource - table&quot;,</span>
+<span class="fc" id="L154">                logger.warn(&quot;no dump found with code {}, dataSource {}, table {}&quot;,</span>
+                        reportCode, dataSource, tableName);
+<span class="fc" id="L156">                BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(tableName, &quot;tableName&quot;);</span>
+<span class="fc" id="L157">                bindingResult.reject(DatabaseValidator.ERRCODE_NO_TABLE_DUMP_FOUND, new Object[]{reportCode, dataSource, tableName}, &quot;database.dump.table.notFound&quot;);</span>
+<span class="fc" id="L158">                throw new ResourceNotFoundException(&quot;code - dataSource - table&quot;,</span>
                         &quot;'&quot; + safeReportCode + &quot;' - '&quot; + dataSource + &quot;' - '&quot; + tableName + &quot;'&quot;);
             }
-<span class="fc" id="L160">            tempFile = FileTextReader.createTempFile(new SecureRandom().nextInt(100) + safeReportCode + &quot;_&quot; + dataSource + &quot;_&quot; + tableName, stream);</span>
-<span class="fc" id="L161">            bytes = FileTextReader.fileToByteArray(tempFile);</span>
-<span class="fc" id="L162">        } catch (ResourceNotFoundException r) {</span>
-<span class="fc" id="L163">            throw r;</span>
-<span class="fc" id="L164">        } catch (Throwable t) {</span>
-<span class="fc" id="L165">            logger.error(&quot;error extracting database dump with code {}, dataSource {}, table {}&quot;, reportCode, dataSource, tableName, t);</span>
-<span class="fc" id="L166">            throw new RestServerError(&quot;error extracting database dump&quot;, t);</span>
+<span class="fc" id="L161">            tempFile = FileTextReader.createTempFile(new SecureRandom().nextInt(100) + safeReportCode + &quot;_&quot; + dataSource + &quot;_&quot; + tableName, stream);</span>
+<span class="fc" id="L162">            bytes = FileTextReader.fileToByteArray(tempFile);</span>
+<span class="fc" id="L163">        } catch (ResourceNotFoundException r) {</span>
+<span class="fc" id="L164">            throw r;</span>
+<span class="fc" id="L165">        } catch (Throwable t) {</span>
+<span class="fc" id="L166">            logger.error(&quot;error extracting database dump with code {}, dataSource {}, table {}&quot;, reportCode, dataSource, tableName, t);</span>
+<span class="fc" id="L167">            throw new RestServerError(&quot;error extracting database dump&quot;, t);</span>
         } finally {
-<span class="fc bfc" id="L168" title="All 2 branches covered.">            if (null != tempFile) {</span>
-<span class="fc" id="L169">                boolean deleted = tempFile.delete();</span>
-<span class="pc bpc" id="L170" title="1 of 2 branches missed.">                if (!deleted) {</span>
-<span class="nc" id="L171">                    logger.warn(&quot;Failed to create temp file {}&quot;, tempFile.getAbsolutePath());</span>
+<span class="fc bfc" id="L169" title="All 2 branches covered.">            if (null != tempFile) {</span>
+<span class="fc" id="L170">                boolean deleted = tempFile.delete();</span>
+<span class="pc bpc" id="L171" title="1 of 2 branches missed.">                if (!deleted) {</span>
+<span class="nc" id="L172">                    logger.warn(&quot;Failed to create temp file {}&quot;, tempFile.getAbsolutePath());</span>
                 }
             }
         }
-<span class="fc" id="L175">        return bytes;</span>
+<span class="fc" id="L176">        return bytes;</span>
     }
 
     public IDatabaseManager getDatabaseManager() {
-<span class="fc" id="L179">        return databaseManager;</span>
+<span class="fc" id="L180">        return databaseManager;</span>
     }
 
     public void setDatabaseManager(IDatabaseManager databaseManager) {
-<span class="fc" id="L183">        this.databaseManager = databaseManager;</span>
-<span class="fc" id="L184">    }</span>
+<span class="fc" id="L184">        this.databaseManager = databaseManager;</span>
+<span class="fc" id="L185">    }</span>
 
     public IComponentManager getComponentManager() {
-<span class="fc" id="L187">        return componentManager;</span>
+<span class="fc" id="L188">        return componentManager;</span>
     }
 
     public void setComponentManager(IComponentManager componentManager) {
-<span class="fc" id="L191">        this.componentManager = componentManager;</span>
-<span class="fc" id="L192">    }</span>
+<span class="fc" id="L192">        this.componentManager = componentManager;</span>
+<span class="fc" id="L193">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

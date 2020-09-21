@@ -30,7 +30,7 @@ import com.agiletec.aps.system.common.entity.IEntitySearcherDAO;
 import com.agiletec.aps.system.common.entity.model.EntitySearchFilter;
 import com.agiletec.aps.system.common.entity.model.IApsEntity;
 import com.agiletec.aps.system.common.entity.model.SmallEntityType;
-import com.agiletec.aps.system.exception.ApsSystemException;
+import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.system.services.category.CategoryUtilizer;
 import com.agiletec.aps.system.services.group.GroupUtilizer;
 import com.agiletec.aps.system.services.keygenerator.IKeyGeneratorManager;
@@ -38,8 +38,8 @@ import org.entando.entando.aps.system.services.dataobject.event.PublicDataChange
 import org.entando.entando.aps.system.services.dataobject.model.DataObject;
 import org.entando.entando.aps.system.services.dataobject.model.DataObjectRecordVO;
 import org.entando.entando.aps.system.services.dataobject.model.SmallDataType;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 
 /**
  * DataObjects manager. This implements all the methods needed to create and
@@ -49,7 +49,7 @@ import org.slf4j.LoggerFactory;
  */
 <span class="fc" id="L50">public class DataObjectManager extends ApsEntityManager implements IDataObjectManager, GroupUtilizer&lt;String&gt;, CategoryUtilizer {</span>
 
-<span class="fc" id="L52">    private static final Logger logger = LoggerFactory.getLogger(DataObjectManager.class);</span>
+<span class="fc" id="L52">    private static final EntLogger logger = EntLogFactory.getSanitizedLogger(DataObjectManager.class);</span>
 
     private IDataObjectDAO dataObjectDao;
 
@@ -161,27 +161,27 @@ import org.slf4j.LoggerFactory;
      * @param onLine Specifies the type of the dataobject to return: 'true'
      * references the published dataobject, 'false' the freely modifiable one.
      * @return The requested dataobject.
-     * @throws ApsSystemException In case of error.
+     * @throws EntException In case of error.
      */
     @Override
-    public DataObject loadDataObject(String id, boolean onLine) throws ApsSystemException {
+    public DataObject loadDataObject(String id, boolean onLine) throws EntException {
 <span class="fc" id="L168">        return this.loadDataObject(id, onLine, false);</span>
     }
 
     @Override
-    public DataObject loadDataObject(String id, boolean onLine, boolean cacheable) throws ApsSystemException {
+    public DataObject loadDataObject(String id, boolean onLine, boolean cacheable) throws EntException {
 <span class="fc" id="L173">        DataObject dataobject = null;</span>
         try {
 <span class="fc" id="L175">            DataObjectRecordVO dataobjectVo = this.loadDataObjectVO(id);</span>
 <span class="fc" id="L176">            dataobject = this.createDataObject(dataobjectVo, onLine);</span>
-<span class="nc" id="L177">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L177">        } catch (EntException e) {</span>
 <span class="nc" id="L178">            logger.error(&quot;Error while loading dataobject : id {}&quot;, id, e);</span>
-<span class="nc" id="L179">            throw new ApsSystemException(&quot;Error while loading dataobject : id &quot; + id, e);</span>
+<span class="nc" id="L179">            throw new EntException(&quot;Error while loading dataobject : id &quot; + id, e);</span>
 <span class="fc" id="L180">        }</span>
 <span class="fc" id="L181">        return dataobject;</span>
     }
 
-    protected DataObject createDataObject(DataObjectRecordVO dataobjectVo, boolean onLine) throws ApsSystemException {
+    protected DataObject createDataObject(DataObjectRecordVO dataobjectVo, boolean onLine) throws EntException {
 <span class="fc" id="L185">        DataObject dataobject = null;</span>
         try {
 <span class="fc bfc" id="L187" title="All 2 branches covered.">            if (dataobjectVo != null) {</span>
@@ -218,9 +218,9 @@ import org.slf4j.LoggerFactory;
                     }
                 }
             }
-<span class="nc" id="L221">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L221">        } catch (EntException e) {</span>
 <span class="nc" id="L222">            logger.error(&quot;Error while creating dataobject by vo&quot;, e);</span>
-<span class="nc" id="L223">            throw new ApsSystemException(&quot;Error while creating dataobject by vo&quot;, e);</span>
+<span class="nc" id="L223">            throw new EntException(&quot;Error while creating dataobject by vo&quot;, e);</span>
 <span class="fc" id="L224">        }</span>
 <span class="fc" id="L225">        return dataobject;</span>
     }
@@ -231,16 +231,16 @@ import org.slf4j.LoggerFactory;
      *
      * @param id The id of the requested dataobject.
      * @return The VO object corresponding to the wanted dataobject.
-     * @throws ApsSystemException in case of error.
+     * @throws EntException in case of error.
      */
     @Override
-    public DataObjectRecordVO loadDataObjectVO(String id) throws ApsSystemException {
+    public DataObjectRecordVO loadDataObjectVO(String id) throws EntException {
 <span class="fc" id="L238">        DataObjectRecordVO dataobjectVo = null;</span>
         try {
 <span class="fc" id="L240">            dataobjectVo = (DataObjectRecordVO) this.getDataObjectDAO().loadEntityRecord(id);</span>
 <span class="nc" id="L241">        } catch (Throwable t) {</span>
 <span class="nc" id="L242">            logger.error(&quot;Error while loading dataobject vo : id {}&quot;, id, t);</span>
-<span class="nc" id="L243">            throw new ApsSystemException(&quot;Error while loading dataobject vo : id &quot; + id, t);</span>
+<span class="nc" id="L243">            throw new EntException(&quot;Error while loading dataobject vo : id &quot; + id, t);</span>
 <span class="fc" id="L244">        }</span>
 <span class="fc" id="L245">        return dataobjectVo;</span>
     }
@@ -249,15 +249,15 @@ import org.slf4j.LoggerFactory;
      * Save a dataobject in the DB.
      *
      * @param dataobject The dataobject to add.
-     * @throws ApsSystemException in case of error.
+     * @throws EntException in case of error.
      */
     @Override
-    public void saveDataObject(DataObject dataobject) throws ApsSystemException {
+    public void saveDataObject(DataObject dataobject) throws EntException {
 <span class="fc" id="L256">        this.addDataObject(dataobject);</span>
 <span class="fc" id="L257">    }</span>
 
     @Override
-    public void saveDataObjectAndContinue(DataObject dataobject) throws ApsSystemException {
+    public void saveDataObjectAndContinue(DataObject dataobject) throws EntException {
 <span class="nc" id="L261">        this.addUpdateDataObject(dataobject, false);</span>
 <span class="nc" id="L262">    }</span>
 
@@ -266,14 +266,14 @@ import org.slf4j.LoggerFactory;
      * attached
      *
      * @param dataobject
-     * @throws ApsSystemException
+     * @throws EntException
      */
     @Override
-    public void addDataObject(DataObject dataobject) throws ApsSystemException {
+    public void addDataObject(DataObject dataobject) throws EntException {
 <span class="fc" id="L273">        this.addUpdateDataObject(dataobject, true);</span>
 <span class="fc" id="L274">    }</span>
 
-    private void addUpdateDataObject(DataObject dataobject, boolean updateDate) throws ApsSystemException {
+    private void addUpdateDataObject(DataObject dataobject, boolean updateDate) throws EntException {
         try {
 <span class="fc" id="L278">            dataobject.setLastModified(new Date());</span>
 <span class="pc bpc" id="L279" title="1 of 2 branches missed.">            if (updateDate) {</span>
@@ -296,7 +296,7 @@ import org.slf4j.LoggerFactory;
             }
 <span class="nc" id="L297">        } catch (Throwable t) {</span>
 <span class="nc" id="L298">            logger.error(&quot;Error while saving dataobject&quot;, t);</span>
-<span class="nc" id="L299">            throw new ApsSystemException(&quot;Error while saving dataobject&quot;, t);</span>
+<span class="nc" id="L299">            throw new EntException(&quot;Error while saving dataobject&quot;, t);</span>
 <span class="fc" id="L300">        }</span>
 <span class="fc" id="L301">    }</span>
 
@@ -305,10 +305,10 @@ import org.slf4j.LoggerFactory;
      *
      * @param dataobject The ID associated to the dataobject to be displayed in
      * the portal.
-     * @throws ApsSystemException in case of error.
+     * @throws EntException in case of error.
      */
     @Override
-    public void insertDataObject(DataObject dataobject) throws ApsSystemException {
+    public void insertDataObject(DataObject dataobject) throws EntException {
         try {
 <span class="fc" id="L313">            dataobject.setLastModified(new Date());</span>
 <span class="pc bpc" id="L314" title="1 of 2 branches missed.">            if (null == dataobject.getId()) {</span>
@@ -327,7 +327,7 @@ import org.slf4j.LoggerFactory;
 <span class="fc" id="L327">            this.notifyPublicDataObjectChanging(dataobject, operationEventCode);</span>
 <span class="nc" id="L328">        } catch (Throwable t) {</span>
 <span class="nc" id="L329">            logger.error(&quot;Error while inserting dataobject on line&quot;, t);</span>
-<span class="nc" id="L330">            throw new ApsSystemException(&quot;Error while inserting dataobject on line&quot;, t);</span>
+<span class="nc" id="L330">            throw new EntException(&quot;Error while inserting dataobject on line&quot;, t);</span>
 <span class="fc" id="L331">        }</span>
 <span class="fc" id="L332">    }</span>
 
@@ -350,10 +350,10 @@ import org.slf4j.LoggerFactory;
      * Obviously the dataobject itself is not deleted.
      *
      * @param dataobject the dataobject to unpublish.
-     * @throws ApsSystemException in case of error
+     * @throws EntException in case of error
      */
     @Override
-    public void removeDataObject(DataObject dataobject) throws ApsSystemException {
+    public void removeDataObject(DataObject dataobject) throws EntException {
         try {
 <span class="fc" id="L358">            dataobject.setLastModified(new Date());</span>
 <span class="fc" id="L359">            dataobject.incrementVersion(false);</span>
@@ -364,18 +364,18 @@ import org.slf4j.LoggerFactory;
 <span class="fc" id="L364">            this.notifyPublicDataObjectChanging(dataobject, PublicDataChangedEvent.REMOVE_OPERATION_CODE);</span>
 <span class="nc" id="L365">        } catch (Throwable t) {</span>
 <span class="nc" id="L366">            logger.error(&quot;Error while removing onLine dataobject&quot;, t);</span>
-<span class="nc" id="L367">            throw new ApsSystemException(&quot;Error while removing onLine dataobject&quot;, t);</span>
+<span class="nc" id="L367">            throw new EntException(&quot;Error while removing onLine dataobject&quot;, t);</span>
 <span class="fc" id="L368">        }</span>
 <span class="fc" id="L369">    }</span>
 
     /**
      * Notify the modification of a published dataobject.
      *
-     * @param dataobject The modified dataobject.
+     * @param dataobject    The modified dataobject.
      * @param operationCode the operation code to notify.
-     * @exception ApsSystemException in caso of error.
+     * @throws EntException in caso of error.
      */
-    private void notifyPublicDataObjectChanging(DataObject dataobject, int operationCode) throws ApsSystemException {
+    private void notifyPublicDataObjectChanging(DataObject dataobject, int operationCode) {
 <span class="fc" id="L379">        PublicDataChangedEvent event = new PublicDataChangedEvent();</span>
 <span class="fc" id="L380">        event.setDataObject(dataobject);</span>
 <span class="fc" id="L381">        event.setOperationCode(operationCode);</span>
@@ -400,63 +400,63 @@ import org.slf4j.LoggerFactory;
      * Deletes a dataobject from the DB.
      *
      * @param dataobject The dataobject to delete.
-     * @throws ApsSystemException in case of error.
+     * @throws EntException in case of error.
      */
     @Override
-    public void deleteDataObject(DataObject dataobject) throws ApsSystemException {
+    public void deleteDataObject(DataObject dataobject) throws EntException {
         try {
 <span class="fc" id="L408">            this.getDataObjectDAO().deleteEntity(dataobject.getId());</span>
 <span class="nc" id="L409">        } catch (Throwable t) {</span>
 <span class="nc" id="L410">            logger.error(&quot;Error while deleting dataobject {}&quot;, dataobject.getId(), t);</span>
-<span class="nc" id="L411">            throw new ApsSystemException(&quot;Error while deleting dataobject &quot; + dataobject.getId(), t);</span>
+<span class="nc" id="L411">            throw new EntException(&quot;Error while deleting dataobject &quot; + dataobject.getId(), t);</span>
 <span class="fc" id="L412">        }</span>
 <span class="fc" id="L413">    }</span>
 
     @Override
     public List&lt;String&gt; loadDataObjectsId(String dataobjectType, String[] categories, EntitySearchFilter[] filters,
-            Collection&lt;String&gt; userGroupCodes) throws ApsSystemException {
+            Collection&lt;String&gt; userGroupCodes) throws EntException {
 <span class="fc" id="L418">        return this.loadDataObjectsId(dataobjectType, categories, false, filters, userGroupCodes);</span>
     }
 
     @Override
     public List&lt;String&gt; loadDataObjectsId(String dataobjectType, String[] categories, boolean orClauseCategoryFilter,
-            EntitySearchFilter[] filters, Collection&lt;String&gt; userGroupCodes) throws ApsSystemException {
+            EntitySearchFilter[] filters, Collection&lt;String&gt; userGroupCodes) throws EntException {
 <span class="fc" id="L424">        List&lt;String&gt; dataobjectsId = null;</span>
         try {
 <span class="fc" id="L426">            dataobjectsId = this.getDataObjectSearcherDAO().loadDataObjectsId(dataobjectType, categories, orClauseCategoryFilter, filters, userGroupCodes);</span>
 <span class="nc" id="L427">        } catch (Throwable t) {</span>
 <span class="nc" id="L428">            logger.error(&quot;Error while loading dataobjects&quot;, t);</span>
-<span class="nc" id="L429">            throw new ApsSystemException(&quot;Error while loading dataobjects&quot;, t);</span>
+<span class="nc" id="L429">            throw new EntException(&quot;Error while loading dataobjects&quot;, t);</span>
 <span class="fc" id="L430">        }</span>
 <span class="fc" id="L431">        return dataobjectsId;</span>
     }
 
     @Override
     public List&lt;String&gt; loadDataObjectsId(String[] categories,
-            EntitySearchFilter[] filters, Collection&lt;String&gt; userGroupCodes) throws ApsSystemException {
+            EntitySearchFilter[] filters, Collection&lt;String&gt; userGroupCodes) throws EntException {
 <span class="fc" id="L437">        return this.loadDataObjectsId(categories, false, filters, userGroupCodes);</span>
     }
 
     @Override
     public List&lt;String&gt; loadDataObjectsId(String[] categories, boolean orClauseCategoryFilter,
-            EntitySearchFilter[] filters, Collection&lt;String&gt; userGroupCodes) throws ApsSystemException {
+            EntitySearchFilter[] filters, Collection&lt;String&gt; userGroupCodes) throws EntException {
 <span class="fc" id="L443">        List&lt;String&gt; dataobjectsId = null;</span>
         try {
 <span class="fc" id="L445">            dataobjectsId = this.getDataObjectSearcherDAO().loadDataObjectsId(categories, orClauseCategoryFilter, filters, userGroupCodes);</span>
 <span class="nc" id="L446">        } catch (Throwable t) {</span>
 <span class="nc" id="L447">            logger.error(&quot;Error while loading dataobjects&quot;, t);</span>
-<span class="nc" id="L448">            throw new ApsSystemException(&quot;Error while loading dataobjects&quot;, t);</span>
+<span class="nc" id="L448">            throw new EntException(&quot;Error while loading dataobjects&quot;, t);</span>
 <span class="fc" id="L449">        }</span>
 <span class="fc" id="L450">        return dataobjectsId;</span>
     }
 
     @Override
-    public List getCategoryUtilizers(String resourceId) throws ApsSystemException {
+    public List getCategoryUtilizers(String resourceId) throws EntException {
 <span class="fc" id="L455">        List&lt;String&gt; dataIds = null;</span>
         try {
 <span class="fc" id="L457">            dataIds = this.getDataObjectDAO().getCategoryUtilizers(resourceId);</span>
 <span class="nc" id="L458">        } catch (Throwable t) {</span>
-<span class="nc" id="L459">            throw new ApsSystemException(&quot;Error while loading referenced dataobjects : category &quot; + resourceId, t);</span>
+<span class="nc" id="L459">            throw new EntException(&quot;Error while loading referenced dataobjects : category &quot; + resourceId, t);</span>
 <span class="fc" id="L460">        }</span>
 <span class="fc" id="L461">        return dataIds;</span>
     }
@@ -485,12 +485,12 @@ import org.slf4j.LoggerFactory;
     }
 
     @Override
-    public List&lt;String&gt; getGroupUtilizers(String groupName) throws ApsSystemException {
+    public List&lt;String&gt; getGroupUtilizers(String groupName) throws EntException {
 <span class="fc" id="L489">        List&lt;String&gt; dataIds = null;</span>
         try {
 <span class="fc" id="L491">            dataIds = this.getDataObjectDAO().getGroupUtilizers(groupName);</span>
 <span class="nc" id="L492">        } catch (Throwable t) {</span>
-<span class="nc" id="L493">            throw new ApsSystemException(&quot;Error while loading referenced dataobjects : group &quot; + groupName, t);</span>
+<span class="nc" id="L493">            throw new EntException(&quot;Error while loading referenced dataobjects : group &quot; + groupName, t);</span>
 <span class="fc" id="L494">        }</span>
 <span class="fc" id="L495">        return dataIds;</span>
     }
@@ -551,7 +551,7 @@ import org.slf4j.LoggerFactory;
 <span class="nc" id="L551">    }</span>
 
     @Override
-    public IApsEntity getEntity(String entityId) throws ApsSystemException {
+    public IApsEntity getEntity(String entityId) throws EntException {
 <span class="nc" id="L555">        return this.loadDataObject(entityId, false);</span>
     }
 

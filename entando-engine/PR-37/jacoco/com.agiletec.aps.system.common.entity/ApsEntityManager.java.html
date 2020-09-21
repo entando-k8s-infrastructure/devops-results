@@ -48,12 +48,12 @@ import com.agiletec.aps.system.common.entity.parse.EntityHandler;
 import com.agiletec.aps.system.common.entity.parse.IApsEntityDOM;
 import com.agiletec.aps.system.common.entity.parse.IEntityTypeDOM;
 import com.agiletec.aps.system.common.entity.parse.IEntityTypeFactory;
-import com.agiletec.aps.system.exception.ApsSystemException;
+import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.system.services.category.ICategoryManager;
 import com.agiletec.aps.util.DateConverter;
 import org.apache.commons.beanutils.BeanComparator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
 
@@ -74,7 +74,7 @@ import org.xml.sax.SAXException;
      */
     public static final String RELOAD_REFERENCES_THREAD_NAME_PREFIX = &quot;RELOAD_REFERENCES_INDEX_&quot;;
 
-<span class="fc" id="L77">    private static final Logger logger = LoggerFactory.getLogger(ApsEntityManager.class);</span>
+<span class="fc" id="L77">    private static final EntLogger logger = EntLogFactory.getSanitizedLogger(ApsEntityManager.class);</span>
 
     private IEntityTypeFactory entityTypeFactory;
 
@@ -178,10 +178,10 @@ import org.xml.sax.SAXException;
      * @param entityTypeCode The Entity Type code.
      * @param xml The XML of the associated entity.
      * @return The populated entity.
-     * @throws ApsSystemException If errors detected while retrieving the
+     * @throws EntException If errors detected while retrieving the
      * entity.
      */
-    protected IApsEntity createEntityFromXml(String entityTypeCode, String xml) throws ApsSystemException {
+    protected IApsEntity createEntityFromXml(String entityTypeCode, String xml) throws EntException {
         try {
 <span class="fc" id="L186">            IApsEntity entityPrototype = this.getEntityPrototype(entityTypeCode);</span>
 <span class="fc" id="L187">            SAXParser parser = EntSafeXmlUtils.newSafeSAXParser();</span>
@@ -192,7 +192,7 @@ import org.xml.sax.SAXException;
 <span class="fc" id="L192">            return entityPrototype;</span>
 <span class="nc" id="L193">        } catch (ParserConfigurationException | SAXException | IOException t) {</span>
 <span class="nc" id="L194">            logger.error(&quot;Error detected while creating the entity. typecode: {} - xml: {}&quot;, entityTypeCode, xml, t);</span>
-<span class="nc" id="L195">            throw new ApsSystemException(&quot;Error detected while creating the entity&quot;, t);</span>
+<span class="nc" id="L195">            throw new EntException(&quot;Error detected while creating the entity&quot;, t);</span>
         }
     }
 
@@ -241,12 +241,12 @@ import org.xml.sax.SAXException;
      * Add a new entity prototype on the catalog.
      *
      * @param entityType The entity type to add.
-     * @throws ApsSystemException In case of error.
+     * @throws EntException In case of error.
      */
     @Override
-    public void addEntityPrototype(IApsEntity entityType) throws ApsSystemException {
+    public void addEntityPrototype(IApsEntity entityType) throws EntException {
 <span class="pc bpc" id="L248" title="1 of 2 branches missed.">        if (null == entityType) {</span>
-<span class="nc" id="L249">            throw new ApsSystemException(&quot;Invalid entity type to add&quot;);</span>
+<span class="nc" id="L249">            throw new EntException(&quot;Invalid entity type to add&quot;);</span>
         }
 <span class="fc" id="L251">        Map&lt;String, IApsEntity&gt; newEntityTypes = this.getEntityTypes();</span>
 <span class="fc" id="L252">        newEntityTypes.put(entityType.getTypeCode(), entityType);</span>
@@ -258,17 +258,17 @@ import org.xml.sax.SAXException;
      * Update an entity prototype on the catalog.
      *
      * @param entityType The entity type to update.
-     * @throws ApsSystemException In case of error.
+     * @throws EntException In case of error.
      */
     @Override
-    public void updateEntityPrototype(IApsEntity entityType) throws ApsSystemException {
+    public void updateEntityPrototype(IApsEntity entityType) throws EntException {
 <span class="pc bpc" id="L265" title="1 of 2 branches missed.">        if (null == entityType) {</span>
-<span class="nc" id="L266">            throw new ApsSystemException(&quot;Invalid entity type to update&quot;);</span>
+<span class="nc" id="L266">            throw new EntException(&quot;Invalid entity type to update&quot;);</span>
         }
 <span class="fc" id="L268">        Map&lt;String, IApsEntity&gt; entityTypes = this.getEntityTypes();</span>
 <span class="fc" id="L269">        IApsEntity oldEntityType = entityTypes.get(entityType.getTypeCode());</span>
 <span class="pc bpc" id="L270" title="1 of 2 branches missed.">        if (null == oldEntityType) {</span>
-<span class="nc" id="L271">            throw new ApsSystemException(&quot;No entity type to update with code '&quot; + entityType.getTypeCode() + &quot;' where found&quot;);</span>
+<span class="nc" id="L271">            throw new EntException(&quot;No entity type to update with code '&quot; + entityType.getTypeCode() + &quot;' where found&quot;);</span>
         }
 <span class="fc" id="L273">        entityTypes.put(entityType.getTypeCode(), entityType);</span>
 <span class="fc" id="L274">        this.updateEntityPrototypes(entityTypes);</span>
@@ -313,14 +313,14 @@ import org.xml.sax.SAXException;
      * Remove an entity type from the catalog.
      *
      * @param entityTypeCode The code of the entity type to remove.
-     * @throws ApsSystemException In case of error.
+     * @throws EntException In case of error.
      */
     @Override
-    public void removeEntityPrototype(String entityTypeCode) throws ApsSystemException {
+    public void removeEntityPrototype(String entityTypeCode) throws EntException {
 <span class="fc" id="L320">        Map&lt;String, IApsEntity&gt; entityTypes = this.getEntityTypes();</span>
 <span class="fc" id="L321">        IApsEntity entityTypeToRemove = entityTypes.get(entityTypeCode);</span>
 <span class="pc bpc" id="L322" title="1 of 2 branches missed.">        if (null == entityTypeToRemove) {</span>
-<span class="nc" id="L323">            throw new ApsSystemException(&quot;No entity type to remove with code '&quot; + entityTypeCode + &quot;' were found&quot;);</span>
+<span class="nc" id="L323">            throw new EntException(&quot;No entity type to remove with code '&quot; + entityTypeCode + &quot;' were found&quot;);</span>
         }
 <span class="fc" id="L325">        entityTypes.remove(entityTypeCode);</span>
 <span class="fc" id="L326">        this.updateEntityPrototypes(entityTypes);</span>
@@ -332,19 +332,19 @@ import org.xml.sax.SAXException;
      *
      * @param newEntityTypes the map, indexed by code, containing the new
      * entities.
-     * @throws ApsSystemException If errors are detected during the process.
+     * @throws EntException If errors are detected during the process.
      */
-    private void updateEntityPrototypes(Map&lt;String, IApsEntity&gt; newEntityTypes) throws ApsSystemException {
+    private void updateEntityPrototypes(Map&lt;String, IApsEntity&gt; newEntityTypes) throws EntException {
         try {
 <span class="fc" id="L339">            this.getEntityTypeFactory().updateEntityTypes(newEntityTypes, this.getConfigItemName(), this.getEntityTypeDom());</span>
 <span class="fc" id="L340">            this.refresh();</span>
 <span class="nc" id="L341">        } catch (Throwable t) {</span>
 <span class="nc" id="L342">            logger.error(&quot;Error detected while updating entity prototypes&quot;, t);</span>
-<span class="nc" id="L343">            throw new ApsSystemException(&quot;Error detected while updating entity prototypes&quot;, t);</span>
+<span class="nc" id="L343">            throw new EntException(&quot;Error detected while updating entity prototypes&quot;, t);</span>
 <span class="fc" id="L344">        }</span>
 <span class="fc" id="L345">    }</span>
 
-    private void notifyEntityTypesChanging(IApsEntity oldEntityType, IApsEntity newEntityType, int operationCode) throws ApsSystemException {
+    private void notifyEntityTypesChanging(IApsEntity oldEntityType, IApsEntity newEntityType, int operationCode) {
 <span class="fc" id="L348">        EntityTypesChangingEvent event = new EntityTypesChangingEvent();</span>
 <span class="fc" id="L349">        event.setOperationCode(operationCode);</span>
 <span class="fc" id="L350">        event.setNewEntityType(newEntityType);</span>
@@ -549,16 +549,16 @@ import org.xml.sax.SAXException;
      * @param filters The filters used to find an sort the entities ID that
      * match the given criteria.
      * @return The list of the IDs found.
-     * @throws ApsSystemException In case of error.
+     * @throws EntException In case of error.
      */
     @Override
-    public List&lt;String&gt; searchId(EntitySearchFilter[] filters) throws ApsSystemException {
+    public List&lt;String&gt; searchId(EntitySearchFilter[] filters) throws EntException {
 <span class="fc" id="L556">        List&lt;String&gt; idList = null;</span>
         try {
 <span class="fc" id="L558">            idList = this.getEntitySearcherDao().searchId(filters);</span>
 <span class="nc" id="L559">        } catch (Throwable t) {</span>
 <span class="nc" id="L560">            logger.error(&quot;Error detected while searching entities&quot;, t);</span>
-<span class="nc" id="L561">            throw new ApsSystemException(&quot;Error detected while searching entities&quot;, t);</span>
+<span class="nc" id="L561">            throw new EntException(&quot;Error detected while searching entities&quot;, t);</span>
 <span class="fc" id="L562">        }</span>
 <span class="fc" id="L563">        return idList;</span>
     }
@@ -569,28 +569,28 @@ import org.xml.sax.SAXException;
      * @param typeCode The code of the Entity Types to look for.
      * @param filters The search filters to apply to find and sort the ID found.
      * @return The list of the ID found.
-     * @throws ApsSystemException In case of error.
+     * @throws EntException In case of error.
      */
     @Override
-    public List&lt;String&gt; searchId(String typeCode, EntitySearchFilter[] filters) throws ApsSystemException {
+    public List&lt;String&gt; searchId(String typeCode, EntitySearchFilter[] filters) throws EntException {
 <span class="fc" id="L576">        List&lt;String&gt; idList = null;</span>
         try {
 <span class="fc" id="L578">            idList = this.getEntitySearcherDao().searchId(typeCode, filters);</span>
 <span class="nc" id="L579">        } catch (Throwable t) {</span>
 <span class="nc" id="L580">            logger.error(&quot;Error detected while searching entities with typeCode {}&quot;, typeCode, t);</span>
-<span class="nc" id="L581">            throw new ApsSystemException(&quot;Error detected while searching entities&quot;, t);</span>
+<span class="nc" id="L581">            throw new EntException(&quot;Error detected while searching entities&quot;, t);</span>
 <span class="fc" id="L582">        }</span>
 <span class="fc" id="L583">        return idList;</span>
     }
 
     @Override
-    public List&lt;ApsEntityRecord&gt; searchRecords(EntitySearchFilter[] filters) throws ApsSystemException {
+    public List&lt;ApsEntityRecord&gt; searchRecords(EntitySearchFilter[] filters) throws EntException {
 <span class="fc" id="L588">        List&lt;ApsEntityRecord&gt; records = null;</span>
         try {
 <span class="fc" id="L590">            records = this.getEntitySearcherDao().searchRecords(filters);</span>
 <span class="nc" id="L591">        } catch (Throwable t) {</span>
 <span class="nc" id="L592">            logger.error(&quot;Error searching entity records&quot;, t);</span>
-<span class="nc" id="L593">            throw new ApsSystemException(&quot;Error searching entity records&quot;, t);</span>
+<span class="nc" id="L593">            throw new EntException(&quot;Error searching entity records&quot;, t);</span>
 <span class="fc" id="L594">        }</span>
 <span class="fc" id="L595">        return records;</span>
     }
@@ -630,11 +630,11 @@ import org.xml.sax.SAXException;
      *
      * @param typeCode The type Code of entities to reload references. If null,
      * will reload all entities.
-     * @throws ApsSystemException In case of error.
+     * @throws EntException In case of error.
      */
-    protected synchronized void reloadEntitySearchReferencesByType(String typeCode) throws ApsSystemException {
+    protected synchronized void reloadEntitySearchReferencesByType(String typeCode) throws EntException {
 <span class="pc bpc" id="L636" title="1 of 2 branches missed.">        if (null == typeCode) {</span>
-<span class="nc" id="L637">            throw new ApsSystemException(&quot;Error: invalid type code detected&quot;);</span>
+<span class="nc" id="L637">            throw new EntException(&quot;Error: invalid type code detected&quot;);</span>
         }
 <span class="fc" id="L639">        this.setStatus(ApsEntityManager.STATUS_RELOADING_REFERENCES_IN_PROGRESS, typeCode);</span>
         try {
@@ -647,7 +647,7 @@ import org.xml.sax.SAXException;
             }
 <span class="nc" id="L648">        } catch (Throwable t) {</span>
 <span class="nc" id="L649">            logger.error(&quot;Error reloading entity references of type: {}&quot;, typeCode, t);</span>
-<span class="nc" id="L650">            throw new ApsSystemException(&quot;Error reloading entity references of type: &quot; + typeCode, t);</span>
+<span class="nc" id="L650">            throw new EntException(&quot;Error reloading entity references of type: &quot; + typeCode, t);</span>
         } finally {
 <span class="fc" id="L652">            this.setStatus(ApsEntityManager.STATUS_READY, typeCode);</span>
         }
@@ -669,17 +669,17 @@ import org.xml.sax.SAXException;
      * Load the complete list of the entities.
      *
      * @return The complete list of entity IDs.
-     * @throws ApsSystemException In case of error.
+     * @throws EntException In case of error.
      * @deprecated From jAPS 2.0 version 2.0.9, use {@link IEntitySearcherDAO}
      * searchId(EntitySearchFilter[]) method
      */
-    protected List&lt;String&gt; getAllEntityId() throws ApsSystemException {
+    protected List&lt;String&gt; getAllEntityId() throws EntException {
 <span class="nc" id="L677">        List&lt;String&gt; entitiesId = new ArrayList&lt;&gt;();</span>
         try {
 <span class="nc" id="L679">            entitiesId = this.getEntityDao().getAllEntityId();</span>
 <span class="nc" id="L680">        } catch (Throwable t) {</span>
 <span class="nc" id="L681">            logger.error(&quot;Error while loading the complete list of entity IDs&quot;, t);</span>
-<span class="nc" id="L682">            throw new ApsSystemException(&quot;Error while loading the complete list of entity IDs&quot;, t);</span>
+<span class="nc" id="L682">            throw new EntException(&quot;Error while loading the complete list of entity IDs&quot;, t);</span>
 <span class="nc" id="L683">        }</span>
 <span class="nc" id="L684">        return entitiesId;</span>
     }

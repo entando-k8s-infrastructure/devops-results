@@ -25,7 +25,7 @@ import java.util.Map;
 import javax.servlet.ServletContext;
 import javax.sql.DataSource;
 
-import com.agiletec.aps.system.exception.ApsSystemException;
+import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.util.ApsWebApplicationUtils;
 import com.agiletec.aps.util.DateConverter;
 import com.agiletec.aps.util.FileTextReader;
@@ -41,8 +41,8 @@ import org.entando.entando.aps.system.init.model.SystemInstallationReport;
 import org.entando.entando.aps.system.init.util.TableDataUtils;
 import org.entando.entando.aps.system.init.util.TableFactory;
 import org.entando.entando.aps.system.services.storage.IStorageManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.web.context.ServletContextAware;
@@ -53,7 +53,7 @@ import org.springframework.web.context.ServletContextAware;
 <span class="fc" id="L53">public class DatabaseManager extends AbstractInitializerManager</span>
         implements IDatabaseManager, IDatabaseInstallerManager, ServletContextAware {
 
-<span class="fc" id="L56">    private static final Logger logger = LoggerFactory.getLogger(DatabaseManager.class);</span>
+<span class="fc" id="L56">    private static final EntLogger logger = EntLogFactory.getSanitizedLogger(DatabaseManager.class);</span>
 
     private static final String LOG_PREFIX = &quot;|   &quot;;
 
@@ -124,7 +124,7 @@ import org.springframework.web.context.ServletContextAware;
 <span class="fc" id="L124">        return report;</span>
     }
 
-    private void initMasterDatabases(SystemInstallationReport report, boolean checkOnStatup) throws ApsSystemException {
+    private void initMasterDatabases(SystemInstallationReport report, boolean checkOnStatup) throws EntException {
 <span class="fc" id="L128">        System.out.println(&quot;+ [ Component: Core ] :: SCHEMA\n&quot; + LOG_PREFIX);</span>
 <span class="fc" id="L129">        ComponentInstallationReport componentReport = report.getComponentReport(&quot;entandoCore&quot;, true);</span>
 <span class="fc" id="L130">        DataSourceInstallationReport dataSourceReport = componentReport.getDataSourceReport();</span>
@@ -168,11 +168,11 @@ import org.springframework.web.context.ServletContextAware;
 <span class="fc" id="L168">            logger.debug(LOG_PREFIX + &quot;\n&quot; + LOG_PREFIX + &quot;Installation complete\n&quot; + LOG_PREFIX);</span>
 <span class="nc" id="L169">        } catch (Throwable t) {</span>
 <span class="nc" id="L170">            logger.error(&quot;Error initializating master databases&quot;, t);</span>
-<span class="nc" id="L171">            throw new ApsSystemException(&quot;Error initializating master databases&quot;, t);</span>
+<span class="nc" id="L171">            throw new EntException(&quot;Error initializating master databases&quot;, t);</span>
 <span class="fc" id="L172">        }</span>
 <span class="fc" id="L173">    }</span>
 
-    private void initMasterDatabase(String databaseName, DataSource dataSource, DataSourceInstallationReport schemaReport) throws ApsSystemException {
+    private void initMasterDatabase(String databaseName, DataSource dataSource, DataSourceInstallationReport schemaReport) throws EntException {
         try {
 <span class="fc" id="L177">            DatabaseType type = this.getDatabaseRestorer().getType(dataSource);</span>
 <span class="pc bpc" id="L178" title="1 of 2 branches missed.">            if (type.equals(DatabaseType.DERBY)) {</span>
@@ -180,7 +180,7 @@ import org.springframework.web.context.ServletContextAware;
             }
 <span class="fc" id="L181">            List&lt;String&gt; tableClassNames = this.getEntandoTableMapping().get(databaseName);</span>
 <span class="pc bpc" id="L182" title="2 of 4 branches missed.">            if (null == tableClassNames || tableClassNames.isEmpty()) {</span>
-<span class="nc" id="L183">                logger.debug(&quot;No Master Tables defined for db - &quot; + databaseName);</span>
+<span class="nc" id="L183">                logger.debug(&quot;No Master Tables defined for db {}&quot;, databaseName);</span>
 <span class="nc" id="L184">                schemaReport.getDatabaseStatus().put(databaseName, SystemInstallationReport.Status.NOT_AVAILABLE);</span>
             } else {
 <span class="fc" id="L186">                this.createTables(databaseName, tableClassNames, dataSource, schemaReport);</span>
@@ -188,11 +188,11 @@ import org.springframework.web.context.ServletContextAware;
 <span class="nc" id="L188">        } catch (Throwable t) {</span>
 <span class="nc" id="L189">            schemaReport.getDatabaseStatus().put(databaseName, SystemInstallationReport.Status.INCOMPLETE);</span>
 <span class="nc" id="L190">            logger.error(&quot;Error creating master tables to db {}&quot;, databaseName, t);</span>
-<span class="nc" id="L191">            throw new ApsSystemException(&quot;Error creating master tables to db &quot; + databaseName, t);</span>
+<span class="nc" id="L191">            throw new EntException(&quot;Error creating master tables to db &quot; + databaseName, t);</span>
 <span class="fc" id="L192">        }</span>
 <span class="fc" id="L193">    }</span>
 
-    public void initComponentDatabases(Component componentConfiguration, SystemInstallationReport report, boolean checkOnStatup) throws ApsSystemException {
+    public void initComponentDatabases(Component componentConfiguration, SystemInstallationReport report, boolean checkOnStatup) throws EntException {
 <span class="nc" id="L196">        System.out.println(&quot;+ [ Component: &quot; + componentConfiguration.getCode() + &quot; ] :: SCHEMA\n&quot; + LOG_PREFIX);</span>
 <span class="nc" id="L197">        ComponentInstallationReport componentReport = report.getComponentReport(componentConfiguration.getCode(), true);</span>
 <span class="nc bnc" id="L198" title="All 2 branches missed.">        if (componentReport.getStatus().equals(SystemInstallationReport.Status.OK)) {</span>
@@ -222,7 +222,7 @@ import org.springframework.web.context.ServletContextAware;
 <span class="nc" id="L222">                            ? report.getStatus()</span>
 <span class="nc" id="L223">                            : SystemInstallationReport.Status.SKIPPED;</span>
 <span class="nc" id="L224">                    dataSourceReport.getDatabaseStatus().put(dataSourceName, status);</span>
-<span class="nc" id="L225">                    logger.debug(LOG_PREFIX + &quot;( ok )  &quot; + dataSourceName + &quot; already installed&quot; + SystemInstallationReport.Status.PORTING);</span>
+<span class="nc" id="L225">                    logger.debug(LOG_PREFIX + &quot;( ok )  {} already installed {}&quot;, dataSourceName, SystemInstallationReport.Status.PORTING);</span>
 <span class="nc" id="L226">                    System.out.println(LOG_PREFIX + &quot;( ok )  &quot; + dataSourceName + &quot; already installed&quot; + SystemInstallationReport.Status.PORTING);</span>
 <span class="nc" id="L227">                    continue;</span>
                 }
@@ -250,24 +250,24 @@ import org.springframework.web.context.ServletContextAware;
 <span class="nc" id="L250">            logger.debug(LOG_PREFIX + &quot;\n&quot; + LOG_PREFIX + &quot;Installation complete\n&quot; + LOG_PREFIX);</span>
 <span class="nc" id="L251">        } catch (Throwable t) {</span>
 <span class="nc" id="L252">            logger.error(&quot;Error initializating component {}&quot;, componentConfiguration.getCode(), t);</span>
-<span class="nc" id="L253">            throw new ApsSystemException(&quot;Error initializating component &quot; + componentConfiguration.getCode(), t);</span>
+<span class="nc" id="L253">            throw new EntException(&quot;Error initializating component &quot; + componentConfiguration.getCode(), t);</span>
 <span class="nc" id="L254">        }</span>
 <span class="nc" id="L255">    }</span>
 
     private void createTables(String databaseName, List&lt;String&gt; tableClassNames,
-            DataSource dataSource, DataSourceInstallationReport schemaReport) throws ApsSystemException {
+            DataSource dataSource, DataSourceInstallationReport schemaReport) throws EntException {
         try {
 <span class="fc" id="L260">            DatabaseType type = this.getDatabaseRestorer().getType(dataSource);</span>
 <span class="fc" id="L261">            TableFactory tableFactory = new TableFactory(databaseName, dataSource, type);</span>
 <span class="fc" id="L262">            tableFactory.createTables(tableClassNames, schemaReport);</span>
 <span class="nc" id="L263">        } catch (Throwable t) {</span>
 <span class="nc" id="L264">            logger.error(&quot;Error creating tables to db {}&quot;, databaseName, t);</span>
-<span class="nc" id="L265">            throw new ApsSystemException(&quot;Error creating tables to db &quot; + databaseName, t);</span>
+<span class="nc" id="L265">            throw new EntException(&quot;Error creating tables to db &quot; + databaseName, t);</span>
 <span class="fc" id="L266">        }</span>
 <span class="fc" id="L267">    }</span>
 
     //---------------- DATA ------------------- START
-    private void initMasterDefaultResource(SystemInstallationReport report, boolean checkOnStatup) throws ApsSystemException {
+    private void initMasterDefaultResource(SystemInstallationReport report, boolean checkOnStatup) throws EntException {
 <span class="fc" id="L271">        System.out.println(&quot;+ [ Component: Core ] :: DATA\n&quot; + LOG_PREFIX);</span>
 <span class="fc" id="L272">        ComponentInstallationReport coreComponentReport = report.getComponentReport(&quot;entandoCore&quot;, false);</span>
 <span class="fc bfc" id="L273" title="All 2 branches covered.">        if (coreComponentReport.getStatus().equals(SystemInstallationReport.Status.OK)) {</span>
@@ -322,12 +322,12 @@ import org.springframework.web.context.ServletContextAware;
 <span class="fc" id="L322">            logger.debug(LOG_PREFIX + &quot;\n&quot; + LOG_PREFIX + &quot;Installation complete\n&quot; + LOG_PREFIX);</span>
 <span class="nc" id="L323">        } catch (Throwable t) {</span>
 <span class="nc" id="L324">            logger.error(&quot;Error initializating master DefaultResource&quot;, t);</span>
-<span class="nc" id="L325">            throw new ApsSystemException(&quot;Error initializating master DefaultResource&quot;, t);</span>
+<span class="nc" id="L325">            throw new EntException(&quot;Error initializating master DefaultResource&quot;, t);</span>
 <span class="fc" id="L326">        }</span>
 <span class="fc" id="L327">    }</span>
 
     public void initComponentDefaultResources(Component componentConfiguration,
-            SystemInstallationReport report, boolean checkOnStatup) throws ApsSystemException {
+            SystemInstallationReport report, boolean checkOnStatup) throws EntException {
 <span class="nc" id="L331">        System.out.println(&quot;+ [ Component: &quot; + componentConfiguration.getCode() + &quot; ] :: DATA\n&quot; + LOG_PREFIX);</span>
 <span class="nc" id="L332">        ComponentInstallationReport componentReport = report.getComponentReport(componentConfiguration.getCode(), false);</span>
 <span class="nc bnc" id="L333" title="All 2 branches missed.">        if (componentReport.getStatus().equals(SystemInstallationReport.Status.OK)) {</span>
@@ -385,12 +385,12 @@ import org.springframework.web.context.ServletContextAware;
 <span class="nc" id="L385">            logger.debug(LOG_PREFIX + &quot;\n&quot; + LOG_PREFIX + &quot;Installation complete\n&quot; + LOG_PREFIX);</span>
 <span class="nc" id="L386">        } catch (Throwable t) {</span>
 <span class="nc" id="L387">            logger.error(&quot;Error restoring default resources of component {}&quot;, componentConfiguration.getCode(), t);</span>
-<span class="nc" id="L388">            throw new ApsSystemException(&quot;Error restoring default resources of component &quot; + componentConfiguration.getCode(), t);</span>
+<span class="nc" id="L388">            throw new EntException(&quot;Error restoring default resources of component &quot; + componentConfiguration.getCode(), t);</span>
 <span class="nc" id="L389">        }</span>
 <span class="nc" id="L390">    }</span>
 
     public void uninstallComponentResources(Component componentConfiguration,
-                                            SystemInstallationReport report) throws ApsSystemException {
+                                            SystemInstallationReport report) throws EntException {
 <span class="fc" id="L394">        System.out.println(&quot;+ [ Component: &quot; + componentConfiguration.getCode() + &quot; ] :: DATA\n&quot; + LOG_PREFIX);</span>
 <span class="fc" id="L395">        ComponentInstallationReport componentReport = report.getComponentReport(componentConfiguration.getCode(), false);</span>
 <span class="pc bpc" id="L396" title="1 of 2 branches missed.">        if (componentReport.getStatus().equals(SystemInstallationReport.Status.UNINSTALLED)) {</span>
@@ -435,12 +435,12 @@ import org.springframework.web.context.ServletContextAware;
 <span class="fc" id="L435">                logger.debug(LOG_PREFIX + &quot;\n&quot; + LOG_PREFIX + &quot;Uninstall complete\n&quot; + LOG_PREFIX);</span>
 <span class="nc" id="L436">            } catch (Throwable t) {</span>
 <span class="nc" id="L437">                logger.error(&quot;Error removing component {}&quot;, componentConfiguration.getCode(), t);</span>
-<span class="nc" id="L438">                throw new ApsSystemException(&quot;Error removing component &quot; + componentConfiguration.getCode(), t);</span>
+<span class="nc" id="L438">                throw new EntException(&quot;Error removing component &quot; + componentConfiguration.getCode(), t);</span>
 <span class="fc" id="L439">            }</span>
         }
 <span class="fc" id="L441">    }</span>
 
-    private void restoreDefaultDump() throws ApsSystemException {
+    private void restoreDefaultDump() throws EntException {
         try {
 <span class="nc" id="L445">            String[] dataSourceNames = this.extractBeanNames(DataSource.class);</span>
 <span class="nc" id="L446">            Map&lt;String, Resource&gt; defaultDump = this.getDefaultSqlDump();</span>
@@ -458,7 +458,7 @@ import org.springframework.web.context.ServletContextAware;
             }
 <span class="nc" id="L459">        } catch (Throwable t) {</span>
 <span class="nc" id="L460">            logger.error(&quot;Error restoring default Dump&quot;, t);</span>
-<span class="nc" id="L461">            throw new ApsSystemException(&quot;Error restoring default Dump&quot;, t);</span>
+<span class="nc" id="L461">            throw new EntException(&quot;Error restoring default Dump&quot;, t);</span>
 <span class="nc" id="L462">        }</span>
 <span class="nc" id="L463">    }</span>
 
@@ -476,7 +476,7 @@ import org.springframework.web.context.ServletContextAware;
 <span class="fc" id="L476">            text = FileTextReader.getText(is, &quot;UTF-8&quot;);</span>
 <span class="nc" id="L477">        } catch (Throwable t) {</span>
 <span class="nc" id="L478">            logger.error(&quot;Error reading resource&quot;, t);</span>
-<span class="nc" id="L479">            throw new ApsSystemException(&quot;Error reading resource&quot;, t);</span>
+<span class="nc" id="L479">            throw new EntException(&quot;Error reading resource&quot;, t);</span>
         } finally {
 <span class="pc bpc" id="L481" title="1 of 2 branches missed.">            if (null != is) {</span>
 <span class="fc" id="L482">                is.close();</span>
@@ -487,7 +487,7 @@ import org.springframework.web.context.ServletContextAware;
 
     //---------------- DATA ------------------- END
     @Override
-    public void createBackup() throws ApsSystemException {
+    public void createBackup() throws EntException {
 <span class="nc bnc" id="L491" title="All 2 branches missed.">        if (this.getStatus() != STATUS_READY) {</span>
 <span class="nc" id="L492">            return;</span>
         }
@@ -500,34 +500,34 @@ import org.springframework.web.context.ServletContextAware;
 <span class="nc" id="L500">        } catch (Throwable t) {</span>
 <span class="nc" id="L501">            this.setStatus(DatabaseManager.STATUS_READY);</span>
 <span class="nc" id="L502">            logger.error(&quot;Error while creating backup&quot;, t);</span>
-<span class="nc" id="L503">            throw new ApsSystemException(&quot;Error while creating backup&quot;, t);</span>
+<span class="nc" id="L503">            throw new EntException(&quot;Error while creating backup&quot;, t);</span>
 <span class="nc" id="L504">        }</span>
 <span class="nc" id="L505">    }</span>
 
-    protected void executeBackup() throws ApsSystemException {
+    protected void executeBackup() throws EntException {
         try {
 
 <span class="nc" id="L510">            this.getDatabaseDumper().createBackup(this.getEnvironment(), this.extractReport());</span>
 <span class="nc" id="L511">        } catch (Throwable t) {</span>
 <span class="nc" id="L512">            logger.error(&quot;Error while creating backup&quot;, t);</span>
-<span class="nc" id="L513">            throw new ApsSystemException(&quot;Error while creating backup&quot;, t);</span>
+<span class="nc" id="L513">            throw new EntException(&quot;Error while creating backup&quot;, t);</span>
         } finally {
 <span class="nc" id="L515">            this.setStatus(DatabaseManager.STATUS_READY);</span>
         }
 <span class="nc" id="L517">    }</span>
 
     @Override
-    public void deleteBackup(String subFolderName) throws ApsSystemException {
+    public void deleteBackup(String subFolderName) throws EntException {
         try {
 <span class="fc" id="L522">            String directoryName = this.getLocalBackupsFolder() + subFolderName;</span>
 <span class="fc" id="L523">            this.getStorageManager().deleteDirectory(directoryName, true);</span>
 <span class="nc" id="L524">        } catch (Throwable t) {</span>
 <span class="nc" id="L525">            logger.error(&quot;Error while deleting backup&quot;, t);</span>
-<span class="nc" id="L526">            throw new ApsSystemException(&quot;Error while deleting backup&quot;, t);</span>
+<span class="nc" id="L526">            throw new EntException(&quot;Error while deleting backup&quot;, t);</span>
 <span class="fc" id="L527">        }</span>
 <span class="fc" id="L528">    }</span>
 
-    protected DataSourceDumpReport getLastDumpReport() throws ApsSystemException {
+    protected DataSourceDumpReport getLastDumpReport() throws EntException {
 <span class="nc bnc" id="L531" title="All 2 branches missed.">        if (Environment.develop.equals(this.getEnvironment())) {</span>
 <span class="nc" id="L532">            return this.getBackupReport(this.getEnvironment().toString());</span>
         }
@@ -539,7 +539,7 @@ import org.springframework.web.context.ServletContextAware;
     }
 
     @Override
-    public DataSourceDumpReport getBackupReport(String subFolderName) throws ApsSystemException {
+    public DataSourceDumpReport getBackupReport(String subFolderName) throws EntException {
         try {
 <span class="pc bpc" id="L544" title="1 of 2 branches missed.">            if (this.checkBackupFolder(subFolderName)) {</span>
 <span class="nc" id="L545">                return this.getDumpReport(subFolderName);</span>
@@ -552,7 +552,7 @@ import org.springframework.web.context.ServletContextAware;
     }
 
     @Override
-    public List&lt;DataSourceDumpReport&gt; getBackupReports() throws ApsSystemException {
+    public List&lt;DataSourceDumpReport&gt; getBackupReports() throws EntException {
 <span class="fc" id="L556">        List&lt;DataSourceDumpReport&gt; reports = new ArrayList&lt;DataSourceDumpReport&gt;();</span>
         try {
 <span class="fc" id="L558">            String[] children = this.getStorageManager().listDirectory(this.getLocalBackupsFolder(), true); //backupsFolder.list();</span>
@@ -573,7 +573,7 @@ import org.springframework.web.context.ServletContextAware;
 <span class="nc" id="L573">        return reports;</span>
     }
 
-    private boolean checkBackupFolder(String subFolderName) throws ApsSystemException {
+    private boolean checkBackupFolder(String subFolderName) throws EntException {
 <span class="fc" id="L577">        String dirName = this.getLocalBackupsFolder();</span>
         /* shouldn't be no need to check if there is a folder for each Data Source defined
 		String[] dataSourceNames = this.extractBeanNames(DataSource.class);
@@ -593,7 +593,7 @@ import org.springframework.web.context.ServletContextAware;
 <span class="nc" id="L593">        return true;</span>
     }
 
-    private DataSourceDumpReport getDumpReport(String subFolderName) throws ApsSystemException {
+    private DataSourceDumpReport getDumpReport(String subFolderName) throws EntException {
 <span class="nc" id="L597">        InputStream is = null;</span>
 <span class="nc" id="L598">        DataSourceDumpReport report = null;</span>
         try {
@@ -616,7 +616,7 @@ import org.springframework.web.context.ServletContextAware;
     }
 
     @Override
-    public boolean dropAndRestoreBackup(String subFolderName) throws ApsSystemException {
+    public boolean dropAndRestoreBackup(String subFolderName) throws EntException {
         try {
 <span class="nc bnc" id="L621" title="All 2 branches missed.">            if (!this.checkBackupFolder(subFolderName)) {</span>
 <span class="nc" id="L622">                logger.error(&quot;backup not available - subfolder '{}'&quot;, subFolderName);</span>
@@ -629,13 +629,13 @@ import org.springframework.web.context.ServletContextAware;
 <span class="nc" id="L629">        } catch (Throwable t) {</span>
             //TODO future improvement - restore 'lifeline' backup
 <span class="nc" id="L631">            logger.error(&quot;Error while restoring backup - subfolder {}&quot;, subFolderName, t);</span>
-<span class="nc" id="L632">            throw new ApsSystemException(&quot;Error while restoring backup - subfolder &quot; + subFolderName, t);</span>
+<span class="nc" id="L632">            throw new EntException(&quot;Error while restoring backup - subfolder &quot; + subFolderName, t);</span>
 <span class="nc" id="L633">        } finally {</span>
             //TODO future improvement - delete 'lifeline' backup
 <span class="nc" id="L635">        }</span>
     }
 
-    private boolean restoreBackup(String subFolderName) throws ApsSystemException {
+    private boolean restoreBackup(String subFolderName) throws EntException {
         try {
 <span class="nc bnc" id="L640" title="All 2 branches missed.">            if (!this.checkBackupFolder(subFolderName)) {</span>
 <span class="nc" id="L641">                logger.error(&quot;backup not available - subfolder '{}'&quot;, subFolderName);</span>
@@ -645,7 +645,7 @@ import org.springframework.web.context.ServletContextAware;
 <span class="nc" id="L645">            return true;</span>
 <span class="nc" id="L646">        } catch (Throwable t) {</span>
 <span class="nc" id="L647">            logger.error(&quot;Error while restoring local backup&quot;, t);</span>
-<span class="nc" id="L648">            throw new ApsSystemException(&quot;Error while restoring local backup&quot;, t);</span>
+<span class="nc" id="L648">            throw new EntException(&quot;Error while restoring local backup&quot;, t);</span>
         }
     }
 
@@ -655,7 +655,7 @@ import org.springframework.web.context.ServletContextAware;
     }
 
     @Override
-    public InputStream getTableDump(String tableName, String dataSourceName, String subFolderName) throws ApsSystemException {
+    public InputStream getTableDump(String tableName, String dataSourceName, String subFolderName) throws EntException {
         try {
 <span class="nc bnc" id="L660" title="All 2 branches missed.">            if (null == subFolderName) {</span>
 <span class="nc" id="L661">                return null;</span>
@@ -671,7 +671,7 @@ import org.springframework.web.context.ServletContextAware;
     }
 
     @Override
-    public DatabaseType getDatabaseType(DataSource dataSource) throws ApsSystemException {
+    public DatabaseType getDatabaseType(DataSource dataSource) throws EntException {
 <span class="nc" id="L675">        return this.getDatabaseRestorer().getType(dataSource);</span>
     }
 

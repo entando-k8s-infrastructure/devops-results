@@ -20,14 +20,14 @@ import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 import org.springframework.beans.factory.BeanFactoryUtils;
 import org.springframework.beans.factory.ListableBeanFactory;
 
 import com.agiletec.aps.system.common.AbstractService;
 import com.agiletec.aps.system.common.tree.ITreeNode;
-import com.agiletec.aps.system.exception.ApsSystemException;
+import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.system.services.category.cache.ICategoryManagerCacheWrapper;
 import com.agiletec.aps.system.services.lang.ILangManager;
 import com.agiletec.aps.util.DateConverter;
@@ -39,7 +39,7 @@ import com.agiletec.aps.util.DateConverter;
  */
 <span class="fc" id="L40">public class CategoryManager extends AbstractService implements ICategoryManager {</span>
 
-<span class="fc" id="L42">	private static final Logger _logger = LoggerFactory.getLogger(CategoryManager.class);</span>
+<span class="fc" id="L42">	private static final EntLogger _logger = EntLogFactory.getSanitizedLogger(CategoryManager.class);</span>
 
 	private ILangManager _langManager;
 
@@ -53,7 +53,7 @@ import com.agiletec.aps.util.DateConverter;
 <span class="fc" id="L53">		_logger.debug(&quot;{} initialized&quot;, this.getClass().getName());</span>
 <span class="fc" id="L54">	}</span>
 
-	private void initCache() throws ApsSystemException {
+	private void initCache() throws EntException {
 <span class="fc" id="L57">		this.getCacheWrapper().initCache(this.getCategoryDAO(), this.getLangManager());</span>
 <span class="fc" id="L58">	}</span>
 
@@ -61,16 +61,16 @@ import com.agiletec.aps.util.DateConverter;
 	 * Aggiunge una categoria al db.
 	 *
 	 * @param category La categoria da aggiungere.
-	 * @throws ApsSystemException In caso di errore nell'accesso al db.
+	 * @throws EntException In caso di errore nell'accesso al db.
 	 */
 	@Override
-	public void addCategory(Category category) throws ApsSystemException {
+	public void addCategory(Category category) throws EntException {
 		try {
 <span class="fc" id="L69">			this.getCategoryDAO().addCategory(category);</span>
 <span class="fc" id="L70">            this.getCacheWrapper().addCategory(category);</span>
 <span class="nc" id="L71">		} catch (Throwable t) {</span>
 <span class="nc" id="L72">			_logger.error(&quot;Error detected while adding a category&quot;, t);</span>
-<span class="nc" id="L73">			throw new ApsSystemException(&quot;Error detected while adding a category&quot;, t);</span>
+<span class="nc" id="L73">			throw new EntException(&quot;Error detected while adding a category&quot;, t);</span>
 <span class="fc" id="L74">		}</span>
 <span class="fc" id="L75">	}</span>
 
@@ -78,13 +78,13 @@ import com.agiletec.aps.util.DateConverter;
 	 * Cancella una categoria.
 	 *
 	 * @param code Il codice della categoria da eliminare.
-	 * @throws ApsSystemException in caso di errore nell'accesso al db.
+	 * @throws EntException in caso di errore nell'accesso al db.
 	 */
 	@Override
-	public void deleteCategory(String code) throws ApsSystemException {
+	public void deleteCategory(String code) throws EntException {
 <span class="fc" id="L85">		Category cat = this.getCategory(code);</span>
 <span class="pc bpc" id="L86" title="2 of 4 branches missed.">		if (cat == null || cat.getChildrenCodes().length &gt; 0) {</span>
-<span class="nc" id="L87">			throw new ApsSystemException(&quot;Error detected while removing a category&quot;);</span>
+<span class="nc" id="L87">			throw new EntException(&quot;Error detected while removing a category&quot;);</span>
 		}
 
 		try {
@@ -92,7 +92,7 @@ import com.agiletec.aps.util.DateConverter;
 <span class="fc" id="L92">			this.getCacheWrapper().deleteCategory(code);</span>
 <span class="nc" id="L93">		} catch (Throwable t) {</span>
 <span class="nc" id="L94">			_logger.error(&quot;Error detected while removing the category {}&quot;, code, t);</span>
-<span class="nc" id="L95">			throw new ApsSystemException(&quot;Error detected while removing a category&quot;, t);</span>
+<span class="nc" id="L95">			throw new EntException(&quot;Error detected while removing a category&quot;, t);</span>
 <span class="fc" id="L96">		}</span>
 <span class="fc" id="L97">	}</span>
 
@@ -100,16 +100,16 @@ import com.agiletec.aps.util.DateConverter;
 	 * Aggiorna una categoria nel db.
 	 *
 	 * @param category La categoria da modificare.
-	 * @throws ApsSystemException In caso di errore nell'accesso al db.
+	 * @throws EntException In caso di errore nell'accesso al db.
 	 */
 	@Override
-	public void updateCategory(Category category) throws ApsSystemException {
+	public void updateCategory(Category category) throws EntException {
 		try {
 <span class="fc" id="L108">			this.getCategoryDAO().updateCategory(category);</span>
 <span class="fc" id="L109">            this.getCacheWrapper().updateCategory(category);</span>
 <span class="nc" id="L110">		} catch (Throwable t) {</span>
 <span class="nc" id="L111">			_logger.error(&quot;Error detected while updating a category&quot;, t);</span>
-<span class="nc" id="L112">			throw new ApsSystemException(&quot;Error detected while updating a category&quot;, t);</span>
+<span class="nc" id="L112">			throw new EntException(&quot;Error detected while updating a category&quot;, t);</span>
 <span class="fc" id="L113">		}</span>
 <span class="fc" id="L114">	}</span>
 
@@ -166,7 +166,7 @@ import com.agiletec.aps.util.DateConverter;
 	}
 
 	@Override
-	public List&lt;Category&gt; searchCategories(String categoryCodeToken) throws ApsSystemException {
+	public List&lt;Category&gt; searchCategories(String categoryCodeToken) throws EntException {
 <span class="nc" id="L170">		List&lt;Category&gt; searchResult = new ArrayList&lt;&gt;();</span>
 		try {
 <span class="nc" id="L172">			Category root = this.getRoot();</span>
@@ -174,18 +174,18 @@ import com.agiletec.aps.util.DateConverter;
 <span class="nc" id="L174">		} catch (Throwable t) {</span>
 <span class="nc" id="L175">			String message = &quot;Error during searching categories with token &quot; + categoryCodeToken;</span>
 <span class="nc" id="L176">			_logger.error(&quot;Error during searching categories with token {}&quot;, categoryCodeToken, t);</span>
-<span class="nc" id="L177">			throw new ApsSystemException(message, t);</span>
+<span class="nc" id="L177">			throw new EntException(message, t);</span>
 <span class="nc" id="L178">		}</span>
 <span class="nc" id="L179">		return searchResult;</span>
 	}
     
     @Override
-	public boolean moveCategory(Category currentCategory, Category newParent) throws ApsSystemException {
+	public boolean moveCategory(Category currentCategory, Category newParent) throws EntException {
 <span class="nc" id="L184">        return this.moveCategory(currentCategory.getCode(), newParent.getCode());</span>
     }
 
 	@Override
-	public boolean moveCategory(String categoryCode, String newParentCode) throws ApsSystemException {
+	public boolean moveCategory(String categoryCode, String newParentCode) throws EntException {
 <span class="fc" id="L189">        Category currentCategory = this.getCategory(categoryCode);</span>
 <span class="fc" id="L190">        Category newParent = this.getCategory(newParentCode);</span>
 <span class="fc" id="L191">		boolean resultOperation = false;</span>
@@ -208,7 +208,7 @@ import com.agiletec.aps.util.DateConverter;
 <span class="fc" id="L208">			resultOperation = true;</span>
 <span class="nc" id="L209">		} catch (Throwable t) {</span>
 <span class="nc" id="L210">			_logger.error(&quot;Error while moving  page {} under the node {}&quot;, currentCategory, newParent, t);</span>
-<span class="nc" id="L211">			throw new ApsSystemException(&quot;Error while moving a category under a different node&quot;, t);</span>
+<span class="nc" id="L211">			throw new EntException(&quot;Error while moving a category under a different node&quot;, t);</span>
 <span class="fc" id="L212">		}</span>
 <span class="fc" id="L213">		this.startReloadCategoryReferences(currentCategory.getCode());</span>
 <span class="fc" id="L214">		return resultOperation;</span>
@@ -314,9 +314,9 @@ import com.agiletec.aps.util.DateConverter;
 <span class="fc" id="L314">		return reloadThread;</span>
 	}
 
-	protected synchronized void reloadCategoryReferencesByBeanName(String beanName, String categoryCode) throws ApsSystemException {
+	protected synchronized void reloadCategoryReferencesByBeanName(String beanName, String categoryCode) throws EntException {
 <span class="pc bpc" id="L318" title="1 of 2 branches missed.">		if (StringUtils.isBlank(beanName)) {</span>
-<span class="nc" id="L319">			throw new ApsSystemException(&quot;Error: null beanName&quot;);</span>
+<span class="nc" id="L319">			throw new EntException(&quot;Error: null beanName&quot;);</span>
 		}
 <span class="fc" id="L321">		this.getCacheWrapper().updateMoveNodeStatus(beanName, STATUS_RELOADING_REFERENCES_IN_PROGRESS);</span>
 		try {
@@ -330,7 +330,7 @@ import com.agiletec.aps.util.DateConverter;
 			}
 <span class="nc" id="L331">		} catch (Throwable t) {</span>
 <span class="nc" id="L332">			_logger.error(&quot;Reload category references for: {} caused an error&quot;, beanName, t);</span>
-<span class="nc" id="L333">			throw new ApsSystemException(&quot;Error reloading entity references by bean: &quot; + beanName, t);</span>
+<span class="nc" id="L333">			throw new EntException(&quot;Error reloading entity references by bean: &quot; + beanName, t);</span>
 <span class="fc" id="L334">		}</span>
 <span class="fc" id="L335">	}</span>
 
