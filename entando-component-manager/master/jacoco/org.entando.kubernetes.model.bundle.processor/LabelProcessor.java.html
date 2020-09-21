@@ -3,9 +3,9 @@
 import static java.util.Optional.ofNullable;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,9 +23,8 @@ import org.springframework.stereotype.Service;
 
 /**
  * Processor to create Labels.
- *
  */
-<span class="fc" id="L28">@Slf4j</span>
+<span class="fc" id="L27">@Slf4j</span>
 @Service
 @RequiredArgsConstructor
 public class LabelProcessor implements ComponentProcessor&lt;LabelDescriptor&gt; {
@@ -34,43 +33,46 @@ public class LabelProcessor implements ComponentProcessor&lt;LabelDescriptor&gt;
 
     @Override
     public ComponentType getSupportedComponentType() {
-<span class="fc" id="L37">        return ComponentType.LABEL;</span>
+<span class="fc" id="L36">        return ComponentType.LABEL;</span>
     }
 
     @Override
     public List&lt;Installable&lt;LabelDescriptor&gt;&gt; process(BundleReader npr) {
         try {
-<span class="fc" id="L43">            BundleDescriptor descriptor = npr.readBundleDescriptor();</span>
+<span class="fc" id="L42">            BundleDescriptor descriptor = npr.readBundleDescriptor();</span>
 
-<span class="fc" id="L45">            final Optional&lt;List&lt;LabelDescriptor&gt;&gt; labelDescriptors = ofNullable(descriptor.getComponents())</span>
-<span class="fc" id="L46">                    .map(ComponentSpecDescriptor::getLabels);</span>
-<span class="fc" id="L47">            final List&lt;Installable&lt;LabelDescriptor&gt;&gt; installables = new LinkedList&lt;&gt;();</span>
+<span class="fc" id="L44">            final List&lt;String&gt; labelDescriptorFiles = ofNullable(descriptor.getComponents())</span>
+<span class="fc" id="L45">                    .map(ComponentSpecDescriptor::getLabels)</span>
+<span class="fc" id="L46">                    .orElse(Collections.emptyList());</span>
 
-<span class="pc bpc" id="L49" title="1 of 2 branches missed.">            if (labelDescriptors.isPresent()) {</span>
-<span class="fc bfc" id="L50" title="All 2 branches covered.">                for (final LabelDescriptor labelDescriptor : labelDescriptors.get()) {</span>
-<span class="fc" id="L51">                    installables.add(new LabelInstallable(engineService, labelDescriptor));</span>
-<span class="fc" id="L52">                }</span>
-            }
+<span class="fc" id="L48">            final List&lt;Installable&lt;LabelDescriptor&gt;&gt; installables = new LinkedList&lt;&gt;();</span>
 
-<span class="fc" id="L55">            return installables;</span>
-<span class="nc" id="L56">        } catch (IOException e) {</span>
-<span class="nc" id="L57">            throw new EntandoComponentManagerException(&quot;Error reading bundle&quot;, e);</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">            for (String ldf : labelDescriptorFiles) {</span>
+<span class="fc" id="L51">                List&lt;LabelDescriptor&gt; labelDescriptorList = npr.readListOfDescriptorFile(ldf, LabelDescriptor.class);</span>
+<span class="fc bfc" id="L52" title="All 2 branches covered.">                for (LabelDescriptor ld : labelDescriptorList) {</span>
+<span class="fc" id="L53">                    installables.add(new LabelInstallable(engineService, ld));</span>
+<span class="fc" id="L54">                }</span>
+<span class="fc" id="L55">            }</span>
+
+<span class="fc" id="L57">            return installables;</span>
+<span class="nc" id="L58">        } catch (IOException e) {</span>
+<span class="nc" id="L59">            throw new EntandoComponentManagerException(&quot;Error reading bundle&quot;, e);</span>
         }
     }
 
     @Override
     public List&lt;Installable&lt;LabelDescriptor&gt;&gt; process(List&lt;EntandoBundleComponentJobEntity&gt; components) {
-<span class="fc" id="L63">        return components.stream()</span>
-<span class="pc bpc" id="L64" title="1 of 2 branches missed.">                .filter(c -&gt; c.getComponentType() == ComponentType.LABEL)</span>
-<span class="fc" id="L65">                .map(c -&gt; new LabelInstallable(engineService, this.buildDescriptorFromComponentJob(c)))</span>
-<span class="fc" id="L66">                .collect(Collectors.toList());</span>
+<span class="fc" id="L65">        return components.stream()</span>
+<span class="pc bpc" id="L66" title="1 of 2 branches missed.">                .filter(c -&gt; c.getComponentType() == ComponentType.LABEL)</span>
+<span class="fc" id="L67">                .map(c -&gt; new LabelInstallable(engineService, this.buildDescriptorFromComponentJob(c)))</span>
+<span class="fc" id="L68">                .collect(Collectors.toList());</span>
     }
 
     @Override
     public LabelDescriptor buildDescriptorFromComponentJob(EntandoBundleComponentJobEntity component) {
-<span class="fc" id="L71">        return LabelDescriptor.builder()</span>
-<span class="fc" id="L72">                .key(component.getComponentId())</span>
-<span class="fc" id="L73">                .build();</span>
+<span class="fc" id="L73">        return LabelDescriptor.builder()</span>
+<span class="fc" id="L74">                .key(component.getComponentId())</span>
+<span class="fc" id="L75">                .build();</span>
     }
 
 }
