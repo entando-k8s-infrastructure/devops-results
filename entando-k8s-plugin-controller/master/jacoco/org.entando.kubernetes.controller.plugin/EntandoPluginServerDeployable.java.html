@@ -29,8 +29,9 @@ import org.entando.kubernetes.controller.database.DatabaseServiceResult;
 import org.entando.kubernetes.controller.spi.DbAwareDeployable;
 import org.entando.kubernetes.controller.spi.DeployableContainer;
 import org.entando.kubernetes.controller.spi.IngressingDeployable;
-import org.entando.kubernetes.model.EntandoCustomResource;
+import org.entando.kubernetes.model.EntandoBaseCustomResource;
 import org.entando.kubernetes.model.plugin.EntandoPlugin;
+import org.entando.kubernetes.model.plugin.EntandoPluginSpec;
 import org.entando.kubernetes.model.plugin.PluginSecurityLevel;
 
 public class EntandoPluginServerDeployable implements IngressingDeployable&lt;ServiceDeploymentResult&gt;, DbAwareDeployable {
@@ -40,60 +41,60 @@ public class EntandoPluginServerDeployable implements IngressingDeployable&lt;Se
     private final List&lt;DeployableContainer&gt; containers;
 
     public EntandoPluginServerDeployable(DatabaseServiceResult databaseServiceResult,
-<span class="fc" id="L43">            KeycloakConnectionConfig keycloakConnectionConfig, EntandoPlugin entandoPlugin) {</span>
-<span class="fc" id="L44">        this.databaseServiceResult = databaseServiceResult;</span>
-<span class="fc" id="L45">        this.entandoPlugin = entandoPlugin;</span>
+<span class="fc" id="L44">            KeycloakConnectionConfig keycloakConnectionConfig, EntandoPlugin entandoPlugin) {</span>
+<span class="fc" id="L45">        this.databaseServiceResult = databaseServiceResult;</span>
+<span class="fc" id="L46">        this.entandoPlugin = entandoPlugin;</span>
         //TODO make decision on which other containers to include based on the EntandoPlugin.spec
-<span class="fc" id="L47">        this.containers = new ArrayList&lt;&gt;();</span>
-<span class="fc" id="L48">        this.containers.add(new EntandoPluginDeployableContainer(entandoPlugin, keycloakConnectionConfig));</span>
-<span class="fc bfc" id="L49" title="All 2 branches covered.">        if (entandoPlugin.getSpec().getSecurityLevel().map(PluginSecurityLevel.LENIENT::equals).orElse(true)) {</span>
-<span class="fc" id="L50">            this.containers.add(new EntandoPluginSidecarDeployableContainer(entandoPlugin, keycloakConnectionConfig));</span>
+<span class="fc" id="L48">        this.containers = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L49">        this.containers.add(new EntandoPluginDeployableContainer(entandoPlugin, keycloakConnectionConfig));</span>
+<span class="fc bfc" id="L50" title="All 2 branches covered.">        if (entandoPlugin.getSpec().getSecurityLevel().map(PluginSecurityLevel.LENIENT::equals).orElse(true)) {</span>
+<span class="fc" id="L51">            this.containers.add(new EntandoPluginSidecarDeployableContainer(entandoPlugin, keycloakConnectionConfig));</span>
         }
-<span class="fc" id="L52">    }</span>
+<span class="fc" id="L53">    }</span>
 
     @Override
     public int getReplicas() {
-<span class="fc" id="L56">        return entandoPlugin.getSpec().getReplicas().orElse(1);</span>
+<span class="fc" id="L57">        return entandoPlugin.getSpec().getReplicas().orElse(1);</span>
     }
 
     @Override
     public String getServiceAccountName() {
-<span class="fc" id="L61">        return &quot;entando-plugin&quot;;</span>
+<span class="fc" id="L62">        return &quot;entando-plugin&quot;;</span>
     }
 
     @Override
     public List&lt;DeployableContainer&gt; getContainers() {
-<span class="fc" id="L66">        return containers;</span>
+<span class="fc" id="L67">        return containers;</span>
     }
 
     @Override
     public String getIngressName() {
-<span class="fc" id="L71">        return KubeUtils.standardIngressName(entandoPlugin);</span>
+<span class="fc" id="L72">        return KubeUtils.standardIngressName(entandoPlugin);</span>
     }
 
     @Override
     public String getIngressNamespace() {
-<span class="fc" id="L76">        return entandoPlugin.getMetadata().getNamespace();</span>
+<span class="fc" id="L77">        return entandoPlugin.getMetadata().getNamespace();</span>
     }
 
     @Override
     public String getNameQualifier() {
-<span class="fc" id="L81">        return KubeUtils.DEFAULT_SERVER_QUALIFIER;</span>
+<span class="fc" id="L82">        return KubeUtils.DEFAULT_SERVER_QUALIFIER;</span>
     }
 
     @Override
-    public EntandoCustomResource getCustomResource() {
-<span class="fc" id="L86">        return entandoPlugin;</span>
+    public EntandoBaseCustomResource&lt;EntandoPluginSpec&gt; getCustomResource() {
+<span class="fc" id="L87">        return entandoPlugin;</span>
     }
 
     @Override
     public ServiceDeploymentResult createResult(Deployment deployment, Service service, Ingress ingress, Pod pod) {
-<span class="fc" id="L91">        return new ServiceDeploymentResult(service, ingress);</span>
+<span class="fc" id="L92">        return new ServiceDeploymentResult(service, ingress);</span>
     }
 
     @Override
     public DatabaseServiceResult getDatabaseServiceResult() {
-<span class="fc" id="L96">        return databaseServiceResult;</span>
+<span class="fc" id="L97">        return databaseServiceResult;</span>
     }
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
