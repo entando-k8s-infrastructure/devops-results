@@ -18,7 +18,6 @@ import java.util.Map;
 
 import javax.validation.Valid;
 
-import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.system.services.role.Permission;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -33,8 +32,8 @@ import org.entando.entando.web.common.model.RestListRequest;
 import org.entando.entando.web.common.model.SimpleRestResponse;
 import org.entando.entando.web.role.model.RoleRequest;
 import org.entando.entando.web.role.validator.RoleValidator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -48,9 +47,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping(value = &quot;/roles&quot;)
-<span class="fc" id="L51">public class RoleController {</span>
+<span class="fc" id="L50">public class RoleController {</span>
 
-<span class="fc" id="L53">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+<span class="fc" id="L52">    private final EntLogger logger = EntLogFactory.getSanitizedLogger(getClass());</span>
 
     @Autowired
     private IRoleService roleService;
@@ -62,100 +61,102 @@ import org.springframework.web.bind.annotation.RestController;
     private RoleValidator roleValidator;
 
     public IRoleService getRoleService() {
-<span class="fc" id="L65">        return roleService;</span>
+<span class="fc" id="L64">        return roleService;</span>
     }
 
     public void setRoleService(IRoleService roleService) {
-<span class="fc" id="L69">        this.roleService = roleService;</span>
-<span class="fc" id="L70">    }</span>
+<span class="fc" id="L68">        this.roleService = roleService;</span>
+<span class="fc" id="L69">    }</span>
 
     public RoleValidator getRoleValidator() {
-<span class="fc" id="L73">        return roleValidator;</span>
+<span class="fc" id="L72">        return roleValidator;</span>
     }
 
     public void setRoleValidator(RoleValidator roleValidator) {
-<span class="fc" id="L77">        this.roleValidator = roleValidator;</span>
-<span class="fc" id="L78">    }</span>
+<span class="fc" id="L76">        this.roleValidator = roleValidator;</span>
+<span class="fc" id="L77">    }</span>
 
     @RestAccessControl(permission = { Permission.SUPERUSER, Permission.MANAGE_USERS})
     @RequestMapping(method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;PagedRestResponse&lt;RoleDto&gt;&gt; getRoles(RestListRequest requestList) throws JsonProcessingException {
-<span class="fc" id="L83">        this.getRoleValidator().validateRestListRequest(requestList, RoleDto.class);</span>
-<span class="fc" id="L84">        PagedMetadata&lt;RoleDto&gt; result = this.getRoleService().getRoles(requestList);</span>
-<span class="fc" id="L85">        this.getRoleValidator().validateRestListResult(requestList, result);</span>
-<span class="fc" id="L86">        logger.debug(&quot;loading role list -&gt; {}&quot;, result);</span>
-<span class="fc" id="L87">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+<span class="fc" id="L82">        this.getRoleValidator().validateRestListRequest(requestList, RoleDto.class);</span>
+<span class="fc" id="L83">        PagedMetadata&lt;RoleDto&gt; result = this.getRoleService().getRoles(requestList);</span>
+<span class="fc" id="L84">        this.getRoleValidator().validateRestListResult(requestList, result);</span>
+<span class="fc" id="L85">        logger.debug(&quot;loading role list -&gt; {}&quot;, result);</span>
+<span class="fc" id="L86">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.SUPERUSER)
     @RequestMapping(value = &quot;/{roleCode}&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;RoleDto&gt;&gt; getRole(@PathVariable String roleCode) {
-<span class="fc" id="L93">        logger.debug(&quot;loading role {}&quot;, roleCode);</span>
-<span class="fc" id="L94">        RoleDto role = this.getRoleService().getRole(roleCode);</span>
-<span class="fc" id="L95">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(role), HttpStatus.OK);</span>
+<span class="fc" id="L92">        logger.debug(&quot;loading role {}&quot;, roleCode);</span>
+<span class="fc" id="L93">        RoleDto role = this.getRoleService().getRole(roleCode);</span>
+<span class="fc" id="L94">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(role), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.SUPERUSER)
     @RequestMapping(value = &quot;/{roleCode}/userreferences&quot;, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;PagedRestResponse&lt;UserDto&gt;&gt; getRoleReferences(@PathVariable String roleCode, RestListRequest requestList) {
-<span class="fc" id="L101">        logger.debug(&quot;loading user references for role {}&quot;, roleCode);</span>
-<span class="fc" id="L102">        PagedMetadata&lt;UserDto&gt; result = this.getRoleService().getRoleReferences(roleCode, requestList);</span>
-<span class="fc" id="L103">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+<span class="fc" id="L100">        logger.debug(&quot;loading user references for role {}&quot;, roleCode);</span>
+<span class="fc" id="L101">        PagedMetadata&lt;UserDto&gt; result = this.getRoleService().getRoleReferences(roleCode, requestList);</span>
+<span class="fc" id="L102">        return new ResponseEntity&lt;&gt;(new PagedRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.SUPERUSER)
     @RequestMapping(value = &quot;/{roleCode}&quot;, method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity&lt;SimpleRestResponse&lt;RoleDto&gt;&gt; updateRole(@PathVariable String roleCode, @Valid @RequestBody RoleRequest roleRequest, BindingResult bindingResult) {
-<span class="fc" id="L109">        logger.debug(&quot;updating role {}&quot;, roleCode);</span>
+<span class="fc" id="L108">        logger.debug(&quot;updating role {}&quot;, roleCode);</span>
         //field validations
-<span class="pc bpc" id="L111" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L112">            throw new ValidationGenericException(bindingResult);</span>
+<span class="pc bpc" id="L110" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L111">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="fc" id="L114">        this.getRoleValidator().validateBodyName(roleCode, roleRequest, bindingResult);</span>
-<span class="pc bpc" id="L115" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
-<span class="nc" id="L116">            throw new ValidationGenericException(bindingResult);</span>
+<span class="fc" id="L113">        this.getRoleValidator().validateBodyName(roleCode, roleRequest, bindingResult);</span>
+<span class="pc bpc" id="L114" title="1 of 2 branches missed.">        if (bindingResult.hasErrors()) {</span>
+<span class="nc" id="L115">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="fc" id="L118">        RoleDto role = this.getRoleService().updateRole(roleRequest);</span>
-<span class="fc" id="L119">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(role), HttpStatus.OK);</span>
+<span class="fc" id="L117">        RoleDto role = this.getRoleService().updateRole(roleRequest);</span>
+<span class="fc" id="L118">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(role), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.SUPERUSER)
     @RequestMapping(value = &quot;/{roleCode}&quot;, method = RequestMethod.PATCH, produces = MediaType.APPLICATION_JSON_VALUE, consumes=&quot;application/json-patch+json&quot;)
     public ResponseEntity&lt;SimpleRestResponse&lt;RoleDto&gt;&gt; updateRole(@PathVariable String roleCode, @RequestBody JsonNode patchRequest, BindingResult bindingResult) {
-<span class="fc" id="L125">        logger.debug(&quot;update role {} with jsonpatch-request {}&quot;, roleCode, patchRequest);</span>
+<span class="fc" id="L124">        logger.debug(&quot;update role {} with jsonpatch-request {}&quot;, roleCode, patchRequest);</span>
 
-<span class="fc" id="L127">        this.getRoleValidator().validateJsonPatch(patchRequest, bindingResult);</span>
-<span class="fc bfc" id="L128" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
-<span class="fc" id="L129">            throw new ValidationGenericException(bindingResult);</span>
+<span class="fc" id="L126">        this.getRoleValidator().validateJsonPatch(patchRequest, bindingResult);</span>
+<span class="fc bfc" id="L127" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L128">            throw new ValidationGenericException(bindingResult);</span>
         }
 
-<span class="fc" id="L132">        RoleDto patchedRoleDto = this.getRoleService().getPatchedRole(roleCode, patchRequest);</span>
-<span class="fc" id="L133">        RoleRequest patchedRoleRequest = this.roleDtotoRoleRequestConverter.convert(patchedRoleDto);</span>
+<span class="fc" id="L131">        RoleDto patchedRoleDto = this.getRoleService().getPatchedRole(roleCode, patchRequest);</span>
+<span class="fc" id="L132">        RoleRequest patchedRoleRequest = this.roleDtotoRoleRequestConverter.convert(patchedRoleDto);</span>
 
-<span class="fc" id="L135">        return this.updateRole(roleCode, patchedRoleRequest, bindingResult);</span>
+<span class="fc" id="L134">        return this.updateRole(roleCode, patchedRoleRequest, bindingResult);</span>
     }
 
 
     @RestAccessControl(permission = Permission.SUPERUSER)
     @RequestMapping(method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity&lt;SimpleRestResponse&lt;RoleDto&gt;&gt; addRole(@Valid @RequestBody RoleRequest roleRequest, BindingResult bindingResult) throws EntException {
-<span class="fc" id="L142">        logger.debug(&quot;adding role&quot;);</span>
+    public ResponseEntity&lt;SimpleRestResponse&lt;RoleDto&gt;&gt; addRole(
+            @Valid @RequestBody RoleRequest roleRequest,
+            BindingResult bindingResult) {
+<span class="fc" id="L143">        logger.debug(&quot;adding role&quot;);</span>
         //field validations
-<span class="fc bfc" id="L144" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
-<span class="fc" id="L145">            throw new ValidationGenericException(bindingResult);</span>
+<span class="fc bfc" id="L145" title="All 2 branches covered.">        if (bindingResult.hasErrors()) {</span>
+<span class="fc" id="L146">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="fc" id="L147">        RoleDto dto = this.getRoleService().addRole(roleRequest);</span>
-<span class="fc" id="L148">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(dto), HttpStatus.OK);</span>
+<span class="fc" id="L148">        RoleDto dto = this.getRoleService().addRole(roleRequest);</span>
+<span class="fc" id="L149">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(dto), HttpStatus.OK);</span>
     }
 
     @RestAccessControl(permission = Permission.SUPERUSER)
     @RequestMapping(value = &quot;/{roleCode}&quot;, method = RequestMethod.DELETE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity&lt;SimpleRestResponse&lt;Map&gt;&gt; deleteRole(@PathVariable String roleCode) throws EntException {
-<span class="fc" id="L154">        logger.info(&quot;deleting {}&quot;, roleCode);</span>
-<span class="fc" id="L155">        this.getRoleService().removeRole(roleCode);</span>
-<span class="fc" id="L156">        Map&lt;String, String&gt; result = new HashMap&lt;&gt;();</span>
-<span class="fc" id="L157">        result.put(&quot;code&quot;, roleCode);</span>
-<span class="fc" id="L158">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
+    public ResponseEntity&lt;SimpleRestResponse&lt;Map&lt;String, String&gt;&gt;&gt; deleteRole(@PathVariable String roleCode) {
+<span class="fc" id="L155">        logger.info(&quot;deleting {}&quot;, roleCode);</span>
+<span class="fc" id="L156">        this.getRoleService().removeRole(roleCode);</span>
+<span class="fc" id="L157">        Map&lt;String, String&gt; result = new HashMap&lt;&gt;();</span>
+<span class="fc" id="L158">        result.put(&quot;code&quot;, roleCode);</span>
+<span class="fc" id="L159">        return new ResponseEntity&lt;&gt;(new SimpleRestResponse&lt;&gt;(result), HttpStatus.OK);</span>
     }
 
 }
