@@ -40,27 +40,27 @@ import org.entando.entando.ent.util.EntLogging.EntLogFactory;
  */
 <span class="nc" id="L41">public class FileTextReader {</span>
 
-<span class="nc" id="L43">    private static final EntLogger logger = EntLogFactory.getSanitizedLogger(FileTextReader.class);</span>
+<span class="fc" id="L43">    private static final EntLogger logger = EntLogFactory.getSanitizedLogger(FileTextReader.class);</span>
 
     public static String getText(InputStream is) throws EntException, IOException {
-<span class="nc" id="L46">        return getText(is, null);</span>
+<span class="fc" id="L46">        return getText(is, null);</span>
     }
 
     public static String getText(InputStream is, String charset) throws EntException, IOException {
-<span class="nc" id="L50">        Reader reader = null;</span>
-<span class="nc" id="L51">        BufferedReader br = null;</span>
+<span class="fc" id="L50">        Reader reader = null;</span>
+<span class="fc" id="L51">        BufferedReader br = null;</span>
         try {
-<span class="nc bnc" id="L53" title="All 2 branches missed.">            reader = (null != charset) ? new InputStreamReader(is, charset) : new InputStreamReader(is);</span>
-<span class="nc" id="L54">            br = new BufferedReader(reader);</span>
-<span class="nc" id="L55">            return getText(br);</span>
+<span class="fc bfc" id="L53" title="All 2 branches covered.">            reader = (null != charset) ? new InputStreamReader(is, charset) : new InputStreamReader(is);</span>
+<span class="fc" id="L54">            br = new BufferedReader(reader);</span>
+<span class="fc" id="L55">            return getText(br);</span>
 <span class="nc" id="L56">        } catch (Throwable t) {</span>
 <span class="nc" id="L57">            throw new EntException(&quot;Error reading text&quot;, t);</span>
         } finally {
-<span class="nc bnc" id="L59" title="All 2 branches missed.">            if (null != br) {</span>
-<span class="nc" id="L60">                br.close();</span>
+<span class="pc bpc" id="L59" title="1 of 2 branches missed.">            if (null != br) {</span>
+<span class="fc" id="L60">                br.close();</span>
             }
-<span class="nc bnc" id="L62" title="All 2 branches missed.">            if (null != reader) {</span>
-<span class="nc" id="L63">                reader.close();</span>
+<span class="pc bpc" id="L62" title="1 of 2 branches missed.">            if (null != reader) {</span>
+<span class="fc" id="L63">                reader.close();</span>
             }
         }
     }
@@ -85,65 +85,67 @@ import org.entando.entando.ent.util.EntLogging.EntLogFactory;
     }
 
     private static String getText(BufferedReader br) throws IOException {
-<span class="nc" id="L88">        String lineSep = System.getProperty(&quot;line.separator&quot;);</span>
-<span class="nc" id="L89">        String nextLine = &quot;&quot;;</span>
-<span class="nc" id="L90">        StringBuilder sb = new StringBuilder();</span>
-<span class="nc bnc" id="L91" title="All 2 branches missed.">        while ((nextLine = br.readLine()) != null) {</span>
-<span class="nc" id="L92">            sb.append(nextLine);</span>
-<span class="nc" id="L93">            sb.append(lineSep);</span>
+<span class="fc" id="L88">        String lineSep = System.getProperty(&quot;line.separator&quot;);</span>
+<span class="fc" id="L89">        String nextLine = &quot;&quot;;</span>
+<span class="fc" id="L90">        StringBuilder sb = new StringBuilder();</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">        while ((nextLine = br.readLine()) != null) {</span>
+<span class="fc" id="L92">            sb.append(nextLine);</span>
+<span class="fc" id="L93">            sb.append(lineSep);</span>
         }
-<span class="nc" id="L95">        return sb.toString();</span>
+<span class="fc" id="L95">        return sb.toString();</span>
     }
 
     public static File createTempFile(String filename, InputStream is) throws IOException {
-<span class="nc" id="L99">        String tempDir = System.getProperty(&quot;java.io.tmpdir&quot;);</span>
-<span class="nc" id="L100">        String filePath = tempDir + File.separator + filename;</span>
-<span class="nc" id="L101">        FileOutputStream outStream = null;</span>
+<span class="fc" id="L99">        String tempDir = System.getProperty(&quot;java.io.tmpdir&quot;);</span>
+<span class="fc" id="L100">        String filePath = tempDir + File.separator + filename;</span>
+<span class="fc" id="L101">        FileOutputStream outStream = null;</span>
         try {
-<span class="nc" id="L103">            byte[] buffer = new byte[1024];</span>
-<span class="nc" id="L104">            int length = -1;</span>
-            /*if (!FileUtils.directoryContains(new File(tempDir), new File(filePath))) {
-                throw new EntRuntimeException(
-                        String.format(&quot;Path validation failed: \&quot;%s\&quot; not in \&quot;%s\&quot;&quot;, filePath, tempDir)
+<span class="fc" id="L103">            byte[] buffer = new byte[1024];</span>
+<span class="fc" id="L104">            int length = -1;</span>
+            // PATH-TRAVERSAL-CHECK
+<span class="pc bpc" id="L106" title="1 of 2 branches missed.">            if (!FileUtils.directoryContains(new File(tempDir), new File(filePath))) {</span>
+<span class="fc" id="L107">                throw new EntRuntimeException(</span>
+<span class="fc" id="L108">                        String.format(&quot;Path validation failed: \&quot;%s\&quot; not in \&quot;%s\&quot;&quot;, filePath, tempDir)</span>
                 );
-            }*/
-<span class="nc" id="L110">            outStream = new FileOutputStream(filePath);</span>
-<span class="nc bnc" id="L111" title="All 2 branches missed.">            while ((length = is.read(buffer)) != -1) {</span>
-<span class="nc" id="L112">                outStream.write(buffer, 0, length);</span>
-<span class="nc" id="L113">                outStream.flush();</span>
             }
-<span class="nc" id="L115">        } catch (IOException t) {</span>
-<span class="nc" id="L116">            logger.error(&quot;Error on saving temporary file&quot;, t);</span>
-<span class="nc" id="L117">            throw t;</span>
+            //-
+<span class="nc" id="L112">            outStream = new FileOutputStream(filePath);</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">            while ((length = is.read(buffer)) != -1) {</span>
+<span class="nc" id="L114">                outStream.write(buffer, 0, length);</span>
+<span class="nc" id="L115">                outStream.flush();</span>
+            }
+<span class="nc" id="L117">        } catch (IOException t) {</span>
+<span class="nc" id="L118">            logger.error(&quot;Error on saving temporary file&quot;, t);</span>
+<span class="nc" id="L119">            throw t;</span>
         } finally {
-<span class="nc bnc" id="L119" title="All 2 branches missed.">            if (null != outStream) {</span>
-<span class="nc" id="L120">                outStream.close();</span>
+<span class="pc bpc" id="L121" title="1 of 2 branches missed.">            if (null != outStream) {</span>
+<span class="nc" id="L122">                outStream.close();</span>
             }
-<span class="nc bnc" id="L122" title="All 2 branches missed.">            if (null != is) {</span>
-<span class="nc" id="L123">                is.close();</span>
+<span class="pc bpc" id="L124" title="1 of 2 branches missed.">            if (null != is) {</span>
+<span class="fc" id="L125">                is.close();</span>
             }
         }
-<span class="nc" id="L126">        return new File(filePath);</span>
+<span class="nc" id="L128">        return new File(filePath);</span>
     }
 
     public static byte[] fileToByteArray(File file) throws IOException {
-<span class="nc" id="L130">        FileInputStream fis = null;</span>
-<span class="nc" id="L131">        ByteArrayOutputStream bos = new ByteArrayOutputStream();</span>
+<span class="nc" id="L132">        FileInputStream fis = null;</span>
+<span class="nc" id="L133">        ByteArrayOutputStream bos = new ByteArrayOutputStream();</span>
         try {
-<span class="nc" id="L133">            fis = new FileInputStream(file);</span>
-<span class="nc" id="L134">            byte[] buf = new byte[1024];</span>
-<span class="nc bnc" id="L135" title="All 2 branches missed.">            for (int readNum; (readNum = fis.read(buf)) != -1;) {</span>
-<span class="nc" id="L136">                bos.write(buf, 0, readNum);</span>
+<span class="nc" id="L135">            fis = new FileInputStream(file);</span>
+<span class="nc" id="L136">            byte[] buf = new byte[1024];</span>
+<span class="nc bnc" id="L137" title="All 2 branches missed.">            for (int readNum; (readNum = fis.read(buf)) != -1;) {</span>
+<span class="nc" id="L138">                bos.write(buf, 0, readNum);</span>
             }
-<span class="nc" id="L138">        } catch (IOException ex) {</span>
-<span class="nc" id="L139">            logger.error(&quot;Error creating byte array&quot;, ex);</span>
-<span class="nc" id="L140">            throw ex;</span>
+<span class="nc" id="L140">        } catch (IOException ex) {</span>
+<span class="nc" id="L141">            logger.error(&quot;Error creating byte array&quot;, ex);</span>
+<span class="nc" id="L142">            throw ex;</span>
         } finally {
-<span class="nc bnc" id="L142" title="All 2 branches missed.">            if (null != fis) {</span>
-<span class="nc" id="L143">                fis.close();</span>
+<span class="nc bnc" id="L144" title="All 2 branches missed.">            if (null != fis) {</span>
+<span class="nc" id="L145">                fis.close();</span>
             }
         }
-<span class="nc" id="L146">        return bos.toByteArray();</span>
+<span class="nc" id="L148">        return bos.toByteArray();</span>
     }
 
 }

@@ -40,68 +40,68 @@ import org.springframework.validation.BeanPropertyBindingResult;
 /**
  * @author E.Santoboni
  */
-<span class="nc" id="L43">public class FileBrowserService implements IFileBrowserService {</span>
+<span class="fc" id="L43">public class FileBrowserService implements IFileBrowserService {</span>
 
-<span class="nc" id="L45">    private final EntLogger logger = EntLogFactory.getSanitizedLogger(this.getClass());</span>
+<span class="fc" id="L45">    private final EntLogger logger = EntLogFactory.getSanitizedLogger(this.getClass());</span>
 
     private IStorageManager storageManager;
 
     protected IDtoBuilder&lt;BasicFileAttributeView, BasicFileAttributeViewDto&gt; getFileAttributeViewDtoDtoBuilder() {
-<span class="nc" id="L50">        return new DtoBuilder&lt;BasicFileAttributeView, BasicFileAttributeViewDto&gt;() {</span>
+<span class="fc" id="L50">        return new DtoBuilder&lt;BasicFileAttributeView, BasicFileAttributeViewDto&gt;() {</span>
             @Override
             protected BasicFileAttributeViewDto toDto(BasicFileAttributeView src) {
-<span class="nc" id="L53">                return new BasicFileAttributeViewDto(src);</span>
+<span class="fc" id="L53">                return new BasicFileAttributeViewDto(src);</span>
             }
         };
     }
 
     @Override
     public List&lt;BasicFileAttributeViewDto&gt; browseFolder(String currentPath, Boolean protectedFolder) {
-<span class="nc" id="L60">        this.checkResource(currentPath, &quot;Folder&quot;, protectedFolder);</span>
-<span class="nc" id="L61">        List&lt;BasicFileAttributeViewDto&gt; dtos = null;</span>
+<span class="fc" id="L60">        this.checkResource(currentPath, &quot;Folder&quot;, protectedFolder);</span>
+<span class="fc" id="L61">        List&lt;BasicFileAttributeViewDto&gt; dtos = null;</span>
         try {
-<span class="nc" id="L63">            BasicFileAttributeView[] views = null;</span>
-<span class="nc bnc" id="L64" title="All 2 branches missed.">            if (null == protectedFolder) {</span>
-<span class="nc" id="L65">                views = new BasicFileAttributeView[]{this.getRootFolder(false), this.getRootFolder(true)};</span>
+<span class="fc" id="L63">            BasicFileAttributeView[] views = null;</span>
+<span class="fc bfc" id="L64" title="All 2 branches covered.">            if (null == protectedFolder) {</span>
+<span class="fc" id="L65">                views = new BasicFileAttributeView[]{this.getRootFolder(false), this.getRootFolder(true)};</span>
             } else {
-<span class="nc" id="L67">                views = this.getStorageManager().listAttributes(currentPath, protectedFolder);</span>
+<span class="fc" id="L67">                views = this.getStorageManager().listAttributes(currentPath, protectedFolder);</span>
             }
-<span class="nc" id="L69">            dtos = this.getFileAttributeViewDtoDtoBuilder().convert(Arrays.asList(views));</span>
-<span class="nc" id="L70">            dtos.stream().forEach(i -&gt; i.buildPath(currentPath));</span>
-<span class="nc bnc" id="L71" title="All 2 branches missed.">            if (null != protectedFolder) {</span>
-<span class="nc" id="L72">                dtos.stream().forEach(i -&gt; i.setProtectedFolder(protectedFolder));</span>
+<span class="fc" id="L69">            dtos = this.getFileAttributeViewDtoDtoBuilder().convert(Arrays.asList(views));</span>
+<span class="fc" id="L70">            dtos.stream().forEach(i -&gt; i.buildPath(currentPath));</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">            if (null != protectedFolder) {</span>
+<span class="fc" id="L72">                dtos.stream().forEach(i -&gt; i.setProtectedFolder(protectedFolder));</span>
             }
 <span class="nc" id="L74">        } catch (Throwable t) {</span>
 <span class="nc" id="L75">            logger.error(&quot;error browsing folder {} - type {}&quot;, currentPath, protectedFolder);</span>
 <span class="nc" id="L76">            throw new RestServerError(&quot;error browsing folder&quot;, t);</span>
-<span class="nc" id="L77">        }</span>
-<span class="nc" id="L78">        return dtos;</span>
+<span class="fc" id="L77">        }</span>
+<span class="fc" id="L78">        return dtos;</span>
     }
 
     private RootFolderAttributeView getRootFolder(boolean protectedFolder) {
-<span class="nc bnc" id="L82" title="All 2 branches missed.">        String folderName = (protectedFolder) ? &quot;protected&quot; : &quot;public&quot;;</span>
-<span class="nc" id="L83">        return new RootFolderAttributeView(folderName, protectedFolder);</span>
+<span class="fc bfc" id="L82" title="All 2 branches covered.">        String folderName = (protectedFolder) ? &quot;protected&quot; : &quot;public&quot;;</span>
+<span class="fc" id="L83">        return new RootFolderAttributeView(folderName, protectedFolder);</span>
     }
 
     @Override
     public byte[] getFileStream(String currentPath, Boolean protectedFolder) {
-<span class="nc" id="L88">        this.checkResource(currentPath, &quot;File&quot;, protectedFolder);</span>
-<span class="nc" id="L89">        File tempFileZZ = null;</span>
-<span class="nc" id="L90">        byte[] bytes = null;</span>
+<span class="fc" id="L88">        this.checkResource(currentPath, &quot;File&quot;, protectedFolder);</span>
+<span class="fc" id="L89">        File tempFile = null;</span>
+<span class="fc" id="L90">        byte[] bytes = null;</span>
         try {
-<span class="nc" id="L92">            String[] sections = currentPath.split(&quot;/&quot;);</span>
-<span class="nc" id="L93">            InputStream stream = this.getStorageManager().getStream(currentPath, protectedFolder);</span>
-<span class="nc" id="L94">            tempFileZZ = FileTextReader.createTempFile(new SecureRandom().nextInt(100) + sections[sections.length - 1], stream);</span>
-<span class="nc" id="L95">            bytes = FileTextReader.fileToByteArray(tempFileZZ);</span>
-<span class="nc" id="L96">        } catch (Throwable t) {</span>
-<span class="nc" id="L97">            logger.error(&quot;error extracting stream for path {} - type {}&quot;, currentPath, protectedFolder);</span>
-<span class="nc" id="L98">            throw new RestServerError(&quot;error extracting stream&quot;, t);</span>
+<span class="fc" id="L92">            String[] sections = currentPath.split(&quot;/&quot;);</span>
+<span class="fc" id="L93">            InputStream stream = this.getStorageManager().getStream(currentPath, protectedFolder);</span>
+<span class="nc" id="L94">            tempFile = FileTextReader.createTempFile(new SecureRandom().nextInt(100) + sections[sections.length - 1], stream);</span>
+<span class="nc" id="L95">            bytes = FileTextReader.fileToByteArray(tempFile);</span>
+<span class="fc" id="L96">        } catch (Throwable t) {</span>
+<span class="fc" id="L97">            logger.error(&quot;error extracting stream for path {} - type {}&quot;, currentPath, protectedFolder);</span>
+<span class="fc" id="L98">            throw new RestServerError(&quot;error extracting stream&quot;, t);</span>
         } finally {
-<span class="nc bnc" id="L100" title="All 2 branches missed.">            if (null != tempFileZZ) {</span>
-<span class="nc" id="L101">                boolean deleted = tempFileZZ.delete();</span>
+<span class="pc bpc" id="L100" title="1 of 2 branches missed.">            if (null != tempFile) {</span>
+<span class="nc" id="L101">                boolean deleted = tempFile.delete();</span>
 
 <span class="nc bnc" id="L103" title="All 2 branches missed.">                if (!deleted) {</span>
-<span class="nc" id="L104">                    logger.warn(&quot;Failed to delete temp file {}&quot;, tempFileZZ.getAbsolutePath());</span>
+<span class="nc" id="L104">                    logger.warn(&quot;Failed to delete temp file {}&quot;, tempFile.getAbsolutePath());</span>
                 }
             }
         }
@@ -192,35 +192,35 @@ import org.springframework.validation.BeanPropertyBindingResult;
 <span class="nc" id="L192">    }</span>
 
     protected void checkResource(String currentPath, String objectName, Boolean protectedFolder) {
-<span class="nc bnc" id="L195" title="All 4 branches missed.">        if (null == protectedFolder &amp;&amp; !StringUtils.isEmpty(currentPath)) {</span>
-<span class="nc" id="L196">            BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(objectName, objectName);</span>
-<span class="nc" id="L197">            bindingResult.reject(FileBrowserValidator.ERRCODE_REQUIRED_FOLDER_TYPE, &quot;fileBrowser.browser.protectedFolder.required&quot;);</span>
-<span class="nc" id="L198">            throw new ValidationGenericException(bindingResult);</span>
+<span class="fc bfc" id="L195" title="All 4 branches covered.">        if (null == protectedFolder &amp;&amp; !StringUtils.isEmpty(currentPath)) {</span>
+<span class="fc" id="L196">            BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(objectName, objectName);</span>
+<span class="fc" id="L197">            bindingResult.reject(FileBrowserValidator.ERRCODE_REQUIRED_FOLDER_TYPE, &quot;fileBrowser.browser.protectedFolder.required&quot;);</span>
+<span class="fc" id="L198">            throw new ValidationGenericException(bindingResult);</span>
         }
-<span class="nc bnc" id="L200" title="All 2 branches missed.">        if (null == protectedFolder) {</span>
-<span class="nc" id="L201">            return;</span>
+<span class="fc bfc" id="L200" title="All 2 branches covered.">        if (null == protectedFolder) {</span>
+<span class="fc" id="L201">            return;</span>
         }
         try {
-<span class="nc" id="L204">            boolean exists = this.getStorageManager().exists(currentPath, protectedFolder);</span>
-<span class="nc bnc" id="L205" title="All 2 branches missed.">            if (!exists) {</span>
+<span class="fc" id="L204">            boolean exists = this.getStorageManager().exists(currentPath, protectedFolder);</span>
+<span class="pc bpc" id="L205" title="1 of 2 branches missed.">            if (!exists) {</span>
 <span class="nc" id="L206">                logger.warn(&quot;no resource found for path {} - type {}&quot;, currentPath, protectedFolder);</span>
 <span class="nc" id="L207">                throw new ResourceNotFoundException(FileBrowserValidator.ERRCODE_RESOURCE_DOES_NOT_EXIST, objectName, currentPath);</span>
             }
 <span class="nc" id="L209">        } catch (ResourceNotFoundException e) {</span>
 <span class="nc" id="L210">            throw e;</span>
-<span class="nc" id="L211">        } catch (Exception e) {</span>
-<span class="nc" id="L212">            logger.error(&quot;Error checking resource {} , protected {} &quot;, currentPath, protectedFolder, e);</span>
-<span class="nc" id="L213">            throw new RestServerError(&quot;error checking resource&quot;, e);</span>
-<span class="nc" id="L214">        }</span>
-<span class="nc" id="L215">    }</span>
+<span class="fc" id="L211">        } catch (Exception e) {</span>
+<span class="fc" id="L212">            logger.error(&quot;Error checking resource {} , protected {} &quot;, currentPath, protectedFolder, e);</span>
+<span class="fc" id="L213">            throw new RestServerError(&quot;error checking resource&quot;, e);</span>
+<span class="fc" id="L214">        }</span>
+<span class="fc" id="L215">    }</span>
 
     public IStorageManager getStorageManager() {
-<span class="nc" id="L218">        return storageManager;</span>
+<span class="fc" id="L218">        return storageManager;</span>
     }
 
     public void setStorageManager(IStorageManager storageManager) {
-<span class="nc" id="L222">        this.storageManager = storageManager;</span>
-<span class="nc" id="L223">    }</span>
+<span class="fc" id="L222">        this.storageManager = storageManager;</span>
+<span class="fc" id="L223">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
