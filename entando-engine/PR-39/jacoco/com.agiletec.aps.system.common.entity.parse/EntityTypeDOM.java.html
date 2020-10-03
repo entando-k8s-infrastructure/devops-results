@@ -25,8 +25,8 @@ import org.jdom.Element;
 import org.jdom.input.SAXBuilder;
 import org.jdom.output.Format;
 import org.jdom.output.XMLOutputter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
@@ -38,7 +38,7 @@ import com.agiletec.aps.system.common.entity.model.IApsEntity;
 import com.agiletec.aps.system.common.entity.model.SmallEntityType;
 import com.agiletec.aps.system.common.entity.model.attribute.AbstractComplexAttribute;
 import com.agiletec.aps.system.common.entity.model.attribute.AttributeInterface;
-import com.agiletec.aps.system.exception.ApsSystemException;
+import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.system.services.lang.ILangManager;
 import java.io.IOException;
 import org.apache.commons.lang3.StringUtils;
@@ -62,7 +62,7 @@ import org.jdom.JDOMException;
  */
 <span class="fc" id="L63">public class EntityTypeDOM implements IEntityTypeDOM, BeanFactoryAware {</span>
 
-<span class="fc" id="L65">	private static final Logger _logger = LoggerFactory.getLogger(EntityTypeDOM.class);</span>
+<span class="fc" id="L65">	private static final EntLogger _logger = EntLogFactory.getSanitizedLogger(EntityTypeDOM.class);</span>
 
 	private Map&lt;String, AttributeInterface&gt; _attributeTypes;
 
@@ -70,7 +70,7 @@ import org.jdom.JDOMException;
 	private BeanFactory _beanFactory;
 
 	@Override
-	public List&lt;SmallEntityType&gt; extractSmallEntityTypes(String xml) throws ApsSystemException {
+	public List&lt;SmallEntityType&gt; extractSmallEntityTypes(String xml) throws EntException {
 <span class="fc" id="L74">		List&lt;SmallEntityType&gt; list = new ArrayList&lt;&gt;();</span>
 <span class="fc" id="L75">		Document document = this.decodeDOM(xml);</span>
 <span class="fc" id="L76">		List&lt;Element&gt; entityElements = document.getRootElement().getChildren();</span>
@@ -85,19 +85,19 @@ import org.jdom.JDOMException;
 
 	@Override
 	public Map&lt;String, IApsEntity&gt; extractEntityTypes(String xml, Class entityClass,
-			IApsEntityDOM entityDom, String entityManagerName) throws ApsSystemException {
+			IApsEntityDOM entityDom, String entityManagerName) throws EntException {
 <span class="fc" id="L89">		Document document = this.initDom(xml, entityManagerName);</span>
 <span class="fc" id="L90">		return this.doParsing(document, entityClass, entityDom);</span>
 	}
 
 	@Override
 	public IApsEntity extractEntityType(String typeCode, String xml, Class entityClass,
-			IApsEntityDOM entityDom, String entityManagerName) throws ApsSystemException {
+			IApsEntityDOM entityDom, String entityManagerName) throws EntException {
 <span class="fc" id="L96">		Document document = this.initDom(xml, entityManagerName);</span>
 <span class="fc" id="L97">		return this.doParsing(typeCode, document, entityClass, entityDom);</span>
 	}
 
-	protected Document initDom(String xml, String entityManagerName) throws ApsSystemException {
+	protected Document initDom(String xml, String entityManagerName) throws EntException {
 <span class="pc bpc" id="L101" title="1 of 2 branches missed.">		if (null != entityManagerName) {</span>
 <span class="fc" id="L102">			ExtraAttributeLoader loader = new ExtraAttributeLoader();</span>
 <span class="fc" id="L103">			Map&lt;String, AttributeInterface&gt; extraAttributes = loader.extractAttributes(this.getBeanFactory(), entityManagerName);</span>
@@ -110,7 +110,7 @@ import org.jdom.JDOMException;
 	}
 
 	@Override
-	public String getXml(Map&lt;String, IApsEntity&gt; entityTypes) throws ApsSystemException {
+	public String getXml(Map&lt;String, IApsEntity&gt; entityTypes) throws EntException {
 <span class="fc" id="L114">		XMLOutputter out = new XMLOutputter();</span>
 <span class="fc" id="L115">		Document document = new Document();</span>
 		try {
@@ -128,13 +128,13 @@ import org.jdom.JDOMException;
 <span class="fc" id="L128">			out.setFormat(format);</span>
 <span class="nc" id="L129">		} catch (Throwable t) {</span>
 <span class="nc" id="L130">			_logger.error(&quot;Error building xml&quot;, t);</span>
-<span class="nc" id="L131">			throw new ApsSystemException(&quot;Error building xml&quot;, t);</span>
+<span class="nc" id="L131">			throw new EntException(&quot;Error building xml&quot;, t);</span>
 <span class="fc" id="L132">		}</span>
 <span class="fc" id="L133">		return out.outputString(document);</span>
 	}
 
 	@Override
-	public String getXml(IApsEntity entityType) throws ApsSystemException {
+	public String getXml(IApsEntity entityType) throws EntException {
 <span class="nc" id="L138">		XMLOutputter out = new XMLOutputter();</span>
 <span class="nc" id="L139">		Document document = new Document();</span>
 		try {
@@ -145,20 +145,20 @@ import org.jdom.JDOMException;
 <span class="nc" id="L145">			out.setFormat(format);</span>
 <span class="nc" id="L146">		} catch (Throwable t) {</span>
 <span class="nc" id="L147">			_logger.error(&quot;Error building xml&quot;, t);</span>
-<span class="nc" id="L148">			throw new ApsSystemException(&quot;Error building xml&quot;, t);</span>
+<span class="nc" id="L148">			throw new EntException(&quot;Error building xml&quot;, t);</span>
 <span class="nc" id="L149">		}</span>
 <span class="nc" id="L150">		return out.outputString(document);</span>
 	}
 
 	@Override
 	public IApsEntity extractEntityType(String entityTypeXml, Class entityClass,
-			IApsEntityDOM entityDom, String entityManagerName) throws ApsSystemException {
+			IApsEntityDOM entityDom, String entityManagerName) throws EntException {
 		try {
 <span class="nc" id="L157">			Document document = this.decodeDOM(entityTypeXml);</span>
 <span class="nc" id="L158">			return this.doParsing(document.getRootElement(), entityClass, entityDom);</span>
 <span class="nc" id="L159">		} catch (Throwable t) {</span>
 <span class="nc" id="L160">			_logger.error(&quot;Error extracting single entity type from xml {}&quot;, entityTypeXml, t);</span>
-<span class="nc" id="L161">			throw new ApsSystemException(&quot;Error extracting single entity type&quot;, t);</span>
+<span class="nc" id="L161">			throw new EntException(&quot;Error extracting single entity type&quot;, t);</span>
 		}
 	}
 
@@ -181,7 +181,7 @@ import org.jdom.JDOMException;
 <span class="fc" id="L181">		return typeElement;</span>
 	}
 
-	private Document decodeDOM(String xmlText) throws ApsSystemException {
+	private Document decodeDOM(String xmlText) throws EntException {
 <span class="fc" id="L185">		Document doc = null;</span>
 <span class="fc" id="L186">		SAXBuilder builder = new SAXBuilder();</span>
 <span class="fc" id="L187">		builder.setValidation(false);</span>
@@ -189,7 +189,7 @@ import org.jdom.JDOMException;
 		try {
 <span class="fc" id="L190">			doc = builder.build(reader);</span>
 <span class="nc" id="L191">		} catch (JDOMException | IOException ex) {</span>
-<span class="nc" id="L192">			throw new ApsSystemException(&quot;Error while parsing: &quot; + ex.getMessage(), ex);</span>
+<span class="nc" id="L192">			throw new EntException(&quot;Error while parsing: &quot; + ex.getMessage(), ex);</span>
 <span class="fc" id="L193">		}</span>
 <span class="fc" id="L194">		return doc;</span>
 	}
@@ -206,9 +206,9 @@ import org.jdom.JDOMException;
 	 * @param entityDom L'elemento xml della definizione del singolo tipo di
 	 * entità.
 	 * @return The map of the Entity Types
-	 * @throws ApsSystemException In case of error
+	 * @throws EntException In case of error
 	 */
-	protected Map&lt;String, IApsEntity&gt; doParsing(Document document, Class entityClass, IApsEntityDOM entityDom) throws ApsSystemException {
+	protected Map&lt;String, IApsEntity&gt; doParsing(Document document, Class entityClass, IApsEntityDOM entityDom) throws EntException {
 <span class="fc" id="L212">		Map&lt;String, IApsEntity&gt; entityTypes = new HashMap&lt;&gt;();</span>
 <span class="fc" id="L213">		List&lt;Element&gt; contentElements = document.getRootElement().getChildren();</span>
 <span class="fc bfc" id="L214" title="All 2 branches covered.">		for (int i = 0; i &lt; contentElements.size(); i++) {</span>
@@ -219,9 +219,9 @@ import org.jdom.JDOMException;
 <span class="fc" id="L219">		return entityTypes;</span>
 	}
 
-	protected IApsEntity doParsing(String typeCode, Document document, Class entityClass, IApsEntityDOM entityDom) throws ApsSystemException {
-<span class="pc bpc" id="L223" title="1 of 2 branches missed.">		if (StringUtils.isEmpty(typeCode)) {</span>
-<span class="nc" id="L224">			return null;</span>
+	protected IApsEntity doParsing(String typeCode, Document document, Class entityClass, IApsEntityDOM entityDom) throws EntException {
+<span class="fc bfc" id="L223" title="All 2 branches covered.">		if (StringUtils.isEmpty(typeCode)) {</span>
+<span class="fc" id="L224">			return null;</span>
 		}
 <span class="fc" id="L226">		List&lt;Element&gt; entityElements = document.getRootElement().getChildren();</span>
 <span class="fc bfc" id="L227" title="All 2 branches covered.">		for (Element currentEntityElem : entityElements) {</span>
@@ -234,7 +234,7 @@ import org.jdom.JDOMException;
 <span class="fc" id="L234">		return null;</span>
 	}
 
-	protected IApsEntity doParsing(Element element, Class entityClass, IApsEntityDOM entityDom) throws ApsSystemException {
+	protected IApsEntity doParsing(Element element, Class entityClass, IApsEntityDOM entityDom) throws EntException {
 <span class="fc" id="L238">		IApsEntity entity = null;</span>
 		try {
 <span class="fc" id="L240">			entity = this.createEntityType(element, entityClass);</span>
@@ -244,7 +244,7 @@ import org.jdom.JDOMException;
 <span class="fc" id="L244">			_logger.debug(&quot;Entity Type '{}' defined&quot;, entity.getTypeCode());</span>
 <span class="nc" id="L245">		} catch (Throwable t) {</span>
 <span class="nc" id="L246">			_logger.error(&quot;Error extracting entity type&quot;, t);</span>
-<span class="nc" id="L247">			throw new ApsSystemException(&quot;Configuration error of the Entity Type detected&quot;, t);</span>
+<span class="nc" id="L247">			throw new EntException(&quot;Configuration error of the Entity Type detected&quot;, t);</span>
 <span class="fc" id="L248">		}</span>
 <span class="fc" id="L249">		return entity;</span>
 	}
@@ -258,10 +258,10 @@ import org.jdom.JDOMException;
 	 *
 	 * @param entityType The entity type to map.
 	 * @param currentContentElem The XML that configures the Entity Type.
-	 * @throws ApsSystemException If errors are detected during the parsing
+	 * @throws EntException If errors are detected during the parsing
 	 * process.
 	 */
-	protected void fillEntityType(IApsEntity entityType, Element currentContentElem) throws ApsSystemException {
+	protected void fillEntityType(IApsEntity entityType, Element currentContentElem) throws EntException {
 		try {
 <span class="pc bpc" id="L266" title="1 of 2 branches missed.">			if (null == currentContentElem.getChild(&quot;attributes&quot;)) {</span>
 <span class="nc" id="L267">				return;</span>
@@ -274,7 +274,7 @@ import org.jdom.JDOMException;
 <span class="fc" id="L274">				_logger.debug(&quot;The Attribute {} of type {} was successfully inserted in the Entity Type {}&quot;, attribute.getName(), attribute.getType(), entityType.getTypeCode());</span>
 <span class="fc" id="L275">			}</span>
 <span class="nc" id="L276">		} catch (Throwable t) {</span>
-<span class="nc" id="L277">			throw new ApsSystemException(&quot;Configuration error of the Entity Type &quot; + entityType.getTypeCode() + &quot; detected&quot;, t);</span>
+<span class="nc" id="L277">			throw new EntException(&quot;Configuration error of the Entity Type &quot; + entityType.getTypeCode() + &quot; detected&quot;, t);</span>
 <span class="fc" id="L278">		}</span>
 <span class="fc" id="L279">	}</span>
 
@@ -285,9 +285,9 @@ import org.jdom.JDOMException;
 	 * @param entityElem The element of the Entity Type to initialize.
 	 * @param entityClass The class of the Entity Type.
 	 * @return The initialized Entity Type.
-	 * @throws ApsSystemException If parsing errors are detected.
+	 * @throws EntException If parsing errors are detected.
 	 */
-	protected IApsEntity createEntityType(Element entityElem, Class entityClass) throws ApsSystemException {
+	protected IApsEntity createEntityType(Element entityElem, Class entityClass) throws EntException {
 		try {
 <span class="fc" id="L292">			IApsEntity entity = (IApsEntity) entityClass.newInstance();</span>
 <span class="fc" id="L293">			entity.setId(null);</span>
@@ -296,8 +296,8 @@ import org.jdom.JDOMException;
 <span class="fc" id="L296">			String typeDescr = this.extractXmlAttribute(entityElem, &quot;typedescr&quot;, true);</span>
 <span class="fc" id="L297">			entity.setTypeDescription(typeDescr);</span>
 <span class="fc" id="L298">			return entity;</span>
-<span class="nc" id="L299">		} catch (InstantiationException | IllegalAccessException | ApsSystemException t) {</span>
-<span class="nc" id="L300">			throw new ApsSystemException(&quot;Error detected while creating a new entity&quot;, t);</span>
+<span class="nc" id="L299">		} catch (InstantiationException | IllegalAccessException | EntException t) {</span>
+<span class="nc" id="L300">			throw new EntException(&quot;Error detected while creating a new entity&quot;, t);</span>
 		}
 	}
 
@@ -307,13 +307,13 @@ import org.jdom.JDOMException;
 	 *
 	 * @param attributeElem The element of the Attribute Type to generate.
 	 * @return The built attribute.
-	 * @throws ApsSystemException If parsing errors are detected.
+	 * @throws EntException If parsing errors are detected.
 	 */
-	private AttributeInterface createAttribute(Element attributeElem) throws ApsSystemException {
+	private AttributeInterface createAttribute(Element attributeElem) throws EntException {
 <span class="fc" id="L313">		String typeCode = this.extractXmlAttribute(attributeElem, &quot;attributetype&quot;, true);</span>
 <span class="fc" id="L314">		AttributeInterface attr = (AttributeInterface) getAttributeTypes().get(typeCode);</span>
 <span class="pc bpc" id="L315" title="1 of 2 branches missed.">		if (null == attr) {</span>
-<span class="nc" id="L316">			throw new ApsSystemException(&quot;Wrong Attribute Type: &quot; + typeCode + &quot;, &quot;</span>
+<span class="nc" id="L316">			throw new EntException(&quot;Wrong Attribute Type: &quot; + typeCode + &quot;, &quot;</span>
 <span class="nc" id="L317">					+ &quot;found in the tag &lt;&quot; + attributeElem.getName() + &quot;&gt;&quot;);</span>
 		}
 <span class="fc" id="L319">		attr = (AttributeInterface) attr.getAttributePrototype();</span>
@@ -332,13 +332,13 @@ import org.jdom.JDOMException;
 	 * @param attributeName The name of the requested attribute.
 	 * @param required Distinguish between mandatory and optional attributes.
 	 * @return The value of the requested attribute.
-	 * @throws ApsSystemException When a mandatory attribute is not found.
+	 * @throws EntException When a mandatory attribute is not found.
 	 */
 	protected String extractXmlAttribute(Element currElement, String attributeName,
-			boolean required) throws ApsSystemException {
+			boolean required) throws EntException {
 <span class="fc" id="L339">		String value = currElement.getAttributeValue(attributeName);</span>
 <span class="pc bpc" id="L340" title="2 of 4 branches missed.">		if (required &amp;&amp; value == null) {</span>
-<span class="nc" id="L341">			throw new ApsSystemException(&quot;Attribute '&quot; + attributeName + &quot;' not found in the tag &lt;&quot; + currElement.getName() + &quot;&gt;&quot;);</span>
+<span class="nc" id="L341">			throw new EntException(&quot;Attribute '&quot; + attributeName + &quot;' not found in the tag &lt;&quot; + currElement.getName() + &quot;&gt;&quot;);</span>
 		}
 <span class="fc" id="L343">		return value;</span>
 	}

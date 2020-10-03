@@ -29,12 +29,12 @@ import org.entando.entando.aps.system.init.model.Component;
 import org.entando.entando.aps.system.services.DtoBuilder;
 import org.entando.entando.aps.system.services.widgettype.WidgetType;
 import org.entando.entando.aps.system.services.widgettype.WidgetTypeParameter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
 
 <span class="fc" id="L35">public class WidgetDtoBuilder extends DtoBuilder&lt;WidgetType, WidgetDto&gt; {</span>
 
-<span class="fc" id="L37">    private final Logger logger = LoggerFactory.getLogger(this.getClass());</span>
+<span class="fc" id="L37">    private final EntLogger logger = EntLogFactory.getSanitizedLogger(this.getClass());</span>
 
     private IPageManager pageManager;
 
@@ -63,67 +63,68 @@ import org.slf4j.LoggerFactory;
 <span class="fc" id="L63">        String pluginCode = src.getPluginCode();</span>
 <span class="fc" id="L64">        Component plugin = this.getComponentManager().getInstalledComponent(pluginCode);</span>
 <span class="fc" id="L65">        dest.setPluginCode(pluginCode);</span>
-<span class="pc bpc" id="L66" title="1 of 2 branches missed.">        dest.setPluginDesc(plugin != null ? plugin.getDescription() : null);</span>
-<span class="fc" id="L67">        List&lt;WidgetTypeParameter&gt; params = src.getTypeParameters();</span>
-<span class="fc" id="L68">        Map&lt;String, Object&gt; configUi = parseConfigUi(src);</span>
-<span class="pc bpc" id="L69" title="2 of 8 branches missed.">        dest.setHasConfig((null != params &amp;&amp; params.size() &gt; 0) || (configUi != null &amp;&amp; !configUi.isEmpty()));</span>
-<span class="fc" id="L70">        dest.setConfig(src.getConfig());</span>
-<span class="fc" id="L71">        dest.setConfigUi(configUi);</span>
-<span class="fc" id="L72">        dest.setBundleId(src.getBundleId());</span>
-<span class="pc bpc" id="L73" title="3 of 4 branches missed.">        if (null != pluginCode &amp;&amp; pluginCode.trim().length() &gt; 0) {</span>
-<span class="nc" id="L74">            dest.setTypology(pluginCode);</span>
-<span class="fc bfc" id="L75" title="All 2 branches covered.">        } else if (src.isUserType()) {</span>
-<span class="fc" id="L76">            dest.setTypology(WidgetDto.USER_TYPOLOGY_CODE);</span>
-<span class="fc bfc" id="L77" title="All 2 branches covered.">        } else if (this.getStockWidgetCodes().contains(src.getCode())) {</span>
-<span class="fc" id="L78">            dest.setTypology(WidgetDto.STOCK_TYPOLOGY_CODE);</span>
+<span class="fc" id="L66">        dest.setLocked(src.isLocked());</span>
+<span class="pc bpc" id="L67" title="1 of 2 branches missed.">        dest.setPluginDesc(plugin != null ? plugin.getDescription() : null);</span>
+<span class="fc" id="L68">        List&lt;WidgetTypeParameter&gt; params = src.getTypeParameters();</span>
+<span class="fc" id="L69">        Map&lt;String, Object&gt; configUi = parseConfigUi(src);</span>
+<span class="pc bpc" id="L70" title="2 of 8 branches missed.">        dest.setHasConfig((null != params &amp;&amp; params.size() &gt; 0) || (configUi != null &amp;&amp; !configUi.isEmpty()));</span>
+<span class="fc" id="L71">        dest.setConfig(src.getConfig());</span>
+<span class="fc" id="L72">        dest.setConfigUi(configUi);</span>
+<span class="fc" id="L73">        dest.setBundleId(src.getBundleId());</span>
+<span class="pc bpc" id="L74" title="3 of 4 branches missed.">        if (null != pluginCode &amp;&amp; pluginCode.trim().length() &gt; 0) {</span>
+<span class="nc" id="L75">            dest.setTypology(pluginCode);</span>
+<span class="fc bfc" id="L76" title="All 2 branches covered.">        } else if (src.isUserType()) {</span>
+<span class="fc" id="L77">            dest.setTypology(WidgetDto.USER_TYPOLOGY_CODE);</span>
+<span class="fc bfc" id="L78" title="All 2 branches covered.">        } else if (this.getStockWidgetCodes().contains(src.getCode())) {</span>
+<span class="fc" id="L79">            dest.setTypology(WidgetDto.STOCK_TYPOLOGY_CODE);</span>
         } else {
-<span class="fc" id="L80">            dest.setTypology(WidgetDto.CUSTOM_TYPOLOGY_CODE);</span>
+<span class="fc" id="L81">            dest.setTypology(WidgetDto.CUSTOM_TYPOLOGY_CODE);</span>
         }
-<span class="fc" id="L82">        dest.setAction(src.getAction());</span>
-<span class="fc bfc" id="L83" title="All 2 branches covered.">        if (null != src.getTypeParameters()) {</span>
-<span class="fc" id="L84">            src.getTypeParameters().stream().forEach(t -&gt; {</span>
-<span class="fc" id="L85">                dest.addWidgetParameter(t.getName(), t.getDescr());</span>
-<span class="fc" id="L86">            });</span>
+<span class="fc" id="L83">        dest.setAction(src.getAction());</span>
+<span class="fc bfc" id="L84" title="All 2 branches covered.">        if (null != src.getTypeParameters()) {</span>
+<span class="fc" id="L85">            src.getTypeParameters().stream().forEach(t -&gt; {</span>
+<span class="fc" id="L86">                dest.addWidgetParameter(t.getName(), t.getDescr());</span>
+<span class="fc" id="L87">            });</span>
         }
-<span class="fc" id="L88">        return dest;</span>
+<span class="fc" id="L89">        return dest;</span>
     }
 
     private Map&lt;String, Object&gt; parseConfigUi(WidgetType src) {
-<span class="fc" id="L92">        Map&lt;String, Object&gt; configUi = null;</span>
+<span class="fc" id="L93">        Map&lt;String, Object&gt; configUi = null;</span>
         try {
-<span class="fc bfc" id="L94" title="All 2 branches covered.">            if (StringUtils.isNotBlank(src.getConfigUi())) {</span>
-<span class="fc" id="L95">                configUi = objectMapper.readValue(src.getConfigUi(), new TypeReference&lt;Map&lt;String, Object&gt;&gt;() {</span>
+<span class="fc bfc" id="L95" title="All 2 branches covered.">            if (StringUtils.isNotBlank(src.getConfigUi())) {</span>
+<span class="fc" id="L96">                configUi = objectMapper.readValue(src.getConfigUi(), new TypeReference&lt;Map&lt;String, Object&gt;&gt;() {</span>
                 });
             }
-<span class="nc" id="L98">        } catch (JsonProcessingException e) {</span>
-<span class="nc" id="L99">            logger.error(&quot;Error parsing configUi json to object for widget {}&quot;, src.getCode(), e);</span>
-<span class="fc" id="L100">        }</span>
-<span class="fc" id="L101">        return configUi;</span>
+<span class="nc" id="L99">        } catch (JsonProcessingException e) {</span>
+<span class="nc" id="L100">            logger.error(&quot;Error parsing configUi json to object for widget {}&quot;, src.getCode(), e);</span>
+<span class="fc" id="L101">        }</span>
+<span class="fc" id="L102">        return configUi;</span>
     }
 
     public IPageManager getPageManager() {
-<span class="fc" id="L105">        return pageManager;</span>
+<span class="fc" id="L106">        return pageManager;</span>
     }
 
     public void setPageManager(IPageManager pageManager) {
-<span class="fc" id="L109">        this.pageManager = pageManager;</span>
-<span class="fc" id="L110">    }</span>
+<span class="fc" id="L110">        this.pageManager = pageManager;</span>
+<span class="fc" id="L111">    }</span>
 
     protected String getStockWidgetCodes() {
-<span class="fc" id="L113">        return stockWidgetCodes;</span>
+<span class="fc" id="L114">        return stockWidgetCodes;</span>
     }
 
     public void setStockWidgetCodes(String stockWidgetCodes) {
-<span class="fc" id="L117">        this.stockWidgetCodes = stockWidgetCodes;</span>
-<span class="fc" id="L118">    }</span>
+<span class="fc" id="L118">        this.stockWidgetCodes = stockWidgetCodes;</span>
+<span class="fc" id="L119">    }</span>
 
     public IComponentManager getComponentManager() {
-<span class="fc" id="L121">        return componentManager;</span>
+<span class="fc" id="L122">        return componentManager;</span>
     }
 
     public void setComponentManager(IComponentManager componentManager) {
-<span class="fc" id="L125">        this.componentManager = componentManager;</span>
-<span class="fc" id="L126">    }</span>
+<span class="fc" id="L126">        this.componentManager = componentManager;</span>
+<span class="fc" id="L127">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

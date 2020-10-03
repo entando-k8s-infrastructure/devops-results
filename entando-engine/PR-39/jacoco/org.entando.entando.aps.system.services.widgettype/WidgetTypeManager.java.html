@@ -19,7 +19,7 @@ import java.util.List;
 
 import com.agiletec.aps.system.common.AbstractService;
 import com.agiletec.aps.system.common.FieldSearchFilter;
-import com.agiletec.aps.system.exception.ApsSystemException;
+import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.system.services.group.Group;
 import com.agiletec.aps.system.services.group.GroupUtilizer;
 import com.agiletec.aps.system.services.lang.events.LangsChangedEvent;
@@ -31,8 +31,8 @@ import org.entando.entando.aps.system.services.guifragment.GuiFragmentUtilizer;
 import org.entando.entando.aps.system.services.guifragment.IGuiFragmentManager;
 import org.entando.entando.aps.system.services.widgettype.cache.IWidgetTypeManagerCacheWrapper;
 import org.entando.entando.aps.system.services.widgettype.events.WidgetTypeChangedEvent;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 
 /**
  * Servizio di gestione dei tipi di widget (WidgetType) definiti nel sistema.
@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
 <span class="fc" id="L44">public class WidgetTypeManager extends AbstractService</span>
         implements IWidgetTypeManager, LangsChangedObserver, GroupUtilizer&lt;WidgetType&gt;, GuiFragmentUtilizer {
 
-<span class="fc" id="L47">    private static final Logger logger = LoggerFactory.getLogger(WidgetTypeManager.class);</span>
+<span class="fc" id="L47">    private static final EntLogger logger = EntLogFactory.getSanitizedLogger(WidgetTypeManager.class);</span>
 
     private IWidgetTypeDAO _widgetTypeDAO;
     private IGuiFragmentManager _guiFragmentManager;
@@ -80,7 +80,7 @@ import org.slf4j.LoggerFactory;
     }
 
     @Override
-    public void addWidgetType(WidgetType widgetType) throws ApsSystemException {
+    public void addWidgetType(WidgetType widgetType) throws EntException {
         try {
 <span class="pc bpc" id="L85" title="1 of 2 branches missed.">            if (null == widgetType) {</span>
 <span class="nc" id="L86">                logger.error(&quot;Null Widget Type&quot;);</span>
@@ -93,25 +93,25 @@ import org.slf4j.LoggerFactory;
             }
 <span class="fc" id="L94">            String parentTypeCode = widgetType.getParentTypeCode();</span>
 <span class="pc bpc" id="L95" title="1 of 4 branches missed.">            if (null != parentTypeCode &amp;&amp; null == this.getWidgetType(parentTypeCode)) {</span>
-<span class="nc" id="L96">                throw new ApsSystemException(&quot;ERROR : Parent type '&quot; + parentTypeCode + &quot;' doesn't exists&quot;);</span>
+<span class="nc" id="L96">                throw new EntException(&quot;ERROR : Parent type '&quot; + parentTypeCode + &quot;' doesn't exists&quot;);</span>
             }
 <span class="pc bpc" id="L98" title="1 of 4 branches missed.">            if (null == parentTypeCode &amp;&amp; null != widgetType.getConfig()) {</span>
-<span class="nc" id="L99">                throw new ApsSystemException(&quot;ERROR : Parent type null and default config not null&quot;);</span>
+<span class="nc" id="L99">                throw new EntException(&quot;ERROR : Parent type null and default config not null&quot;);</span>
             }
 <span class="pc bpc" id="L101" title="1 of 4 branches missed.">            if (null != widgetType.getTypeParameters() &amp;&amp; null != widgetType.getConfig()) {</span>
-<span class="nc" id="L102">                throw new ApsSystemException(&quot;ERROR : Params not null and config not null&quot;);</span>
+<span class="nc" id="L102">                throw new EntException(&quot;ERROR : Params not null and config not null&quot;);</span>
             }
 <span class="fc" id="L104">            this.getWidgetTypeDAO().addWidgetType(widgetType);</span>
 <span class="fc" id="L105">            this.getCacheWrapper().addWidgetType(widgetType);</span>
 <span class="fc" id="L106">            this.notifyWidgetTypeChanging(widgetType.getCode(), WidgetTypeChangedEvent.INSERT_OPERATION_CODE);</span>
 <span class="nc" id="L107">        } catch (Throwable t) {</span>
 <span class="nc" id="L108">            logger.error(&quot;Error adding a Widget Type&quot;, t);</span>
-<span class="nc" id="L109">            throw new ApsSystemException(&quot;Error adding a Widget Type&quot;, t);</span>
+<span class="nc" id="L109">            throw new EntException(&quot;Error adding a Widget Type&quot;, t);</span>
 <span class="fc" id="L110">        }</span>
 <span class="fc" id="L111">    }</span>
 
     @Override
-    public void deleteWidgetType(String widgetTypeCode) throws ApsSystemException {
+    public void deleteWidgetType(String widgetTypeCode) throws EntException {
 <span class="fc" id="L115">        List&lt;GuiFragment&gt; deletedFragments = new ArrayList&lt;GuiFragment&gt;();</span>
         try {
 <span class="fc" id="L117">            WidgetType type = this.getWidgetType(widgetTypeCode);</span>
@@ -143,13 +143,13 @@ import org.slf4j.LoggerFactory;
                 }
             }
 <span class="nc" id="L145">            logger.error(&quot;Error deleting widget type&quot;, t);</span>
-<span class="nc" id="L146">            throw new ApsSystemException(&quot;Error deleting widget type&quot;, t);</span>
+<span class="nc" id="L146">            throw new EntException(&quot;Error deleting widget type&quot;, t);</span>
 <span class="fc" id="L147">        }</span>
 <span class="fc" id="L148">    }</span>
 
     @Override
     public void updateWidgetType(String widgetTypeCode, ApsProperties titles, ApsProperties defaultConfig, String mainGroup,
-                                 String configUi, String bundleId) throws ApsSystemException {
+                                 String configUi, String bundleId) throws EntException {
         try {
 <span class="fc" id="L154">            WidgetType type = this.getWidgetType(widgetTypeCode);</span>
 <span class="pc bpc" id="L155" title="1 of 2 branches missed.">            if (null == type) {</span>
@@ -169,12 +169,12 @@ import org.slf4j.LoggerFactory;
 <span class="fc" id="L169">            this.notifyWidgetTypeChanging(widgetTypeCode, WidgetTypeChangedEvent.UPDATE_OPERATION_CODE);</span>
 <span class="nc" id="L170">        } catch (Throwable t) {</span>
 <span class="nc" id="L171">            logger.error(&quot;Error updating Widget type titles : type code {}&quot;, widgetTypeCode, t);</span>
-<span class="nc" id="L172">            throw new ApsSystemException(&quot;Error updating Widget type titles : type code&quot; + widgetTypeCode, t);</span>
+<span class="nc" id="L172">            throw new EntException(&quot;Error updating Widget type titles : type code&quot; + widgetTypeCode, t);</span>
 <span class="fc" id="L173">        }</span>
 <span class="fc" id="L174">    }</span>
 
     @Override
-    public List&lt;WidgetType&gt; getGroupUtilizers(String groupName) throws ApsSystemException {
+    public List&lt;WidgetType&gt; getGroupUtilizers(String groupName) throws EntException {
 <span class="fc" id="L178">        List&lt;WidgetType&gt; utilizers = null;</span>
         try {
 <span class="pc bpc" id="L180" title="1 of 4 branches missed.">            boolean freeTypes = (null == groupName || groupName.equals(Group.FREE_GROUP_NAME));</span>
@@ -191,13 +191,13 @@ import org.slf4j.LoggerFactory;
             }
 <span class="nc" id="L192">        } catch (Throwable t) {</span>
 <span class="nc" id="L193">            logger.error(&quot;Error extracting utilizers&quot;, t);</span>
-<span class="nc" id="L194">            throw new ApsSystemException(&quot;Error extracting utilizers&quot;, t);</span>
+<span class="nc" id="L194">            throw new EntException(&quot;Error extracting utilizers&quot;, t);</span>
 <span class="fc" id="L195">        }</span>
 <span class="fc" id="L196">        return utilizers;</span>
     }
 
     @Override
-    public List getGuiFragmentUtilizers(String guiFragmentCode) throws ApsSystemException {
+    public List getGuiFragmentUtilizers(String guiFragmentCode) throws EntException {
 <span class="fc" id="L201">        List&lt;WidgetType&gt; utilizers = new ArrayList&lt;WidgetType&gt;();</span>
         try {
 <span class="fc" id="L203">            FieldSearchFilter codeFilter = new FieldSearchFilter(&quot;code&quot;, guiFragmentCode, false);</span>
@@ -216,12 +216,12 @@ import org.slf4j.LoggerFactory;
             }
 <span class="nc" id="L217">        } catch (Throwable t) {</span>
 <span class="nc" id="L218">            logger.error(&quot;Error extracting utilizers&quot;, t);</span>
-<span class="nc" id="L219">            throw new ApsSystemException(&quot;Error extracting utilizers&quot;, t);</span>
+<span class="nc" id="L219">            throw new EntException(&quot;Error extracting utilizers&quot;, t);</span>
 <span class="fc" id="L220">        }</span>
 <span class="fc" id="L221">        return utilizers;</span>
     }
 
-    private void notifyWidgetTypeChanging(String widgetTypeCode, int operationCode) throws ApsSystemException {
+    private void notifyWidgetTypeChanging(String widgetTypeCode, int operationCode) {
 <span class="fc" id="L225">        WidgetTypeChangedEvent event = new WidgetTypeChangedEvent();</span>
 <span class="fc" id="L226">        event.setWidgetTypeCode(widgetTypeCode);</span>
 <span class="fc" id="L227">        event.setOperationCode(operationCode);</span>

@@ -32,8 +32,8 @@ import org.entando.entando.aps.system.services.api.model.ApiMethod;
 import org.entando.entando.aps.system.services.api.model.ApiMethodParameter;
 import org.entando.entando.aps.system.services.api.model.ApiMethodResult;
 import org.entando.entando.aps.system.services.api.model.StringApiResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
@@ -41,7 +41,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.web.context.ServletContextAware;
 
 import com.agiletec.aps.system.common.renderer.IVelocityRenderer;
-import com.agiletec.aps.system.exception.ApsSystemException;
+import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.util.ApsWebApplicationUtils;
 import com.agiletec.aps.util.FileTextReader;
 
@@ -50,11 +50,11 @@ import com.agiletec.aps.util.FileTextReader;
  */
 <span class="fc" id="L51">public class ResponseBuilder implements IResponseBuilder, BeanFactoryAware, ServletContextAware {</span>
    
-<span class="fc" id="L53">	private static final Logger _logger = LoggerFactory.getLogger(ApiRestStatusServer.class);</span>
+<span class="fc" id="L53">	private static final EntLogger _logger = EntLogFactory.getSanitizedLogger(ApiRestStatusServer.class);</span>
 	
 	@Override
     @Deprecated
-    public Object createResponse(String resourceName, Properties parameters) throws ApsSystemException {
+    public Object createResponse(String resourceName, Properties parameters) throws EntException {
 <span class="nc" id="L58">        Object apiResponse = null;</span>
         try {
 <span class="nc" id="L60">            ApiMethod method = this.extractApiMethod(ApiMethod.HttpMethod.GET, null, resourceName);</span>
@@ -70,12 +70,12 @@ import com.agiletec.aps.util.FileTextReader;
     }
     
 	@Override
-    public Object createResponse(ApiMethod method, Properties parameters) throws ApsSystemException {
+    public Object createResponse(ApiMethod method, Properties parameters) throws EntException {
 <span class="fc" id="L74">        return createResponse(method, null, parameters);</span>
     }
     
 	@Override
-    public Object createResponse(ApiMethod method, Object bodyObject, Properties parameters) throws ApsSystemException {
+    public Object createResponse(ApiMethod method, Object bodyObject, Properties parameters) throws EntException {
 <span class="fc" id="L79">        AbstractApiResponse response = null;</span>
         try {
 <span class="fc" id="L81">            this.checkParameter(method, parameters);</span>
@@ -205,15 +205,15 @@ import com.agiletec.aps.util.FileTextReader;
 <span class="nc" id="L205">            throw t;</span>
 <span class="nc" id="L206">        } catch (Throwable t) {</span>
 <span class="nc" id="L207">        	_logger.error(&quot;Error checking api parameters&quot;, t);</span>
-<span class="nc" id="L208">            throw new ApsSystemException(&quot;Internal Error&quot;, t);</span>
+<span class="nc" id="L208">            throw new EntException(&quot;Internal Error&quot;, t);</span>
 <span class="fc" id="L209">        }</span>
 <span class="fc" id="L210">    }</span>
 
     private AbstractApiResponse buildApiResponseObject(ApiMethod apiMethod) throws ApiException {
 <span class="fc" id="L213">        AbstractApiResponse apiResponse = null;</span>
         try {
-<span class="fc" id="L215">            Class responseClass = Class.forName(apiMethod.getResponseClassName());</span>
-<span class="fc" id="L216">            apiResponse = (AbstractApiResponse) responseClass.newInstance();</span>
+<span class="fc" id="L215">            Class&lt;?&gt; responseClass = Class.forName(apiMethod.getResponseClassName());</span>
+<span class="fc" id="L216">            apiResponse = (AbstractApiResponse) responseClass.getDeclaredConstructor().newInstance();</span>
 <span class="nc" id="L217">        } catch (Exception e) {</span>
 <span class="nc" id="L218">        	_logger.error(&quot;Error creating instance of response '{}'&quot;, apiMethod.getResponseClassName(), e);</span>
 <span class="fc" id="L219">        }</span>
@@ -222,7 +222,7 @@ import com.agiletec.aps.util.FileTextReader;
     
     @Override
     @Deprecated
-	public Object invoke(String resourceName, Properties parameters) throws ApiException, ApsSystemException {
+	public Object invoke(String resourceName, Properties parameters) throws ApiException, EntException {
 <span class="nc" id="L226">        Object result = null;</span>
         try {
 <span class="nc" id="L228">            ApiMethod api = this.extractApiMethod(ApiMethod.HttpMethod.GET, null, resourceName);</span>
@@ -234,7 +234,7 @@ import com.agiletec.aps.util.FileTextReader;
 <span class="nc" id="L234">            throw ae;</span>
 <span class="nc" id="L235">        } catch (Throwable t) {</span>
 <span class="nc" id="L236">        	_logger.error(&quot;Error invoking method GET for resource '{}'&quot;, resourceName, t);</span>
-<span class="nc" id="L237">            throw new ApsSystemException(&quot;Error invoking method GET for resource '&quot; + resourceName + &quot;'&quot;, t);</span>
+<span class="nc" id="L237">            throw new EntException(&quot;Error invoking method GET for resource '&quot; + resourceName + &quot;'&quot;, t);</span>
 <span class="nc" id="L238">        }</span>
 <span class="nc" id="L239">        return result;</span>
     }
@@ -254,164 +254,168 @@ import com.agiletec.aps.util.FileTextReader;
 <span class="nc" id="L254">				throw new ApiException(error);</span>
             }
 <span class="nc" id="L256">        } catch (ApiException ae) {</span>
-<span class="nc" id="L257">        	_logger.error(&quot;Error extracting api method {}&quot;, this.buildApiSignature(httpMethod, namespace, resourceName), ae);</span>
-<span class="nc" id="L258">            throw ae;</span>
-<span class="nc" id="L259">        } catch (Throwable t) {</span>
-<span class="nc" id="L260">        	_logger.error(&quot;Error extracting api method {}&quot;, this.buildApiSignature(httpMethod, namespace, resourceName), t);</span>
-<span class="nc" id="L261">            throw new ApiException(IApiErrorCodes.SERVER_ERROR, signature + &quot; is not supported&quot;, Response.Status.INTERNAL_SERVER_ERROR);</span>
-<span class="nc" id="L262">        }</span>
-<span class="nc" id="L263">        return api;</span>
+<span class="nc" id="L257">        	_logger.error(&quot;Error extracting api method {}&quot;,</span>
+<span class="nc" id="L258">                    this.buildApiSignature(httpMethod, namespace, resourceName), ae);</span>
+<span class="nc" id="L259">            throw ae;</span>
+<span class="nc" id="L260">        } catch (Throwable t) {</span>
+<span class="nc" id="L261">            _logger.error(&quot;Error extracting api method {}&quot;,</span>
+<span class="nc" id="L262">                    this.buildApiSignature(httpMethod, namespace, resourceName), t);</span>
+<span class="nc" id="L263">            throw new ApiException(IApiErrorCodes.SERVER_ERROR, signature + &quot; is not supported&quot;,</span>
+                    Response.Status.INTERNAL_SERVER_ERROR);
+<span class="nc" id="L265">        }</span>
+<span class="nc" id="L266">        return api;</span>
     }
     
     private String buildApiSignature(ApiMethod apiMethod) {
-<span class="nc" id="L267">        return this.buildApiSignature(apiMethod.getHttpMethod(), apiMethod.getNamespace(), apiMethod.getResourceName());</span>
+<span class="nc" id="L270">        return this.buildApiSignature(apiMethod.getHttpMethod(), apiMethod.getNamespace(), apiMethod.getResourceName());</span>
     }
     
     private String buildApiSignature(ApiMethod.HttpMethod httpMethod, String namespace, String resourceName) {
-<span class="nc" id="L271">        StringBuilder buffer = new StringBuilder();</span>
-<span class="nc" id="L272">        buffer.append(&quot;Method '&quot;).append(httpMethod.toString()).append(&quot;' Resource '&quot;).append(resourceName).append(&quot;'&quot;);</span>
-<span class="nc bnc" id="L273" title="All 2 branches missed.">		if (null != namespace) {</span>
-<span class="nc" id="L274">			buffer.append(&quot; Namespace '&quot;).append(namespace).append(&quot;'&quot;);</span>
+<span class="nc" id="L274">        StringBuilder buffer = new StringBuilder();</span>
+<span class="nc" id="L275">        buffer.append(&quot;Method '&quot;).append(httpMethod.toString()).append(&quot;' Resource '&quot;).append(resourceName).append(&quot;'&quot;);</span>
+<span class="nc bnc" id="L276" title="All 2 branches missed.">		if (null != namespace) {</span>
+<span class="nc" id="L277">			buffer.append(&quot; Namespace '&quot;).append(namespace).append(&quot;'&quot;);</span>
 		}
-<span class="nc" id="L276">        return buffer.toString();</span>
+<span class="nc" id="L279">        return buffer.toString();</span>
     }
-    
-    protected Object extractBean(ApiMethod api) throws ApsSystemException, ApiException {
-<span class="fc" id="L280">        Object bean = this.getBeanFactory().getBean(api.getSpringBean());</span>
-<span class="pc bpc" id="L281" title="1 of 2 branches missed.">        if (null == bean) {</span>
-<span class="nc" id="L282">            _logger.error(&quot;Null bean '{}' for api {}&quot;, api.getSpringBean(), this.buildApiSignature(api));</span>
-<span class="nc" id="L283">            throw new ApiException(IApiErrorCodes.SERVER_ERROR, this.buildApiSignature(api) + &quot; is not supported&quot;, Response.Status.INTERNAL_SERVER_ERROR);</span>
+
+    protected Object extractBean(ApiMethod api) throws ApiException {
+<span class="fc" id="L283">        Object bean = this.getBeanFactory().getBean(api.getSpringBean());</span>
+<span class="pc bpc" id="L284" title="1 of 2 branches missed.">        if (null == bean) {</span>
+<span class="nc" id="L285">            _logger.error(&quot;Null bean '{}' for api {}&quot;, api.getSpringBean(), this.buildApiSignature(api));</span>
+<span class="nc" id="L286">            throw new ApiException(IApiErrorCodes.SERVER_ERROR, this.buildApiSignature(api) + &quot; is not supported&quot;,</span>
+                    Response.Status.INTERNAL_SERVER_ERROR);
         }
-<span class="fc" id="L285">        return bean;</span>
+<span class="fc" id="L289">        return bean;</span>
     }
     
     @Deprecated
     protected Object invokeMethod(ApiMethod api, Object bean,
             String methodSuffix, Properties parameters, boolean throwException) throws ApiException, Throwable {
-<span class="nc" id="L291">        return this.invokeGetMethod(api, bean, methodSuffix, parameters, throwException);</span>
+<span class="nc" id="L295">        return this.invokeGetMethod(api, bean, methodSuffix, parameters, throwException);</span>
     }
     
     protected Object invokeGetMethod(ApiMethod apiMethod, Object bean,
             String methodSuffix, Properties parameters, boolean throwException) throws ApiException, Throwable {
-<span class="fc" id="L296">        String methodName = null;</span>
-<span class="fc" id="L297">        Object result = null;</span>
+<span class="fc" id="L300">        String methodName = null;</span>
+<span class="fc" id="L301">        Object result = null;</span>
         try {
-<span class="fc" id="L299">            Class[] parameterTypes = new Class[]{Properties.class};</span>
-<span class="fc" id="L300">            Class beanClass = bean.getClass();</span>
-<span class="fc bfc" id="L301" title="All 2 branches covered.">            methodName = (null != methodSuffix) ? apiMethod.getSpringBeanMethod() + methodSuffix.trim() : apiMethod.getSpringBeanMethod();</span>
-<span class="fc" id="L302">            Method method = beanClass.getDeclaredMethod(methodName, parameterTypes);</span>
-<span class="fc" id="L303">            result = method.invoke(bean, parameters);</span>
-<span class="fc" id="L304">        } catch (NoSuchMethodException e) {</span>
-<span class="pc bpc" id="L305" title="1 of 2 branches missed.">            if (throwException) {</span>
-<span class="nc" id="L306">            	_logger.error(&quot;No such method '{}' of class '{}'&quot;, methodName, bean.getClass(), e);</span>
-<span class="nc" id="L307">                throw new ApiException(IApiErrorCodes.API_METHOD_ERROR, &quot;Method not supported - &quot; + this.buildApiSignature(apiMethod), Response.Status.INTERNAL_SERVER_ERROR);</span>
+<span class="fc" id="L303">            Class[] parameterTypes = new Class[]{Properties.class};</span>
+<span class="fc" id="L304">            Class beanClass = bean.getClass();</span>
+<span class="fc bfc" id="L305" title="All 2 branches covered.">            methodName = (null != methodSuffix) ? apiMethod.getSpringBeanMethod() + methodSuffix.trim() : apiMethod.getSpringBeanMethod();</span>
+<span class="fc" id="L306">            Method method = beanClass.getDeclaredMethod(methodName, parameterTypes);</span>
+<span class="fc" id="L307">            result = method.invoke(bean, parameters);</span>
+<span class="fc" id="L308">        } catch (NoSuchMethodException e) {</span>
+<span class="pc bpc" id="L309" title="1 of 2 branches missed.">            if (throwException) {</span>
+<span class="nc" id="L310">            	_logger.error(&quot;No such method '{}' of class '{}'&quot;, methodName, bean.getClass(), e);</span>
+<span class="nc" id="L311">                throw new ApiException(IApiErrorCodes.API_METHOD_ERROR, &quot;Method not supported - &quot; + this.buildApiSignature(apiMethod), Response.Status.INTERNAL_SERVER_ERROR);</span>
             }
-<span class="nc" id="L309">        } catch (InvocationTargetException e) {</span>
-<span class="nc bnc" id="L310" title="All 2 branches missed.">            if (e.getTargetException() instanceof ApiException) {</span>
-<span class="nc" id="L311">                throw (ApiException) e.getTargetException();</span>
-<span class="nc bnc" id="L312" title="All 2 branches missed.">            } else if (throwException) {</span>
-<span class="nc" id="L313">            	_logger.error(&quot;Error invoking method '{}' of class '{}'&quot;, methodName, bean.getClass());</span>
-<span class="nc" id="L314">                throw new ApiException(IApiErrorCodes.API_METHOD_ERROR, &quot;Error invoking Method - &quot; + this.buildApiSignature(apiMethod), Response.Status.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L313">        } catch (InvocationTargetException e) {</span>
+<span class="nc bnc" id="L314" title="All 2 branches missed.">            if (e.getTargetException() instanceof ApiException) {</span>
+<span class="nc" id="L315">                throw (ApiException) e.getTargetException();</span>
+<span class="nc bnc" id="L316" title="All 2 branches missed.">            } else if (throwException) {</span>
+<span class="nc" id="L317">            	_logger.error(&quot;Error invoking method '{}' of class '{}'&quot;, methodName, bean.getClass());</span>
+<span class="nc" id="L318">                throw new ApiException(IApiErrorCodes.API_METHOD_ERROR, &quot;Error invoking Method - &quot; + this.buildApiSignature(apiMethod), Response.Status.INTERNAL_SERVER_ERROR);</span>
             }
-<span class="nc" id="L316">        } catch (Throwable t) {</span>
-<span class="nc bnc" id="L317" title="All 2 branches missed.">            if (throwException) {</span>
-<span class="nc" id="L318">            	_logger.error(&quot;Error invoking method - {} {} of class '{}'&quot;, this.buildApiSignature(apiMethod) , methodName, bean.getClass(), t);</span>
-<span class="nc" id="L319">                throw t;</span>
+<span class="nc" id="L320">        } catch (Throwable t) {</span>
+<span class="nc bnc" id="L321" title="All 2 branches missed.">            if (throwException) {</span>
+<span class="nc" id="L322">            	_logger.error(&quot;Error invoking method - {} {} of class '{}'&quot;, this.buildApiSignature(apiMethod) , methodName, bean.getClass(), t);</span>
+<span class="nc" id="L323">                throw t;</span>
             }
-<span class="pc" id="L321">        }</span>
-<span class="fc" id="L322">        return result;</span>
+<span class="pc" id="L325">        }</span>
+<span class="fc" id="L326">        return result;</span>
     }
     
     protected Object invokePutPostDeleteMethod(ApiMethod apiMethod, Object bean,
             Properties parameters, Object bodyObject) throws ApiException, Throwable {
-<span class="fc" id="L327">        Object result = null;</span>
+<span class="fc" id="L331">        Object result = null;</span>
         try {
-<span class="pc bpc" id="L329" title="1 of 2 branches missed.">            if (apiMethod.getHttpMethod().equals(ApiMethod.HttpMethod.DELETE)) {</span>
-<span class="nc" id="L330">                result = this.invokeDeleteMethod(apiMethod, bean, parameters);</span>
+<span class="pc bpc" id="L333" title="1 of 2 branches missed.">            if (apiMethod.getHttpMethod().equals(ApiMethod.HttpMethod.DELETE)) {</span>
+<span class="nc" id="L334">                result = this.invokeDeleteMethod(apiMethod, bean, parameters);</span>
             } else {
-<span class="fc" id="L332">                result = this.invokePutPostMethod(apiMethod, bean, parameters, bodyObject);</span>
+<span class="fc" id="L336">                result = this.invokePutPostMethod(apiMethod, bean, parameters, bodyObject);</span>
             }
-<span class="fc bfc" id="L334" title="All 2 branches covered.">            if (null != result) return result;</span>
-<span class="fc" id="L335">            StringApiResponse response = new StringApiResponse();</span>
-<span class="fc" id="L336">            response.setResult(SUCCESS, null);</span>
-<span class="fc" id="L337">            result = response;</span>
-<span class="nc" id="L338">        } catch (NoSuchMethodException e) {</span>
-<span class="nc" id="L339">        	_logger.error(&quot;No such method '{}' of class '{}'&quot;,apiMethod.getSpringBeanMethod(), bean.getClass(), e);</span>
-<span class="nc" id="L340">            throw new ApiException(IApiErrorCodes.API_METHOD_ERROR, &quot;Method not supported - &quot; + this.buildApiSignature(apiMethod), Response.Status.INTERNAL_SERVER_ERROR);</span>
-<span class="nc" id="L341">        } catch (InvocationTargetException e) {</span>
-<span class="nc bnc" id="L342" title="All 2 branches missed.">            if (e.getTargetException() instanceof ApiException) {</span>
-<span class="nc" id="L343">                throw (ApiException) e.getTargetException();</span>
+<span class="fc bfc" id="L338" title="All 2 branches covered.">            if (null != result) return result;</span>
+<span class="fc" id="L339">            StringApiResponse response = new StringApiResponse();</span>
+<span class="fc" id="L340">            response.setResult(SUCCESS, null);</span>
+<span class="fc" id="L341">            result = response;</span>
+<span class="nc" id="L342">        } catch (NoSuchMethodException e) {</span>
+<span class="nc" id="L343">        	_logger.error(&quot;No such method '{}' of class '{}'&quot;,apiMethod.getSpringBeanMethod(), bean.getClass(), e);</span>
+<span class="nc" id="L344">            throw new ApiException(IApiErrorCodes.API_METHOD_ERROR, &quot;Method not supported - &quot; + this.buildApiSignature(apiMethod), Response.Status.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L345">        } catch (InvocationTargetException e) {</span>
+<span class="nc bnc" id="L346" title="All 2 branches missed.">            if (e.getTargetException() instanceof ApiException) {</span>
+<span class="nc" id="L347">                throw (ApiException) e.getTargetException();</span>
             } else {
-<span class="nc" id="L345">            	_logger.error(&quot;Error invoking method '{}' of class '{}'&quot;,apiMethod.getSpringBeanMethod(), bean.getClass());</span>
-<span class="nc" id="L346">                throw new ApiException(IApiErrorCodes.API_METHOD_ERROR, &quot;Error invoking Method - &quot; + this.buildApiSignature(apiMethod), Response.Status.INTERNAL_SERVER_ERROR);</span>
+<span class="nc" id="L349">            	_logger.error(&quot;Error invoking method '{}' of class '{}'&quot;,apiMethod.getSpringBeanMethod(), bean.getClass());</span>
+<span class="nc" id="L350">                throw new ApiException(IApiErrorCodes.API_METHOD_ERROR, &quot;Error invoking Method - &quot; + this.buildApiSignature(apiMethod), Response.Status.INTERNAL_SERVER_ERROR);</span>
             }
-<span class="nc" id="L348">        } catch (Throwable t) {</span>
-<span class="nc" id="L349">        	_logger.error(&quot;Error invoking method '{}' of class '{}'&quot;,apiMethod.getSpringBeanMethod(), bean.getClass(), t);</span>
-<span class="nc" id="L350">            throw t;</span>
-<span class="fc" id="L351">        }</span>
-<span class="fc" id="L352">        return result;</span>
+<span class="nc" id="L352">        } catch (Throwable t) {</span>
+<span class="nc" id="L353">        	_logger.error(&quot;Error invoking method '{}' of class '{}'&quot;,apiMethod.getSpringBeanMethod(), bean.getClass(), t);</span>
+<span class="nc" id="L354">            throw t;</span>
+<span class="fc" id="L355">        }</span>
+<span class="fc" id="L356">        return result;</span>
     }
     
     private Object invokePutPostMethod(ApiMethod api, Object bean, 
             Properties parameters, Object bodyObject) throws NoSuchMethodException, InvocationTargetException, Throwable {
-<span class="fc" id="L357">        Object result = null;</span>
-<span class="fc" id="L358">        Class beanClass = bean.getClass();</span>
-<span class="fc" id="L359">        String methodName = api.getSpringBeanMethod();</span>
+<span class="fc" id="L361">        Object result = null;</span>
+<span class="fc" id="L362">        Class beanClass = bean.getClass();</span>
+<span class="fc" id="L363">        String methodName = api.getSpringBeanMethod();</span>
         try {
-<span class="fc" id="L361">            Class[] parameterTypes = new Class[]{bodyObject.getClass(), Properties.class};</span>
-<span class="fc" id="L362">            Method method = beanClass.getDeclaredMethod(methodName, parameterTypes);</span>
-<span class="fc" id="L363">            result = method.invoke(bean, bodyObject, parameters);</span>
-<span class="fc" id="L364">        } catch (NoSuchMethodException e) {</span>
+<span class="fc" id="L365">            Class[] parameterTypes = new Class[]{bodyObject.getClass(), Properties.class};</span>
+<span class="fc" id="L366">            Method method = beanClass.getDeclaredMethod(methodName, parameterTypes);</span>
+<span class="fc" id="L367">            result = method.invoke(bean, bodyObject, parameters);</span>
+<span class="fc" id="L368">        } catch (NoSuchMethodException e) {</span>
             //the first exception of type &quot;NoSuchMethodException&quot; will not catched... the second yes
-<span class="fc" id="L366">            Class[] parameterTypes = new Class[]{bodyObject.getClass()};</span>
-<span class="fc" id="L367">            Method method = beanClass.getDeclaredMethod(methodName, parameterTypes);</span>
-<span class="fc" id="L368">            result = method.invoke(bean, bodyObject);</span>
-<span class="nc" id="L369">        } catch (InvocationTargetException e) {</span>
-<span class="nc" id="L370">            throw e;</span>
-<span class="nc" id="L371">        } catch (Throwable t) {</span>
-<span class="nc" id="L372">            throw t;</span>
-<span class="fc" id="L373">        }</span>
-<span class="fc" id="L374">        return result;</span>
+<span class="fc" id="L370">            Class[] parameterTypes = new Class[]{bodyObject.getClass()};</span>
+<span class="fc" id="L371">            Method method = beanClass.getDeclaredMethod(methodName, parameterTypes);</span>
+<span class="fc" id="L372">            result = method.invoke(bean, bodyObject);</span>
+<span class="nc" id="L373">        } catch (InvocationTargetException e) {</span>
+<span class="nc" id="L374">            throw e;</span>
+<span class="nc" id="L375">        } catch (Throwable t) {</span>
+<span class="nc" id="L376">            throw t;</span>
+<span class="fc" id="L377">        }</span>
+<span class="fc" id="L378">        return result;</span>
     }
     
     private Object invokeDeleteMethod(ApiMethod api, Object bean, 
             Properties parameters) throws NoSuchMethodException, InvocationTargetException, Throwable {
-<span class="nc" id="L379">        Class[] parameterTypes = new Class[]{Properties.class};</span>
-<span class="nc" id="L380">        Class beanClass = bean.getClass();</span>
-<span class="nc" id="L381">        String methodName = api.getSpringBeanMethod();</span>
-<span class="nc" id="L382">        Method method = beanClass.getDeclaredMethod(methodName, parameterTypes);</span>
-<span class="nc" id="L383">        return method.invoke(bean, parameters);</span>
+<span class="nc" id="L383">        Class[] parameterTypes = new Class[]{Properties.class};</span>
+<span class="nc" id="L384">        Class beanClass = bean.getClass();</span>
+<span class="nc" id="L385">        String methodName = api.getSpringBeanMethod();</span>
+<span class="nc" id="L386">        Method method = beanClass.getDeclaredMethod(methodName, parameterTypes);</span>
+<span class="nc" id="L387">        return method.invoke(bean, parameters);</span>
     }
     
     protected IApiCatalogManager getApiCatalogManager() {
-<span class="nc" id="L387">        return _apiCatalogManager;</span>
+<span class="nc" id="L391">        return _apiCatalogManager;</span>
     }
     public void setApiCatalogManager(IApiCatalogManager apiCatalogManager) {
-<span class="fc" id="L390">        this._apiCatalogManager = apiCatalogManager;</span>
-<span class="fc" id="L391">    }</span>
+<span class="fc" id="L394">        this._apiCatalogManager = apiCatalogManager;</span>
+<span class="fc" id="L395">    }</span>
 
     protected IVelocityRenderer getVelocityRenderer() {
-<span class="nc" id="L394">        return _velocityRenderer;</span>
+<span class="nc" id="L398">        return _velocityRenderer;</span>
     }
     public void setVelocityRenderer(IVelocityRenderer velocityRenderer) {
-<span class="fc" id="L397">        this._velocityRenderer = velocityRenderer;</span>
-<span class="fc" id="L398">    }</span>
+<span class="fc" id="L401">        this._velocityRenderer = velocityRenderer;</span>
+<span class="fc" id="L402">    }</span>
 
     protected BeanFactory getBeanFactory() {
-<span class="fc" id="L401">        return this._beanFactory;</span>
+<span class="fc" id="L405">        return this._beanFactory;</span>
     }
 	@Override
     public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
-<span class="fc" id="L405">        this._beanFactory = beanFactory;</span>
-<span class="fc" id="L406">    }</span>
+<span class="fc" id="L409">        this._beanFactory = beanFactory;</span>
+<span class="fc" id="L410">    }</span>
 
     protected ServletContext getServletContext() {
-<span class="fc" id="L409">        return this._servletContext;</span>
+<span class="fc" id="L413">        return this._servletContext;</span>
     }
 	@Override
     public void setServletContext(ServletContext servletContext) {
-<span class="fc" id="L413">        this._servletContext = servletContext;</span>
-<span class="fc" id="L414">    }</span>
+<span class="fc" id="L417">        this._servletContext = servletContext;</span>
+<span class="fc" id="L418">    }</span>
     
     private IApiCatalogManager _apiCatalogManager;
     private IVelocityRenderer _velocityRenderer;
