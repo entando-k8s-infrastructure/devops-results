@@ -40,17 +40,17 @@ import org.entando.entando.ent.util.EntLogging.EntLogger;
     private ILangManager langManager;
 
 <span class="fc" id="L42">    private final String ALL_WIDGET_TYPES</span>
-            = &quot;SELECT code, titles, parameters, plugincode, parenttypecode, defaultconfig, locked, maingroup, configui, bundleid, overridable FROM widgetcatalog&quot;;
+            = &quot;SELECT code, titles, parameters, plugincode, parenttypecode, defaultconfig, locked, maingroup, configui, bundleid, readonlydefaultconfig FROM widgetcatalog&quot;;
 
 <span class="fc" id="L45">    private final String ADD_WIDGET_TYPE</span>
-            = &quot;INSERT INTO widgetcatalog (code, titles, parameters, plugincode, parenttypecode, defaultconfig, locked, maingroup, configui, bundleid, overridable) &quot;
+            = &quot;INSERT INTO widgetcatalog (code, titles, parameters, plugincode, parenttypecode, defaultconfig, locked, maingroup, configui, bundleid, readonlydefaultconfig) &quot;
             + &quot;VALUES ( ? , ? , ? , ? , ? , ? , ? , ?, ?, ?, ?)&quot;;
 
 <span class="fc" id="L49">    private final String DELETE_WIDGET_TYPE</span>
             = &quot;DELETE FROM widgetcatalog WHERE code = ? AND locked = ? &quot;;
 
 <span class="fc" id="L52">    private final String UPDATE_WIDGET_TYPE</span>
-            = &quot;UPDATE widgetcatalog SET titles = ? , defaultconfig = ? , maingroup = ?, configui = ?, bundleid = ?, overridable = ? WHERE code = ? &quot;;
+            = &quot;UPDATE widgetcatalog SET titles = ? , defaultconfig = ? , maingroup = ?, configui = ?, bundleid = ?, readonlydefaultconfig = ? WHERE code = ? &quot;;
 
     @Override
     public Map&lt;String, WidgetType&gt; loadWidgetTypes() {
@@ -118,8 +118,8 @@ import org.entando.entando.ent.util.EntLogging.EntLogger;
 <span class="pc bpc" id="L118" title="1 of 2 branches missed.">            if (StringUtils.isNotEmpty(bundleId)) {</span>
 <span class="nc" id="L119">                widgetType.setBundleId(bundleId);</span>
             }
-<span class="fc" id="L121">            int isOverridable = res.getInt(11);</span>
-<span class="fc bfc" id="L122" title="All 2 branches covered.">            widgetType.setOverridable(isOverridable == 1);</span>
+<span class="fc" id="L121">            int isReadonlyDefaultConfig = res.getInt(11);</span>
+<span class="fc bfc" id="L122" title="All 2 branches covered.">            widgetType.setReadonlyDefaultConfig(isReadonlyDefaultConfig == 1);</span>
 
 <span class="nc" id="L124">        } catch (Throwable t) {</span>
 <span class="nc" id="L125">            logger.error(&quot;Error parsing the Widget Type '{}'&quot;, code, t);</span>
@@ -136,7 +136,7 @@ import org.entando.entando.ent.util.EntLogging.EntLogger;
 <span class="fc" id="L136">            conn = this.getConnection();</span>
 <span class="fc" id="L137">            conn.setAutoCommit(false);</span>
 <span class="fc" id="L138">            stat = conn.prepareStatement(ADD_WIDGET_TYPE);</span>
-            //(code, titles, parameters, plugincode, parenttypecode, defaultconfig, locked, overridable)
+            //(code, titles, parameters, plugincode, parenttypecode, defaultconfig, locked, readonlydefaulconfig)
 <span class="fc" id="L140">            stat.setString(1, widgetType.getCode());</span>
 <span class="fc" id="L141">            stat.setString(2, widgetType.getTitles().toXml());</span>
 <span class="fc bfc" id="L142" title="All 2 branches covered.">            if (null != widgetType.getTypeParameters()) {</span>
@@ -160,7 +160,7 @@ import org.entando.entando.ent.util.EntLogging.EntLogger;
 <span class="fc" id="L160">            stat.setString(8, widgetType.getMainGroup());</span>
 <span class="fc" id="L161">            stat.setString(9, widgetType.getConfigUi());</span>
 <span class="fc" id="L162">            stat.setString(10, widgetType.getBundleId());</span>
-<span class="fc bfc" id="L163" title="All 2 branches covered.">            if (widgetType.isOverridable()) {</span>
+<span class="fc bfc" id="L163" title="All 2 branches covered.">            if (widgetType.isReadonlyDefaultConfig()) {</span>
 <span class="fc" id="L164">                stat.setInt(11, 1);</span>
             } else {
 <span class="fc" id="L166">                stat.setInt(11, 0);</span>
@@ -199,7 +199,7 @@ import org.entando.entando.ent.util.EntLogging.EntLogger;
 
     @Override
     public void updateWidgetType(String widgetTypeCode, ApsProperties titles, ApsProperties defaultConfig, String mainGroup,
-                                 String configUi, String bundleId, Boolean overridable) {
+                                 String configUi, String bundleId, Boolean readonlyDefaultConfig) {
 <span class="fc" id="L203">        Connection conn = null;</span>
 <span class="fc" id="L204">        PreparedStatement stat = null;</span>
         try {
@@ -216,7 +216,7 @@ import org.entando.entando.ent.util.EntLogging.EntLogger;
 <span class="fc" id="L216">            stat.setString(4, configUi);</span>
 <span class="fc" id="L217">            stat.setString(5, bundleId);</span>
 
-<span class="fc bfc" id="L219" title="All 2 branches covered.">            if (Boolean.TRUE.equals(overridable)) {</span>
+<span class="fc bfc" id="L219" title="All 2 branches covered.">            if (Boolean.TRUE.equals(readonlyDefaultConfig)) {</span>
 <span class="fc" id="L220">                stat.setInt(6, 1);</span>
             } else {
 <span class="fc" id="L222">                stat.setInt(6, 0);</span>
