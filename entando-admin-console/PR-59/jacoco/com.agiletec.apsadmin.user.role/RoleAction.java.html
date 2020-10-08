@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>RoleAction.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Administration Console</a> &gt; <a href="index.source.html" class="el_package">com.agiletec.apsadmin.user.role</a> &gt; <span class="el_source">RoleAction.java</span></div><h1>RoleAction.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package com.agiletec.apsadmin.user.role;
+
+
+import com.agiletec.aps.system.services.role.*;
+import com.agiletec.apsadmin.system.ApsAdminSystemConstants;
+import com.agiletec.apsadmin.user.AbstractAuthorityAction;
+import org.entando.entando.ent.exception.EntException;
+import org.slf4j.*;
+
+import java.util.*;
+
+/**
+ * Classe action della gestione Ruoli.
+ */
+<span class="fc" id="L28">public class RoleAction extends AbstractAuthorityAction {</span>
+
+<span class="fc" id="L30">	private static final Logger logger = LoggerFactory.getLogger(RoleAction.class);</span>
+	private static final String ERROR_ROLE_NOT_EXIST = &quot;error.role.notExist&quot;;
+	private static final String ROLE_LIST = &quot;roleList&quot;;
+
+
+	private int strutsAction;
+	private String name;
+	private String description;
+	private Set&lt;String&gt; permissionNames;
+
+	private List&lt;String&gt; references;
+
+	private IRoleManager roleManager;
+
+
+	@Override
+	public void validate() {
+<span class="fc" id="L47">		super.validate();</span>
+<span class="fc bfc" id="L48" title="All 2 branches covered.">		if (this.getStrutsAction() == ApsAdminSystemConstants.ADD) {</span>
+<span class="fc" id="L49">			this.checkDuplicatedRole();</span>
+<span class="pc bpc" id="L50" title="1 of 2 branches missed.">		} else if (!this.existsRole()) {</span>
+<span class="nc" id="L51">			addActionError(getText(ERROR_ROLE_NOT_EXIST));</span>
+		}
+<span class="fc" id="L53">	}</span>
+	
+	/**
+	 * Esegue in fase di aggiunta la verifica sulla duplicazione del ruolo.&lt;br /&gt;
+	 * Nel caso la verifica risulti negativa aggiunge un fieldError.
+	 */
+	protected void checkDuplicatedRole() {
+<span class="fc bfc" id="L60" title="All 2 branches covered.">		if (this.existsRole()) {</span>
+<span class="fc" id="L61">			String[] args = {this.getName()};</span>
+<span class="fc" id="L62">			this.addFieldError(&quot;name&quot;, this.getText(&quot;error.role.duplicated&quot;, args));</span>
+		}
+<span class="fc" id="L64">	}</span>
+	
+	public String newRole() {
+<span class="fc" id="L67">		this.setStrutsAction(ApsAdminSystemConstants.ADD);</span>
+<span class="fc" id="L68">		return SUCCESS;</span>
+	}
+	
+	public String edit() {
+<span class="fc" id="L72">		this.setStrutsAction(ApsAdminSystemConstants.EDIT);</span>
+		try {
+<span class="fc bfc" id="L74" title="All 2 branches covered.">			if (!this.existsRole()) {</span>
+<span class="fc" id="L75">				addActionError(getText(ERROR_ROLE_NOT_EXIST));</span>
+<span class="fc" id="L76">				return ROLE_LIST;</span>
+			}
+<span class="fc" id="L78">			Role role = this.getRoleManager().getRole(this.getName());</span>
+<span class="fc" id="L79">			this.setDescription(role.getDescription());</span>
+<span class="fc" id="L80">			this.setPermissionNames(role.getPermissions());</span>
+<span class="nc" id="L81">		} catch (Throwable t) {</span>
+<span class="nc" id="L82">			logger.error(&quot;error in edit&quot;, t);</span>
+<span class="nc" id="L83">			return FAILURE;</span>
+<span class="fc" id="L84">		}</span>
+<span class="fc" id="L85">		return SUCCESS;</span>
+	}
+	
+	public String save() {
+		try {
+<span class="fc" id="L90">			Role role = this.createRole();</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">			if (this.getStrutsAction() == ApsAdminSystemConstants.ADD) {</span>
+<span class="fc" id="L92">				this.getRoleManager().addRole(role);</span>
+<span class="pc bpc" id="L93" title="1 of 2 branches missed.">			} else if (this.getStrutsAction() == ApsAdminSystemConstants.EDIT) {</span>
+<span class="fc" id="L94">				this.getRoleManager().updateRole(role);</span>
+			}
+<span class="nc" id="L96">		} catch (Throwable t) {</span>
+<span class="nc" id="L97">			logger.error(&quot;error in save&quot;, t);</span>
+<span class="nc" id="L98">			return FAILURE;</span>
+<span class="fc" id="L99">		}</span>
+<span class="fc" id="L100">		return SUCCESS;</span>
+	}
+
+	/**
+	 * Replaced by {@link #showDetail()}
+	 */
+	@Deprecated
+	public String view() {
+<span class="nc" id="L108">		return this.showDetail();</span>
+	}
+	
+	public String showDetail() {
+<span class="nc" id="L112">		this.setStrutsAction(ApsAdminSystemConstants.EDIT);</span>
+		try {
+<span class="nc bnc" id="L114" title="All 2 branches missed.">			if (!this.existsRole()) {</span>
+<span class="nc" id="L115">				addActionError(getText(ERROR_ROLE_NOT_EXIST));</span>
+<span class="nc" id="L116">				return ROLE_LIST;</span>
+			}
+<span class="nc" id="L118">			Role role = this.getRoleManager().getRole(this.getName());</span>
+<span class="nc" id="L119">			this.setDescription(role.getDescription());</span>
+<span class="nc" id="L120">			this.setPermissionNames(role.getPermissions());</span>
+<span class="nc" id="L121">			this.isRoleInUse();</span>
+<span class="nc" id="L122">		} catch (Throwable t) {</span>
+<span class="nc" id="L123">			logger.error(&quot;error in view&quot;, t);</span>
+<span class="nc" id="L124">			return FAILURE;</span>
+<span class="nc" id="L125">		}</span>
+<span class="nc" id="L126">		return SUCCESS;</span>
+	}
+	
+	public String trash() {
+		try {
+<span class="fc" id="L131">			String result = this.checkRoleForDelete();</span>
+<span class="pc bpc" id="L132" title="1 of 2 branches missed.">			if (null != result) return result;</span>
+<span class="nc" id="L133">		} catch (Throwable t) {</span>
+<span class="nc" id="L134">			logger.error(&quot;error in trash&quot;, t);</span>
+<span class="nc" id="L135">			return FAILURE;</span>
+<span class="fc" id="L136">		}</span>
+<span class="fc" id="L137">		return SUCCESS;</span>
+	}
+	
+	public String delete() {
+		try {
+<span class="fc" id="L142">			String result = this.checkRoleForDelete();</span>
+<span class="pc bpc" id="L143" title="1 of 2 branches missed.">			if (null != result) return result;</span>
+<span class="fc" id="L144">			Role role = roleManager.getRole(this.getName());</span>
+<span class="fc" id="L145">			roleManager.removeRole(role);</span>
+<span class="nc" id="L146">		} catch (Throwable t) {</span>
+<span class="nc" id="L147">			logger.error(&quot;error in delete&quot;, t);</span>
+<span class="nc" id="L148">			return FAILURE;</span>
+<span class="fc" id="L149">		}</span>
+<span class="fc" id="L150">		return SUCCESS;</span>
+	}
+	
+	/**
+	 * Verifica l'esistenza del ruolo.
+	 * @return true in caso positivo, false nel caso il ruolo non esista.
+	 */
+	protected boolean existsRole() {
+<span class="pc bpc" id="L158" title="1 of 4 branches missed.">		return (name != null) &amp;&amp; (roleManager.getRole(name) != null);</span>
+	}
+	
+	/**
+	 * Verifica l'utilizzo del ruolo.
+	 * @return true in caso positivo, false nel caso il ruolo non sia utilizzato.
+	 * @throws EntException In caso di errore.
+	 */
+	protected boolean isRoleInUse() throws EntException {
+<span class="fc" id="L167">		Role role = roleManager.getRole(this.getName());</span>
+<span class="fc" id="L168">		List&lt;String&gt; usernames = super.getAuthorizationManager().getUsersByRole(role, false);</span>
+<span class="fc" id="L169">		this.setReferences(usernames);</span>
+<span class="pc bpc" id="L170" title="2 of 4 branches missed.">		return (null != usernames &amp;&amp; !usernames.isEmpty());</span>
+	}
+	
+	/**
+	 * Esegue i controlli necessari per la cancellazione di un ruolo. 
+	 * Imposta gli opportuni messaggi di errore come actionMessages.
+	 * Restituisce l'esito del controllo.
+	 * @return il codice del risultato.
+	 * @throws EntException In caso di errore.
+	 */
+	protected String checkRoleForDelete() throws EntException {
+<span class="pc bpc" id="L181" title="1 of 2 branches missed.">		if (!this.existsRole()) {</span>
+<span class="nc" id="L182">			addActionError(getText(ERROR_ROLE_NOT_EXIST));</span>
+<span class="nc" id="L183">			return ROLE_LIST;</span>
+<span class="pc bpc" id="L184" title="1 of 2 branches missed.">		} else if (this.isRoleInUse()) {</span>
+<span class="nc" id="L185">			this.addActionError(this.getText(&quot;error.role.used&quot;));</span>
+<span class="nc" id="L186">			return &quot;references&quot;;</span>
+		}
+<span class="fc" id="L188">		return null;</span>
+	}
+	
+	/**
+	 * Prepara il ruolo con i dati ricevuti dal form.
+	 * @return Il ruolo popolato con tutti i dati.
+	 */
+	protected Role createRole() {
+<span class="fc" id="L196">		Role role = new Role();</span>
+<span class="fc" id="L197">		role.setName(this.getName());</span>
+<span class="fc" id="L198">		role.setDescription(this.getDescription());</span>
+<span class="fc" id="L199">		Set&lt;String&gt; permissionNames = this.getPermissionNames();</span>
+<span class="pc bpc" id="L200" title="1 of 2 branches missed.">		if (permissionNames != null) {</span>
+<span class="fc" id="L201">			role.getPermissions().addAll(permissionNames);</span>
+		}
+<span class="fc" id="L203">		return role;</span>
+	}
+	
+	public int getStrutsAction() {
+<span class="fc" id="L207">		return strutsAction;</span>
+	}
+	public void setStrutsAction(int strutsAction) {
+<span class="fc" id="L210">		this.strutsAction = strutsAction;</span>
+<span class="fc" id="L211">	}</span>
+	
+	public String getName() {
+<span class="fc" id="L214">		return name;</span>
+	}
+	public void setName(String name) {
+<span class="fc" id="L217">		this.name = name;</span>
+<span class="fc" id="L218">	}</span>
+	
+	public String getDescription() {
+<span class="fc" id="L221">		return description;</span>
+	}
+	public void setDescription(String description) {
+<span class="fc" id="L224">		this.description = description;</span>
+<span class="fc" id="L225">	}</span>
+	
+	public Set&lt;String&gt; getPermissionNames() {
+<span class="fc" id="L228">		return permissionNames;</span>
+	}
+	public void setPermissionNames(Set&lt;String&gt; permissionNames) {
+<span class="fc" id="L231">		this.permissionNames = permissionNames;</span>
+<span class="fc" id="L232">	}</span>
+	
+	public Set&lt;Permission&gt; getRolePermissions() {
+<span class="nc" id="L235">		Set&lt;Permission&gt; rolePermissions = new HashSet&lt;&gt;(permissionNames.size());</span>
+<span class="nc bnc" id="L236" title="All 2 branches missed.">		for (String permissionName : permissionNames) {</span>
+<span class="nc" id="L237">			Permission permission = this.getRoleManager().getPermission(permissionName);</span>
+<span class="nc" id="L238">			rolePermissions.add(permission);</span>
+<span class="nc" id="L239">		}</span>
+<span class="nc" id="L240">		return rolePermissions;</span>
+	}
+	
+	public List&lt;Permission&gt; getSystemPermissions() {
+<span class="fc" id="L244">		return this.getRoleManager().getPermissions();</span>
+	}
+	
+	public List&lt;String&gt; getReferences() {
+<span class="nc" id="L248">		return references;</span>
+	}
+	protected void setReferences(List&lt;String&gt; references) {
+<span class="fc" id="L251">		this.references = references;</span>
+<span class="fc" id="L252">	}</span>
+	
+	protected IRoleManager getRoleManager() {
+<span class="fc" id="L255">		return roleManager;</span>
+	}
+	public void setRoleManager(IRoleManager roleManager) {
+<span class="fc" id="L258">		this.roleManager = roleManager;</span>
+<span class="fc" id="L259">	}</span>
+	
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
