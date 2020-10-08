@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>WidgetDtoBuilder.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.system.services.widgettype.model</a> &gt; <span class="el_source">WidgetDtoBuilder.java</span></div><h1>WidgetDtoBuilder.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2018-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.entando.aps.system.services.widgettype.model;
+
+import com.agiletec.aps.system.services.page.IPage;
+import com.agiletec.aps.system.services.page.IPageManager;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
+import org.apache.commons.lang3.StringUtils;
+import org.entando.entando.aps.system.exception.RestServerError;
+import org.entando.entando.aps.system.init.IComponentManager;
+import org.entando.entando.aps.system.init.model.Component;
+import org.entando.entando.aps.system.services.DtoBuilder;
+import org.entando.entando.aps.system.services.widgettype.WidgetType;
+import org.entando.entando.aps.system.services.widgettype.WidgetTypeParameter;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+
+<span class="fc" id="L35">public class WidgetDtoBuilder extends DtoBuilder&lt;WidgetType, WidgetDto&gt; {</span>
+
+<span class="fc" id="L37">    private final EntLogger logger = EntLogFactory.getSanitizedLogger(this.getClass());</span>
+
+    private IPageManager pageManager;
+
+    private String stockWidgetCodes;
+
+    private IComponentManager componentManager;
+
+<span class="fc" id="L45">    private ObjectMapper objectMapper = new ObjectMapper();</span>
+
+    @Override
+    protected WidgetDto toDto(WidgetType src) {
+<span class="fc" id="L49">        WidgetDto dest = new WidgetDto();</span>
+<span class="fc" id="L50">        dest.setCode(src.getCode());</span>
+<span class="fc" id="L51">        dest.setGroup(src.getMainGroup());</span>
+<span class="fc" id="L52">        dest.setTitles((Hashtable) src.getTitles());</span>
+<span class="fc" id="L53">        dest.setParentType(src.getParentTypeCode());</span>
+<span class="fc" id="L54">        Map&lt;String, IPage&gt; usedMap = new HashMap&lt;&gt;();</span>
+        try {
+<span class="fc" id="L56">            getPageManager().getOnlineWidgetUtilizers(src.getCode()).forEach(p -&gt; usedMap.put(p.getCode(), p));</span>
+<span class="fc" id="L57">            getPageManager().getDraftWidgetUtilizers(src.getCode()).forEach(p -&gt; usedMap.put(p.getCode(), p));</span>
+<span class="nc" id="L58">        } catch (Exception e) {</span>
+<span class="nc" id="L59">            logger.error(&quot;Error extracting utilizers for widget {}&quot;, src.getCode(), e);</span>
+<span class="nc" id="L60">            throw new RestServerError(&quot;Error extracting utilizers for widget &quot; + src.getCode(), e);</span>
+<span class="fc" id="L61">        }</span>
+<span class="fc" id="L62">        dest.setUsed(usedMap.keySet().size());</span>
+<span class="fc" id="L63">        String pluginCode = src.getPluginCode();</span>
+<span class="fc" id="L64">        Component plugin = this.getComponentManager().getInstalledComponent(pluginCode);</span>
+<span class="fc" id="L65">        dest.setPluginCode(pluginCode);</span>
+<span class="fc" id="L66">        dest.setLocked(src.isLocked());</span>
+<span class="pc bpc" id="L67" title="1 of 2 branches missed.">        dest.setPluginDesc(plugin != null ? plugin.getDescription() : null);</span>
+<span class="fc" id="L68">        List&lt;WidgetTypeParameter&gt; params = src.getTypeParameters();</span>
+<span class="fc" id="L69">        Map&lt;String, Object&gt; configUi = parseConfigUi(src);</span>
+<span class="pc bpc" id="L70" title="2 of 8 branches missed.">        dest.setHasConfig((null != params &amp;&amp; params.size() &gt; 0) || (configUi != null &amp;&amp; !configUi.isEmpty()));</span>
+<span class="fc" id="L71">        dest.setConfig(src.getConfig());</span>
+<span class="fc" id="L72">        dest.setConfigUi(configUi);</span>
+<span class="fc" id="L73">        dest.setBundleId(src.getBundleId());</span>
+<span class="fc" id="L74">        dest.setReadonlyDefaultConfig(src.isReadonlyDefaultConfig());</span>
+<span class="pc bpc" id="L75" title="3 of 4 branches missed.">        if (null != pluginCode &amp;&amp; pluginCode.trim().length() &gt; 0) {</span>
+<span class="nc" id="L76">            dest.setTypology(pluginCode);</span>
+<span class="fc bfc" id="L77" title="All 2 branches covered.">        } else if (src.isUserType()) {</span>
+<span class="fc" id="L78">            dest.setTypology(WidgetDto.USER_TYPOLOGY_CODE);</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        } else if (this.getStockWidgetCodes().contains(src.getCode())) {</span>
+<span class="fc" id="L80">            dest.setTypology(WidgetDto.STOCK_TYPOLOGY_CODE);</span>
+        } else {
+<span class="fc" id="L82">            dest.setTypology(WidgetDto.CUSTOM_TYPOLOGY_CODE);</span>
+        }
+<span class="fc" id="L84">        dest.setAction(src.getAction());</span>
+<span class="fc bfc" id="L85" title="All 2 branches covered.">        if (null != src.getTypeParameters()) {</span>
+<span class="fc" id="L86">            src.getTypeParameters().stream().forEach(t -&gt; {</span>
+<span class="fc" id="L87">                dest.addWidgetParameter(t.getName(), t.getDescr());</span>
+<span class="fc" id="L88">            });</span>
+        }
+<span class="fc" id="L90">        return dest;</span>
+    }
+
+    private Map&lt;String, Object&gt; parseConfigUi(WidgetType src) {
+<span class="fc" id="L94">        Map&lt;String, Object&gt; configUi = null;</span>
+        try {
+<span class="fc bfc" id="L96" title="All 2 branches covered.">            if (StringUtils.isNotBlank(src.getConfigUi())) {</span>
+<span class="fc" id="L97">                configUi = objectMapper.readValue(src.getConfigUi(), new TypeReference&lt;Map&lt;String, Object&gt;&gt;() {</span>
+                });
+            }
+<span class="nc" id="L100">        } catch (JsonProcessingException e) {</span>
+<span class="nc" id="L101">            logger.error(&quot;Error parsing configUi json to object for widget {}&quot;, src.getCode(), e);</span>
+<span class="fc" id="L102">        }</span>
+<span class="fc" id="L103">        return configUi;</span>
+    }
+
+    public IPageManager getPageManager() {
+<span class="fc" id="L107">        return pageManager;</span>
+    }
+
+    public void setPageManager(IPageManager pageManager) {
+<span class="fc" id="L111">        this.pageManager = pageManager;</span>
+<span class="fc" id="L112">    }</span>
+
+    protected String getStockWidgetCodes() {
+<span class="fc" id="L115">        return stockWidgetCodes;</span>
+    }
+
+    public void setStockWidgetCodes(String stockWidgetCodes) {
+<span class="fc" id="L119">        this.stockWidgetCodes = stockWidgetCodes;</span>
+<span class="fc" id="L120">    }</span>
+
+    public IComponentManager getComponentManager() {
+<span class="fc" id="L123">        return componentManager;</span>
+    }
+
+    public void setComponentManager(IComponentManager componentManager) {
+<span class="fc" id="L127">        this.componentManager = componentManager;</span>
+<span class="fc" id="L128">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
