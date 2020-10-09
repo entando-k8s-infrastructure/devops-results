@@ -1,0 +1,538 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ApiDataObjectInterface.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando Core: Engine</a> &gt; <a href="index.source.html" class="el_package">org.entando.entando.aps.system.services.dataobject.api</a> &gt; <span class="el_source">ApiDataObjectInterface.java</span></div><h1>ApiDataObjectInterface.java</h1><pre class="source lang-java linenums">/*
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ */
+package org.entando.entando.aps.system.services.dataobject.api;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
+
+import javax.ws.rs.core.Response;
+
+import org.apache.commons.lang3.StringUtils;
+import org.entando.entando.aps.system.services.api.IApiErrorCodes;
+import org.entando.entando.aps.system.services.api.model.ApiError;
+import org.entando.entando.aps.system.services.api.model.ApiException;
+import org.entando.entando.aps.system.services.api.model.StringApiResponse;
+import org.entando.entando.aps.system.services.api.server.IResponseBuilder;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
+
+import com.agiletec.aps.system.SystemConstants;
+import com.agiletec.aps.system.common.entity.model.AttributeFieldError;
+import com.agiletec.aps.system.common.entity.model.EntitySearchFilter;
+import com.agiletec.aps.system.common.entity.model.FieldError;
+import com.agiletec.aps.system.common.entity.model.attribute.AttributeInterface;
+import com.agiletec.aps.system.common.entity.model.attribute.ITextAttribute;
+import org.entando.entando.ent.exception.EntException;
+import com.agiletec.aps.system.services.category.ICategoryManager;
+import com.agiletec.aps.system.services.group.IGroupManager;
+import com.agiletec.aps.system.services.page.IPageManager;
+import com.agiletec.aps.system.services.user.IUserManager;
+import com.agiletec.aps.system.services.user.UserDetails;
+import org.entando.entando.aps.system.services.dataobject.api.model.ApiDataObjectListBean;
+import org.entando.entando.aps.system.services.dataobject.api.model.JAXBDataObject;
+import org.entando.entando.aps.system.services.dataobject.api.model.JAXBDataObjectAttribute;
+import org.entando.entando.aps.system.services.dataobject.helper.IDataAuthorizationHelper;
+import org.entando.entando.aps.system.services.dataobject.model.DataObject;
+import org.entando.entando.aps.system.services.dataobjectdispenser.DataObjectRenderizationInfo;
+import org.entando.entando.aps.system.services.dataobjectmodel.DataObjectModel;
+import org.entando.entando.aps.system.services.dataobject.helper.IDataTypeListHelper;
+import org.entando.entando.aps.system.services.dataobjectdispenser.IDataObjectDispenser;
+
+/**
+ * @author E.Santoboni
+ */
+<span class="fc" id="L56">public class ApiDataObjectInterface extends AbstractApiDataObjectInterface {</span>
+
+<span class="fc" id="L58">    private static final EntLogger _logger = EntLogFactory.getSanitizedLogger(ApiDataObjectInterface.class);</span>
+
+    public List&lt;String&gt; getDataObjects(Properties properties) throws Throwable {
+<span class="nc" id="L61">        return this.extractDataObjects(properties);</span>
+    }
+
+    protected List&lt;String&gt; extractDataObjects(Properties properties) throws Throwable {
+<span class="nc" id="L65">        List&lt;String&gt; contentsId = null;</span>
+        try {
+<span class="nc" id="L67">            ApiDataObjectListBean bean = this.buildSearchBean(properties);</span>
+<span class="nc" id="L68">            UserDetails user = (UserDetails) properties.get(SystemConstants.API_USER_PARAMETER);</span>
+<span class="nc" id="L69">            contentsId = this.getDataObjectListHelper().getDataTypesId(bean, user);</span>
+<span class="nc" id="L70">        } catch (ApiException ae) {</span>
+<span class="nc" id="L71">            throw ae;</span>
+<span class="nc" id="L72">        } catch (Throwable t) {</span>
+<span class="nc" id="L73">            _logger.error(&quot;error in extractDataObjects&quot;, t);</span>
+<span class="nc" id="L74">            throw new EntException(&quot;Error into API method&quot;, t);</span>
+<span class="nc" id="L75">        }</span>
+<span class="nc" id="L76">        return contentsId;</span>
+    }
+
+    protected ApiDataObjectListBean buildSearchBean(Properties properties) throws ApiException, Throwable {
+<span class="nc" id="L80">        ApiDataObjectListBean bean = null;</span>
+        try {
+<span class="nc" id="L82">            String dataType = properties.getProperty(&quot;dataType&quot;);</span>
+<span class="nc bnc" id="L83" title="All 2 branches missed.">            if (null == this.getDataObjectManager().getSmallDataTypesMap().get(dataType)) {</span>
+<span class="nc" id="L84">                throw new ApiException(IApiErrorCodes.API_PARAMETER_VALIDATION_ERROR, &quot;DataObject Type '&quot; + dataType + &quot;' does not exist&quot;, Response.Status.CONFLICT);</span>
+            }
+<span class="nc" id="L86">            String langCode = properties.getProperty(SystemConstants.API_LANG_CODE_PARAMETER);</span>
+<span class="nc" id="L87">            String filtersParam = properties.getProperty(&quot;filters&quot;);</span>
+<span class="nc" id="L88">            EntitySearchFilter[] filters = this.getDataObjectListHelper().getFilters(dataType, filtersParam, langCode);</span>
+<span class="nc" id="L89">            String[] categoryCodes = null;</span>
+<span class="nc" id="L90">            String categoriesParam = properties.getProperty(&quot;categories&quot;);</span>
+<span class="nc bnc" id="L91" title="All 4 branches missed.">            if (null != categoriesParam &amp;&amp; categoriesParam.trim().length() &gt; 0) {</span>
+<span class="nc" id="L92">                categoryCodes = categoriesParam.split(IDataTypeListHelper.CATEGORIES_SEPARATOR);</span>
+            }
+<span class="nc" id="L94">            bean = new ApiDataObjectListBean(dataType, filters, categoryCodes);</span>
+<span class="nc" id="L95">        } catch (ApiException ae) {</span>
+<span class="nc" id="L96">            throw ae;</span>
+<span class="nc" id="L97">        } catch (Throwable t) {</span>
+<span class="nc" id="L98">            _logger.error(&quot;error in buildSearchBean&quot;, t);</span>
+<span class="nc" id="L99">            throw new EntException(&quot;Error into API method&quot;, t);</span>
+<span class="nc" id="L100">        }</span>
+<span class="nc" id="L101">        return bean;</span>
+    }
+
+    public String getDataObjectsToHtml(Properties properties) throws Throwable {
+<span class="nc" id="L105">        StringBuilder render = new StringBuilder();</span>
+        try {
+<span class="nc" id="L107">            String modelId = properties.getProperty(&quot;modelId&quot;);</span>
+<span class="nc bnc" id="L108" title="All 4 branches missed.">            if (null == modelId || modelId.trim().length() == 0) {</span>
+<span class="nc" id="L109">                return null;</span>
+            }
+<span class="nc" id="L111">            String dataType = properties.getProperty(&quot;dataType&quot;);</span>
+<span class="nc" id="L112">            DataObject prototype = (DataObject) this.getDataObjectManager().getEntityPrototype(dataType);</span>
+<span class="nc" id="L113">            Integer modelIdInteger = this.checkModel(modelId, prototype);</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">            if (null == modelIdInteger) {</span>
+<span class="nc" id="L115">                return null;</span>
+            }
+<span class="nc" id="L117">            List&lt;String&gt; dataObjectsId = this.extractDataObjects(properties);</span>
+<span class="nc" id="L118">            String langCode = properties.getProperty(SystemConstants.API_LANG_CODE_PARAMETER);</span>
+<span class="nc" id="L119">            render.append(this.getItemsStartElement());</span>
+<span class="nc bnc" id="L120" title="All 2 branches missed.">            for (int i = 0; i &lt; dataObjectsId.size(); i++) {</span>
+<span class="nc" id="L121">                render.append(this.getItemStartElement());</span>
+<span class="nc" id="L122">                String renderedData = this.getRenderedDataObject(dataObjectsId.get(i), modelIdInteger, langCode);</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">                if (null != renderedData) {</span>
+<span class="nc" id="L124">                    render.append(renderedData);</span>
+                }
+<span class="nc" id="L126">                render.append(this.getItemEndElement());</span>
+            }
+<span class="nc" id="L128">            render.append(this.getItemsEndElement());</span>
+<span class="nc" id="L129">        } catch (ApiException ae) {</span>
+<span class="nc" id="L130">            throw ae;</span>
+<span class="nc" id="L131">        } catch (Throwable t) {</span>
+<span class="nc" id="L132">            _logger.error(&quot;error in getDataObjectsToHtml&quot;, t);</span>
+<span class="nc" id="L133">            throw new EntException(&quot;Error into API method&quot;, t);</span>
+<span class="nc" id="L134">        }</span>
+<span class="nc" id="L135">        return render.toString();</span>
+    }
+
+    public JAXBDataObject getDataObject(Properties properties) throws ApiException, Throwable {
+<span class="fc" id="L139">        JAXBDataObject jaxbDataObject = null;</span>
+<span class="fc" id="L140">        String id = properties.getProperty(&quot;id&quot;);</span>
+        try {
+<span class="fc" id="L142">            String langCode = properties.getProperty(SystemConstants.API_LANG_CODE_PARAMETER);</span>
+<span class="fc" id="L143">            DataObject mainDataObject = this.getPublicDataObject(id);</span>
+<span class="fc" id="L144">            jaxbDataObject = this.getJAXBDataObjectInstance(mainDataObject, langCode);</span>
+<span class="fc" id="L145">            UserDetails user = (UserDetails) properties.get(SystemConstants.API_USER_PARAMETER);</span>
+<span class="pc bpc" id="L146" title="1 of 2 branches missed.">            if (null == user) {</span>
+<span class="nc" id="L147">                user = this.getUserManager().getGuestUser();</span>
+            }
+<span class="pc bpc" id="L149" title="1 of 2 branches missed.">            if (!this.getDataObjectAuthorizationHelper().isAuth(user, mainDataObject)) {</span>
+<span class="nc" id="L150">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR, &quot;Required DataObject '&quot; + id + &quot;' does not allowed&quot;, Response.Status.FORBIDDEN);</span>
+            }
+<span class="nc" id="L152">        } catch (ApiException ae) {</span>
+<span class="nc" id="L153">            throw ae;</span>
+<span class="nc" id="L154">        } catch (Throwable t) {</span>
+<span class="nc" id="L155">            _logger.error(&quot;error in getDataObject&quot;, t);</span>
+<span class="nc" id="L156">            throw new EntException(&quot;Error into API method&quot;, t);</span>
+<span class="fc" id="L157">        }</span>
+<span class="fc" id="L158">        return jaxbDataObject;</span>
+    }
+
+    protected JAXBDataObject getJAXBDataObjectInstance(DataObject mainDataObject, String langCode) {
+<span class="fc" id="L162">        return new JAXBDataObject(mainDataObject, langCode);</span>
+    }
+
+    public String getDataObjectToHtml(Properties properties) throws ApiException, Throwable {
+<span class="fc" id="L166">        String render = null;</span>
+<span class="fc" id="L167">        String id = properties.getProperty(&quot;id&quot;);</span>
+<span class="fc" id="L168">        String modelId = properties.getProperty(&quot;modelId&quot;);</span>
+        try {
+<span class="pc bpc" id="L170" title="3 of 4 branches missed.">            if (null == modelId || modelId.trim().length() == 0) {</span>
+<span class="fc" id="L171">                return null;</span>
+            }
+<span class="nc" id="L173">            DataObject mainDataObject = this.getPublicDataObject(id);</span>
+<span class="nc" id="L174">            Integer modelIdInteger = this.checkModel(modelId, mainDataObject);</span>
+<span class="nc bnc" id="L175" title="All 2 branches missed.">            if (null != modelIdInteger) {</span>
+<span class="nc" id="L176">                String langCode = properties.getProperty(SystemConstants.API_LANG_CODE_PARAMETER);</span>
+<span class="nc" id="L177">                render = this.getRenderedDataObject(id, modelIdInteger, langCode);</span>
+            }
+<span class="nc" id="L179">        } catch (ApiException ae) {</span>
+<span class="nc" id="L180">            throw ae;</span>
+<span class="nc" id="L181">        } catch (Throwable t) {</span>
+<span class="nc" id="L182">            _logger.error(&quot;error in getDataObjectToHtml&quot;, t);</span>
+<span class="nc" id="L183">            throw new EntException(&quot;Error into API method&quot;, t);</span>
+<span class="nc" id="L184">        }</span>
+<span class="nc" id="L185">        return render;</span>
+    }
+
+    protected String getRenderedDataObject(String id, int modelId, String langCode) {
+<span class="nc" id="L189">        String renderedData = null;</span>
+<span class="nc" id="L190">        DataObjectRenderizationInfo renderizationInfo = this.getDataObjectDispenser().getRenderizationInfo(id, modelId, langCode, null, true);</span>
+<span class="nc bnc" id="L191" title="All 2 branches missed.">        if (null != renderizationInfo) {</span>
+<span class="nc" id="L192">            renderedData = renderizationInfo.getRenderedDataobject();</span>
+        }
+<span class="nc" id="L194">        return renderedData;</span>
+    }
+
+    protected DataObject getPublicDataObject(String id) throws ApiException, Throwable {
+<span class="fc" id="L198">        DataObject dataObject = null;</span>
+        try {
+<span class="fc" id="L200">            dataObject = this.getDataObjectManager().loadDataObject(id, true);</span>
+<span class="pc bpc" id="L201" title="1 of 2 branches missed.">            if (null == dataObject) {</span>
+<span class="nc" id="L202">                throw new ApiException(IApiErrorCodes.API_PARAMETER_VALIDATION_ERROR, &quot;Null DataObject by id '&quot; + id + &quot;'&quot;, Response.Status.CONFLICT);</span>
+            }
+<span class="nc" id="L204">        } catch (ApiException ae) {</span>
+<span class="nc" id="L205">            throw ae;</span>
+<span class="nc" id="L206">        } catch (Throwable t) {</span>
+<span class="nc" id="L207">            _logger.error(&quot;Error extracting DataObject by id '{}'&quot;, id, t);</span>
+<span class="nc" id="L208">            throw new EntException(&quot;Error extracting DataObject by id '&quot; + id + &quot;'&quot;, t);</span>
+<span class="fc" id="L209">        }</span>
+<span class="fc" id="L210">        return dataObject;</span>
+    }
+
+    protected Integer checkModel(String modelId, DataObject dataObject) throws ApiException, Throwable {
+<span class="nc" id="L214">        Integer modelIdInteger = null;</span>
+        try {
+<span class="nc bnc" id="L216" title="All 4 branches missed.">            if (null == modelId || modelId.trim().length() == 0) {</span>
+<span class="nc" id="L217">                return null;</span>
+            }
+<span class="nc bnc" id="L219" title="All 2 branches missed.">            if (modelId.equals(&quot;default&quot;)) {</span>
+<span class="nc bnc" id="L220" title="All 2 branches missed.">                if (null == dataObject.getDefaultModel()) {</span>
+<span class="nc" id="L221">                    throw new ApiException(IApiErrorCodes.API_PARAMETER_VALIDATION_ERROR,</span>
+<span class="nc" id="L222">                            &quot;Invalid 'default' system model for DataObject type '&quot; + dataObject.getTypeCode() + &quot;' - Contact the administrators&quot;,</span>
+                            Response.Status.ACCEPTED);
+                }
+<span class="nc" id="L225">                modelIdInteger = Integer.parseInt(dataObject.getDefaultModel());</span>
+<span class="nc bnc" id="L226" title="All 2 branches missed.">            } else if (modelId.equals(&quot;list&quot;)) {</span>
+<span class="nc bnc" id="L227" title="All 2 branches missed.">                if (null == dataObject.getListModel()) {</span>
+<span class="nc" id="L228">                    throw new ApiException(IApiErrorCodes.API_PARAMETER_VALIDATION_ERROR,</span>
+<span class="nc" id="L229">                            &quot;Invalid 'list' system model for DataObject type '&quot; + dataObject.getTypeCode() + &quot;' - Contact the administrators&quot;,</span>
+                            Response.Status.ACCEPTED);
+                }
+<span class="nc" id="L232">                modelIdInteger = Integer.parseInt(dataObject.getListModel());</span>
+            } else {
+                try {
+<span class="nc" id="L235">                    modelIdInteger = Integer.parseInt(modelId);</span>
+<span class="nc" id="L236">                } catch (Throwable t) {</span>
+<span class="nc" id="L237">                    throw new ApiException(IApiErrorCodes.API_PARAMETER_VALIDATION_ERROR,</span>
+                            &quot;The model id must be an integer or 'default' or 'list' - '&quot; + modelId + &quot;'&quot;,
+                            Response.Status.ACCEPTED);
+<span class="nc" id="L240">                }</span>
+            }
+<span class="nc" id="L242">            DataObjectModel model = this.getDataObjectModelManager().getDataObjectModel(modelIdInteger);</span>
+<span class="nc bnc" id="L243" title="All 2 branches missed.">            if (model == null) {</span>
+<span class="nc" id="L244">                throw new ApiException(IApiErrorCodes.API_PARAMETER_VALIDATION_ERROR, &quot;The DataObject model with id '&quot; + modelId + &quot;' does not exist&quot;, Response.Status.ACCEPTED);</span>
+<span class="nc bnc" id="L245" title="All 2 branches missed.">            } else if (!dataObject.getTypeCode().equals(model.getDataType())) {</span>
+<span class="nc" id="L246">                throw new ApiException(IApiErrorCodes.API_PARAMETER_VALIDATION_ERROR,</span>
+<span class="nc" id="L247">                        &quot;The DataObject model with id '&quot; + modelId + &quot;' does not match with DataObject of type '&quot; + dataObject.getTypeDescription() + &quot;' &quot;,</span>
+                        Response.Status.ACCEPTED);
+            }
+<span class="nc" id="L250">        } catch (ApiException ae) {</span>
+<span class="nc" id="L251">            throw ae;</span>
+<span class="nc" id="L252">        } catch (Throwable t) {</span>
+<span class="nc" id="L253">            _logger.error(&quot;Error checking model id '{}'&quot;, modelId, t);</span>
+<span class="nc" id="L254">            throw new EntException(&quot;Error checking model id '&quot; + modelId + &quot;'&quot;, t);</span>
+<span class="nc" id="L255">        }</span>
+<span class="nc" id="L256">        return modelIdInteger;</span>
+    }
+
+    public StringApiResponse addDataObject(JAXBDataObject jaxbDataObject, Properties properties) throws Throwable {
+<span class="fc" id="L260">        StringApiResponse response = new StringApiResponse();</span>
+        try {
+<span class="fc" id="L262">            String typeCode = jaxbDataObject.getTypeCode();</span>
+<span class="fc" id="L263">            DataObject prototype = (DataObject) this.getDataObjectManager().getEntityPrototype(typeCode);</span>
+<span class="pc bpc" id="L264" title="1 of 2 branches missed.">            if (null == prototype) {</span>
+<span class="nc" id="L265">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR, &quot;DataObject type with code '&quot; + typeCode + &quot;' does not exist&quot;, Response.Status.CONFLICT);</span>
+            }
+<span class="fc" id="L267">            DataObject dataObject = (DataObject) jaxbDataObject.buildEntity(prototype, this.getCategoryManager(), null);</span>
+<span class="pc bpc" id="L268" title="1 of 2 branches missed.">            if (null != dataObject.getId()) {</span>
+<span class="nc" id="L269">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR, &quot;You cannot specify DataObject Id&quot;, Response.Status.CONFLICT);</span>
+            }
+<span class="fc" id="L271">            UserDetails user = (UserDetails) properties.get(SystemConstants.API_USER_PARAMETER);</span>
+<span class="pc bpc" id="L272" title="1 of 2 branches missed.">            dataObject.setFirstEditor((null != user) ? user.getUsername() : SystemConstants.GUEST_USER_NAME);</span>
+<span class="fc" id="L273">            response = this.validateAndSaveDataObject(dataObject, properties);</span>
+<span class="nc" id="L274">        } catch (ApiException ae) {</span>
+<span class="nc" id="L275">            response.addErrors(ae.getErrors());</span>
+<span class="nc" id="L276">            response.setResult(IResponseBuilder.FAILURE, null);</span>
+<span class="nc" id="L277">        } catch (Throwable t) {</span>
+<span class="nc" id="L278">            _logger.error(&quot;Error adding DataObject&quot;, t);</span>
+<span class="nc" id="L279">            throw new EntException(&quot;Error adding DataObject&quot;, t);</span>
+<span class="pc" id="L280">        }</span>
+<span class="fc" id="L281">        return response;</span>
+    }
+
+    public StringApiResponse updateDataObject(JAXBDataObject jaxbDataObject, Properties properties) throws Throwable {
+<span class="nc" id="L285">        StringApiResponse response = new StringApiResponse();</span>
+        try {
+<span class="nc" id="L287">            String typeCode = jaxbDataObject.getTypeCode();</span>
+<span class="nc" id="L288">            DataObject prototype = (DataObject) this.getDataObjectManager().getEntityPrototype(typeCode);</span>
+<span class="nc bnc" id="L289" title="All 2 branches missed.">            if (null == prototype) {</span>
+<span class="nc" id="L290">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR, &quot;DataObject type with code '&quot; + typeCode + &quot;' does not exist&quot;, Response.Status.CONFLICT);</span>
+            }
+<span class="nc" id="L292">            DataObject content = (DataObject) jaxbDataObject.buildEntity(prototype, this.getCategoryManager(), null);</span>
+<span class="nc" id="L293">            DataObject masterData = this.getDataObjectManager().loadDataObject(content.getId(), false);</span>
+<span class="nc bnc" id="L294" title="All 2 branches missed.">            if (null == masterData) {</span>
+<span class="nc" id="L295">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR, &quot;DataObject with code '&quot; + content.getId() + &quot;' does not exist&quot;, Response.Status.CONFLICT);</span>
+<span class="nc bnc" id="L296" title="All 2 branches missed.">            } else if (!masterData.getMainGroup().equals(content.getMainGroup())) {</span>
+<span class="nc" id="L297">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR,</span>
+<span class="nc" id="L298">                        &quot;Invalid main group &quot; + content.getMainGroup() + &quot; not equals then master &quot; + masterData.getMainGroup(),</span>
+                        Response.Status.CONFLICT);
+            }
+<span class="nc" id="L301">            response = this.validateAndSaveDataObject(content, properties);</span>
+<span class="nc" id="L302">        } catch (ApiException ae) {</span>
+<span class="nc" id="L303">            response.addErrors(ae.getErrors());</span>
+<span class="nc" id="L304">            response.setResult(IResponseBuilder.FAILURE, null);</span>
+<span class="nc" id="L305">        } catch (Throwable t) {</span>
+<span class="nc" id="L306">            _logger.error(&quot;Error updating DataObject&quot;, t);</span>
+<span class="nc" id="L307">            throw new EntException(&quot;Error updating DataObject&quot;, t);</span>
+<span class="nc" id="L308">        }</span>
+<span class="nc" id="L309">        return response;</span>
+    }
+
+    protected StringApiResponse validateAndSaveDataObject(DataObject dataObject, Properties properties) throws ApiException, Throwable {
+<span class="fc" id="L313">        StringApiResponse response = new StringApiResponse();</span>
+        try {
+<span class="fc" id="L315">            UserDetails user = (UserDetails) properties.get(SystemConstants.API_USER_PARAMETER);</span>
+<span class="pc bpc" id="L316" title="1 of 2 branches missed.">            if (null == user) {</span>
+<span class="nc" id="L317">                user = this.getUserManager().getGuestUser();</span>
+            }
+<span class="pc bpc" id="L319" title="1 of 2 branches missed.">            if (!this.getDataObjectAuthorizationHelper().isAuth(user, dataObject)) {</span>
+<span class="nc" id="L320">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR,</span>
+<span class="nc" id="L321">                        &quot;DataObject groups makes the new content not allowed for user &quot; + user.getUsername(),</span>
+                        Response.Status.FORBIDDEN);
+            }
+<span class="fc" id="L324">            List&lt;ApiError&gt; errors = this.validate(dataObject);</span>
+<span class="pc bpc" id="L325" title="1 of 2 branches missed.">            if (errors.size() &gt; 0) {</span>
+<span class="nc" id="L326">                response.addErrors(errors);</span>
+<span class="nc" id="L327">                response.setResult(IResponseBuilder.FAILURE, null);</span>
+<span class="nc" id="L328">                return response;</span>
+            }
+<span class="fc" id="L330">            String insertString = properties.getProperty(&quot;insert&quot;);</span>
+<span class="pc bpc" id="L331" title="1 of 2 branches missed.">            boolean insert = (null != insertString) ? Boolean.parseBoolean(insertString) : false;</span>
+<span class="pc bpc" id="L332" title="1 of 2 branches missed.">            if (!insert) {</span>
+<span class="fc" id="L333">                this.getDataObjectManager().saveDataObject(dataObject);</span>
+            } else {
+<span class="nc" id="L335">                this.getDataObjectManager().insertDataObject(dataObject);</span>
+            }
+<span class="fc" id="L337">            response.setResult(IResponseBuilder.SUCCESS, null);</span>
+<span class="nc" id="L338">        } catch (ApiException ae) {</span>
+<span class="nc" id="L339">            response.addErrors(ae.getErrors());</span>
+<span class="nc" id="L340">            response.setResult(IResponseBuilder.FAILURE, null);</span>
+<span class="nc" id="L341">        } catch (Throwable t) {</span>
+<span class="nc" id="L342">            _logger.error(&quot;error in validateAndSaveDataObject&quot;, t);</span>
+<span class="nc" id="L343">            throw new EntException(&quot;Error adding dataObject&quot;, t);</span>
+<span class="pc" id="L344">        }</span>
+<span class="fc" id="L345">        return response;</span>
+    }
+
+    private List&lt;ApiError&gt; validate(DataObject dataObject) throws EntException {
+<span class="fc" id="L349">        List&lt;ApiError&gt; errors = new ArrayList&lt;ApiError&gt;();</span>
+        try {
+<span class="pc bpc" id="L351" title="1 of 2 branches missed.">            if (null == dataObject.getMainGroup()) {</span>
+<span class="nc" id="L352">                errors.add(new ApiError(IApiErrorCodes.API_VALIDATION_ERROR, &quot;Main group null&quot;, Response.Status.CONFLICT));</span>
+            }
+<span class="fc" id="L354">            List&lt;FieldError&gt; fieldErrors = dataObject.validate(this.getGroupManager());</span>
+<span class="pc bpc" id="L355" title="1 of 2 branches missed.">            if (null != fieldErrors) {</span>
+<span class="pc bpc" id="L356" title="1 of 2 branches missed.">                for (int i = 0; i &lt; fieldErrors.size(); i++) {</span>
+<span class="nc" id="L357">                    FieldError fieldError = fieldErrors.get(i);</span>
+<span class="nc bnc" id="L358" title="All 2 branches missed.">                    if (fieldError instanceof AttributeFieldError) {</span>
+<span class="nc" id="L359">                        AttributeFieldError attributeError = (AttributeFieldError) fieldError;</span>
+<span class="nc" id="L360">                        errors.add(new ApiError(IApiErrorCodes.API_VALIDATION_ERROR, attributeError.getFullMessage(), Response.Status.CONFLICT));</span>
+<span class="nc" id="L361">                    } else {</span>
+<span class="nc" id="L362">                        errors.add(new ApiError(IApiErrorCodes.API_VALIDATION_ERROR, fieldError.getMessage(), Response.Status.CONFLICT));</span>
+                    }
+                }
+            }
+<span class="nc" id="L366">        } catch (Throwable t) {</span>
+<span class="nc" id="L367">            _logger.error(&quot;Error validating DataObject&quot;, t);</span>
+<span class="nc" id="L368">            throw new EntException(&quot;Error validating DataObject&quot;, t);</span>
+<span class="fc" id="L369">        }</span>
+<span class="fc" id="L370">        return errors;</span>
+    }
+
+    public StringApiResponse deleteDataObject(Properties properties) throws Throwable {
+<span class="nc" id="L374">        StringApiResponse response = new StringApiResponse();</span>
+        try {
+<span class="nc" id="L376">            String id = properties.getProperty(&quot;id&quot;);</span>
+<span class="nc" id="L377">            DataObject masterDataObject = this.getDataObjectManager().loadDataObject(id, false);</span>
+<span class="nc bnc" id="L378" title="All 2 branches missed.">            if (null == masterDataObject) {</span>
+<span class="nc" id="L379">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR, &quot;DataObject with code '&quot; + id + &quot;' does not exist&quot;, Response.Status.CONFLICT);</span>
+            }
+<span class="nc" id="L381">            UserDetails user = (UserDetails) properties.get(SystemConstants.API_USER_PARAMETER);</span>
+<span class="nc bnc" id="L382" title="All 2 branches missed.">            if (null == user) {</span>
+<span class="nc" id="L383">                user = this.getUserManager().getGuestUser();</span>
+            }
+<span class="nc bnc" id="L385" title="All 2 branches missed.">            if (!this.getDataObjectAuthorizationHelper().isAuth(user, masterDataObject)) {</span>
+<span class="nc" id="L386">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR,</span>
+<span class="nc" id="L387">                        &quot;DataObject groups makes the new dataObject not allowed for user &quot; + user.getUsername(),</span>
+                        Response.Status.FORBIDDEN);
+            }
+<span class="nc bnc" id="L390" title="All 2 branches missed.">            if (masterDataObject.isOnLine()) {</span>
+<span class="nc" id="L391">                this.getDataObjectManager().removeDataObject(masterDataObject);</span>
+            }
+<span class="nc" id="L393">            response.setResult(IResponseBuilder.SUCCESS, null);</span>
+<span class="nc" id="L394">        } catch (ApiException ae) {</span>
+<span class="nc" id="L395">            response.addErrors(ae.getErrors());</span>
+<span class="nc" id="L396">            response.setResult(IResponseBuilder.FAILURE, null);</span>
+<span class="nc" id="L397">        } catch (Throwable t) {</span>
+<span class="nc" id="L398">            _logger.error(&quot;Error deleting DataObject&quot;, t);</span>
+<span class="nc" id="L399">            throw new EntException(&quot;Error deleting DataObject&quot;, t);</span>
+<span class="nc" id="L400">        }</span>
+<span class="nc" id="L401">        return response;</span>
+    }
+
+    public void updateDataObjectText(JAXBDataObjectAttribute jaxbDataObjectAttribute, Properties properties) throws ApiException, Throwable {
+        try {
+<span class="nc" id="L406">            String dataId = jaxbDataObjectAttribute.getDataId();</span>
+<span class="nc" id="L407">            DataObject masterDataObject = this.getDataObjectManager().loadDataObject(jaxbDataObjectAttribute.getDataId(), true);</span>
+<span class="nc bnc" id="L408" title="All 2 branches missed.">            if (null == masterDataObject) {</span>
+<span class="nc" id="L409">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR, &quot;DataObject with code '&quot; + dataId + &quot;' does not exist&quot;, Response.Status.CONFLICT);</span>
+            }
+<span class="nc" id="L411">            String attributeName = jaxbDataObjectAttribute.getAttributeName();</span>
+<span class="nc" id="L412">            AttributeInterface attribute = (AttributeInterface) masterDataObject.getAttribute(attributeName);</span>
+<span class="nc bnc" id="L413" title="All 2 branches missed.">            if (null == attribute) {</span>
+<span class="nc" id="L414">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR,</span>
+                        &quot;DataObject Attribute with code '&quot; + attributeName + &quot;' does not exist into DataObject &quot; + dataId,
+                        Response.Status.CONFLICT);
+<span class="nc bnc" id="L417" title="All 2 branches missed.">            } else if (!(attribute instanceof ITextAttribute)) {</span>
+<span class="nc" id="L418">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR,</span>
+                        &quot;DataObject Attribute with code '&quot; + attributeName + &quot;' isn't a Text Atttribute&quot;,
+                        Response.Status.CONFLICT);
+            }
+<span class="nc" id="L422">            String langCode = jaxbDataObjectAttribute.getLangCode();</span>
+<span class="nc" id="L423">            String value = jaxbDataObjectAttribute.getValue();</span>
+<span class="nc bnc" id="L424" title="All 4 branches missed.">            if (StringUtils.isEmpty(langCode) || StringUtils.isEmpty(value)) {</span>
+<span class="nc" id="L425">                throw new ApiException(IApiErrorCodes.API_VALIDATION_ERROR, &quot;LangCode or value is Empty&quot;, Response.Status.CONFLICT);</span>
+            }
+<span class="nc" id="L427">            ((ITextAttribute) attribute).setText(value, langCode);</span>
+<span class="nc" id="L428">            this.getDataObjectManager().insertDataObject(masterDataObject);</span>
+<span class="nc" id="L429">        } catch (ApiException ae) {</span>
+<span class="nc" id="L430">            throw ae;</span>
+<span class="nc" id="L431">        } catch (Throwable t) {</span>
+<span class="nc" id="L432">            _logger.error(&quot;Error updating DataObject attribute&quot;, t);</span>
+<span class="nc" id="L433">            throw new EntException(&quot;Error updating DataObject attribute&quot;, t);</span>
+<span class="nc" id="L434">        }</span>
+<span class="nc" id="L435">    }</span>
+
+    protected IUserManager getUserManager() {
+<span class="nc" id="L438">        return _userManager;</span>
+    }
+
+    public void setUserManager(IUserManager userManager) {
+<span class="fc" id="L442">        this._userManager = userManager;</span>
+<span class="fc" id="L443">    }</span>
+
+    protected ICategoryManager getCategoryManager() {
+<span class="fc" id="L446">        return _categoryManager;</span>
+    }
+
+    public void setCategoryManager(ICategoryManager categoryManager) {
+<span class="fc" id="L450">        this._categoryManager = categoryManager;</span>
+<span class="fc" id="L451">    }</span>
+
+    protected IGroupManager getGroupManager() {
+<span class="fc" id="L454">        return _groupManager;</span>
+    }
+
+    public void setGroupManager(IGroupManager groupManager) {
+<span class="fc" id="L458">        this._groupManager = groupManager;</span>
+<span class="fc" id="L459">    }</span>
+
+    protected IPageManager getPageManager() {
+<span class="nc" id="L462">        return _pageManager;</span>
+    }
+
+    public void setPageManager(IPageManager pageManager) {
+<span class="fc" id="L466">        this._pageManager = pageManager;</span>
+<span class="fc" id="L467">    }</span>
+
+    public IDataTypeListHelper getDataObjectListHelper() {
+<span class="nc" id="L470">        return _dataObjectListHelper;</span>
+    }
+
+    public void setDataObjectListHelper(IDataTypeListHelper dataObjectListHelper) {
+<span class="fc" id="L474">        this._dataObjectListHelper = dataObjectListHelper;</span>
+<span class="fc" id="L475">    }</span>
+
+    public IDataAuthorizationHelper getDataObjectAuthorizationHelper() {
+<span class="fc" id="L478">        return _dataObjectAuthorizationHelper;</span>
+    }
+
+    public void setDataObjectAuthorizationHelper(IDataAuthorizationHelper dataObjectAuthorizationHelper) {
+<span class="fc" id="L482">        this._dataObjectAuthorizationHelper = dataObjectAuthorizationHelper;</span>
+<span class="fc" id="L483">    }</span>
+
+    public IDataObjectDispenser getDataObjectDispenser() {
+<span class="nc" id="L486">        return _dataObjectDispenser;</span>
+    }
+
+    public void setDataObjectDispenser(IDataObjectDispenser dataObjectDispenser) {
+<span class="fc" id="L490">        this._dataObjectDispenser = dataObjectDispenser;</span>
+<span class="fc" id="L491">    }</span>
+
+    public String getItemsStartElement() {
+<span class="nc" id="L494">        return _itemsStartElement;</span>
+    }
+
+    public void setItemsStartElement(String itemsStartElement) {
+<span class="nc" id="L498">        this._itemsStartElement = itemsStartElement;</span>
+<span class="nc" id="L499">    }</span>
+
+    public String getItemStartElement() {
+<span class="nc" id="L502">        return _itemStartElement;</span>
+    }
+
+    public void setItemStartElement(String itemStartElement) {
+<span class="nc" id="L506">        this._itemStartElement = itemStartElement;</span>
+<span class="nc" id="L507">    }</span>
+
+    public String getItemEndElement() {
+<span class="nc" id="L510">        return _itemEndElement;</span>
+    }
+
+    public void setItemEndElement(String itemEndElement) {
+<span class="nc" id="L514">        this._itemEndElement = itemEndElement;</span>
+<span class="nc" id="L515">    }</span>
+
+    public String getItemsEndElement() {
+<span class="nc" id="L518">        return _itemsEndElement;</span>
+    }
+
+    public void setItemsEndElement(String itemsEndElement) {
+<span class="nc" id="L522">        this._itemsEndElement = itemsEndElement;</span>
+<span class="nc" id="L523">    }</span>
+
+    private IDataTypeListHelper _dataObjectListHelper;
+    private IUserManager _userManager;
+    private ICategoryManager _categoryManager;
+    private IGroupManager _groupManager;
+    private IPageManager _pageManager;
+    private IDataAuthorizationHelper _dataObjectAuthorizationHelper;
+    private IDataObjectDispenser _dataObjectDispenser;
+<span class="fc" id="L532">    private String _itemsStartElement = &quot;&lt;ul&gt;&quot;;</span>
+<span class="fc" id="L533">    private String _itemStartElement = &quot;&lt;li&gt;&quot;;</span>
+<span class="fc" id="L534">    private String _itemEndElement = &quot;&lt;/li&gt;&quot;;</span>
+<span class="fc" id="L535">    private String _itemsEndElement = &quot;&lt;/ul&gt;&quot;;</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
