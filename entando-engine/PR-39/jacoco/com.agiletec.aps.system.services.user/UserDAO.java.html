@@ -235,16 +235,21 @@ import org.springframework.security.crypto.password.PasswordEncoder;
             } else {
 <span class="fc" id="L236">                stat.setInt(4, 0);</span>
             }
-<span class="fc" id="L238">            stat.executeUpdate();</span>
-<span class="fc" id="L239">            conn.commit();</span>
-<span class="nc" id="L240">        } catch (Throwable t) {</span>
-<span class="nc" id="L241">            this.executeRollback(conn);</span>
-<span class="nc" id="L242">            logger.error(&quot;Error while adding a new user {}&quot;, user, t);</span>
-<span class="nc" id="L243">            throw new RuntimeException(&quot;Error while adding a new user&quot;, t);</span>
+<span class="fc bfc" id="L238" title="All 2 branches covered.">            if (user.isWizardEnabled()) {</span>
+<span class="fc" id="L239">                stat.setInt(5, 1);</span>
+            } else {
+<span class="fc" id="L241">                stat.setInt(5, 0);</span>
+            }
+<span class="fc" id="L243">            stat.executeUpdate();</span>
+<span class="fc" id="L244">            conn.commit();</span>
+<span class="nc" id="L245">        } catch (Throwable t) {</span>
+<span class="nc" id="L246">            this.executeRollback(conn);</span>
+<span class="nc" id="L247">            logger.error(&quot;Error while adding a new user {}&quot;, user, t);</span>
+<span class="nc" id="L248">            throw new RuntimeException(&quot;Error while adding a new user&quot;, t);</span>
         } finally {
-<span class="fc" id="L245">            closeDaoResources(null, stat, conn);</span>
+<span class="fc" id="L250">            closeDaoResources(null, stat, conn);</span>
         }
-<span class="fc" id="L247">    }</span>
+<span class="fc" id="L252">    }</span>
 
     /**
      * Aggiorna un utente già presente con nuovi valori (tranne la username che
@@ -254,87 +259,113 @@ import org.springframework.security.crypto.password.PasswordEncoder;
      */
     @Override
     public void updateUser(UserDetails user) {
-<span class="pc bpc" id="L257" title="1 of 2 branches missed.">        User entandoUser = ((user instanceof User) ? (User) user : null);</span>
-<span class="fc" id="L258">        Connection conn = null;</span>
-<span class="fc" id="L259">        PreparedStatement stat = null;</span>
+<span class="pc bpc" id="L262" title="1 of 2 branches missed.">        User entandoUser = ((user instanceof User) ? (User) user : null);</span>
+<span class="fc" id="L263">        Connection conn = null;</span>
+<span class="fc" id="L264">        PreparedStatement stat = null;</span>
         try {
-<span class="fc" id="L261">            conn = this.getConnection();</span>
-<span class="fc" id="L262">            conn.setAutoCommit(false);</span>
-<span class="fc" id="L263">            stat = conn.prepareStatement(UPDATE_USER);</span>
-<span class="pc bpc" id="L264" title="1 of 4 branches missed.">            if (null != entandoUser &amp;&amp; null != entandoUser.getLastAccess()) {</span>
-<span class="fc" id="L265">                stat.setDate(1, new java.sql.Date(entandoUser.getLastAccess().getTime()));</span>
+<span class="fc" id="L266">            conn = this.getConnection();</span>
+<span class="fc" id="L267">            conn.setAutoCommit(false);</span>
+<span class="fc" id="L268">            stat = conn.prepareStatement(UPDATE_USER);</span>
+<span class="pc bpc" id="L269" title="1 of 4 branches missed.">            if (null != entandoUser &amp;&amp; null != entandoUser.getLastAccess()) {</span>
+<span class="fc" id="L270">                stat.setDate(1, new java.sql.Date(entandoUser.getLastAccess().getTime()));</span>
             } else {
-<span class="fc" id="L267">                stat.setNull(1, Types.DATE);</span>
+<span class="fc" id="L272">                stat.setNull(1, Types.DATE);</span>
             }
-<span class="pc bpc" id="L269" title="1 of 4 branches missed.">            if (null != entandoUser &amp;&amp; null != entandoUser.getLastPasswordChange()) {</span>
-<span class="fc" id="L270">                stat.setDate(2, new java.sql.Date(entandoUser.getLastPasswordChange().getTime()));</span>
+<span class="pc bpc" id="L274" title="1 of 4 branches missed.">            if (null != entandoUser &amp;&amp; null != entandoUser.getLastPasswordChange()) {</span>
+<span class="fc" id="L275">                stat.setDate(2, new java.sql.Date(entandoUser.getLastPasswordChange().getTime()));</span>
             } else {
-<span class="fc" id="L272">                stat.setNull(2, Types.DATE);</span>
+<span class="fc" id="L277">                stat.setNull(2, Types.DATE);</span>
             }
-<span class="pc bpc" id="L274" title="1 of 2 branches missed.">            if (null != entandoUser) {</span>
-<span class="pc bpc" id="L275" title="1 of 2 branches missed.">                if (!entandoUser.isDisabled()) {</span>
-<span class="fc" id="L276">                    stat.setInt(3, 1);</span>
+<span class="pc bpc" id="L279" title="1 of 2 branches missed.">            if (null != entandoUser) {</span>
+<span class="pc bpc" id="L280" title="1 of 2 branches missed.">                if (!entandoUser.isDisabled()) {</span>
+<span class="fc" id="L281">                    stat.setInt(3, 1);</span>
                 } else {
-<span class="nc" id="L278">                    stat.setInt(3, 0);</span>
+<span class="nc" id="L283">                    stat.setInt(3, 0);</span>
                 }
             } else {
-<span class="nc" id="L281">                stat.setNull(3, Types.NUMERIC);</span>
+<span class="nc" id="L286">                stat.setNull(3, Types.NUMERIC);</span>
             }
-<span class="fc" id="L283">            stat.setString(4, user.getUsername());</span>
-<span class="fc" id="L284">            stat.executeUpdate();</span>
-<span class="fc" id="L285">            conn.commit();</span>
-<span class="nc" id="L286">        } catch (Throwable t) {</span>
-<span class="nc" id="L287">            this.executeRollback(conn);</span>
-<span class="nc" id="L288">            logger.error(&quot;Error while updating the user {}&quot;, user.getUsername(), t);</span>
-<span class="nc" id="L289">            throw new RuntimeException(&quot;Error while adding a new user&quot;, t);</span>
+<span class="pc bpc" id="L288" title="2 of 4 branches missed.">            if (null != entandoUser &amp;&amp; entandoUser.isWizardEnabled()) {</span>
+<span class="nc" id="L289">                stat.setInt(4, 1);</span>
+            } else {
+<span class="fc" id="L291">                stat.setInt(4, 0);</span>
+            }
+<span class="fc" id="L293">            stat.setString(5, user.getUsername());</span>
+<span class="fc" id="L294">            stat.executeUpdate();</span>
+<span class="fc" id="L295">            conn.commit();</span>
+<span class="nc" id="L296">        } catch (Throwable t) {</span>
+<span class="nc" id="L297">            this.executeRollback(conn);</span>
+<span class="nc" id="L298">            logger.error(&quot;Error while updating the user {}&quot;, user.getUsername(), t);</span>
+<span class="nc" id="L299">            throw new RuntimeException(&quot;Error while adding a new user&quot;, t);</span>
         } finally {
-<span class="fc" id="L291">            closeDaoResources(null, stat, conn);</span>
+<span class="fc" id="L301">            closeDaoResources(null, stat, conn);</span>
         }
-<span class="fc" id="L293">    }</span>
+<span class="fc" id="L303">    }</span>
 
     @Override
     public void changePassword(String username, String password) {
-<span class="fc" id="L297">        Connection conn = null;</span>
-<span class="fc" id="L298">        PreparedStatement stat = null;</span>
+<span class="fc" id="L307">        Connection conn = null;</span>
+<span class="fc" id="L308">        PreparedStatement stat = null;</span>
         try {
-<span class="fc" id="L300">            conn = this.getConnection();</span>
-<span class="fc" id="L301">            conn.setAutoCommit(false);</span>
-<span class="fc" id="L302">            stat = conn.prepareStatement(CHANGE_PASSWORD);</span>
-<span class="fc" id="L303">            String encodedPassowrd = passwordEncoder.encode(password);</span>
-<span class="fc" id="L304">            stat.setString(1, encodedPassowrd);</span>
-<span class="fc" id="L305">            stat.setDate(2, new java.sql.Date(new Date().getTime()));</span>
-<span class="fc" id="L306">            stat.setString(3, username);</span>
-<span class="fc" id="L307">            stat.executeUpdate();</span>
-<span class="fc" id="L308">            conn.commit();</span>
-<span class="nc" id="L309">        } catch (Throwable t) {</span>
-<span class="nc" id="L310">            this.executeRollback(conn);</span>
-<span class="nc" id="L311">            logger.error(&quot;Error updating the password for the user {}&quot;, username, t);</span>
-<span class="nc" id="L312">            throw new RuntimeException(&quot;Error updating the password for the user &quot; + username, t);</span>
+<span class="fc" id="L310">            conn = this.getConnection();</span>
+<span class="fc" id="L311">            conn.setAutoCommit(false);</span>
+<span class="fc" id="L312">            stat = conn.prepareStatement(CHANGE_PASSWORD);</span>
+<span class="fc" id="L313">            String encodedPassowrd = passwordEncoder.encode(password);</span>
+<span class="fc" id="L314">            stat.setString(1, encodedPassowrd);</span>
+<span class="fc" id="L315">            stat.setDate(2, new java.sql.Date(new Date().getTime()));</span>
+<span class="fc" id="L316">            stat.setString(3, username);</span>
+<span class="fc" id="L317">            stat.executeUpdate();</span>
+<span class="fc" id="L318">            conn.commit();</span>
+<span class="nc" id="L319">        } catch (Throwable t) {</span>
+<span class="nc" id="L320">            this.executeRollback(conn);</span>
+<span class="nc" id="L321">            logger.error(&quot;Error updating the password for the user {}&quot;, username, t);</span>
+<span class="nc" id="L322">            throw new RuntimeException(&quot;Error updating the password for the user &quot; + username, t);</span>
         } finally {
-<span class="fc" id="L314">            closeDaoResources(null, stat, conn);</span>
+<span class="fc" id="L324">            closeDaoResources(null, stat, conn);</span>
         }
-<span class="fc" id="L316">    }</span>
+<span class="fc" id="L326">    }</span>
+
+    @Override
+    public void changeWizard(String username, Boolean wizardEnabled) {
+<span class="fc" id="L330">        Connection conn = null;</span>
+<span class="fc" id="L331">        PreparedStatement stat = null;</span>
+        try {
+<span class="fc" id="L333">            conn = this.getConnection();</span>
+<span class="fc" id="L334">            conn.setAutoCommit(false);</span>
+<span class="fc" id="L335">            stat = conn.prepareStatement(CHANGE_WIZARD);</span>
+<span class="fc" id="L336">            stat.setBoolean(1, wizardEnabled);</span>
+<span class="fc" id="L337">            stat.setString(2, username);</span>
+<span class="fc" id="L338">            stat.executeUpdate();</span>
+<span class="fc" id="L339">            conn.commit();</span>
+<span class="nc" id="L340">        } catch (Throwable t) {</span>
+<span class="nc" id="L341">            this.executeRollback(conn);</span>
+<span class="nc" id="L342">            logger.error(&quot;Error updating wizardEnabled for the user {}&quot;, username, t);</span>
+<span class="nc" id="L343">            throw new RuntimeException(&quot;Error updating wizardEnabled for the user &quot; + username, t);</span>
+        } finally {
+<span class="fc" id="L345">            closeDaoResources(null, stat, conn);</span>
+        }
+<span class="fc" id="L347">    }</span>
 
     @Override
     public void updateLastAccess(String username) {
-<span class="fc" id="L320">        Connection conn = null;</span>
-<span class="fc" id="L321">        PreparedStatement stat = null;</span>
+<span class="fc" id="L351">        Connection conn = null;</span>
+<span class="fc" id="L352">        PreparedStatement stat = null;</span>
         try {
-<span class="fc" id="L323">            conn = this.getConnection();</span>
-<span class="fc" id="L324">            conn.setAutoCommit(false);</span>
-<span class="fc" id="L325">            stat = conn.prepareStatement(UPDATE_LAST_ACCESS);</span>
-<span class="fc" id="L326">            stat.setDate(1, new java.sql.Date(new java.util.Date().getTime()));</span>
-<span class="fc" id="L327">            stat.setString(2, username);</span>
-<span class="fc" id="L328">            stat.executeUpdate();</span>
-<span class="fc" id="L329">            conn.commit();</span>
-<span class="nc" id="L330">        } catch (Throwable t) {</span>
-<span class="nc" id="L331">            this.executeRollback(conn);</span>
-<span class="nc" id="L332">            logger.error(&quot;Error updating the last access for the user {}&quot;, username, t);</span>
-<span class="nc" id="L333">            throw new RuntimeException(&quot;Error updating the last access for the user &quot; + username, t);</span>
+<span class="fc" id="L354">            conn = this.getConnection();</span>
+<span class="fc" id="L355">            conn.setAutoCommit(false);</span>
+<span class="fc" id="L356">            stat = conn.prepareStatement(UPDATE_LAST_ACCESS);</span>
+<span class="fc" id="L357">            stat.setDate(1, new java.sql.Date(new java.util.Date().getTime()));</span>
+<span class="fc" id="L358">            stat.setString(2, username);</span>
+<span class="fc" id="L359">            stat.executeUpdate();</span>
+<span class="fc" id="L360">            conn.commit();</span>
+<span class="nc" id="L361">        } catch (Throwable t) {</span>
+<span class="nc" id="L362">            this.executeRollback(conn);</span>
+<span class="nc" id="L363">            logger.error(&quot;Error updating the last access for the user {}&quot;, username, t);</span>
+<span class="nc" id="L364">            throw new RuntimeException(&quot;Error updating the last access for the user &quot; + username, t);</span>
         } finally {
-<span class="fc" id="L335">            closeDaoResources(null, stat, conn);</span>
+<span class="fc" id="L366">            closeDaoResources(null, stat, conn);</span>
         }
-<span class="fc" id="L337">    }</span>
+<span class="fc" id="L368">    }</span>
 
     /**
      * Crea un utente leggendo i valori dal record corrente del ResultSet
@@ -347,64 +378,70 @@ import org.springframework.security.crypto.password.PasswordEncoder;
      * @throws SQLException
      */
     protected User createUserFromRecord(ResultSet res) throws SQLException {
-<span class="fc" id="L350">        User user = null;</span>
-<span class="fc bfc" id="L351" title="All 2 branches covered.">        if (res.next()) {</span>
-<span class="fc" id="L352">            user = new User();</span>
-<span class="fc" id="L353">            user.setUsername(res.getString(1));</span>
-<span class="fc" id="L354">            user.setPassword(res.getString(2));</span>
-<span class="fc" id="L355">            user.setCreationDate(res.getDate(3));</span>
-<span class="fc" id="L356">            user.setLastAccess(res.getDate(4));</span>
-<span class="fc" id="L357">            user.setLastPasswordChange(res.getDate(5));</span>
-<span class="fc" id="L358">            int activeId = res.getInt(6);</span>
-<span class="fc bfc" id="L359" title="All 2 branches covered.">            user.setDisabled(activeId != 1);</span>
+<span class="fc" id="L381">        User user = null;</span>
+<span class="fc bfc" id="L382" title="All 2 branches covered.">        if (res.next()) {</span>
+<span class="fc" id="L383">            user = new User();</span>
+<span class="fc" id="L384">            user.setUsername(res.getString(1));</span>
+<span class="fc" id="L385">            user.setPassword(res.getString(2));</span>
+<span class="fc" id="L386">            user.setCreationDate(res.getDate(3));</span>
+<span class="fc" id="L387">            user.setLastAccess(res.getDate(4));</span>
+<span class="fc" id="L388">            user.setLastPasswordChange(res.getDate(5));</span>
+<span class="fc bfc" id="L389" title="All 2 branches covered.">            user.setDisabled(res.getInt(6) != 1);</span>
+<span class="fc bfc" id="L390" title="All 2 branches covered.">            user.setWizardEnabled(res.getInt(7) == 1);</span>
         }
-<span class="fc" id="L361">        return user;</span>
+<span class="fc" id="L392">        return user;</span>
     }
 
     @Override
     public PasswordEncoder getPasswordEncoder() {
-<span class="nc" id="L366">        return passwordEncoder;</span>
+<span class="nc" id="L397">        return passwordEncoder;</span>
     }
 
     public void setPasswordEncoder(PasswordEncoder encoder) {
-<span class="fc" id="L370">        this.passwordEncoder = encoder;</span>
-<span class="fc" id="L371">    }</span>
+<span class="fc" id="L401">        this.passwordEncoder = encoder;</span>
+<span class="fc" id="L402">    }</span>
 
-<span class="fc" id="L373">    private final String PREFIX_LOAD_USERNAMES</span>
+<span class="fc" id="L404">    private final String PREFIX_LOAD_USERNAMES</span>
             = &quot;SELECT authusers.username FROM authusers &quot;;
 
-<span class="fc" id="L376">    private final String PREFIX_LOAD_USERS</span>
+<span class="fc" id="L407">    private final String PREFIX_LOAD_USERS</span>
             = &quot;SELECT authusers.username, authusers.passwd, authusers.registrationdate, &quot;
-            + &quot;authusers.lastaccess, authusers.lastpasswordchange, authusers.active FROM authusers &quot;;
+            + &quot;authusers.lastaccess, authusers.lastpasswordchange, authusers.active, authusers.wizardenabled FROM &quot;
+            + &quot;authusers &quot;;
 
-<span class="fc" id="L380">    private final String LOAD_USERNAMES</span>
+<span class="fc" id="L412">    private final String LOAD_USERNAMES</span>
             = PREFIX_LOAD_USERNAMES + &quot;ORDER BY authusers.username&quot;;
 
-<span class="fc" id="L383">    private final String LOAD_USERS</span>
+<span class="fc" id="L415">    private final String LOAD_USERS</span>
             = PREFIX_LOAD_USERS + &quot;ORDER BY authusers.username&quot;;
 
-<span class="fc" id="L386">    private final String SEARCH_USERNAMES_BY_TEXT</span>
+<span class="fc" id="L418">    private final String SEARCH_USERNAMES_BY_TEXT</span>
             = PREFIX_LOAD_USERNAMES + &quot; WHERE authusers.username LIKE ? ORDER BY authusers.username&quot;;
 
-<span class="fc" id="L389">    private final String SEARCH_USERS_BY_TEXT</span>
+<span class="fc" id="L421">    private final String SEARCH_USERS_BY_TEXT</span>
             = PREFIX_LOAD_USERS + &quot; WHERE authusers.username LIKE ? ORDER BY authusers.username&quot;;
 
-<span class="fc" id="L392">    private final String LOAD_USER_FROM_USERNAME</span>
+<span class="fc" id="L424">    private final String LOAD_USER_FROM_USERNAME</span>
             = PREFIX_LOAD_USERS + &quot;WHERE authusers.username = ? &quot;;
 
-<span class="fc" id="L395">    private final String DELETE_USER</span>
+<span class="fc" id="L427">    private final String DELETE_USER</span>
             = &quot;DELETE FROM authusers WHERE username = ? &quot;;
 
-<span class="fc" id="L398">    private final String ADD_USER</span>
-            = &quot;INSERT INTO authusers (username, passwd, registrationdate, active) VALUES ( ? , ? , ? , ? )&quot;;
+<span class="fc" id="L430">    private final String ADD_USER</span>
+            = &quot;INSERT INTO authusers (username, passwd, registrationdate, active, wizardenabled) VALUES ( ? , ? , ? ,&quot;
+            + &quot; ? , ?)&quot;;
 
-<span class="fc" id="L401">    private final String CHANGE_PASSWORD</span>
+<span class="fc" id="L434">    private final String CHANGE_PASSWORD</span>
             = &quot;UPDATE authusers SET passwd = ? , lastpasswordchange = ? WHERE username = ? &quot;;
 
-<span class="fc" id="L404">    private final String UPDATE_USER</span>
-            = &quot;UPDATE authusers SET lastaccess = ? , lastpasswordchange = ? , active = ? WHERE username = ? &quot;;
+<span class="fc" id="L437">    private final String CHANGE_WIZARD</span>
+            = &quot;UPDATE authusers SET wizardenabled = ? WHERE username = ? &quot;;
 
-<span class="fc" id="L407">    private final String UPDATE_LAST_ACCESS</span>
+<span class="fc" id="L440">    private final String UPDATE_USER</span>
+            = &quot;UPDATE authusers SET lastaccess = ? , lastpasswordchange = ? , active = ? , wizardenabled = ? WHERE &quot;
+            + &quot;username = ? &quot;;
+
+<span class="fc" id="L444">    private final String UPDATE_LAST_ACCESS</span>
             = &quot;UPDATE authusers SET lastaccess = ? WHERE username = ? &quot;;
 
 }
