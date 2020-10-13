@@ -29,19 +29,20 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.document.*;
 import org.apache.lucene.index.*;
 import org.apache.lucene.store.*;
-import org.slf4j.*;
 
 import java.io.*;
 import java.math.BigDecimal;
 import java.util.*;
 import org.apache.lucene.util.BytesRef;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
 
 /**
  * Data Access Object dedita alla indicizzazione di documenti.
  */
-<span class="nc" id="L42">public class IndexerDAO implements IIndexerDAO {</span>
+<span class="nc" id="L43">public class IndexerDAO implements IIndexerDAO {</span>
 
-<span class="nc" id="L44">    private static final Logger _logger = LoggerFactory.getLogger(IndexerDAO.class);</span>
+<span class="nc" id="L45">    private static final EntLogger _logger = EntLogFactory.getSanitizedLogger(IndexerDAO.class);</span>
 
     private Directory dir;
 
@@ -58,157 +59,157 @@ import org.apache.lucene.util.BytesRef;
     @Override
     public void init(File dir) throws EntException {
         try {
-<span class="nc" id="L61">            this.dir = FSDirectory.open(dir.toPath(), SimpleFSLockFactory.INSTANCE);</span>
-<span class="nc" id="L62">        } catch (Throwable t) {</span>
-<span class="nc" id="L63">            _logger.error(&quot;Error creating directory&quot;, t);</span>
-<span class="nc" id="L64">            throw new EntException(&quot;Error creating directory&quot;, t);</span>
-<span class="nc" id="L65">        }</span>
-<span class="nc" id="L66">        _logger.debug(&quot;Indexer: search engine index ok.&quot;);</span>
-<span class="nc" id="L67">    }</span>
+<span class="nc" id="L62">            this.dir = FSDirectory.open(dir.toPath(), SimpleFSLockFactory.INSTANCE);</span>
+<span class="nc" id="L63">        } catch (Throwable t) {</span>
+<span class="nc" id="L64">            _logger.error(&quot;Error creating directory&quot;, t);</span>
+<span class="nc" id="L65">            throw new EntException(&quot;Error creating directory&quot;, t);</span>
+<span class="nc" id="L66">        }</span>
+<span class="nc" id="L67">        _logger.debug(&quot;Indexer: search engine index ok.&quot;);</span>
+<span class="nc" id="L68">    }</span>
 
     @Override
     public synchronized void add(IApsEntity entity) throws EntException {
-<span class="nc" id="L71">        IndexWriter writer = null;</span>
+<span class="nc" id="L72">        IndexWriter writer = null;</span>
         try {
-<span class="nc" id="L73">            writer = new IndexWriter(this.dir, this.getIndexWriterConfig());</span>
-<span class="nc" id="L74">            Document document = this.createDocument(entity);</span>
-<span class="nc" id="L75">            writer.addDocument(document);</span>
-<span class="nc" id="L76">        } catch (Throwable t) {</span>
-<span class="nc" id="L77">            t.printStackTrace();</span>
-<span class="nc" id="L78">            _logger.error(&quot;Errore saving entity {}&quot;, entity.getId(), t);</span>
-<span class="nc" id="L79">            throw new EntException(&quot;Error saving entity&quot;, t);</span>
+<span class="nc" id="L74">            writer = new IndexWriter(this.dir, this.getIndexWriterConfig());</span>
+<span class="nc" id="L75">            Document document = this.createDocument(entity);</span>
+<span class="nc" id="L76">            writer.addDocument(document);</span>
+<span class="nc" id="L77">        } catch (Throwable t) {</span>
+<span class="nc" id="L78">            t.printStackTrace();</span>
+<span class="nc" id="L79">            _logger.error(&quot;Errore saving entity {}&quot;, entity.getId(), t);</span>
+<span class="nc" id="L80">            throw new EntException(&quot;Error saving entity&quot;, t);</span>
         } finally {
-<span class="nc bnc" id="L81" title="All 2 branches missed.">            if (null != writer) {</span>
+<span class="nc bnc" id="L82" title="All 2 branches missed.">            if (null != writer) {</span>
                 try {
-<span class="nc" id="L83">                    writer.close();</span>
-<span class="nc" id="L84">                } catch (IOException ex) {</span>
-<span class="nc" id="L85">                    _logger.error(&quot;Error closing IndexWriter&quot;, ex);</span>
-<span class="nc" id="L86">                }</span>
+<span class="nc" id="L84">                    writer.close();</span>
+<span class="nc" id="L85">                } catch (IOException ex) {</span>
+<span class="nc" id="L86">                    _logger.error(&quot;Error closing IndexWriter&quot;, ex);</span>
+<span class="nc" id="L87">                }</span>
             }
         }
-<span class="nc" id="L89">    }</span>
+<span class="nc" id="L90">    }</span>
 
     protected Document createDocument(IApsEntity entity) throws EntException {
-<span class="nc" id="L92">        Document document = new Document();</span>
-<span class="nc" id="L93">        document.add(new StringField(CONTENT_ID_FIELD_NAME,</span>
-<span class="nc" id="L94">                entity.getId(), Field.Store.YES));</span>
-<span class="nc" id="L95">        document.add(new TextField(CONTENT_TYPE_FIELD_NAME,</span>
-<span class="nc" id="L96">                entity.getTypeCode(), Field.Store.YES));</span>
-<span class="nc" id="L97">        document.add(new StringField(CONTENT_GROUP_FIELD_NAME,</span>
-<span class="nc" id="L98">                entity.getMainGroup(), Field.Store.YES));</span>
-<span class="nc" id="L99">        Iterator&lt;String&gt; iterGroups = entity.getGroups().iterator();</span>
-<span class="nc bnc" id="L100" title="All 2 branches missed.">        while (iterGroups.hasNext()) {</span>
-<span class="nc" id="L101">            String groupName = (String) iterGroups.next();</span>
-<span class="nc" id="L102">            document.add(new StringField(CONTENT_GROUP_FIELD_NAME,</span>
+<span class="nc" id="L93">        Document document = new Document();</span>
+<span class="nc" id="L94">        document.add(new StringField(CONTENT_ID_FIELD_NAME,</span>
+<span class="nc" id="L95">                entity.getId(), Field.Store.YES));</span>
+<span class="nc" id="L96">        document.add(new TextField(CONTENT_TYPE_FIELD_NAME,</span>
+<span class="nc" id="L97">                entity.getTypeCode(), Field.Store.YES));</span>
+<span class="nc" id="L98">        document.add(new StringField(CONTENT_GROUP_FIELD_NAME,</span>
+<span class="nc" id="L99">                entity.getMainGroup(), Field.Store.YES));</span>
+<span class="nc" id="L100">        Iterator&lt;String&gt; iterGroups = entity.getGroups().iterator();</span>
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        while (iterGroups.hasNext()) {</span>
+<span class="nc" id="L102">            String groupName = (String) iterGroups.next();</span>
+<span class="nc" id="L103">            document.add(new StringField(CONTENT_GROUP_FIELD_NAME,</span>
                     groupName, Field.Store.YES));
-<span class="nc" id="L104">        }</span>
-<span class="nc bnc" id="L105" title="All 2 branches missed.">        if (entity instanceof Content) {</span>
-<span class="nc bnc" id="L106" title="All 2 branches missed.">            if (null != entity.getDescription()) {</span>
-<span class="nc" id="L107">                document.add(new SortedDocValuesField(CONTENT_DESCRIPTION_FIELD_NAME, new BytesRef(entity.getDescription())));</span>
-<span class="nc" id="L108">                document.add(new TextField(CONTENT_DESCRIPTION_FIELD_NAME, entity.getDescription(), Field.Store.YES));</span>
+<span class="nc" id="L105">        }</span>
+<span class="nc bnc" id="L106" title="All 2 branches missed.">        if (entity instanceof Content) {</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">            if (null != entity.getDescription()) {</span>
+<span class="nc" id="L108">                document.add(new SortedDocValuesField(CONTENT_DESCRIPTION_FIELD_NAME, new BytesRef(entity.getDescription())));</span>
+<span class="nc" id="L109">                document.add(new TextField(CONTENT_DESCRIPTION_FIELD_NAME, entity.getDescription(), Field.Store.YES));</span>
             }
-<span class="nc" id="L110">            document.add(new TextField(CONTENT_TYPE_CODE_FIELD_NAME, entity.getTypeCode(), Field.Store.YES));</span>
-<span class="nc" id="L111">            document.add(new TextField(CONTENT_MAIN_GROUP_FIELD_NAME, entity.getMainGroup(), Field.Store.YES));</span>
-<span class="nc" id="L112">            Date creation = ((Content) entity).getCreated();</span>
-<span class="nc bnc" id="L113" title="All 2 branches missed.">            Date lastModify = (null != ((Content) entity).getLastModified()) ? ((Content) entity).getLastModified() : creation;</span>
-<span class="nc bnc" id="L114" title="All 2 branches missed.">            if (null != creation) {</span>
-<span class="nc" id="L115">                String value = DateTools.timeToString(creation.getTime(), DateTools.Resolution.MINUTE);</span>
-<span class="nc" id="L116">                document.add(new SortedDocValuesField(CONTENT_CREATION_FIELD_NAME, new BytesRef(value)));</span>
+<span class="nc" id="L111">            document.add(new TextField(CONTENT_TYPE_CODE_FIELD_NAME, entity.getTypeCode(), Field.Store.YES));</span>
+<span class="nc" id="L112">            document.add(new TextField(CONTENT_MAIN_GROUP_FIELD_NAME, entity.getMainGroup(), Field.Store.YES));</span>
+<span class="nc" id="L113">            Date creation = ((Content) entity).getCreated();</span>
+<span class="nc bnc" id="L114" title="All 2 branches missed.">            Date lastModify = (null != ((Content) entity).getLastModified()) ? ((Content) entity).getLastModified() : creation;</span>
+<span class="nc bnc" id="L115" title="All 2 branches missed.">            if (null != creation) {</span>
+<span class="nc" id="L116">                String value = DateTools.timeToString(creation.getTime(), DateTools.Resolution.MINUTE);</span>
+<span class="nc" id="L117">                document.add(new SortedDocValuesField(CONTENT_CREATION_FIELD_NAME, new BytesRef(value)));</span>
             }
-<span class="nc bnc" id="L118" title="All 2 branches missed.">            if (null != lastModify) {</span>
-<span class="nc" id="L119">                String value = DateTools.timeToString(lastModify.getTime(), DateTools.Resolution.MINUTE);</span>
-<span class="nc" id="L120">                document.add(new SortedDocValuesField(CONTENT_LAST_MODIFY_FIELD_NAME, new BytesRef(value)));</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">            if (null != lastModify) {</span>
+<span class="nc" id="L120">                String value = DateTools.timeToString(lastModify.getTime(), DateTools.Resolution.MINUTE);</span>
+<span class="nc" id="L121">                document.add(new SortedDocValuesField(CONTENT_LAST_MODIFY_FIELD_NAME, new BytesRef(value)));</span>
             }
         }
-<span class="nc" id="L123">        Iterator&lt;AttributeInterface&gt; iterAttribute = entity.getAttributeList().iterator();</span>
-<span class="nc bnc" id="L124" title="All 2 branches missed.">        while (iterAttribute.hasNext()) {</span>
-<span class="nc" id="L125">            AttributeInterface currentAttribute = iterAttribute.next();</span>
-<span class="nc" id="L126">            Object value = currentAttribute.getValue();</span>
-<span class="nc bnc" id="L127" title="All 2 branches missed.">            if (null == value) {</span>
-<span class="nc" id="L128">                continue;</span>
+<span class="nc" id="L124">        Iterator&lt;AttributeInterface&gt; iterAttribute = entity.getAttributeList().iterator();</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">        while (iterAttribute.hasNext()) {</span>
+<span class="nc" id="L126">            AttributeInterface currentAttribute = iterAttribute.next();</span>
+<span class="nc" id="L127">            Object value = currentAttribute.getValue();</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">            if (null == value) {</span>
+<span class="nc" id="L129">                continue;</span>
             }
-<span class="nc" id="L130">            List&lt;Lang&gt; langs = this.getLangManager().getLangs();</span>
-<span class="nc bnc" id="L131" title="All 2 branches missed.">            for (int i = 0; i &lt; langs.size(); i++) {</span>
-<span class="nc" id="L132">                Lang currentLang = (Lang) langs.get(i);</span>
-<span class="nc bnc" id="L133" title="All 4 branches missed.">                if (!currentAttribute.isMultilingual() &amp;&amp; !currentLang.isDefault()) {</span>
-<span class="nc" id="L134">                    continue;</span>
+<span class="nc" id="L131">            List&lt;Lang&gt; langs = this.getLangManager().getLangs();</span>
+<span class="nc bnc" id="L132" title="All 2 branches missed.">            for (int i = 0; i &lt; langs.size(); i++) {</span>
+<span class="nc" id="L133">                Lang currentLang = (Lang) langs.get(i);</span>
+<span class="nc bnc" id="L134" title="All 4 branches missed.">                if (!currentAttribute.isMultilingual() &amp;&amp; !currentLang.isDefault()) {</span>
+<span class="nc" id="L135">                    continue;</span>
                 }
-<span class="nc" id="L136">                this.indexAttribute(document, currentAttribute, currentLang);</span>
+<span class="nc" id="L137">                this.indexAttribute(document, currentAttribute, currentLang);</span>
             }
-<span class="nc" id="L138">        }</span>
-<span class="nc" id="L139">        List&lt;Category&gt; categories = entity.getCategories();</span>
-<span class="nc bnc" id="L140" title="All 4 branches missed.">        if (null != categories &amp;&amp; !categories.isEmpty()) {</span>
-<span class="nc bnc" id="L141" title="All 2 branches missed.">            for (int i = 0; i &lt; categories.size(); i++) {</span>
-<span class="nc" id="L142">                ITreeNode category = categories.get(i);</span>
-<span class="nc" id="L143">                this.indexCategory(document, category);</span>
+<span class="nc" id="L139">        }</span>
+<span class="nc" id="L140">        List&lt;Category&gt; categories = entity.getCategories();</span>
+<span class="nc bnc" id="L141" title="All 4 branches missed.">        if (null != categories &amp;&amp; !categories.isEmpty()) {</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">            for (int i = 0; i &lt; categories.size(); i++) {</span>
+<span class="nc" id="L143">                ITreeNode category = categories.get(i);</span>
+<span class="nc" id="L144">                this.indexCategory(document, category);</span>
             }
         }
-<span class="nc" id="L146">        return document;</span>
+<span class="nc" id="L147">        return document;</span>
     }
 
     protected void indexAttribute(Document document, AttributeInterface attribute, Lang lang) {
-<span class="nc" id="L150">        attribute.setRenderingLang(lang.getCode());</span>
-<span class="nc bnc" id="L151" title="All 6 branches missed.">        if (attribute instanceof IndexableAttributeInterface</span>
-<span class="nc bnc" id="L152" title="All 2 branches missed.">                || ((attribute instanceof DateAttribute || attribute instanceof NumberAttribute) &amp;&amp; attribute.isSearchable())) {</span>
-<span class="nc" id="L153">            String valueToIndex = null;</span>
-<span class="nc" id="L154">            Long number = null;</span>
-<span class="nc bnc" id="L155" title="All 2 branches missed.">            if (attribute instanceof IndexableAttributeInterface) {</span>
-<span class="nc" id="L156">                valueToIndex = ((IndexableAttributeInterface) attribute).getIndexeableFieldValue();</span>
+<span class="nc" id="L151">        attribute.setRenderingLang(lang.getCode());</span>
+<span class="nc bnc" id="L152" title="All 6 branches missed.">        if (attribute instanceof IndexableAttributeInterface</span>
+<span class="nc bnc" id="L153" title="All 2 branches missed.">                || ((attribute instanceof DateAttribute || attribute instanceof NumberAttribute) &amp;&amp; attribute.isSearchable())) {</span>
+<span class="nc" id="L154">            String valueToIndex = null;</span>
+<span class="nc" id="L155">            Long number = null;</span>
+<span class="nc bnc" id="L156" title="All 2 branches missed.">            if (attribute instanceof IndexableAttributeInterface) {</span>
+<span class="nc" id="L157">                valueToIndex = ((IndexableAttributeInterface) attribute).getIndexeableFieldValue();</span>
             } else {
-<span class="nc bnc" id="L158" title="All 2 branches missed.">                if (attribute instanceof DateAttribute) {</span>
-<span class="nc" id="L159">                    Date date = ((DateAttribute) attribute).getDate();</span>
-<span class="nc bnc" id="L160" title="All 2 branches missed.">                    number = (null != date) ? date.getTime() : null;</span>
-<span class="nc" id="L161">                } else {</span>
-<span class="nc" id="L162">                    BigDecimal value = ((NumberAttribute) attribute).getValue();</span>
-<span class="nc bnc" id="L163" title="All 2 branches missed.">                    number = (null != value) ? value.longValue() : null;</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">                if (attribute instanceof DateAttribute) {</span>
+<span class="nc" id="L160">                    Date date = ((DateAttribute) attribute).getDate();</span>
+<span class="nc bnc" id="L161" title="All 2 branches missed.">                    number = (null != date) ? date.getTime() : null;</span>
+<span class="nc" id="L162">                } else {</span>
+<span class="nc" id="L163">                    BigDecimal value = ((NumberAttribute) attribute).getValue();</span>
+<span class="nc bnc" id="L164" title="All 2 branches missed.">                    number = (null != value) ? value.longValue() : null;</span>
                 }
-<span class="nc bnc" id="L165" title="All 2 branches missed.">                valueToIndex = (null != number) ? DateTools.timeToString(number, DateTools.Resolution.MINUTE) : null;</span>
+<span class="nc bnc" id="L166" title="All 2 branches missed.">                valueToIndex = (null != number) ? DateTools.timeToString(number, DateTools.Resolution.MINUTE) : null;</span>
             }
-<span class="nc bnc" id="L167" title="All 2 branches missed.">            if (null == valueToIndex) {</span>
-<span class="nc" id="L168">                return;</span>
+<span class="nc bnc" id="L168" title="All 2 branches missed.">            if (null == valueToIndex) {</span>
+<span class="nc" id="L169">                return;</span>
             }
-<span class="nc bnc" id="L170" title="All 2 branches missed.">            if (attribute instanceof IndexableAttributeInterface) {</span>
+<span class="nc bnc" id="L171" title="All 2 branches missed.">            if (attribute instanceof IndexableAttributeInterface) {</span>
                 // full text search
-<span class="nc" id="L172">                String indexingType = attribute.getIndexingType();</span>
-<span class="nc bnc" id="L173" title="All 2 branches missed.">                if (null != indexingType</span>
-<span class="nc bnc" id="L174" title="All 2 branches missed.">                        &amp;&amp; IndexableAttributeInterface.INDEXING_TYPE_UNSTORED.equalsIgnoreCase(indexingType)) {</span>
-<span class="nc" id="L175">                    document.add(new TextField(lang.getCode(), valueToIndex, Field.Store.NO));</span>
+<span class="nc" id="L173">                String indexingType = attribute.getIndexingType();</span>
+<span class="nc bnc" id="L174" title="All 2 branches missed.">                if (null != indexingType</span>
+<span class="nc bnc" id="L175" title="All 2 branches missed.">                        &amp;&amp; IndexableAttributeInterface.INDEXING_TYPE_UNSTORED.equalsIgnoreCase(indexingType)) {</span>
+<span class="nc" id="L176">                    document.add(new TextField(lang.getCode(), valueToIndex, Field.Store.NO));</span>
                 }
-<span class="nc bnc" id="L177" title="All 2 branches missed.">                if (null != indexingType</span>
-<span class="nc bnc" id="L178" title="All 2 branches missed.">                        &amp;&amp; IndexableAttributeInterface.INDEXING_TYPE_TEXT.equalsIgnoreCase(indexingType)) {</span>
-<span class="nc" id="L179">                    document.add(new TextField(lang.getCode(), valueToIndex, Field.Store.YES));</span>
+<span class="nc bnc" id="L178" title="All 2 branches missed.">                if (null != indexingType</span>
+<span class="nc bnc" id="L179" title="All 2 branches missed.">                        &amp;&amp; IndexableAttributeInterface.INDEXING_TYPE_TEXT.equalsIgnoreCase(indexingType)) {</span>
+<span class="nc" id="L180">                    document.add(new TextField(lang.getCode(), valueToIndex, Field.Store.YES));</span>
                 }
             }
-<span class="nc" id="L182">            String fieldName = lang.getCode().toLowerCase() + &quot;_&quot; + attribute.getName();</span>
-<span class="nc bnc" id="L183" title="All 2 branches missed.">            String sortableValue = (valueToIndex.length() &gt; 100) ? valueToIndex.substring(0, 99) : valueToIndex;</span>
-<span class="nc" id="L184">            document.add(new SortedDocValuesField(fieldName, new BytesRef(sortableValue)));</span>
-<span class="nc" id="L185">            document.add(new TextField(fieldName, valueToIndex.toLowerCase(), Field.Store.YES));</span>
-<span class="nc bnc" id="L186" title="All 2 branches missed.">            if (null != number) {</span>
-<span class="nc" id="L187">                document.add(new LongPoint(fieldName, number));</span>
+<span class="nc" id="L183">            String fieldName = lang.getCode().toLowerCase() + &quot;_&quot; + attribute.getName();</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">            String sortableValue = (valueToIndex.length() &gt; 100) ? valueToIndex.substring(0, 99) : valueToIndex;</span>
+<span class="nc" id="L185">            document.add(new SortedDocValuesField(fieldName, new BytesRef(sortableValue)));</span>
+<span class="nc" id="L186">            document.add(new TextField(fieldName, valueToIndex.toLowerCase(), Field.Store.YES));</span>
+<span class="nc bnc" id="L187" title="All 2 branches missed.">            if (null != number) {</span>
+<span class="nc" id="L188">                document.add(new LongPoint(fieldName, number));</span>
             }
-<span class="nc bnc" id="L189" title="All 2 branches missed.">            if (null == attribute.getRoles()) {</span>
-<span class="nc" id="L190">                return;</span>
+<span class="nc bnc" id="L190" title="All 2 branches missed.">            if (null == attribute.getRoles()) {</span>
+<span class="nc" id="L191">                return;</span>
             }
-<span class="nc bnc" id="L192" title="All 2 branches missed.">            for (int i = 0; i &lt; attribute.getRoles().length; i++) {</span>
-<span class="nc" id="L193">                String roleFieldName = lang.getCode().toLowerCase() + &quot;_&quot; + attribute.getRoles()[i];</span>
-<span class="nc" id="L194">                document.add(new SortedDocValuesField(roleFieldName, new BytesRef(sortableValue)));</span>
-<span class="nc" id="L195">                document.add(new TextField(roleFieldName, valueToIndex.toLowerCase(), Field.Store.YES));</span>
-<span class="nc bnc" id="L196" title="All 2 branches missed.">                if (null != number) {</span>
-<span class="nc" id="L197">                    document.add(new LongPoint(roleFieldName, number));</span>
+<span class="nc bnc" id="L193" title="All 2 branches missed.">            for (int i = 0; i &lt; attribute.getRoles().length; i++) {</span>
+<span class="nc" id="L194">                String roleFieldName = lang.getCode().toLowerCase() + &quot;_&quot; + attribute.getRoles()[i];</span>
+<span class="nc" id="L195">                document.add(new SortedDocValuesField(roleFieldName, new BytesRef(sortableValue)));</span>
+<span class="nc" id="L196">                document.add(new TextField(roleFieldName, valueToIndex.toLowerCase(), Field.Store.YES));</span>
+<span class="nc bnc" id="L197" title="All 2 branches missed.">                if (null != number) {</span>
+<span class="nc" id="L198">                    document.add(new LongPoint(roleFieldName, number));</span>
                 }
             }
         }
-<span class="nc" id="L201">    }</span>
+<span class="nc" id="L202">    }</span>
 
     protected void indexCategory(Document document, ITreeNode categoryToIndex) {
-<span class="nc bnc" id="L204" title="All 4 branches missed.">        if (null == categoryToIndex || categoryToIndex.isRoot()) {</span>
-<span class="nc" id="L205">            return;</span>
+<span class="nc bnc" id="L205" title="All 4 branches missed.">        if (null == categoryToIndex || categoryToIndex.isRoot()) {</span>
+<span class="nc" id="L206">            return;</span>
         }
-<span class="nc" id="L207">        document.add(new StringField(CONTENT_CATEGORY_FIELD_NAME,</span>
-<span class="nc" id="L208">                categoryToIndex.getPath(CONTENT_CATEGORY_SEPARATOR, false, this.getTreeNodeManager()), Field.Store.YES));</span>
-<span class="nc" id="L209">        ITreeNode parentCategory = this.getTreeNodeManager().getNode(categoryToIndex.getParentCode());</span>
-<span class="nc" id="L210">        this.indexCategory(document, parentCategory);</span>
-<span class="nc" id="L211">    }</span>
+<span class="nc" id="L208">        document.add(new StringField(CONTENT_CATEGORY_FIELD_NAME,</span>
+<span class="nc" id="L209">                categoryToIndex.getPath(CONTENT_CATEGORY_SEPARATOR, false, this.getTreeNodeManager()), Field.Store.YES));</span>
+<span class="nc" id="L210">        ITreeNode parentCategory = this.getTreeNodeManager().getNode(categoryToIndex.getParentCode());</span>
+<span class="nc" id="L211">        this.indexCategory(document, parentCategory);</span>
+<span class="nc" id="L212">    }</span>
 
     /**
      * Cancella un documento.
@@ -220,43 +221,43 @@ import org.apache.lucene.util.BytesRef;
     @Override
     public synchronized void delete(String name, String value) throws EntException {
         try {
-<span class="nc" id="L223">            IndexWriter writer = new IndexWriter(this.dir, this.getIndexWriterConfig());</span>
-<span class="nc" id="L224">            writer.deleteDocuments(new Term(name, value));</span>
-<span class="nc" id="L225">            writer.close();</span>
-<span class="nc" id="L226">        } catch (IOException e) {</span>
-<span class="nc" id="L227">            _logger.error(&quot;Error deleting document&quot;, e);</span>
-<span class="nc" id="L228">            throw new EntException(&quot;Error deleting document&quot;, e);</span>
-<span class="nc" id="L229">        }</span>
-<span class="nc" id="L230">    }</span>
+<span class="nc" id="L224">            IndexWriter writer = new IndexWriter(this.dir, this.getIndexWriterConfig());</span>
+<span class="nc" id="L225">            writer.deleteDocuments(new Term(name, value));</span>
+<span class="nc" id="L226">            writer.close();</span>
+<span class="nc" id="L227">        } catch (IOException e) {</span>
+<span class="nc" id="L228">            _logger.error(&quot;Error deleting document&quot;, e);</span>
+<span class="nc" id="L229">            throw new EntException(&quot;Error deleting document&quot;, e);</span>
+<span class="nc" id="L230">        }</span>
+<span class="nc" id="L231">    }</span>
 
     @Override
     public void close() {
         // nothing to do
-<span class="nc" id="L235">    }</span>
+<span class="nc" id="L236">    }</span>
 
     private Analyzer getAnalyzer() {
-<span class="nc" id="L238">        return new StandardAnalyzer();</span>
+<span class="nc" id="L239">        return new StandardAnalyzer();</span>
     }
 
     private IndexWriterConfig getIndexWriterConfig() {
-<span class="nc" id="L242">        return new IndexWriterConfig(this.getAnalyzer());</span>
+<span class="nc" id="L243">        return new IndexWriterConfig(this.getAnalyzer());</span>
     }
 
     protected ILangManager getLangManager() {
-<span class="nc" id="L246">        return langManager;</span>
+<span class="nc" id="L247">        return langManager;</span>
     }
     @Override
     public void setLangManager(ILangManager langManager) {
-<span class="nc" id="L250">        this.langManager = langManager;</span>
-<span class="nc" id="L251">    }</span>
+<span class="nc" id="L251">        this.langManager = langManager;</span>
+<span class="nc" id="L252">    }</span>
 
     public ITreeNodeManager getTreeNodeManager() {
-<span class="nc" id="L254">        return treeNodeManager;</span>
+<span class="nc" id="L255">        return treeNodeManager;</span>
     }
     @Override
     public void setTreeNodeManager(ITreeNodeManager treeNodeManager) {
-<span class="nc" id="L258">        this.treeNodeManager = treeNodeManager;</span>
-<span class="nc" id="L259">    }</span>
+<span class="nc" id="L259">        this.treeNodeManager = treeNodeManager;</span>
+<span class="nc" id="L260">    }</span>
     
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

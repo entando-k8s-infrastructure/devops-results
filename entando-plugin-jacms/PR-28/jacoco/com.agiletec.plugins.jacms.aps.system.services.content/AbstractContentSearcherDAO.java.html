@@ -14,6 +14,12 @@
 package com.agiletec.plugins.jacms.aps.system.services.content;
 
 import com.agiletec.aps.system.SystemConstants;
+import com.agiletec.aps.system.common.entity.AbstractEntitySearcherDAO;
+import com.agiletec.aps.system.common.entity.model.ApsEntityRecord;
+import com.agiletec.aps.system.common.entity.model.EntitySearchFilter;
+import com.agiletec.aps.system.services.group.Group;
+import com.agiletec.aps.util.DateConverter;
+import com.agiletec.plugins.jacms.aps.system.services.content.model.ContentRecordVO;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -21,298 +27,289 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.agiletec.aps.system.common.entity.AbstractEntitySearcherDAO;
-import com.agiletec.aps.system.common.entity.model.ApsEntityRecord;
-import com.agiletec.aps.system.common.entity.model.EntitySearchFilter;
-import com.agiletec.aps.system.services.group.Group;
-import com.agiletec.aps.util.DateConverter;
-import com.agiletec.plugins.jacms.aps.system.services.content.model.ContentRecordVO;
-import java.util.ArrayList;
 import java.util.List;
 import org.apache.commons.lang3.StringUtils;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
 
 /**
  * Abstract Data access object used to search contents.
  * @author E.Santoboni
  */
-<span class="nc" id="L42">public abstract class AbstractContentSearcherDAO extends AbstractEntitySearcherDAO implements IContentSearcherDAO {</span>
+<span class="nc" id="L39">public abstract class AbstractContentSearcherDAO extends AbstractEntitySearcherDAO implements IContentSearcherDAO {</span>
 
-<span class="nc" id="L44">	private static final Logger _logger =  LoggerFactory.getLogger(AbstractContentSearcherDAO.class);</span>
+<span class="nc" id="L41">	private static final EntLogger _logger = EntLogFactory.getSanitizedLogger(AbstractContentSearcherDAO.class);</span>
     
     @Override
     public int countContents(String[] categories, boolean orClauseCategoryFilter, 
             EntitySearchFilter[] filters, Collection&lt;String&gt; userGroupCodes) {
-<span class="nc" id="L49">        Connection conn = null;</span>
-<span class="nc" id="L50">        int count = 0;</span>
-<span class="nc" id="L51">        PreparedStatement stat = null;</span>
-<span class="nc" id="L52">        ResultSet result = null;</span>
+<span class="nc" id="L46">        Connection conn = null;</span>
+<span class="nc" id="L47">        int count = 0;</span>
+<span class="nc" id="L48">        PreparedStatement stat = null;</span>
+<span class="nc" id="L49">        ResultSet result = null;</span>
         try {
-<span class="nc" id="L54">            conn = this.getConnection();</span>
-<span class="nc" id="L55">            stat = this.buildStatement(filters, categories, </span>
+<span class="nc" id="L51">            conn = this.getConnection();</span>
+<span class="nc" id="L52">            stat = this.buildStatement(filters, categories, </span>
                     orClauseCategoryFilter, userGroupCodes, true, false, conn);
-<span class="nc" id="L57">            result = stat.executeQuery();</span>
-<span class="nc bnc" id="L58" title="All 2 branches missed.">            if (result.next()) {</span>
-<span class="nc" id="L59">                count = result.getInt(1);</span>
+<span class="nc" id="L54">            result = stat.executeQuery();</span>
+<span class="nc bnc" id="L55" title="All 2 branches missed.">            if (result.next()) {</span>
+<span class="nc" id="L56">                count = result.getInt(1);</span>
             }
-<span class="nc" id="L61">        } catch (Throwable t) {</span>
-<span class="nc" id="L62">            _logger.error(&quot;Error while loading the count of IDs&quot;, t);</span>
-<span class="nc" id="L63">            throw new RuntimeException(&quot;Error while loading the count of IDs&quot;, t);</span>
+<span class="nc" id="L58">        } catch (Throwable t) {</span>
+<span class="nc" id="L59">            _logger.error(&quot;Error while loading the count of IDs&quot;, t);</span>
+<span class="nc" id="L60">            throw new RuntimeException(&quot;Error while loading the count of IDs&quot;, t);</span>
         } finally {
-<span class="nc" id="L65">            closeDaoResources(result, stat, conn);</span>
+<span class="nc" id="L62">            closeDaoResources(result, stat, conn);</span>
         }
-<span class="nc" id="L67">        return count;</span>
+<span class="nc" id="L64">        return count;</span>
     }
     
     @Override
 	public List&lt;String&gt; loadContentsId(String contentType, String[] categories, boolean orClauseCategoryFilter, 
 			EntitySearchFilter[] filters, Collection&lt;String&gt; userGroupCodes) {
-<span class="nc bnc" id="L73" title="All 2 branches missed.">		if (!StringUtils.isBlank(contentType)) {</span>
-<span class="nc" id="L74">			EntitySearchFilter typeFilter = new EntitySearchFilter(IContentManager.ENTITY_TYPE_CODE_FILTER_KEY, false, contentType, false);</span>
-<span class="nc" id="L75">			filters = this.addFilter(filters, typeFilter);</span>
+<span class="nc bnc" id="L70" title="All 2 branches missed.">		if (!StringUtils.isBlank(contentType)) {</span>
+<span class="nc" id="L71">			EntitySearchFilter typeFilter = new EntitySearchFilter(IContentManager.ENTITY_TYPE_CODE_FILTER_KEY, false, contentType, false);</span>
+<span class="nc" id="L72">			filters = this.addFilter(filters, typeFilter);</span>
 		}
-<span class="nc" id="L77">		return this.loadContentsId(categories, orClauseCategoryFilter, filters, userGroupCodes);</span>
+<span class="nc" id="L74">		return this.loadContentsId(categories, orClauseCategoryFilter, filters, userGroupCodes);</span>
 	}
     
     @Override
     public List&lt;String&gt; loadContentsId(String[] categories, 
 			boolean orClauseCategoryFilter, EntitySearchFilter[] filters, Collection&lt;String&gt; userGroupCodes) {
-<span class="nc" id="L83">		List&lt;String&gt; contentsId = new ArrayList&lt;&gt;();</span>
-<span class="nc" id="L84">		Connection conn = null;</span>
-<span class="nc" id="L85">		PreparedStatement stat = null;</span>
-<span class="nc" id="L86">		ResultSet result = null;</span>
+<span class="nc" id="L80">		List&lt;String&gt; contentsId = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L81">		Connection conn = null;</span>
+<span class="nc" id="L82">		PreparedStatement stat = null;</span>
+<span class="nc" id="L83">		ResultSet result = null;</span>
 		try {
-<span class="nc" id="L88">			conn = this.getConnection();</span>
-<span class="nc" id="L89">			stat = this.buildStatement(filters, categories, orClauseCategoryFilter, userGroupCodes, false, false, conn);</span>
-<span class="nc" id="L90">			result = stat.executeQuery();</span>
-<span class="nc bnc" id="L91" title="All 2 branches missed.">            while (result.next()) {</span>
-<span class="nc" id="L92">                String id = result.getString(this.getMasterTableIdFieldName());</span>
-<span class="nc bnc" id="L93" title="All 2 branches missed.">                if (!contentsId.contains(id)) {</span>
-<span class="nc" id="L94">                    contentsId.add(id);</span>
+<span class="nc" id="L85">			conn = this.getConnection();</span>
+<span class="nc" id="L86">			stat = this.buildStatement(filters, categories, orClauseCategoryFilter, userGroupCodes, false, false, conn);</span>
+<span class="nc" id="L87">			result = stat.executeQuery();</span>
+<span class="nc bnc" id="L88" title="All 2 branches missed.">            while (result.next()) {</span>
+<span class="nc" id="L89">                String id = result.getString(this.getMasterTableIdFieldName());</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">                if (!contentsId.contains(id)) {</span>
+<span class="nc" id="L91">                    contentsId.add(id);</span>
                 }
-<span class="nc" id="L96">            }</span>
-<span class="nc" id="L97">		} catch (Throwable t) {</span>
-<span class="nc" id="L98">			_logger.error(&quot;Error loading contents id list&quot;,  t);</span>
-<span class="nc" id="L99">			throw new RuntimeException(&quot;Error loading contents id list&quot;, t);</span>
+<span class="nc" id="L93">            }</span>
+<span class="nc" id="L94">		} catch (Throwable t) {</span>
+<span class="nc" id="L95">			_logger.error(&quot;Error loading contents id list&quot;,  t);</span>
+<span class="nc" id="L96">			throw new RuntimeException(&quot;Error loading contents id list&quot;, t);</span>
 		} finally {
-<span class="nc" id="L101">			closeDaoResources(result, stat, conn);</span>
+<span class="nc" id="L98">			closeDaoResources(result, stat, conn);</span>
 		}
-<span class="nc" id="L103">		return contentsId;</span>
+<span class="nc" id="L100">		return contentsId;</span>
 	}
 	
 	@Override
 	protected String getTableFieldName(String metadataFieldKey) {
-<span class="nc bnc" id="L108" title="All 2 branches missed.">		if (metadataFieldKey.equals(IContentManager.ENTITY_ID_FILTER_KEY)) {</span>
-<span class="nc" id="L109">			return this.getEntityMasterTableIdFieldName();</span>
-<span class="nc bnc" id="L110" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.ENTITY_TYPE_CODE_FILTER_KEY)) {</span>
-<span class="nc" id="L111">			return this.getEntityMasterTableIdTypeFieldName();</span>
-<span class="nc bnc" id="L112" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_DESCR_FILTER_KEY)) {</span>
-<span class="nc" id="L113">			return &quot;descr&quot;;</span>
-<span class="nc bnc" id="L114" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_STATUS_FILTER_KEY)) {</span>
-<span class="nc" id="L115">			return &quot;status&quot;;</span>
-<span class="nc bnc" id="L116" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_CREATION_DATE_FILTER_KEY)) {</span>
-<span class="nc" id="L117">			return &quot;created&quot;;</span>
-<span class="nc bnc" id="L118" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_MODIFY_DATE_FILTER_KEY)) {</span>
-<span class="nc" id="L119">			return &quot;lastmodified&quot;;</span>
-<span class="nc bnc" id="L120" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_PUBLISH_DATE_FILTER_KEY)) {</span>
-<span class="nc" id="L121">			return &quot;published&quot;;</span>
-<span class="nc bnc" id="L122" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_ONLINE_FILTER_KEY)) {</span>
-<span class="nc" id="L123">			return &quot;onlinexml&quot;;</span>
-<span class="nc bnc" id="L124" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_MAIN_GROUP_FILTER_KEY)) {</span>
-<span class="nc" id="L125">			return &quot;maingroup&quot;;</span>
-<span class="nc bnc" id="L126" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_CURRENT_VERSION_FILTER_KEY)) {</span>
-<span class="nc" id="L127">			return &quot;currentversion&quot;;</span>
-<span class="nc bnc" id="L128" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_FIRST_EDITOR_FILTER_KEY)) {</span>
-<span class="nc" id="L129">			return &quot;firsteditor&quot;;</span>
-<span class="nc bnc" id="L130" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_LAST_EDITOR_FILTER_KEY)) {</span>
-<span class="nc" id="L131">			return &quot;lasteditor&quot;;</span>
-<span class="nc bnc" id="L132" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_RESTRICTION_FILTER_KEY)) {</span>
-<span class="nc" id="L133">			return &quot;restriction&quot;;</span>
-<span class="nc bnc" id="L134" title="All 2 branches missed.">		}else if (metadataFieldKey.equals(IContentManager.CONTENT_GROUP_FILTER_KEY)) {</span>
-<span class="nc" id="L135">			return &quot;group&quot;;</span>
-<span class="nc" id="L136">		} else throw new RuntimeException(&quot;Chiave di ricerca '&quot; + metadataFieldKey + &quot;' non riconosciuta&quot;);</span>
+<span class="nc bnc" id="L105" title="All 2 branches missed.">		if (metadataFieldKey.equals(IContentManager.ENTITY_ID_FILTER_KEY)) {</span>
+<span class="nc" id="L106">			return this.getEntityMasterTableIdFieldName();</span>
+<span class="nc bnc" id="L107" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.ENTITY_TYPE_CODE_FILTER_KEY)) {</span>
+<span class="nc" id="L108">			return this.getEntityMasterTableIdTypeFieldName();</span>
+<span class="nc bnc" id="L109" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_DESCR_FILTER_KEY)) {</span>
+<span class="nc" id="L110">			return &quot;descr&quot;;</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_STATUS_FILTER_KEY)) {</span>
+<span class="nc" id="L112">			return &quot;status&quot;;</span>
+<span class="nc bnc" id="L113" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_CREATION_DATE_FILTER_KEY)) {</span>
+<span class="nc" id="L114">			return &quot;created&quot;;</span>
+<span class="nc bnc" id="L115" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_MODIFY_DATE_FILTER_KEY)) {</span>
+<span class="nc" id="L116">			return &quot;lastmodified&quot;;</span>
+<span class="nc bnc" id="L117" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_PUBLISH_DATE_FILTER_KEY)) {</span>
+<span class="nc" id="L118">			return &quot;published&quot;;</span>
+<span class="nc bnc" id="L119" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_ONLINE_FILTER_KEY)) {</span>
+<span class="nc" id="L120">			return &quot;onlinexml&quot;;</span>
+<span class="nc bnc" id="L121" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_MAIN_GROUP_FILTER_KEY)) {</span>
+<span class="nc" id="L122">			return &quot;maingroup&quot;;</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_CURRENT_VERSION_FILTER_KEY)) {</span>
+<span class="nc" id="L124">			return &quot;currentversion&quot;;</span>
+<span class="nc bnc" id="L125" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_FIRST_EDITOR_FILTER_KEY)) {</span>
+<span class="nc" id="L126">			return &quot;firsteditor&quot;;</span>
+<span class="nc bnc" id="L127" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_LAST_EDITOR_FILTER_KEY)) {</span>
+<span class="nc" id="L128">			return &quot;lasteditor&quot;;</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">		} else if (metadataFieldKey.equals(IContentManager.CONTENT_RESTRICTION_FILTER_KEY)) {</span>
+<span class="nc" id="L130">			return &quot;restriction&quot;;</span>
+<span class="nc bnc" id="L131" title="All 2 branches missed.">		}else if (metadataFieldKey.equals(IContentManager.CONTENT_GROUP_FILTER_KEY)) {</span>
+<span class="nc" id="L132">			return &quot;group&quot;;</span>
+<span class="nc" id="L133">		} else throw new RuntimeException(&quot;Chiave di ricerca '&quot; + metadataFieldKey + &quot;' non riconosciuta&quot;);</span>
 	}
 	
 	protected PreparedStatement buildStatement(EntitySearchFilter[] filters,
 			Collection&lt;String&gt; userGroupCodes, boolean selectAll, Connection conn) {
-<span class="nc" id="L141">		return this.buildStatement(filters, null, false, userGroupCodes, false, selectAll, conn);</span>
+<span class="nc" id="L138">		return this.buildStatement(filters, null, false, userGroupCodes, false, selectAll, conn);</span>
 	}
 	
 	protected PreparedStatement buildStatement(EntitySearchFilter[] filters,
 			String[] categories, Collection&lt;String&gt; userGroupCodes, boolean selectAll, Connection conn) {
-<span class="nc" id="L146">		return this.buildStatement(filters, categories, false, userGroupCodes, false, selectAll, conn);</span>
+<span class="nc" id="L143">		return this.buildStatement(filters, categories, false, userGroupCodes, false, selectAll, conn);</span>
 	}
 	
 	protected PreparedStatement buildStatement(EntitySearchFilter[] filters,
 			String[] categories, boolean orClauseCategoryFilter, 
 			Collection&lt;String&gt; userGroupCodes, boolean isCount, boolean selectAll, Connection conn) {
-<span class="nc" id="L152">		Collection&lt;String&gt; groupsForSelect = this.getGroupsForSelect(userGroupCodes);</span>
+<span class="nc" id="L149">		Collection&lt;String&gt; groupsForSelect = this.getGroupsForSelect(userGroupCodes);</span>
 
-<span class="nc" id="L154">		String query = this.createQueryString(filters, null, categories, orClauseCategoryFilter, groupsForSelect, isCount, selectAll);</span>
+<span class="nc" id="L151">		String query = this.createQueryString(filters, null, categories, orClauseCategoryFilter, groupsForSelect, isCount, selectAll);</span>
 		//System.out.println(&quot;QUERY : &quot; + query);
-<span class="nc" id="L156">		PreparedStatement stat = null;</span>
+<span class="nc" id="L153">		PreparedStatement stat = null;</span>
 		try {
-<span class="nc" id="L158">			stat = conn.prepareStatement(query);</span>
-<span class="nc" id="L159">			int index = 0;</span>
-<span class="nc" id="L160">			index = super.addAttributeFilterStatementBlock(filters, index, stat);</span>
-<span class="nc" id="L161">			index = this.addMetadataFieldFilterStatementBlock(filters, index, stat);</span>
-<span class="nc bnc" id="L162" title="All 2 branches missed.">			if (groupsForSelect != null) {</span>
-<span class="nc" id="L163">				index = this.addGroupStatementBlock(groupsForSelect, index, stat);</span>
+<span class="nc" id="L155">			stat = conn.prepareStatement(query);</span>
+<span class="nc" id="L156">			int index = 0;</span>
+<span class="nc" id="L157">			index = super.addAttributeFilterStatementBlock(filters, index, stat);</span>
+<span class="nc" id="L158">			index = this.addMetadataFieldFilterStatementBlock(filters, index, stat);</span>
+<span class="nc bnc" id="L159" title="All 2 branches missed.">			if (groupsForSelect != null) {</span>
+<span class="nc" id="L160">				index = this.addGroupStatementBlock(groupsForSelect, index, stat);</span>
 			}
-<span class="nc bnc" id="L165" title="All 2 branches missed.">			if (categories != null) {</span>
-<span class="nc" id="L166">				index = this.addCategoryStatementBlock(categories, index, stat);</span>
+<span class="nc bnc" id="L162" title="All 2 branches missed.">			if (categories != null) {</span>
+<span class="nc" id="L163">				index = this.addCategoryStatementBlock(categories, index, stat);</span>
 			}
-<span class="nc" id="L168">		} catch (Throwable t) {</span>
-<span class="nc" id="L169">			_logger.error(&quot;Errore in fase di creazione statement&quot;,  t);</span>
-<span class="nc" id="L170">			throw new RuntimeException(&quot;Errore in fase di creazione statement&quot;, t);</span>
+<span class="nc" id="L165">		} catch (Throwable t) {</span>
+<span class="nc" id="L166">			_logger.error(&quot;Errore in fase di creazione statement&quot;,  t);</span>
+<span class="nc" id="L167">			throw new RuntimeException(&quot;Errore in fase di creazione statement&quot;, t);</span>
 			//processDaoException(t, &quot;Errore in fase di creazione statement&quot;, &quot;buildStatement&quot;);
-<span class="nc" id="L172">		}</span>
-<span class="nc" id="L173">		return stat;</span>
+<span class="nc" id="L169">		}</span>
+<span class="nc" id="L170">		return stat;</span>
 	}
 	
 	protected int addGroupStatementBlock(Collection&lt;String&gt; groupCodes, int index, PreparedStatement stat) throws Throwable {
-<span class="nc" id="L177">		Iterator&lt;String&gt; groupIter = groupCodes.iterator();</span>
-<span class="nc bnc" id="L178" title="All 2 branches missed.">		while (groupIter.hasNext()) {</span>
-<span class="nc" id="L179">			String groupName = groupIter.next();</span>
-<span class="nc" id="L180">			stat.setString(++index, groupName);</span>
-<span class="nc" id="L181">		}</span>
-<span class="nc" id="L182">		return index;</span>
+<span class="nc" id="L174">		Iterator&lt;String&gt; groupIter = groupCodes.iterator();</span>
+<span class="nc bnc" id="L175" title="All 2 branches missed.">		while (groupIter.hasNext()) {</span>
+<span class="nc" id="L176">			String groupName = groupIter.next();</span>
+<span class="nc" id="L177">			stat.setString(++index, groupName);</span>
+<span class="nc" id="L178">		}</span>
+<span class="nc" id="L179">		return index;</span>
 	}
 	
 	protected int addCategoryStatementBlock(String[] categories, int index, PreparedStatement stat) throws Throwable {
-<span class="nc bnc" id="L186" title="All 2 branches missed.">		if (null == categories) return index;</span>
-<span class="nc bnc" id="L187" title="All 2 branches missed.">		for (int i = 0; i &lt; categories.length; i++) {</span>
-<span class="nc" id="L188">			stat.setString(++index, categories[i]);</span>
+<span class="nc bnc" id="L183" title="All 2 branches missed.">		if (null == categories) return index;</span>
+<span class="nc bnc" id="L184" title="All 2 branches missed.">		for (int i = 0; i &lt; categories.length; i++) {</span>
+<span class="nc" id="L185">			stat.setString(++index, categories[i]);</span>
 		}
-<span class="nc" id="L190">		return index;</span>
+<span class="nc" id="L187">		return index;</span>
 	}
 	
 	protected String createQueryString(EntitySearchFilter[] filters, Collection&lt;String&gt; groupsForSelect, boolean selectAll) {
-<span class="nc" id="L194">		return this.createQueryString(filters, null, null, false, groupsForSelect, false, selectAll);</span>
+<span class="nc" id="L191">		return this.createQueryString(filters, null, null, false, groupsForSelect, false, selectAll);</span>
 	}
 	
 	protected String createQueryString(EntitySearchFilter[] filters, 
 			String[] categories, Collection&lt;String&gt; groupsForSelect, boolean selectAll) {
-<span class="nc" id="L199">		return this.createQueryString(filters, null, categories, false, groupsForSelect, false, selectAll);</span>
+<span class="nc" id="L196">		return this.createQueryString(filters, null, categories, false, groupsForSelect, false, selectAll);</span>
 	}
 	
 	protected String createQueryString(EntitySearchFilter[] filters, String[] groups,
 			String[] categories, boolean orClauseCategoryFilter, Collection&lt;String&gt; groupsForSelect, boolean isCount, boolean selectAll) {
-<span class="nc" id="L204">		StringBuffer query = this.createBaseQueryBlock(filters, isCount, selectAll);</span>
-<span class="nc" id="L205">		boolean hasAppendWhereClause = this.appendFullAttributeFilterQueryBlocks(filters, query, false);</span>
-<span class="nc" id="L206">		hasAppendWhereClause = this.appendMetadataFieldFilterQueryBlocks(filters, query, hasAppendWhereClause);</span>
-<span class="nc bnc" id="L207" title="All 4 branches missed.">		if (null != groupsForSelect &amp;&amp; !groupsForSelect.isEmpty()) {</span>
-<span class="nc" id="L208">			hasAppendWhereClause = this.verifyWhereClauseAppend(query, hasAppendWhereClause);</span>
-<span class="nc" id="L209">			this.addGroupsQueryBlock(query, groupsForSelect);</span>
+<span class="nc" id="L201">		StringBuffer query = this.createBaseQueryBlock(filters, isCount, selectAll);</span>
+<span class="nc" id="L202">		boolean hasAppendWhereClause = this.appendFullAttributeFilterQueryBlocks(filters, query, false);</span>
+<span class="nc" id="L203">		hasAppendWhereClause = this.appendMetadataFieldFilterQueryBlocks(filters, query, hasAppendWhereClause);</span>
+<span class="nc bnc" id="L204" title="All 4 branches missed.">		if (null != groupsForSelect &amp;&amp; !groupsForSelect.isEmpty()) {</span>
+<span class="nc" id="L205">			hasAppendWhereClause = this.verifyWhereClauseAppend(query, hasAppendWhereClause);</span>
+<span class="nc" id="L206">			this.addGroupsQueryBlock(query, groupsForSelect);</span>
 		}
-<span class="nc bnc" id="L211" title="All 4 branches missed.">		if (null != categories &amp;&amp; categories.length &gt; 0) {</span>
-<span class="nc" id="L212">			hasAppendWhereClause = this.verifyWhereClauseAppend(query, hasAppendWhereClause);</span>
-<span class="nc bnc" id="L213" title="All 2 branches missed.">			this.addCategoriesQueryBlock(query, categories, !orClauseCategoryFilter);</span>
+<span class="nc bnc" id="L208" title="All 4 branches missed.">		if (null != categories &amp;&amp; categories.length &gt; 0) {</span>
+<span class="nc" id="L209">			hasAppendWhereClause = this.verifyWhereClauseAppend(query, hasAppendWhereClause);</span>
+<span class="nc bnc" id="L210" title="All 2 branches missed.">			this.addCategoriesQueryBlock(query, categories, !orClauseCategoryFilter);</span>
 		}
-<span class="nc bnc" id="L215" title="All 4 branches missed.">		if (null != groups &amp;&amp; groups.length &gt; 0) {</span>
-<span class="nc" id="L216">			hasAppendWhereClause = this.verifyWhereClauseAppend(query, hasAppendWhereClause);</span>
-<span class="nc" id="L217">			this.addGroupsQueryBlock(query, groups);</span>
+<span class="nc bnc" id="L212" title="All 4 branches missed.">		if (null != groups &amp;&amp; groups.length &gt; 0) {</span>
+<span class="nc" id="L213">			hasAppendWhereClause = this.verifyWhereClauseAppend(query, hasAppendWhereClause);</span>
+<span class="nc" id="L214">			this.addGroupsQueryBlock(query, groups);</span>
 		}
-<span class="nc bnc" id="L219" title="All 2 branches missed.">        if (!isCount) {</span>
-<span class="nc" id="L220">            boolean ordered = this.appendOrderQueryBlocks(filters, query, false);</span>
-<span class="nc" id="L221">            this.appendLimitQueryBlock(filters, query);</span>
+<span class="nc bnc" id="L216" title="All 2 branches missed.">        if (!isCount) {</span>
+<span class="nc" id="L217">            boolean ordered = this.appendOrderQueryBlocks(filters, query, false);</span>
+<span class="nc" id="L218">            this.appendLimitQueryBlock(filters, query);</span>
         }
 		//System.out.println(&quot;********** &quot; + query.toString());
-<span class="nc" id="L224">		return query.toString();</span>
+<span class="nc" id="L221">		return query.toString();</span>
 	}
 	
 	protected void addGroupsQueryBlock(StringBuffer query, Collection&lt;String&gt; userGroupCodes) {
-<span class="nc" id="L228">		query.append(&quot; ( &quot;);</span>
-<span class="nc" id="L229">		int size = userGroupCodes.size();</span>
-<span class="nc bnc" id="L230" title="All 2 branches missed.">		for (int i=0; i&lt;size; i++) {</span>
-<span class="nc bnc" id="L231" title="All 2 branches missed.">			if (i!=0) query.append(&quot;OR &quot;);</span>
-<span class="nc" id="L232">			query.append(&quot;contents.maingroup = ? &quot;);</span>
+<span class="nc" id="L225">		query.append(&quot; ( &quot;);</span>
+<span class="nc" id="L226">		int size = userGroupCodes.size();</span>
+<span class="nc bnc" id="L227" title="All 2 branches missed.">		for (int i=0; i&lt;size; i++) {</span>
+<span class="nc bnc" id="L228" title="All 2 branches missed.">			if (i!=0) query.append(&quot;OR &quot;);</span>
+<span class="nc" id="L229">			query.append(&quot;contents.maingroup = ? &quot;);</span>
 		}
-<span class="nc" id="L234">		query.append(&quot;) &quot;);</span>
-<span class="nc" id="L235">	}</span>
+<span class="nc" id="L231">		query.append(&quot;) &quot;);</span>
+<span class="nc" id="L232">	}</span>
 	
 	protected void addCategoriesQueryBlock(StringBuffer query, String[] categories, boolean andClause) {
-<span class="nc bnc" id="L238" title="All 4 branches missed.">		if (categories != null &amp;&amp; categories.length &gt; 0) {</span>
-<span class="nc" id="L239">			query.append(&quot; ( &quot;);</span>
-<span class="nc bnc" id="L240" title="All 2 branches missed.">			for (int i=0; i&lt;categories.length; i++) {</span>
-<span class="nc bnc" id="L241" title="All 2 branches missed.">				if (i&gt;0) {</span>
-<span class="nc bnc" id="L242" title="All 2 branches missed.">					if (andClause) {</span>
-<span class="nc" id="L243">						query.append(&quot; AND &quot;);</span>
+<span class="nc bnc" id="L235" title="All 4 branches missed.">		if (categories != null &amp;&amp; categories.length &gt; 0) {</span>
+<span class="nc" id="L236">			query.append(&quot; ( &quot;);</span>
+<span class="nc bnc" id="L237" title="All 2 branches missed.">			for (int i=0; i&lt;categories.length; i++) {</span>
+<span class="nc bnc" id="L238" title="All 2 branches missed.">				if (i&gt;0) {</span>
+<span class="nc bnc" id="L239" title="All 2 branches missed.">					if (andClause) {</span>
+<span class="nc" id="L240">						query.append(&quot; AND &quot;);</span>
 					} else {
-<span class="nc" id="L245">						query.append(&quot; OR &quot;);</span>
+<span class="nc" id="L242">						query.append(&quot; OR &quot;);</span>
 					}
 				}
-<span class="nc" id="L248">				query.append(&quot; contents.contentid IN (SELECT contentid FROM &quot;)</span>
-<span class="nc" id="L249">					.append(this.getContentRelationsTableName()).append(&quot; WHERE &quot;)</span>
-<span class="nc" id="L250">					.append(this.getContentRelationsTableName()).append(&quot;.refcategory = ? ) &quot;);</span>
+<span class="nc" id="L245">				query.append(&quot; contents.contentid IN (SELECT contentid FROM &quot;)</span>
+<span class="nc" id="L246">					.append(this.getContentRelationsTableName()).append(&quot; WHERE &quot;)</span>
+<span class="nc" id="L247">					.append(this.getContentRelationsTableName()).append(&quot;.refcategory = ? ) &quot;);</span>
 			}
-<span class="nc" id="L252">			query.append(&quot; ) &quot;);</span>
+<span class="nc" id="L249">			query.append(&quot; ) &quot;);</span>
 		}
-<span class="nc" id="L254">	}</span>
+<span class="nc" id="L251">	}</span>
 
     protected void addGroupsQueryBlock(StringBuffer query, String[] groups) {
-<span class="nc bnc" id="L257" title="All 4 branches missed.">        if (groups != null &amp;&amp; groups.length &gt; 0) {</span>
-<span class="nc" id="L258">            query.append(&quot; ( &quot;);</span>
-<span class="nc bnc" id="L259" title="All 2 branches missed.">            for (int i = 0; i &lt; groups.length; i++) {</span>
-<span class="nc bnc" id="L260" title="All 2 branches missed.">                if (i &gt; 0) {</span>
-<span class="nc" id="L261">                    query.append(&quot; AND &quot;);</span>
+<span class="nc bnc" id="L254" title="All 4 branches missed.">        if (groups != null &amp;&amp; groups.length &gt; 0) {</span>
+<span class="nc" id="L255">            query.append(&quot; ( &quot;);</span>
+<span class="nc bnc" id="L256" title="All 2 branches missed.">            for (int i = 0; i &lt; groups.length; i++) {</span>
+<span class="nc bnc" id="L257" title="All 2 branches missed.">                if (i &gt; 0) {</span>
+<span class="nc" id="L258">                    query.append(&quot; AND &quot;);</span>
                 }
-<span class="nc" id="L263">                query.append(&quot; contents.contentid IN (SELECT contentid FROM &quot;)</span>
-<span class="nc" id="L264">                        .append(this.getContentRelationsTableName()).append(&quot; WHERE &quot;)</span>
-<span class="nc" id="L265">                        .append(this.getContentRelationsTableName()).append(&quot;.refgroup = ? ) &quot;);</span>
+<span class="nc" id="L260">                query.append(&quot; contents.contentid IN (SELECT contentid FROM &quot;)</span>
+<span class="nc" id="L261">                        .append(this.getContentRelationsTableName()).append(&quot; WHERE &quot;)</span>
+<span class="nc" id="L262">                        .append(this.getContentRelationsTableName()).append(&quot;.refgroup = ? ) &quot;);</span>
             }
-<span class="nc" id="L267">            query.append(&quot; ) &quot;);</span>
+<span class="nc" id="L264">            query.append(&quot; ) &quot;);</span>
         }
-<span class="nc" id="L269">    }</span>
+<span class="nc" id="L266">    }</span>
 
 	protected Collection&lt;String&gt; getGroupsForSelect(Collection&lt;String&gt; userGroupCodes) {
-<span class="nc bnc" id="L272" title="All 4 branches missed.">		if (userGroupCodes != null &amp;&amp; userGroupCodes.contains(Group.ADMINS_GROUP_NAME)) {</span>
-<span class="nc" id="L273">			return null;</span>
+<span class="nc bnc" id="L269" title="All 4 branches missed.">		if (userGroupCodes != null &amp;&amp; userGroupCodes.contains(Group.ADMINS_GROUP_NAME)) {</span>
+<span class="nc" id="L270">			return null;</span>
 		} else {
-<span class="nc" id="L275">			Collection&lt;String&gt; groupsForSelect = new HashSet&lt;&gt;();</span>
-<span class="nc bnc" id="L276" title="All 2 branches missed.">			if (userGroupCodes != null) groupsForSelect.addAll(userGroupCodes);</span>
-<span class="nc" id="L277">			return groupsForSelect;</span>
+<span class="nc" id="L272">			Collection&lt;String&gt; groupsForSelect = new HashSet&lt;&gt;();</span>
+<span class="nc bnc" id="L273" title="All 2 branches missed.">			if (userGroupCodes != null) groupsForSelect.addAll(userGroupCodes);</span>
+<span class="nc" id="L274">			return groupsForSelect;</span>
 		}
 	}
 	
 	@Override
 	protected ApsEntityRecord createRecord(ResultSet result) throws Throwable {
-<span class="nc" id="L283">		ContentRecordVO contentVo = new ContentRecordVO();</span>
-<span class="nc" id="L284">		contentVo.setId(result.getString(&quot;contentid&quot;));</span>
-<span class="nc" id="L285">		contentVo.setTypeCode(result.getString(&quot;contenttype&quot;));</span>
-<span class="nc" id="L286">		contentVo.setDescription(result.getString(&quot;descr&quot;));</span>
-<span class="nc" id="L287">		contentVo.setStatus(result.getString(&quot;status&quot;));</span>
-<span class="nc" id="L288">		String xmlWork = result.getString(&quot;workxml&quot;);</span>
-<span class="nc" id="L289">        contentVo.setCreate(DateConverter.parseDate(result.getString(&quot;created&quot;), SystemConstants.DATA_TYPE_METADATA_DATE_FORMAT));</span>
-<span class="nc" id="L290">		contentVo.setModify(DateConverter.parseDate(result.getString(&quot;lastmodified&quot;), SystemConstants.DATA_TYPE_METADATA_DATE_FORMAT));</span>
-<span class="nc" id="L291">		contentVo.setPublish(DateConverter.parseDate(result.getString(&quot;published&quot;), SystemConstants.DATA_TYPE_METADATA_DATE_FORMAT));</span>
-<span class="nc" id="L292">		String xmlOnLine = result.getString(&quot;onlinexml&quot;);</span>
-<span class="nc bnc" id="L293" title="All 2 branches missed.">        contentVo.setOnLine(!StringUtils.isBlank(xmlOnLine));</span>
-<span class="nc bnc" id="L294" title="All 2 branches missed.">		contentVo.setSync(result.getInt(&quot;sync&quot;) == 1);</span>
-<span class="nc" id="L295">		String mainGroupCode = result.getString(&quot;maingroup&quot;);</span>
-<span class="nc" id="L296">		contentVo.setMainGroupCode(mainGroupCode);</span>
-<span class="nc" id="L297">		contentVo.setXmlWork(xmlWork);</span>
-<span class="nc" id="L298">		contentVo.setXmlOnLine(xmlOnLine);</span>
-<span class="nc" id="L299">		contentVo.setVersion(result.getString(&quot;currentversion&quot;));</span>
-<span class="nc" id="L300">		contentVo.setLastEditor(result.getString(&quot;lasteditor&quot;));</span>
-<span class="nc" id="L301">		contentVo.setRestriction(result.getString(&quot;restriction&quot;));</span>
-<span class="nc" id="L302">		return contentVo;</span>
+<span class="nc" id="L280">		ContentRecordVO contentVo = new ContentRecordVO();</span>
+<span class="nc" id="L281">		contentVo.setId(result.getString(&quot;contentid&quot;));</span>
+<span class="nc" id="L282">		contentVo.setTypeCode(result.getString(&quot;contenttype&quot;));</span>
+<span class="nc" id="L283">		contentVo.setDescription(result.getString(&quot;descr&quot;));</span>
+<span class="nc" id="L284">		contentVo.setStatus(result.getString(&quot;status&quot;));</span>
+<span class="nc" id="L285">		String xmlWork = result.getString(&quot;workxml&quot;);</span>
+<span class="nc" id="L286">        contentVo.setCreate(DateConverter.parseDate(result.getString(&quot;created&quot;), SystemConstants.DATA_TYPE_METADATA_DATE_FORMAT));</span>
+<span class="nc" id="L287">		contentVo.setModify(DateConverter.parseDate(result.getString(&quot;lastmodified&quot;), SystemConstants.DATA_TYPE_METADATA_DATE_FORMAT));</span>
+<span class="nc" id="L288">		contentVo.setPublish(DateConverter.parseDate(result.getString(&quot;published&quot;), SystemConstants.DATA_TYPE_METADATA_DATE_FORMAT));</span>
+<span class="nc" id="L289">		String xmlOnLine = result.getString(&quot;onlinexml&quot;);</span>
+<span class="nc bnc" id="L290" title="All 2 branches missed.">        contentVo.setOnLine(!StringUtils.isBlank(xmlOnLine));</span>
+<span class="nc bnc" id="L291" title="All 2 branches missed.">		contentVo.setSync(result.getInt(&quot;sync&quot;) == 1);</span>
+<span class="nc" id="L292">		String mainGroupCode = result.getString(&quot;maingroup&quot;);</span>
+<span class="nc" id="L293">		contentVo.setMainGroupCode(mainGroupCode);</span>
+<span class="nc" id="L294">		contentVo.setXmlWork(xmlWork);</span>
+<span class="nc" id="L295">		contentVo.setXmlOnLine(xmlOnLine);</span>
+<span class="nc" id="L296">		contentVo.setVersion(result.getString(&quot;currentversion&quot;));</span>
+<span class="nc" id="L297">		contentVo.setLastEditor(result.getString(&quot;lasteditor&quot;));</span>
+<span class="nc" id="L298">		contentVo.setRestriction(result.getString(&quot;restriction&quot;));</span>
+<span class="nc" id="L299">		return contentVo;</span>
 	}
 	
 	@Override
 	protected String getEntityMasterTableName() {
-<span class="nc" id="L307">		return &quot;contents&quot;;</span>
+<span class="nc" id="L304">		return &quot;contents&quot;;</span>
 	}
 	@Override
 	protected String getEntityMasterTableIdFieldName() {
-<span class="nc" id="L311">		return &quot;contentid&quot;;</span>
+<span class="nc" id="L308">		return &quot;contentid&quot;;</span>
 	}
 	@Override
 	protected String getEntityMasterTableIdTypeFieldName() {
-<span class="nc" id="L315">		return &quot;contenttype&quot;;</span>
+<span class="nc" id="L312">		return &quot;contenttype&quot;;</span>
 	}
 	
 	protected abstract String getContentRelationsTableName();
