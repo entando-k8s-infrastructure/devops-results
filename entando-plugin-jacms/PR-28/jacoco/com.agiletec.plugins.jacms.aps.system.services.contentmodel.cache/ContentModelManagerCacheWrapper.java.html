@@ -19,79 +19,78 @@ import java.util.List;
 import java.util.Map;
 
 import com.agiletec.aps.system.common.AbstractGenericCacheWrapper;
-import com.agiletec.aps.system.exception.ApsSystemException;
+import org.entando.entando.ent.exception.EntException;
 import com.agiletec.plugins.jacms.aps.system.services.contentmodel.ContentModel;
 import com.agiletec.plugins.jacms.aps.system.services.contentmodel.IContentModelDAO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.Cache;
 
-<span class="fc" id="L29">public class ContentModelManagerCacheWrapper extends AbstractGenericCacheWrapper&lt;ContentModel&gt; implements IContentModelManagerCacheWrapper {</span>
+<span class="nc" id="L29">public class ContentModelManagerCacheWrapper extends AbstractGenericCacheWrapper&lt;ContentModel&gt; implements IContentModelManagerCacheWrapper {</span>
 
-<span class="fc" id="L31">	private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+<span class="nc" id="L31">	private final Logger logger = LoggerFactory.getLogger(getClass());</span>
 
 	@Override
-	public void initCache(IContentModelDAO contentModelDao) throws ApsSystemException {
+	public void initCache(IContentModelDAO contentModelDao) throws EntException {
 		try {
-<span class="fc" id="L36">			Cache cache = this.getCache();</span>
-<span class="fc" id="L37">			this.releaseCachedObjects(cache);</span>
-<span class="fc" id="L38">			Map&lt;String, ContentModel&gt; modelsMap = this.getModelsMap(contentModelDao);</span>
-<span class="fc" id="L39">			super.insertObjectsOnCache(cache, modelsMap);</span>
-<span class="nc" id="L40">		} catch (Throwable t) {</span>
-<span class="nc" id="L41">			logger.error(&quot;Error bootstrapping models map cache&quot;, t);</span>
-<span class="nc" id="L42">			throw new ApsSystemException(&quot;Error bootstrapping models map cache&quot;, t);</span>
-<span class="fc" id="L43">		}</span>
-<span class="fc" id="L44">	}</span>
+<span class="nc" id="L36">			Cache cache = this.getCache();</span>
+<span class="nc" id="L37">			Map&lt;String, ContentModel&gt; modelsMap = this.getModelsMap(contentModelDao);</span>
+<span class="nc" id="L38">			super.insertAndCleanCache(cache, modelsMap);</span>
+<span class="nc" id="L39">		} catch (Throwable t) {</span>
+<span class="nc" id="L40">			logger.error(&quot;Error bootstrapping models map cache&quot;, t);</span>
+<span class="nc" id="L41">			throw new EntException(&quot;Error bootstrapping models map cache&quot;, t);</span>
+<span class="nc" id="L42">		}</span>
+<span class="nc" id="L43">	}</span>
 
 	@Override
 	protected String getCacheName() {
-<span class="fc" id="L48">		return CACHE_NAME;</span>
+<span class="nc" id="L47">		return CACHE_NAME;</span>
 	}
 
 	@Override
 	protected String getCodesCacheKey() {
-<span class="fc" id="L53">		return CODES_CACHE_NAME;</span>
+<span class="nc" id="L52">		return CODES_CACHE_NAME;</span>
 	}
 
 	@Override
 	protected String getCacheKeyPrefix() {
-<span class="fc" id="L58">		return CACHE_NAME_PREFIX;</span>
+<span class="nc" id="L57">		return CACHE_NAME_PREFIX;</span>
 	}
 
 	private Map&lt;String, ContentModel&gt; getModelsMap(IContentModelDAO contentModelDao) {
-<span class="fc" id="L62">		Map&lt;Long, ContentModel&gt; models = contentModelDao.loadContentModels();</span>
-<span class="fc" id="L63">		Map&lt;String, ContentModel&gt; modelsMap = new HashMap&lt;&gt;();</span>
-<span class="fc bfc" id="L64" title="All 2 branches covered.">		for (Map.Entry&lt;Long, ContentModel&gt; entry : models.entrySet()) {</span>
-<span class="fc" id="L65">			modelsMap.put(entry.getKey().toString(), entry.getValue());</span>
-<span class="fc" id="L66">		}</span>
-<span class="fc" id="L67">		return modelsMap;</span>
+<span class="nc" id="L61">		Map&lt;Long, ContentModel&gt; models = contentModelDao.loadContentModels();</span>
+<span class="nc" id="L62">		Map&lt;String, ContentModel&gt; modelsMap = new HashMap&lt;&gt;();</span>
+<span class="nc bnc" id="L63" title="All 2 branches missed.">		for (Map.Entry&lt;Long, ContentModel&gt; entry : models.entrySet()) {</span>
+<span class="nc" id="L64">			modelsMap.put(entry.getKey().toString(), entry.getValue());</span>
+<span class="nc" id="L65">		}</span>
+<span class="nc" id="L66">		return modelsMap;</span>
 	}
 
 	@Override
 	public List&lt;ContentModel&gt; getContentModels() {
-<span class="fc" id="L72">		Map&lt;String, ContentModel&gt; map = super.getObjectMap();</span>
-<span class="fc" id="L73">		return new ArrayList&lt;&gt;(map.values());</span>
+<span class="nc" id="L71">		Map&lt;String, ContentModel&gt; map = super.getObjectMap();</span>
+<span class="nc" id="L72">		return new ArrayList&lt;&gt;(map.values());</span>
 	}
 
 	@Override
 	public ContentModel getContentModel(String code) {
-<span class="fc" id="L78">		return this.get(this.getCache(), CACHE_NAME_PREFIX + code, ContentModel.class);</span>
+<span class="nc" id="L77">		return this.get(this.getCache(), CACHE_NAME_PREFIX + code, ContentModel.class);</span>
 	}
 
 	@Override
 	public void addContentModel(ContentModel contentModel) {
-<span class="fc" id="L83">		this.manage(String.valueOf(contentModel.getId()), contentModel, Action.ADD);</span>
-<span class="fc" id="L84">	}</span>
+<span class="nc" id="L82">		this.manage(String.valueOf(contentModel.getId()), contentModel, Action.ADD);</span>
+<span class="nc" id="L83">	}</span>
 
 	@Override
 	public void updateContentModel(ContentModel contentModel) {
-<span class="fc" id="L88">		this.manage(String.valueOf(contentModel.getId()), contentModel, Action.UPDATE);</span>
-<span class="fc" id="L89">	}</span>
+<span class="nc" id="L87">		this.manage(String.valueOf(contentModel.getId()), contentModel, Action.UPDATE);</span>
+<span class="nc" id="L88">	}</span>
 
 	@Override
 	public void removeContentModel(ContentModel contentModel) {
-<span class="fc" id="L93">		this.manage(String.valueOf(contentModel.getId()), contentModel, Action.DELETE);</span>
-<span class="fc" id="L94">	}</span>
+<span class="nc" id="L92">		this.manage(String.valueOf(contentModel.getId()), contentModel, Action.DELETE);</span>
+<span class="nc" id="L93">	}</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

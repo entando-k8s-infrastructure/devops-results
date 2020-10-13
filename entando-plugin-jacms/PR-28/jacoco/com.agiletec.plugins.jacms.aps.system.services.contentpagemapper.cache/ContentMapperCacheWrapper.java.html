@@ -14,7 +14,7 @@
 package com.agiletec.plugins.jacms.aps.system.services.contentpagemapper.cache;
 
 import com.agiletec.aps.system.common.AbstractCacheWrapper;
-import com.agiletec.aps.system.exception.ApsSystemException;
+import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.system.services.page.IPage;
 import com.agiletec.aps.system.services.page.IPageManager;
 import com.agiletec.aps.system.services.page.Widget;
@@ -27,59 +27,64 @@ import org.slf4j.LoggerFactory;
 /**
  * @author E.Santoboni
  */
-<span class="fc" id="L30">public class ContentMapperCacheWrapper extends AbstractCacheWrapper implements IContentMapperCacheWrapper {</span>
+<span class="nc" id="L30">public class ContentMapperCacheWrapper extends AbstractCacheWrapper implements IContentMapperCacheWrapper {</span>
 
-<span class="fc" id="L32">	private static final Logger _logger = LoggerFactory.getLogger(ContentMapperCacheWrapper.class);</span>
+<span class="nc" id="L32">	private static final Logger _logger = LoggerFactory.getLogger(ContentMapperCacheWrapper.class);</span>
+    
+    @Override
+    public void release() {
+<span class="nc" id="L36">        this.getCache().evict(CONTENT_MAPPER_CACHE_KEY);</span>
+<span class="nc" id="L37">    }</span>
 
 	@Override
-	public void initCache(IPageManager pageManager) throws ApsSystemException {
+	public void initCache(IPageManager pageManager) throws EntException {
 		try {
-<span class="fc" id="L37">			ContentPageMapper contentPageMapper = new ContentPageMapper();</span>
-<span class="fc" id="L38">			IPage root = pageManager.getOnlineRoot();</span>
-<span class="fc" id="L39">			this.searchPublishedDataObjects(contentPageMapper, root, pageManager);</span>
-<span class="fc" id="L40">			this.getCache().put(CONTENT_MAPPER_CACHE_KEY, contentPageMapper);</span>
-<span class="fc" id="L41">		} catch (Throwable t) {</span>
-<span class="fc" id="L42">			_logger.error(&quot;Error loading data object mapper&quot;, t);</span>
-<span class="fc" id="L43">			throw new ApsSystemException(&quot;Error loading data object mapper&quot;, t);</span>
-<span class="fc" id="L44">		}</span>
-<span class="fc" id="L45">	}</span>
+<span class="nc" id="L42">			ContentPageMapper contentPageMapper = new ContentPageMapper();</span>
+<span class="nc" id="L43">			IPage root = pageManager.getOnlineRoot();</span>
+<span class="nc" id="L44">			this.searchPublishedDataObjects(contentPageMapper, root, pageManager);</span>
+<span class="nc" id="L45">			this.getCache().put(CONTENT_MAPPER_CACHE_KEY, contentPageMapper);</span>
+<span class="nc" id="L46">		} catch (Throwable t) {</span>
+<span class="nc" id="L47">			_logger.error(&quot;Error loading data object mapper&quot;, t);</span>
+<span class="nc" id="L48">			throw new EntException(&quot;Error loading data object mapper&quot;, t);</span>
+<span class="nc" id="L49">		}</span>
+<span class="nc" id="L50">	}</span>
 
 	private void searchPublishedDataObjects(ContentPageMapper contentPageMapper, IPage page, IPageManager pageManager) {
-<span class="fc" id="L48">		PageModel pageModel = page.getModel();</span>
-<span class="pc bpc" id="L49" title="1 of 2 branches missed.">		if (pageModel != null) {</span>
-<span class="fc" id="L50">			int mainFrame = pageModel.getMainFrame();</span>
-<span class="fc" id="L51">			Widget[] widgets = page.getWidgets();</span>
-<span class="fc" id="L52">			Widget widget = null;</span>
-<span class="pc bpc" id="L53" title="2 of 4 branches missed.">			if (null != widgets &amp;&amp; mainFrame != -1) {</span>
-<span class="fc" id="L54">				widget = widgets[mainFrame];</span>
+<span class="nc" id="L53">		PageModel pageModel = page.getModel();</span>
+<span class="nc bnc" id="L54" title="All 2 branches missed.">		if (pageModel != null) {</span>
+<span class="nc" id="L55">			int mainFrame = pageModel.getMainFrame();</span>
+<span class="nc" id="L56">			Widget[] widgets = page.getWidgets();</span>
+<span class="nc" id="L57">			Widget widget = null;</span>
+<span class="nc bnc" id="L58" title="All 4 branches missed.">			if (null != widgets &amp;&amp; mainFrame != -1) {</span>
+<span class="nc" id="L59">				widget = widgets[mainFrame];</span>
 			}
-<span class="fc bfc" id="L56" title="All 2 branches covered.">			ApsProperties config = (null != widget) ? widget.getConfig() : null;</span>
-<span class="fc bfc" id="L57" title="All 2 branches covered.">			String contentId = (null != config) ? config.getProperty(&quot;contentId&quot;) : null;</span>
-<span class="fc bfc" id="L58" title="All 2 branches covered.">			if (null != contentId) {</span>
-<span class="fc" id="L59">				contentPageMapper.add(contentId, page.getCode());</span>
+<span class="nc bnc" id="L61" title="All 2 branches missed.">			ApsProperties config = (null != widget) ? widget.getConfig() : null;</span>
+<span class="nc bnc" id="L62" title="All 2 branches missed.">			String contentId = (null != config) ? config.getProperty(&quot;contentId&quot;) : null;</span>
+<span class="nc bnc" id="L63" title="All 2 branches missed.">			if (null != contentId) {</span>
+<span class="nc" id="L64">				contentPageMapper.add(contentId, page.getCode());</span>
 			}
-<span class="fc" id="L61">			String[] childCodes = page.getChildrenCodes();</span>
-<span class="fc bfc" id="L62" title="All 2 branches covered.">			for (String childCode : childCodes) {</span>
-<span class="fc" id="L63">				IPage child = pageManager.getOnlinePage(childCode);</span>
-<span class="pc bpc" id="L64" title="1 of 2 branches missed.">				if (null != child) {</span>
-<span class="fc" id="L65">					this.searchPublishedDataObjects(contentPageMapper, child, pageManager);</span>
+<span class="nc" id="L66">			String[] childCodes = page.getChildrenCodes();</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">			for (String childCode : childCodes) {</span>
+<span class="nc" id="L68">				IPage child = pageManager.getOnlinePage(childCode);</span>
+<span class="nc bnc" id="L69" title="All 2 branches missed.">				if (null != child) {</span>
+<span class="nc" id="L70">					this.searchPublishedDataObjects(contentPageMapper, child, pageManager);</span>
 				}
 			}
 		}
-<span class="fc" id="L69">	}</span>
+<span class="nc" id="L74">	}</span>
 	
 	@Override
 	public String getPageCode(String dataId) {
-<span class="fc" id="L73">		ContentPageMapper contentPageMapper = this.get(CONTENT_MAPPER_CACHE_KEY, ContentPageMapper.class);</span>
-<span class="pc bpc" id="L74" title="1 of 2 branches missed.">		if (null != contentPageMapper) {</span>
-<span class="fc" id="L75">			return contentPageMapper.getPageCode(dataId);</span>
+<span class="nc" id="L78">		ContentPageMapper contentPageMapper = this.get(CONTENT_MAPPER_CACHE_KEY, ContentPageMapper.class);</span>
+<span class="nc bnc" id="L79" title="All 2 branches missed.">		if (null != contentPageMapper) {</span>
+<span class="nc" id="L80">			return contentPageMapper.getPageCode(dataId);</span>
 		}
-<span class="nc" id="L77">		return null;</span>
+<span class="nc" id="L82">		return null;</span>
 	}
 	
 	@Override
 	protected String getCacheName() {
-<span class="fc" id="L82">		return IContentMapperCacheWrapper.CONTENT_MAPPER_CACHE_NAME;</span>
+<span class="nc" id="L87">		return IContentMapperCacheWrapper.CONTENT_MAPPER_CACHE_NAME;</span>
 	}
 	
 }
