@@ -16,49 +16,50 @@
 
 package org.entando.kubernetes.controller.common;
 
+import static org.entando.kubernetes.controller.EntandoOperatorConfigBase.lookupProperty;
+
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.text.ParseException;
-import org.entando.kubernetes.controller.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 
 public class LimitAndRequestCalculator {
 
-<span class="fc" id="L27">    protected DecimalFormat format = new DecimalFormat(&quot;#.###&quot;);</span>
+<span class="fc" id="L28">    protected DecimalFormat format = new DecimalFormat(&quot;#.###&quot;);</span>
 
-<span class="fc" id="L29">    protected LimitAndRequestCalculator() {</span>
-<span class="fc" id="L30">        DecimalFormatSymbols newSymbols = new DecimalFormatSymbols();</span>
-<span class="fc" id="L31">        newSymbols.setDecimalSeparator('.');</span>
-<span class="fc" id="L32">        format.setDecimalFormatSymbols(newSymbols);</span>
-<span class="fc" id="L33">    }</span>
+<span class="fc" id="L30">    protected LimitAndRequestCalculator() {</span>
+<span class="fc" id="L31">        DecimalFormatSymbols newSymbols = new DecimalFormatSymbols();</span>
+<span class="fc" id="L32">        newSymbols.setDecimalSeparator('.');</span>
+<span class="fc" id="L33">        format.setDecimalFormatSymbols(newSymbols);</span>
+<span class="fc" id="L34">    }</span>
 
     protected String applyRequestRatio(String memoryLimit) {
-<span class="fc" id="L36">        int i = findIndexOfUnitOfMeasurement(memoryLimit);</span>
-<span class="fc" id="L37">        double number = this.parse(memoryLimit.substring(0, i)).doubleValue();</span>
-<span class="fc" id="L38">        String uom = memoryLimit.substring(i);</span>
-<span class="fc" id="L39">        return format.format(number * getRequestToLimitRatio()) + uom;</span>
+<span class="fc" id="L37">        int i = findIndexOfUnitOfMeasurement(memoryLimit);</span>
+<span class="fc" id="L38">        double number = this.parse(memoryLimit.substring(0, i)).doubleValue();</span>
+<span class="fc" id="L39">        String uom = memoryLimit.substring(i);</span>
+<span class="fc" id="L40">        return format.format(number * getRequestToLimitRatio()) + uom;</span>
     }
 
     private int findIndexOfUnitOfMeasurement(String memoryLimit) {
-<span class="fc" id="L43">        int i = 0;</span>
-<span class="pc bpc" id="L44" title="1 of 2 branches missed.">        for (i = memoryLimit.length(); i &gt; 0; i--) {</span>
-<span class="fc bfc" id="L45" title="All 2 branches covered.">            if (!Character.isAlphabetic(memoryLimit.charAt(i - 1))) {</span>
-<span class="fc" id="L46">                break;</span>
+<span class="fc" id="L44">        int i = 0;</span>
+<span class="pc bpc" id="L45" title="1 of 2 branches missed.">        for (i = memoryLimit.length(); i &gt; 0; i--) {</span>
+<span class="fc bfc" id="L46" title="All 2 branches covered.">            if (!Character.isAlphabetic(memoryLimit.charAt(i - 1))) {</span>
+<span class="fc" id="L47">                break;</span>
             }
         }
-<span class="fc" id="L49">        return i;</span>
+<span class="fc" id="L50">        return i;</span>
     }
 
     protected double getRequestToLimitRatio() {
-<span class="fc" id="L53">        return EntandoOperatorConfig.lookupProperty(</span>
-<span class="fc" id="L54">                EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_REQUEST_TO_LIMIT_RATIO).map(this::parse).orElse(0.1d).doubleValue();</span>
+<span class="fc" id="L54">        return lookupProperty(</span>
+<span class="fc" id="L55">                EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_REQUEST_TO_LIMIT_RATIO).map(this::parse).orElse(0.1d).doubleValue();</span>
     }
 
     private Number parse(String source) {
         try {
-<span class="fc" id="L59">            return format.parse(source);</span>
-<span class="nc" id="L60">        } catch (ParseException e) {</span>
-<span class="nc" id="L61">            throw new IllegalStateException(e);</span>
+<span class="fc" id="L60">            return format.parse(source);</span>
+<span class="nc" id="L61">        } catch (ParseException e) {</span>
+<span class="nc" id="L62">            throw new IllegalStateException(e);</span>
         }
     }
 }
