@@ -25,17 +25,17 @@ import java.io.StringReader;
 import java.util.List;
 
 import javax.xml.parsers.SAXParser;
-import javax.xml.parsers.SAXParserFactory;
 
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.entando.entando.ent.exception.EntException;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
+import org.entando.entando.ent.util.EntSafeXmlUtils;
 import org.xml.sax.InputSource;
 
 import com.agiletec.aps.system.common.AbstractService;
 import com.agiletec.aps.system.common.entity.parse.EntityHandler;
-import com.agiletec.aps.system.exception.ApsSystemException;
 import com.agiletec.aps.system.services.baseconfig.ConfigInterface;
 import com.agiletec.aps.system.services.category.ICategoryManager;
 import com.agiletec.plugins.jacms.aps.system.services.content.IContentManager;
@@ -53,7 +53,7 @@ import org.xml.sax.SAXException;
 @Aspect
 <span class="fc" id="L54">public class VersioningManager extends AbstractService implements IVersioningManager {</span>
 
-<span class="fc" id="L56">    private static final Logger _logger = LoggerFactory.getLogger(VersioningManager.class);</span>
+<span class="fc" id="L56">    private static final EntLogger _logger = EntLogFactory.getSanitizedLogger(VersioningManager.class);</span>
 
     @Override
     public void init() throws Exception {
@@ -133,47 +133,47 @@ import org.xml.sax.SAXException;
     }
 
     @Override
-    public List&lt;Long&gt; getVersions(String contentId) throws ApsSystemException {
+    public List&lt;Long&gt; getVersions(String contentId) throws EntException {
         try {
 <span class="fc" id="L138">            return this.getVersioningDAO().getVersions(contentId);</span>
 <span class="nc" id="L139">        } catch (Exception e) {</span>
 <span class="nc" id="L140">            _logger.error(&quot;Error loading version identifiers&quot;, e);</span>
-<span class="nc" id="L141">            throw new ApsSystemException(&quot;Error loading version identifiers&quot;);</span>
+<span class="nc" id="L141">            throw new EntException(&quot;Error loading version identifiers&quot;);</span>
         }
     }
 
     @Override
-    public List&lt;Long&gt; getLastVersions(String contentType, String descr) throws ApsSystemException {
+    public List&lt;Long&gt; getLastVersions(String contentType, String descr) throws EntException {
         try {
 <span class="fc" id="L148">            return this.getVersioningDAO().getLastVersions(contentType, descr);</span>
 <span class="nc" id="L149">        } catch (Exception e) {</span>
 <span class="nc" id="L150">            _logger.error(&quot;Error loading last version identifiers&quot;, e);</span>
-<span class="nc" id="L151">            throw new ApsSystemException(&quot;Error loading last version identifiers&quot;);</span>
+<span class="nc" id="L151">            throw new EntException(&quot;Error loading last version identifiers&quot;);</span>
         }
     }
 
     @Override
-    public ContentVersion getVersion(long id) throws ApsSystemException {
+    public ContentVersion getVersion(long id) throws EntException {
         try {
 <span class="fc" id="L158">            return this.getVersioningDAO().getVersion(id);</span>
 <span class="nc" id="L159">        } catch (Exception e) {</span>
 <span class="nc" id="L160">            _logger.error(&quot;Error loading version of id {}&quot;, id, e);</span>
-<span class="nc" id="L161">            throw new ApsSystemException(&quot;Error loading version of id &quot; + id);</span>
+<span class="nc" id="L161">            throw new EntException(&quot;Error loading version of id &quot; + id);</span>
         }
     }
 
     @Override
-    public ContentVersion getLastVersion(String contentId) throws ApsSystemException {
+    public ContentVersion getLastVersion(String contentId) throws EntException {
         try {
 <span class="fc" id="L168">            return this.getVersioningDAO().getLastVersion(contentId);</span>
 <span class="nc" id="L169">        } catch (Exception e) {</span>
 <span class="nc" id="L170">            _logger.error(&quot;Error loading last version for content {}&quot;, contentId, e);</span>
-<span class="nc" id="L171">            throw new ApsSystemException(&quot;Error loading last version for content&quot; + contentId);</span>
+<span class="nc" id="L171">            throw new EntException(&quot;Error loading last version for content&quot; + contentId);</span>
         }
     }
 
     @Override
-    public void saveContentVersion(String contentId) throws ApsSystemException {
+    public void saveContentVersion(String contentId) throws EntException {
         try {
 <span class="fc bfc" id="L178" title="All 2 branches covered.">            if (contentId != null) {</span>
 <span class="fc" id="L179">                ContentRecordVO record = this.getContentManager().loadContentVO(contentId);</span>
@@ -189,29 +189,29 @@ import org.xml.sax.SAXException;
             }
 <span class="nc" id="L190">        } catch (Exception e) {</span>
 <span class="nc" id="L191">            _logger.error(&quot;error in Error saving version for content {}&quot;, contentId, e);</span>
-<span class="nc" id="L192">            throw new ApsSystemException(&quot;Error saving version for content&quot; + contentId);</span>
+<span class="nc" id="L192">            throw new EntException(&quot;Error saving version for content&quot; + contentId);</span>
 <span class="fc" id="L193">        }</span>
 <span class="fc" id="L194">    }</span>
 
     @Override
-    public void deleteWorkVersions(String contentId, int onlineVersion) throws ApsSystemException {
+    public void deleteWorkVersions(String contentId, int onlineVersion) throws EntException {
         try {
 <span class="pc bpc" id="L199" title="1 of 2 branches missed.">            if (this.isDeleteMidVersions()) {</span>
 <span class="nc" id="L200">                this.getVersioningDAO().deleteWorkVersions(contentId, onlineVersion);</span>
             }
 <span class="nc" id="L202">        } catch (Exception e) {</span>
 <span class="nc" id="L203">            _logger.error(&quot;Error in delete Work Versions&quot;, e);</span>
-<span class="nc" id="L204">            throw new ApsSystemException(&quot;Errore in delete Work Versions&quot;, e);</span>
+<span class="nc" id="L204">            throw new EntException(&quot;Errore in delete Work Versions&quot;, e);</span>
 <span class="fc" id="L205">        }</span>
 <span class="fc" id="L206">    }</span>
 
     @Override
-    public Content getContent(ContentVersion contentVersion) throws ApsSystemException {
+    public Content getContent(ContentVersion contentVersion) throws EntException {
         try {
 <span class="fc" id="L211">            return this.createContentFromXml(contentVersion.getContentType(), contentVersion.getXml());</span>
 <span class="nc" id="L212">        } catch (Exception e) {</span>
 <span class="nc" id="L213">            _logger.error(&quot;Error loading Content from version xml&quot;, e);</span>
-<span class="nc" id="L214">            throw new ApsSystemException(&quot;Error loading Content from version xml&quot;, e);</span>
+<span class="nc" id="L214">            throw new EntException(&quot;Error loading Content from version xml&quot;, e);</span>
         }
     }
 
@@ -222,58 +222,57 @@ import org.xml.sax.SAXException;
      * @param entityTypeCode Il codice del tipo di entità.
      * @param xml L'xml dell'entità specifica.
      * @return L'entità valorizzata.
-     * @throws ApsSystemException In caso di errore nella lettura dell'entità.
+     * @throws EntException In caso di errore nella lettura dell'entità.
      */
-    protected Content createContentFromXml(String entityTypeCode, String xml) throws ApsSystemException {
+    protected Content createContentFromXml(String entityTypeCode, String xml) throws EntException {
         try {
 <span class="fc" id="L229">            Content entityPrototype = (Content) this.getContentManager().getEntityPrototype(entityTypeCode);</span>
-<span class="fc" id="L230">            SAXParserFactory parseFactory = SAXParserFactory.newInstance();</span>
-<span class="fc" id="L231">            SAXParser parser = parseFactory.newSAXParser();</span>
-<span class="fc" id="L232">            InputSource is = new InputSource(new StringReader(xml));</span>
-<span class="fc" id="L233">            EntityHandler handler = this.getEntityHandler();</span>
-<span class="fc" id="L234">            handler.initHandler(entityPrototype, this.getXmlAttributeRootElementName(), this.getCategoryManager());</span>
-<span class="fc" id="L235">            parser.parse(is, handler);</span>
-<span class="fc" id="L236">            return entityPrototype;</span>
-<span class="nc" id="L237">        } catch (ParserConfigurationException | SAXException | IOException e) {</span>
-<span class="nc" id="L238">            _logger.error(&quot;Error on creation entity. typecode: {} xml: {}&quot;, entityTypeCode, xml, e);</span>
-<span class="nc" id="L239">            throw new ApsSystemException(&quot;Error on creation entity&quot;, e);</span>
+<span class="fc" id="L230">            SAXParser parser = EntSafeXmlUtils.newSafeSAXParser();</span>
+<span class="fc" id="L231">            InputSource is = new InputSource(new StringReader(xml));</span>
+<span class="fc" id="L232">            EntityHandler handler = this.getEntityHandler();</span>
+<span class="fc" id="L233">            handler.initHandler(entityPrototype, this.getXmlAttributeRootElementName(), this.getCategoryManager());</span>
+<span class="fc" id="L234">            parser.parse(is, handler);</span>
+<span class="fc" id="L235">            return entityPrototype;</span>
+<span class="nc" id="L236">        } catch (ParserConfigurationException | SAXException | IOException e) {</span>
+<span class="nc" id="L237">            _logger.error(&quot;Error on creation entity. typecode: {} xml: {}&quot;, entityTypeCode, xml, e);</span>
+<span class="nc" id="L238">            throw new EntException(&quot;Error on creation entity&quot;, e);</span>
         }
     }
 
     private ContentVersion createContentVersion(ContentRecordVO record) {
-<span class="fc" id="L244">        ContentVersion versionRecord = new ContentVersion();</span>
-<span class="fc" id="L245">        versionRecord.setContentId(record.getId());</span>
-<span class="fc" id="L246">        versionRecord.setContentType(record.getTypeCode());</span>
-<span class="fc" id="L247">        versionRecord.setDescr(record.getDescription());</span>
-<span class="fc" id="L248">        versionRecord.setStatus(record.getStatus());</span>
-<span class="fc" id="L249">        versionRecord.setXml(record.getXmlWork());</span>
-<span class="fc" id="L250">        versionRecord.setVersionDate(record.getModify());</span>
-<span class="fc" id="L251">        String version = record.getVersion();</span>
-<span class="fc" id="L252">        versionRecord.setVersion(version);</span>
-<span class="fc" id="L253">        String[] versionParts = version.split(&quot;\\.&quot;);</span>
-<span class="fc" id="L254">        int onlineVersion = Integer.parseInt(versionParts[0]);</span>
-<span class="fc" id="L255">        versionRecord.setOnlineVersion(onlineVersion);</span>
-<span class="fc" id="L256">        int workVersion = Integer.parseInt(versionParts[1]);</span>
-<span class="fc bfc" id="L257" title="All 2 branches covered.">        versionRecord.setApproved(workVersion == 0);</span>
-<span class="fc" id="L258">        versionRecord.setUsername(record.getLastEditor());</span>
-<span class="fc" id="L259">        return versionRecord;</span>
+<span class="fc" id="L243">        ContentVersion versionRecord = new ContentVersion();</span>
+<span class="fc" id="L244">        versionRecord.setContentId(record.getId());</span>
+<span class="fc" id="L245">        versionRecord.setContentType(record.getTypeCode());</span>
+<span class="fc" id="L246">        versionRecord.setDescr(record.getDescription());</span>
+<span class="fc" id="L247">        versionRecord.setStatus(record.getStatus());</span>
+<span class="fc" id="L248">        versionRecord.setXml(record.getXmlWork());</span>
+<span class="fc" id="L249">        versionRecord.setVersionDate(record.getModify());</span>
+<span class="fc" id="L250">        String version = record.getVersion();</span>
+<span class="fc" id="L251">        versionRecord.setVersion(version);</span>
+<span class="fc" id="L252">        String[] versionParts = version.split(&quot;\\.&quot;);</span>
+<span class="fc" id="L253">        int onlineVersion = Integer.parseInt(versionParts[0]);</span>
+<span class="fc" id="L254">        versionRecord.setOnlineVersion(onlineVersion);</span>
+<span class="fc" id="L255">        int workVersion = Integer.parseInt(versionParts[1]);</span>
+<span class="fc bfc" id="L256" title="All 2 branches covered.">        versionRecord.setApproved(workVersion == 0);</span>
+<span class="fc" id="L257">        versionRecord.setUsername(record.getLastEditor());</span>
+<span class="fc" id="L258">        return versionRecord;</span>
     }
 
     protected boolean isDeleteMidVersions() {
-<span class="fc" id="L263">        return _deleteMidVersions;</span>
+<span class="fc" id="L262">        return _deleteMidVersions;</span>
     }
 
     protected void setDeleteMidVersions(boolean deleteMidVersions) {
-<span class="fc" id="L267">        this._deleteMidVersions = deleteMidVersions;</span>
-<span class="fc" id="L268">    }</span>
+<span class="fc" id="L266">        this._deleteMidVersions = deleteMidVersions;</span>
+<span class="fc" id="L267">    }</span>
 
     @Override
     public void deleteVersion(long versionId) {
-<span class="fc" id="L272">        this.getVersioningDAO().deleteVersion(versionId);</span>
-<span class="fc" id="L273">    }</span>
+<span class="fc" id="L271">        this.getVersioningDAO().deleteVersion(versionId);</span>
+<span class="fc" id="L272">    }</span>
 
     protected String getXmlAttributeRootElementName() {
-<span class="fc" id="L276">        return this._xmlAttributeRootElementName;</span>
+<span class="fc" id="L275">        return this._xmlAttributeRootElementName;</span>
     }
 
     /**
@@ -288,8 +287,8 @@ import org.xml.sax.SAXException;
      * dell'xml rappresentante la singola entità.
      */
     public void setXmlAttributeRootElementName(String xmlAttributeRootElementName) {
-<span class="fc" id="L291">        this._xmlAttributeRootElementName = xmlAttributeRootElementName;</span>
-<span class="fc" id="L292">    }</span>
+<span class="fc" id="L290">        this._xmlAttributeRootElementName = xmlAttributeRootElementName;</span>
+<span class="fc" id="L291">    }</span>
 
     /**
      * Restituisce la classe handler delegata alla interpretazione degli xml
@@ -300,7 +299,7 @@ import org.xml.sax.SAXException;
      * singole entità.
      */
     protected EntityHandler getEntityHandler() {
-<span class="fc" id="L303">        return this._entityHandler.getHandlerPrototype();</span>
+<span class="fc" id="L302">        return this._entityHandler.getHandlerPrototype();</span>
     }
 
     /**
@@ -318,40 +317,40 @@ import org.xml.sax.SAXException;
      * degli xml delle singole entità.
      */
     public void setEntityHandler(EntityHandler entityHandler) {
-<span class="fc" id="L321">        this._entityHandler = entityHandler;</span>
-<span class="fc" id="L322">    }</span>
+<span class="fc" id="L320">        this._entityHandler = entityHandler;</span>
+<span class="fc" id="L321">    }</span>
 
     protected IVersioningDAO getVersioningDAO() {
-<span class="fc" id="L325">        return _versioningDAO;</span>
+<span class="fc" id="L324">        return _versioningDAO;</span>
     }
 
     public void setVersioningDAO(IVersioningDAO versioningDAO) {
-<span class="fc" id="L329">        this._versioningDAO = versioningDAO;</span>
-<span class="fc" id="L330">    }</span>
+<span class="fc" id="L328">        this._versioningDAO = versioningDAO;</span>
+<span class="fc" id="L329">    }</span>
 
     protected IContentManager getContentManager() {
-<span class="fc" id="L333">        return _contentManager;</span>
+<span class="fc" id="L332">        return _contentManager;</span>
     }
 
     public void setContentManager(IContentManager contentManager) {
-<span class="fc" id="L337">        this._contentManager = contentManager;</span>
-<span class="fc" id="L338">    }</span>
+<span class="fc" id="L336">        this._contentManager = contentManager;</span>
+<span class="fc" id="L337">    }</span>
 
     protected ICategoryManager getCategoryManager() {
-<span class="fc" id="L341">        return _categoryManager;</span>
+<span class="fc" id="L340">        return _categoryManager;</span>
     }
 
     public void setCategoryManager(ICategoryManager categoryManager) {
-<span class="fc" id="L345">        this._categoryManager = categoryManager;</span>
-<span class="fc" id="L346">    }</span>
+<span class="fc" id="L344">        this._categoryManager = categoryManager;</span>
+<span class="fc" id="L345">    }</span>
 
     protected ConfigInterface getConfigManager() {
-<span class="fc" id="L349">        return _configManager;</span>
+<span class="fc" id="L348">        return _configManager;</span>
     }
 
     public void setConfigManager(ConfigInterface configManager) {
-<span class="fc" id="L353">        this._configManager = configManager;</span>
-<span class="fc" id="L354">    }</span>
+<span class="fc" id="L352">        this._configManager = configManager;</span>
+<span class="fc" id="L353">    }</span>
 
     private boolean _deleteMidVersions;
 

@@ -15,7 +15,7 @@ package org.entando.entando.plugins.jpversioning.services.resource;
 
 import static org.entando.entando.plugins.jacms.web.resource.ResourcesController.ERRCODE_INVALID_RESOURCE_TYPE;
 
-import com.agiletec.aps.system.exception.ApsSystemException;
+import org.entando.entando.ent.exception.EntException;
 import com.agiletec.aps.system.services.authorization.AuthorizationManager;
 import com.agiletec.aps.system.services.category.Category;
 import com.agiletec.aps.system.services.group.Group;
@@ -53,8 +53,8 @@ import org.entando.entando.web.common.exceptions.ValidationGenericException;
 import org.entando.entando.web.common.model.Filter;
 import org.entando.entando.web.common.model.PagedMetadata;
 import org.entando.entando.web.common.model.RestListRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.entando.entando.ent.util.EntLogging.EntLogger;
+import org.entando.entando.ent.util.EntLogging.EntLogFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.BeanPropertyBindingResult;
@@ -62,7 +62,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
 @Service
 <span class="fc" id="L63">public class ResourcesVersioningService {</span>
 
-<span class="fc" id="L65">    private final Logger logger = LoggerFactory.getLogger(getClass());</span>
+<span class="fc" id="L65">    private final EntLogger logger = EntLogFactory.getSanitizedLogger(getClass());</span>
 
     @Autowired
     private TrashedResourceManager trashedResourceManager;
@@ -90,7 +90,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
 <span class="fc bfc" id="L90" title="All 2 branches covered.">            for (String id : resourcesId) {</span>
                 try {
 <span class="fc" id="L92">                    result.add(convertResourceToDto(trashedResourceManager.loadTrashedResource(id)));</span>
-<span class="nc" id="L93">                } catch (ApsSystemException e) {</span>
+<span class="nc" id="L93">                } catch (EntException e) {</span>
 <span class="nc" id="L94">                    logger.error(&quot;Error loading trashedResource with id: {}&quot;, id);</span>
 <span class="fc" id="L95">                }</span>
 <span class="fc" id="L96">            }</span>
@@ -101,7 +101,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
 <span class="fc" id="L101">            pagedResults.setBody(sublist);</span>
 
 <span class="fc" id="L103">            return pagedResults;</span>
-<span class="nc" id="L104">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L104">        } catch (EntException e) {</span>
 <span class="nc" id="L105">            logger.error(&quot;Error while getting trashed resources with request {}&quot;, requestList, e);</span>
 <span class="nc" id="L106">            throw new RestServerError(String.format(&quot;Error while getting trashed resources with request %s&quot;, requestList),</span>
                     e);
@@ -123,7 +123,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
                         VersioningValidatorErrorCodes.ERRCODE_TRASHED_RESOURCE_DOES_NOT_EXIST.value,
                         &quot;Trashed resource: &quot;, resourceId);
             }
-<span class="nc" id="L126">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L126">        } catch (EntException e) {</span>
 <span class="nc" id="L127">            logger.error(&quot;Error while recovering trashed resources with id {}&quot;, resourceId, e);</span>
 <span class="nc" id="L128">            throw new RestServerError(String.format(&quot;Error while recovering trashed resources with id %s&quot;, resourceId),</span>
                     e);
@@ -145,7 +145,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
                         VersioningValidatorErrorCodes.ERRCODE_TRASHED_RESOURCE_DOES_NOT_EXIST.value,
                         &quot;Trashed resource: &quot;, resourceId);
             }
-<span class="nc" id="L148">        } catch (ApsSystemException e) {</span>
+<span class="nc" id="L148">        } catch (EntException e) {</span>
 <span class="nc" id="L149">            logger.error(&quot;Error while deleting trashed resources with id {}&quot;, resourceId, e);</span>
 <span class="nc" id="L150">            throw new RestServerError(String.format(&quot;Error while deleting trashed resources with id %s&quot;, resourceId),</span>
                     e);
@@ -170,7 +170,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
 <span class="fc" id="L170">            return new ResourceDownloadDTO(instance.getFileName(), instance.getMimeType(),</span>
 <span class="fc" id="L171">                    getInputStream(size, user, resource));</span>
 
-<span class="nc" id="L173">        } catch (ApsSystemException | IOException e) {</span>
+<span class="nc" id="L173">        } catch (EntException | IOException e) {</span>
 <span class="nc" id="L174">            logger.error(&quot;Error while getting input stream for trashed resources with id {}&quot;, resourceId, e);</span>
 <span class="nc" id="L175">            throw new RestServerError(</span>
 <span class="nc" id="L176">                    String.format(&quot;Error while getting input stream for trashed resources with id %s&quot;, resourceId), e);</span>
@@ -178,7 +178,7 @@ import org.springframework.validation.BeanPropertyBindingResult;
     }
 
     private byte[] getInputStream(Integer size, UserDetails user, ResourceInterface resource)
-            throws ApsSystemException, IOException {
+            throws EntException, IOException {
 <span class="fc" id="L182">        String mainGroup = resource.getMainGroup();</span>
 <span class="pc bpc" id="L183" title="1 of 2 branches missed.">        if (authorizationManager.isAuthOnGroup(user, mainGroup)) {</span>
 <span class="fc" id="L184">            InputStream is = trashedResourceManager.getTrashFileStream(resource, getResourceInstance(size, resource));</span>
