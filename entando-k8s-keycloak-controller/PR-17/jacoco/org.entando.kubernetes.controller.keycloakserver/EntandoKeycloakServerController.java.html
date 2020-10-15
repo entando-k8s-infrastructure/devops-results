@@ -118,51 +118,52 @@ public class EntandoKeycloakServerController extends AbstractDbAwareController&l
 <span class="fc bfc" id="L118" title="All 2 branches covered.">        if (existingKeycloakAdminSecret == null) {</span>
             //We need to FIRST populate the secret in the controller's namespace so that, if deployment fails, we have the credentials
             // that the secret in the Deployment's namespace was based on, because we may not have read access to it.
-<span class="fc" id="L121">            k8sClient.secrets().overwriteControllerSecret(new SecretBuilder()</span>
+<span class="fc" id="L121">            existingKeycloakAdminSecret = new SecretBuilder()</span>
 <span class="fc" id="L122">                    .withNewMetadata()</span>
 <span class="fc" id="L123">                    .withName(myLocalKeycloakAdminSecretName(newEntandoKeycloakServer))</span>
 <span class="fc" id="L124">                    .endMetadata()</span>
 <span class="fc" id="L125">                    .addToStringData(KubeUtils.USERNAME_KEY, &quot;entando_keycloak_admin&quot;)</span>
 <span class="fc" id="L126">                    .addToStringData(KubeUtils.PASSSWORD_KEY, RandomStringUtils.randomAlphanumeric(10))</span>
-<span class="fc" id="L127">                    .build());</span>
+<span class="fc" id="L127">                    .build();</span>
+<span class="fc" id="L128">            k8sClient.secrets().overwriteControllerSecret(existingKeycloakAdminSecret);</span>
 
         }
-<span class="fc" id="L130">        return existingKeycloakAdminSecret;</span>
+<span class="fc" id="L131">        return existingKeycloakAdminSecret;</span>
     }
 
     private DatabaseServiceResult prepareKeycloakDatabaseService(EntandoKeycloakServer newEntandoKeycloakServer) {
         // Create database for Keycloak
-<span class="fc" id="L135">        return prepareDatabaseService(</span>
+<span class="fc" id="L136">        return prepareDatabaseService(</span>
                 newEntandoKeycloakServer,
-<span class="fc" id="L137">                newEntandoKeycloakServer.getSpec().getDbms().orElse(DbmsVendor.EMBEDDED),</span>
+<span class="fc" id="L138">                newEntandoKeycloakServer.getSpec().getDbms().orElse(DbmsVendor.EMBEDDED),</span>
                 &quot;db&quot;);
     }
 
     private String myLocalKeycloakAdminSecretName(EntandoKeycloakServer newEntandoKeycloakServer) {
-<span class="fc" id="L142">        return newEntandoKeycloakServer.getMetadata().getName() + &quot;-connection-secret&quot;;</span>
+<span class="fc" id="L143">        return newEntandoKeycloakServer.getMetadata().getName() + &quot;-connection-secret&quot;;</span>
     }
 
     private Secret overwriteKeycloakSecret(ExposedService serviceDeploymentResult, String secretName,
             KeycloakConnectionConfig keycloakConnectionConfig) {
-<span class="fc" id="L147">        Secret secret = new SecretBuilder()</span>
-<span class="fc" id="L148">                .withNewMetadata()</span>
-<span class="fc" id="L149">                .withName(secretName)</span>
-<span class="fc" id="L150">                .endMetadata()</span>
-<span class="fc" id="L151">                .addToStringData(KubeUtils.USERNAME_KEY, keycloakConnectionConfig.getUsername())</span>
-<span class="fc" id="L152">                .addToStringData(KubeUtils.PASSSWORD_KEY, keycloakConnectionConfig.getPassword())</span>
-<span class="fc" id="L153">                .addToStringData(KubeUtils.URL_KEY, serviceDeploymentResult.getExternalBaseUrl())</span>
-<span class="fc" id="L154">                .addToStringData(KubeUtils.INTERNAL_URL_KEY, serviceDeploymentResult.getInternalBaseUrl())</span>
-<span class="fc" id="L155">                .build();</span>
-<span class="fc" id="L156">        k8sClient.secrets().overwriteControllerSecret(secret);</span>
-<span class="fc" id="L157">        return secret;</span>
+<span class="fc" id="L148">        Secret secret = new SecretBuilder()</span>
+<span class="fc" id="L149">                .withNewMetadata()</span>
+<span class="fc" id="L150">                .withName(secretName)</span>
+<span class="fc" id="L151">                .endMetadata()</span>
+<span class="fc" id="L152">                .addToStringData(KubeUtils.USERNAME_KEY, keycloakConnectionConfig.getUsername())</span>
+<span class="fc" id="L153">                .addToStringData(KubeUtils.PASSSWORD_KEY, keycloakConnectionConfig.getPassword())</span>
+<span class="fc" id="L154">                .addToStringData(KubeUtils.URL_KEY, serviceDeploymentResult.getExternalBaseUrl())</span>
+<span class="fc" id="L155">                .addToStringData(KubeUtils.INTERNAL_URL_KEY, serviceDeploymentResult.getInternalBaseUrl())</span>
+<span class="fc" id="L156">                .build();</span>
+<span class="fc" id="L157">        k8sClient.secrets().overwriteControllerSecret(secret);</span>
+<span class="fc" id="L158">        return secret;</span>
     }
 
     private void ensureKeycloakRealm(KeycloakConnectionConfig keycloakConnectionConfig) {
-<span class="fc" id="L161">        logger.severe(() -&gt; format(&quot;Attempting to log into Keycloak at %s&quot;, keycloakConnectionConfig.determineBaseUrl()));</span>
-<span class="fc" id="L162">        keycloakClient.login(keycloakConnectionConfig.determineBaseUrl(), keycloakConnectionConfig.getUsername(),</span>
-<span class="fc" id="L163">                keycloakConnectionConfig.getPassword());</span>
-<span class="fc" id="L164">        keycloakClient.ensureRealm(KubeUtils.ENTANDO_KEYCLOAK_REALM);</span>
-<span class="fc" id="L165">    }</span>
+<span class="fc" id="L162">        logger.severe(() -&gt; format(&quot;Attempting to log into Keycloak at %s&quot;, keycloakConnectionConfig.determineBaseUrl()));</span>
+<span class="fc" id="L163">        keycloakClient.login(keycloakConnectionConfig.determineBaseUrl(), keycloakConnectionConfig.getUsername(),</span>
+<span class="fc" id="L164">                keycloakConnectionConfig.getPassword());</span>
+<span class="fc" id="L165">        keycloakClient.ensureRealm(KubeUtils.ENTANDO_KEYCLOAK_REALM);</span>
+<span class="fc" id="L166">    }</span>
 
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
