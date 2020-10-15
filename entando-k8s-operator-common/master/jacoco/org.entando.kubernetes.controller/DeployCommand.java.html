@@ -36,7 +36,7 @@ import org.entando.kubernetes.controller.spi.DbAwareDeployable;
 import org.entando.kubernetes.controller.spi.Deployable;
 import org.entando.kubernetes.controller.spi.IngressingDeployable;
 import org.entando.kubernetes.controller.spi.ServiceBackingContainer;
-import org.entando.kubernetes.controller.spi.ServiceResult;
+import org.entando.kubernetes.controller.spi.ServiceDeploymentResult;
 import org.entando.kubernetes.model.AbstractServerStatus;
 import org.entando.kubernetes.model.DbServerStatus;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
@@ -45,11 +45,11 @@ import org.entando.kubernetes.model.WebServerStatus;
 /**
  * On addition of an Entando CustomResource, the DeployCommand is invoked for every service and database that needs to be deployed.
  */
-public class DeployCommand&lt;T extends ServiceResult&gt; {
+public class DeployCommand&lt;T extends ServiceDeploymentResult, C extends EntandoBaseCustomResource&gt; {
 
     public static final String DEPLOYMENT_LABEL_NAME = &quot;deployment&quot;;
     private static final String DEFAULT = &quot;default&quot;;
-    private final Deployable&lt;T&gt; deployable;
+    private final Deployable&lt;T, C&gt; deployable;
     private final PersistentVolumeClaimCreator persistentVolumeClaimCreator;
     private final ServiceCreator serviceCreator;
     private final DeploymentCreator deploymentCreator;
@@ -62,7 +62,7 @@ public class DeployCommand&lt;T extends ServiceResult&gt; {
     private final EntandoBaseCustomResource&lt;?&gt; entandoCustomResource;
     private Pod pod;
 
-<span class="fc" id="L65">    public DeployCommand(Deployable&lt;T&gt; deployable) {</span>
+<span class="fc" id="L65">    public DeployCommand(Deployable&lt;T, C&gt; deployable) {</span>
 <span class="fc" id="L66">        entandoCustomResource = deployable.getCustomResource();</span>
 <span class="fc" id="L67">        serviceAccountCreator = new ServiceAccountCreator(entandoCustomResource);</span>
 <span class="fc" id="L68">        persistentVolumeClaimCreator = new PersistentVolumeClaimCreator(entandoCustomResource);</span>
@@ -119,10 +119,10 @@ public class DeployCommand&lt;T extends ServiceResult&gt; {
 <span class="pc bpc" id="L119" title="1 of 2 branches missed.">        if (status.hasFailed()) {</span>
 <span class="nc" id="L120">            throw new EntandoControllerException(&quot;Creation of Kubernetes resources has failed&quot;);</span>
         }
-<span class="fc" id="L122">        return deployable.createResult(getDeployment(), getService(), getIngress(), getPod());</span>
+<span class="fc" id="L122">        return (T)deployable.createResult(getDeployment(), getService(), getIngress(), getPod()).withStatus(getStatus());</span>
     }
 
-    private boolean shouldCreateService(Deployable&lt;T&gt; deployable) {
+    private boolean shouldCreateService(Deployable&lt;T, ?&gt; deployable) {
 <span class="fc" id="L126">        return deployable.getContainers().stream().anyMatch(ServiceBackingContainer.class::isInstance);</span>
     }
 
@@ -138,7 +138,7 @@ public class DeployCommand&lt;T extends ServiceResult&gt; {
 <span class="fc" id="L138">        k8sClient.entandoResources().updateStatus(entandoCustomResource, status);</span>
 <span class="fc" id="L139">    }</span>
 
-    private String resolveName(Deployable&lt;T&gt; deployable) {
+    private String resolveName(Deployable&lt;T,C&gt; deployable) {
 <span class="fc" id="L142">        return entandoCustomResource.getMetadata().getName() + &quot;-&quot; + deployable.getNameQualifier();</span>
     }
 
@@ -148,7 +148,7 @@ public class DeployCommand&lt;T extends ServiceResult&gt; {
 <span class="fc" id="L148">        k8sClient.entandoResources().updateStatus(entandoCustomResource, status);</span>
 <span class="fc" id="L149">    }</span>
 
-    private void syncIngress(SimpleK8SClient&lt;?&gt; k8sClient, IngressingDeployable&lt;?&gt; ingressingContainer) {
+    private void syncIngress(SimpleK8SClient&lt;?&gt; k8sClient, IngressingDeployable&lt;?, ?&gt; ingressingContainer) {
 <span class="pc bpc" id="L152" title="1 of 2 branches missed.">        if (ingressCreator.requiresDelegatingService(serviceCreator.getService(), ingressingContainer)) {</span>
 <span class="nc" id="L153">            Service newDelegatingService = serviceCreator.newDelegatingService(k8sClient.services(), ingressingContainer);</span>
 <span class="nc" id="L154">            ingressCreator.createIngress(k8sClient.ingresses(), ingressingContainer, newDelegatingService);</span>

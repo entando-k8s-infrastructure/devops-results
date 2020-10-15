@@ -38,15 +38,15 @@ import org.entando.kubernetes.controller.spi.Secretive;
 import org.entando.kubernetes.controller.spi.ServiceBackingContainer;
 import org.entando.kubernetes.model.EntandoBaseCustomResource;
 
-public class DatabaseDeployable implements Deployable&lt;DatabaseServiceResult&gt;, Secretive {
+public class DatabaseDeployable&lt;C extends EntandoBaseCustomResource&gt; implements Deployable&lt;DatabaseDeploymentResult, C&gt;, Secretive {
 
 <span class="fc" id="L43">    private final Map&lt;DbmsDockerVendorStrategy, VariableInitializer&gt; variableInitializers = new ConcurrentHashMap&lt;&gt;();</span>
     private final DbmsDockerVendorStrategy dbmsVendor;
-    private final EntandoBaseCustomResource&lt;?&gt; customResource;
+    private final C customResource;
     private final List&lt;DeployableContainer&gt; containers;
     private final String nameQualifier;
 
-<span class="fc" id="L49">    public DatabaseDeployable(DbmsDockerVendorStrategy dbmsVendor, EntandoBaseCustomResource&lt;?&gt; customResource, String nameQualifier) {</span>
+<span class="fc" id="L49">    public DatabaseDeployable(DbmsDockerVendorStrategy dbmsVendor, C customResource, String nameQualifier) {</span>
 <span class="fc" id="L50">        variableInitializers.put(DbmsDockerVendorStrategy.MYSQL, vars -&gt;</span>
                 //No DB creation. Dbs are created during schema creation
 <span class="fc" id="L52">                vars.add(new EnvVar(&quot;MYSQL_ROOT_PASSWORD&quot;, null,</span>
@@ -85,13 +85,13 @@ public class DatabaseDeployable implements Deployable&lt;DatabaseServiceResult&g
     }
 
     @Override
-    public EntandoBaseCustomResource&lt;?&gt; getCustomResource() {
+    public C getCustomResource() {
 <span class="fc" id="L89">        return customResource;</span>
     }
 
     @Override
-    public DatabaseServiceResult createResult(Deployment deployment, Service service, Ingress ingress, Pod pod) {
-<span class="fc" id="L94">        return new DatabaseServiceResult(service, dbmsVendor, getDatabaseName(), getDatabaseAdminSecretName(), pod);</span>
+    public DatabaseDeploymentResult createResult(Deployment deployment, Service service, Ingress ingress, Pod pod) {
+<span class="fc" id="L94">        return new DatabaseDeploymentResult(service, dbmsVendor, getDatabaseName(), getDatabaseAdminSecretName(), pod);</span>
     }
 
     @Override
