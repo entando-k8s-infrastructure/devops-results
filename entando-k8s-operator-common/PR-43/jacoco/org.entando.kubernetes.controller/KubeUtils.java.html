@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>KubeUtils.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Entando K8S Operator Common Library</a> &gt; <a href="index.source.html" class="el_package">org.entando.kubernetes.controller</a> &gt; <span class="el_source">KubeUtils.java</span></div><h1>KubeUtils.java</h1><pre class="source lang-java linenums">/*
+ *
+ * Copyright 2015-Present Entando Inc. (http://www.entando.com) All rights reserved.
+ *
+ * This library is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU Lesser General Public License as published by the Free
+ * Software Foundation; either version 2.1 of the License, or (at your option)
+ * any later version.
+ *
+ *  This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
+ * details.
+ *
+ */
+
+package org.entando.kubernetes.controller;
+
+import io.fabric8.kubernetes.api.model.EnvVarSource;
+import io.fabric8.kubernetes.api.model.EnvVarSourceBuilder;
+import io.fabric8.kubernetes.api.model.OwnerReference;
+import io.fabric8.kubernetes.api.model.OwnerReferenceBuilder;
+import io.fabric8.kubernetes.api.model.Secret;
+import io.fabric8.kubernetes.api.model.SecretBuilder;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.RandomStringUtils;
+import org.entando.kubernetes.model.EntandoBaseCustomResource;
+import org.entando.kubernetes.model.EntandoCustomResource;
+
+public final class KubeUtils {
+
+    public static final String PASSSWORD_KEY = &quot;password&quot;;//Funny name because a variable named 'PASSWORD' is considered a vulnerability
+    public static final String USERNAME_KEY = &quot;username&quot;;
+    public static final String DB_JOB_LABEL_NAME = &quot;dbJob&quot;;
+    public static final String DEFAULT_SERVER_QUALIFIER = &quot;server&quot;;
+    public static final String URL_KEY = &quot;url&quot;;
+    public static final String INTERNAL_URL_KEY = &quot;internalUrl&quot;;
+    public static final String DEFAULT_SERVICE_SUFFIX = &quot;service&quot;;
+    public static final String DEFAULT_INGRESS_SUFFIX = &quot;ingress&quot;;
+    public static final String ENTANDO_RESOURCE_ACTION = &quot;entando.resource.action&quot;;
+    public static final String ENTANDO_RESOURCE_NAMESPACE = &quot;entando.resource.namespace&quot;;
+    public static final String ENTANDO_RESOURCE_NAME = &quot;entando.resource.name&quot;;
+    public static final String ENTANDO_APP_ROLE = &quot;entandoApp&quot;;
+    public static final String ENTANDO_PLUGIN_ROLE = &quot;entandoPlugin&quot;;
+    public static final String ENTANDO_CLUSTER_ROLE = &quot;entandoCluster&quot;;
+    public static final String PUBLIC_CLIENT_ID = &quot;entando-web&quot;;
+    public static final String ENTANDO_KEYCLOAK_REALM = &quot;entando&quot;;
+    public static final String ENTANDO_RESOURCE_KIND_LABEL_NAME = &quot;EntandoResourceKind&quot;;
+
+<span class="fc" id="L55">    private static final Logger LOGGER = Logger.getLogger(KubeUtils.class.getName());</span>
+
+    private KubeUtils() {
+    }
+
+    public static String getKindOf(Class&lt;? extends EntandoBaseCustomResource&gt; c) {
+<span class="fc" id="L61">        return c.getSimpleName();</span>
+    }
+
+    public static EnvVarSource secretKeyRef(String secretName, String key) {
+<span class="fc" id="L65">        return new EnvVarSourceBuilder().withNewSecretKeyRef(key, secretName, Boolean.FALSE).build();</span>
+    }
+
+    public static String snakeCaseOf(String in) {
+<span class="fc" id="L69">        return in.replace(&quot;-&quot;, &quot;_&quot;).replace(&quot;.&quot;, &quot;_&quot;);</span>
+    }
+
+    public static Secret generateSecret(EntandoCustomResource resource, String secretName, String username) {
+<span class="fc" id="L73">        String password = RandomStringUtils.randomAlphanumeric(10);</span>
+<span class="fc" id="L74">        return buildSecret(resource, secretName, username, password);</span>
+    }
+
+    public static Secret buildSecret(EntandoCustomResource resource, String secretName, String username,
+            String password) {
+<span class="fc" id="L79">        return new SecretBuilder()</span>
+<span class="fc" id="L80">                .withNewMetadata().withName(secretName)</span>
+<span class="fc" id="L81">                .withOwnerReferences(buildOwnerReference(resource))</span>
+<span class="fc" id="L82">                .addToLabels(resource.getKind(), resource.getMetadata().getName())</span>
+<span class="fc" id="L83">                .endMetadata()</span>
+<span class="fc" id="L84">                .addToStringData(USERNAME_KEY, username)</span>
+<span class="fc" id="L85">                .addToStringData(PASSSWORD_KEY, password)</span>
+<span class="fc" id="L86">                .build();</span>
+    }
+
+    public static void ready(String name) {
+        try {
+<span class="nc" id="L91">            FileUtils.write(new File(&quot;/tmp/&quot; + name + &quot;.ready&quot;), &quot;yes&quot;, StandardCharsets.UTF_8);</span>
+<span class="nc" id="L92">        } catch (IOException e) {</span>
+<span class="nc" id="L93">            LOGGER.log(Level.SEVERE, &quot;Could not create 'ready' file for {0}&quot;, name);</span>
+<span class="nc" id="L94">        }</span>
+<span class="nc" id="L95">    }</span>
+
+    public static OwnerReference buildOwnerReference(EntandoCustomResource entandoCustomResource) {
+<span class="fc" id="L98">        return new OwnerReferenceBuilder()</span>
+<span class="fc" id="L99">                .withApiVersion(entandoCustomResource.getApiVersion())</span>
+<span class="fc" id="L100">                .withBlockOwnerDeletion(true)</span>
+<span class="fc" id="L101">                .withController(true)</span>
+<span class="fc" id="L102">                .withKind(entandoCustomResource.getKind())</span>
+<span class="fc" id="L103">                .withName(entandoCustomResource.getMetadata().getName())</span>
+<span class="fc" id="L104">                .withUid(entandoCustomResource.getMetadata().getUid()).build();</span>
+    }
+
+    public static String standardIngressName(EntandoCustomResource entandoCustomResource) {
+<span class="fc" id="L108">        return entandoCustomResource.getMetadata().getName() + &quot;-&quot; + DEFAULT_INGRESS_SUFFIX;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>
