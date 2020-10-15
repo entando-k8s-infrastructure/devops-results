@@ -58,7 +58,7 @@ public class DefaultKeycloakClient implements SimpleKeycloakClient {
     public static final String MASTER_REALM = &quot;master&quot;;
     public static final String EXCEPTION_RESOLVING_MASTER_REALM_ON_KEYCLOAK = &quot;Exception resolving master realm on Keycloak&quot;;
 <span class="fc" id="L60">    private static final Logger LOGGER = Logger.getLogger(DefaultKeycloakClient.class.getName());</span>
-    private static final int MAX_RETRY_COUNT = 60;
+    private static final int MAX_RETRY_COUNT = 180;
     private Keycloak keycloak;
 <span class="pc" id="L63">    private boolean isHttps = false;</span>
 
@@ -130,21 +130,21 @@ public class DefaultKeycloakClient implements SimpleKeycloakClient {
     public void ensureRealm(String realm) {
 <span class="fc" id="L131">        RealmResource realmResource = keycloak.realm(realm);</span>
 <span class="fc" id="L132">        RealmRepresentation realmRepresentation = getRealmRepresentation(realmResource);</span>
-<span class="pc bpc" id="L133" title="1 of 2 branches missed.">        if (realmRepresentation == null) {</span>
-<span class="nc" id="L134">            RealmRepresentation newRealm = new RealmRepresentation();</span>
-<span class="nc" id="L135">            newRealm.setEnabled(true);</span>
-<span class="nc" id="L136">            newRealm.setRealm(realm);</span>
-<span class="nc bnc" id="L137" title="All 2 branches missed.">            if (shouldDisableSsl()) {</span>
-<span class="nc" id="L138">                newRealm.setSslRequired(SslRequired.NONE.name().toLowerCase());</span>
+<span class="fc bfc" id="L133" title="All 2 branches covered.">        if (realmRepresentation == null) {</span>
+<span class="fc" id="L134">            RealmRepresentation newRealm = new RealmRepresentation();</span>
+<span class="fc" id="L135">            newRealm.setEnabled(true);</span>
+<span class="fc" id="L136">            newRealm.setRealm(realm);</span>
+<span class="pc bpc" id="L137" title="1 of 2 branches missed.">            if (shouldDisableSsl()) {</span>
+<span class="fc" id="L138">                newRealm.setSslRequired(SslRequired.NONE.name().toLowerCase());</span>
             }
-<span class="nc" id="L140">            newRealm.setDisplayName(realm);</span>
-<span class="nc" id="L141">            keycloak.realms().create(newRealm);</span>
-<span class="nc" id="L142">            createFirstUser(realmResource);</span>
+<span class="fc" id="L140">            newRealm.setDisplayName(realm);</span>
+<span class="fc" id="L141">            keycloak.realms().create(newRealm);</span>
+<span class="fc" id="L142">            createFirstUser(realmResource);</span>
         }
 <span class="fc" id="L144">    }</span>
 
     private boolean shouldDisableSsl() {
-<span class="nc bnc" id="L147" title="All 4 branches missed.">        return EntandoOperatorConfig.disableKeycloakSslRequirement() &amp;&amp; !isHttps;</span>
+<span class="pc bpc" id="L147" title="2 of 4 branches missed.">        return EntandoOperatorConfig.disableKeycloakSslRequirement() &amp;&amp; !isHttps;</span>
     }
 
     @Override
@@ -157,55 +157,55 @@ public class DefaultKeycloakClient implements SimpleKeycloakClient {
     private RealmRepresentation getRealmRepresentation(RealmResource realmResource) {
         try {
 <span class="fc" id="L159">            return realmResource.toRepresentation();</span>
-<span class="nc" id="L160">        } catch (NotFoundException e) {</span>
-<span class="nc" id="L161">            return null;</span>
+<span class="fc" id="L160">        } catch (NotFoundException e) {</span>
+<span class="fc" id="L161">            return null;</span>
         }
     }
 
     @Override
     public void createPublicClient(String realm, String domain) {
-<span class="nc" id="L167">        RealmResource realmResource = keycloak.realm(realm);</span>
-<span class="nc" id="L168">        createPublicClient(realmResource, domain);</span>
-<span class="nc" id="L169">    }</span>
+<span class="fc" id="L167">        RealmResource realmResource = keycloak.realm(realm);</span>
+<span class="fc" id="L168">        createPublicClient(realmResource, domain);</span>
+<span class="fc" id="L169">    }</span>
 
     private void createPublicClient(RealmResource realmResource, String domain) {
-<span class="nc" id="L172">        List&lt;ClientRepresentation&gt; existing = realmResource.clients().findByClientId(KubeUtils.PUBLIC_CLIENT_ID);</span>
-<span class="nc bnc" id="L173" title="All 2 branches missed.">        if (existing.isEmpty()) {</span>
-<span class="nc" id="L174">            ClientRepresentation client = new ClientRepresentation();</span>
-<span class="nc" id="L175">            client.setName(&quot;Entando WEB&quot;);</span>
-<span class="nc" id="L176">            client.setClientId(KubeUtils.PUBLIC_CLIENT_ID);</span>
-<span class="nc" id="L177">            client.setEnabled(true);</span>
-<span class="nc" id="L178">            client.setServiceAccountsEnabled(false);</span>
-<span class="nc" id="L179">            client.setStandardFlowEnabled(true);</span>
-<span class="nc" id="L180">            client.setImplicitFlowEnabled(true);</span>
-<span class="nc" id="L181">            client.setDirectAccessGrantsEnabled(false);</span>
-<span class="nc" id="L182">            client.setAuthorizationServicesEnabled(false);</span>
-<span class="nc bnc" id="L183" title="All 2 branches missed.">            client.setRedirectUris(Collections.singletonList(&quot;*&quot;.equals(domain) ? domain : domain + &quot;/*&quot;));</span>
-<span class="nc" id="L184">            client.setPublicClient(true);</span>
-<span class="nc" id="L185">            client.setOrigin(domain);</span>
-<span class="nc" id="L186">            client.setWebOrigins(Collections.singletonList(domain));</span>
-<span class="nc" id="L187">            realmResource.clients().create(client);</span>
-<span class="nc" id="L188">        } else {</span>
+<span class="fc" id="L172">        List&lt;ClientRepresentation&gt; existing = realmResource.clients().findByClientId(KubeUtils.PUBLIC_CLIENT_ID);</span>
+<span class="pc bpc" id="L173" title="1 of 2 branches missed.">        if (existing.isEmpty()) {</span>
+<span class="fc" id="L174">            ClientRepresentation client = new ClientRepresentation();</span>
+<span class="fc" id="L175">            client.setName(&quot;Entando WEB&quot;);</span>
+<span class="fc" id="L176">            client.setClientId(KubeUtils.PUBLIC_CLIENT_ID);</span>
+<span class="fc" id="L177">            client.setEnabled(true);</span>
+<span class="fc" id="L178">            client.setServiceAccountsEnabled(false);</span>
+<span class="fc" id="L179">            client.setStandardFlowEnabled(true);</span>
+<span class="fc" id="L180">            client.setImplicitFlowEnabled(true);</span>
+<span class="fc" id="L181">            client.setDirectAccessGrantsEnabled(false);</span>
+<span class="fc" id="L182">            client.setAuthorizationServicesEnabled(false);</span>
+<span class="pc bpc" id="L183" title="1 of 2 branches missed.">            client.setRedirectUris(Collections.singletonList(&quot;*&quot;.equals(domain) ? domain : domain + &quot;/*&quot;));</span>
+<span class="fc" id="L184">            client.setPublicClient(true);</span>
+<span class="fc" id="L185">            client.setOrigin(domain);</span>
+<span class="fc" id="L186">            client.setWebOrigins(Collections.singletonList(domain));</span>
+<span class="fc" id="L187">            realmResource.clients().create(client);</span>
+<span class="fc" id="L188">        } else {</span>
 <span class="nc" id="L189">            ClientRepresentation client = existing.get(0);</span>
 <span class="nc" id="L190">            client.getRedirectUris().add(domain + &quot;/*&quot;);</span>
 <span class="nc" id="L191">            client.getWebOrigins().add(domain);</span>
 <span class="nc" id="L192">            realmResource.clients().get(client.getId()).update(client);</span>
         }
-<span class="nc" id="L194">    }</span>
+<span class="fc" id="L194">    }</span>
 
     private void createFirstUser(RealmResource realmResource) {
-<span class="nc" id="L197">        final UserRepresentation user = new UserRepresentation();</span>
-<span class="nc" id="L198">        user.setUsername(&quot;admin&quot;);</span>
-<span class="nc" id="L199">        user.setEnabled(true);</span>
-<span class="nc" id="L200">        try (Response response = realmResource.users().create(user)) {</span>
-<span class="nc" id="L201">            CredentialRepresentation credentials = new CredentialRepresentation();</span>
-<span class="nc" id="L202">            credentials.setValue(&quot;adminadmin&quot;);</span>
-<span class="nc" id="L203">            credentials.setTemporary(true);</span>
-<span class="nc" id="L204">            credentials.setType(KubeUtils.PASSSWORD_KEY);</span>
-<span class="nc" id="L205">            String userId = response.getLocation().getPath().replaceAll(&quot;.*/([^/]+)$&quot;, &quot;$1&quot;);</span>
-<span class="nc" id="L206">            realmResource.users().get(userId).resetPassword(credentials);</span>
+<span class="fc" id="L197">        final UserRepresentation user = new UserRepresentation();</span>
+<span class="fc" id="L198">        user.setUsername(&quot;admin&quot;);</span>
+<span class="fc" id="L199">        user.setEnabled(true);</span>
+<span class="fc" id="L200">        try (Response response = realmResource.users().create(user)) {</span>
+<span class="fc" id="L201">            CredentialRepresentation credentials = new CredentialRepresentation();</span>
+<span class="fc" id="L202">            credentials.setValue(&quot;adminadmin&quot;);</span>
+<span class="fc" id="L203">            credentials.setTemporary(true);</span>
+<span class="fc" id="L204">            credentials.setType(KubeUtils.PASSSWORD_KEY);</span>
+<span class="fc" id="L205">            String userId = response.getLocation().getPath().replaceAll(&quot;.*/([^/]+)$&quot;, &quot;$1&quot;);</span>
+<span class="fc" id="L206">            realmResource.users().get(userId).resetPassword(credentials);</span>
         }
-<span class="nc" id="L208">    }</span>
+<span class="fc" id="L208">    }</span>
 
     @Override
     public String prepareClientAndReturnSecret(KeycloakClientConfig config) {
@@ -218,22 +218,22 @@ public class DefaultKeycloakClient implements SimpleKeycloakClient {
 <span class="fc" id="L218">        RealmResource realmResource = keycloak.realm(config.getRealm());</span>
 <span class="fc" id="L219">        Optional&lt;ClientRepresentation&gt; clientRepresentation = findClient(config);</span>
 <span class="pc bpc" id="L220" title="1 of 2 branches missed.">        if (clientRepresentation.isPresent()) {</span>
-<span class="fc" id="L221">            return clientRepresentation.get().getId();</span>
+<span class="nc" id="L221">            return clientRepresentation.get().getId();</span>
         } else {
-<span class="nc" id="L223">            ClientRepresentation client = new ClientRepresentation();</span>
-<span class="nc" id="L224">            client.setName(config.getClientName());</span>
-<span class="nc" id="L225">            client.setClientId(config.getClientId());</span>
-<span class="nc" id="L226">            client.setEnabled(true);</span>
-<span class="nc" id="L227">            client.setServiceAccountsEnabled(true);</span>
-<span class="nc" id="L228">            client.setStandardFlowEnabled(true);</span>
-<span class="nc" id="L229">            client.setImplicitFlowEnabled(true);</span>
-<span class="nc" id="L230">            client.setDirectAccessGrantsEnabled(true);</span>
-<span class="nc" id="L231">            client.setAuthorizationServicesEnabled(false);</span>
-<span class="nc" id="L232">            client.setWebOrigins(config.getWebOrigins());</span>
-<span class="nc" id="L233">            try (Response response = realmResource.clients().create(client)) {</span>
-<span class="nc" id="L234">                String id = response.getLocation().getPath().replaceAll(&quot;.*/([^/]+)$&quot;, &quot;$1&quot;);</span>
-<span class="nc" id="L235">                realmResource.clients().get(id).generateNewSecret();</span>
-<span class="nc" id="L236">                return id;</span>
+<span class="fc" id="L223">            ClientRepresentation client = new ClientRepresentation();</span>
+<span class="fc" id="L224">            client.setName(config.getClientName());</span>
+<span class="fc" id="L225">            client.setClientId(config.getClientId());</span>
+<span class="fc" id="L226">            client.setEnabled(true);</span>
+<span class="fc" id="L227">            client.setServiceAccountsEnabled(true);</span>
+<span class="fc" id="L228">            client.setStandardFlowEnabled(true);</span>
+<span class="fc" id="L229">            client.setImplicitFlowEnabled(true);</span>
+<span class="fc" id="L230">            client.setDirectAccessGrantsEnabled(true);</span>
+<span class="fc" id="L231">            client.setAuthorizationServicesEnabled(false);</span>
+<span class="fc" id="L232">            client.setWebOrigins(config.getWebOrigins());</span>
+<span class="fc" id="L233">            try (Response response = realmResource.clients().create(client)) {</span>
+<span class="fc" id="L234">                String id = response.getLocation().getPath().replaceAll(&quot;.*/([^/]+)$&quot;, &quot;$1&quot;);</span>
+<span class="fc" id="L235">                realmResource.clients().get(id).generateNewSecret();</span>
+<span class="fc" id="L236">                return id;</span>
             }
         }
     }
@@ -263,7 +263,7 @@ public class DefaultKeycloakClient implements SimpleKeycloakClient {
 <span class="fc" id="L263">                .map(RoleRepresentation::getName)</span>
 <span class="fc" id="L264">                .collect(Collectors.toList());</span>
 <span class="fc" id="L265">        currentRoleNames.stream()</span>
-<span class="pc bpc" id="L266" title="1 of 2 branches missed.">                .filter(roleName -&gt; !desiredRoleNames.contains(roleName))</span>
+<span class="pc bnc" id="L266" title="All 2 branches missed.">                .filter(roleName -&gt; !desiredRoleNames.contains(roleName))</span>
 <span class="fc" id="L267">                .forEach(clientResource.roles()::deleteRole);</span>
 <span class="pc bpc" id="L268" title="1 of 2 branches missed.">        desiredRoles.stream().filter(role -&gt; !currentRoleNames.contains(role.getName()))</span>
 <span class="fc" id="L269">                .map(DefaultKeycloakClient::toRoleRepresentation)</span>
