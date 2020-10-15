@@ -28,33 +28,36 @@ import org.entando.kubernetes.client.PodWatcher;
 
 public interface PodWaitingClient {
 
+    /**
+     * A getter for the an AtomicReference to the most recently constructed PodWatcherholder for testing purposes.
+     */
     AtomicReference&lt;PodWatcher&gt; getPodWatcherHolder();
 
     default Pod watchPod(Predicate&lt;Pod&gt; podPredicate, long timeoutSeconds, Watchable&lt;Watch, Watcher&lt;Pod&gt;&gt; podResource) {
         try {
-<span class="fc" id="L35">            Object mutex = new Object();</span>
-
-<span class="fc" id="L37">            synchronized (mutex) {</span>
-<span class="fc" id="L38">                PodWatcher watcher = new PodWatcher(podPredicate, mutex, timeoutSeconds * 1000);</span>
-<span class="fc" id="L39">                getPodWatcherHolder().set(watcher);</span>
-<span class="fc" id="L40">                try (Watch ignored = podResource.watch(watcher)) {</span>
+<span class="fc" id="L38">            Object mutex = new Object();</span>
+<span class="fc" id="L39">            synchronized (mutex) {</span>
+<span class="fc" id="L40">                PodWatcher watcher = new PodWatcher(podPredicate, mutex, timeoutSeconds * 1000);</span>
+<span class="fc" id="L41">                getPodWatcherHolder().set(watcher);</span>
+<span class="fc" id="L42">                try (Watch ignored = podResource.watch(watcher)) {</span>
                     //Sonar seems to believe the JVM may not respect wait() with timeout due to 'Spurious wakeups'
-<span class="fc bfc" id="L42" title="All 2 branches covered.">                    while (watcher.shouldStillWait()) {</span>
-<span class="fc" id="L43">                        mutex.wait(timeoutSeconds * 1000);</span>
+<span class="fc bfc" id="L44" title="All 2 branches covered.">                    while (watcher.shouldStillWait()) {</span>
+<span class="fc" id="L45">                        mutex.wait(timeoutSeconds * 1000);</span>
                     }
-<span class="pc bpc" id="L45" title="1 of 2 branches missed.">                    if (watcher.lastPodFulfillsCondition()) {</span>
-<span class="fc" id="L46">                        return watcher.getLastPod();</span>
+<span class="pc bpc" id="L47" title="1 of 2 branches missed.">                    if (watcher.lastPodFulfillsCondition()) {</span>
+<span class="fc" id="L48">                        return watcher.getLastPod();</span>
                     }
-<span class="nc" id="L48">                    throw new IllegalStateException(format(&quot;Pod %s/%s did not meet the wait condition within %s seconds&quot;,</span>
-<span class="nc" id="L49">                            watcher.getLastPod().getMetadata().getNamespace(),</span>
-<span class="nc" id="L50">                            watcher.getLastPod().getMetadata().getName(),</span>
-<span class="nc" id="L51">                            String.valueOf(timeoutSeconds)));</span>
-<span class="fc" id="L52">                }</span>
+<span class="nc" id="L50">                    throw new IllegalStateException(format(&quot;Pod %s/%s did not meet the wait condition within %s seconds&quot;,</span>
+<span class="nc" id="L51">                            watcher.getLastPod().getMetadata().getNamespace(),</span>
+<span class="nc" id="L52">                            watcher.getLastPod().getMetadata().getName(),</span>
+<span class="nc" id="L53">                            timeoutSeconds));</span>
+<span class="fc" id="L54">                }</span>
             }
-<span class="nc" id="L54">        } catch (InterruptedException e) {</span>
-<span class="nc" id="L55">            Thread.currentThread().interrupt();</span>
-<span class="nc" id="L56">            throw new IllegalStateException(e);</span>
+<span class="nc" id="L56">        } catch (InterruptedException e) {</span>
+<span class="nc" id="L57">            Thread.currentThread().interrupt();</span>
+<span class="nc" id="L58">            throw new IllegalStateException(e);</span>
         }
     }
+
 }
 </pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.5.201910111838</span></div></body></html>

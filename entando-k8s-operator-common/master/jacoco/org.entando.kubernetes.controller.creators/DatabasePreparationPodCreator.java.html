@@ -16,6 +16,8 @@
 
 package org.entando.kubernetes.controller.creators;
 
+import static org.entando.kubernetes.controller.EntandoOperatorConfigBase.lookupProperty;
+
 import io.fabric8.kubernetes.api.model.Container;
 import io.fabric8.kubernetes.api.model.ContainerBuilder;
 import io.fabric8.kubernetes.api.model.EnvVar;
@@ -30,7 +32,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import org.entando.kubernetes.controller.EntandoImageResolver;
-import org.entando.kubernetes.controller.EntandoOperatorConfig;
 import org.entando.kubernetes.controller.EntandoOperatorConfigProperty;
 import org.entando.kubernetes.controller.KubeUtils;
 import org.entando.kubernetes.controller.database.DatabaseSchemaCreationResult;
@@ -45,96 +46,95 @@ import org.entando.kubernetes.model.EntandoBaseCustomResource;
 public class DatabasePreparationPodCreator extends AbstractK8SResourceCreator {
 
     public DatabasePreparationPodCreator(EntandoBaseCustomResource&lt;?&gt; entandoCustomResource) {
-<span class="fc" id="L48">        super(entandoCustomResource);</span>
-<span class="fc" id="L49">    }</span>
+<span class="fc" id="L49">        super(entandoCustomResource);</span>
+<span class="fc" id="L50">    }</span>
 
-    public Pod runToCompletion(SimpleK8SClient client, DbAwareDeployable dbAwareDeployable, EntandoImageResolver entandoImageResolver) {
-<span class="fc" id="L52">        return client.pods().runToCompletion(buildJobPod(client.secrets(), entandoImageResolver, dbAwareDeployable));</span>
+    public Pod runToCompletion(SimpleK8SClient&lt;?&gt; client, DbAwareDeployable dbAwareDeployable, EntandoImageResolver entandoImageResolver) {
+<span class="fc" id="L53">        return client.pods().runToCompletion(buildJobPod(client.secrets(), entandoImageResolver, dbAwareDeployable));</span>
     }
 
     private Pod buildJobPod(SecretClient secretClient, EntandoImageResolver entandoImageResolver, DbAwareDeployable dbAwareDeployable) {
-<span class="fc" id="L56">        String dbJobName = String</span>
-<span class="fc" id="L57">                .format(&quot;%s-db-preparation-job&quot;, entandoCustomResource.getMetadata().getName());</span>
-<span class="fc" id="L58">        return new PodBuilder().withNewMetadata()</span>
-<span class="fc" id="L59">                .withNamespace(entandoCustomResource.getMetadata().getNamespace())</span>
-<span class="fc" id="L60">                .withOwnerReferences(KubeUtils.buildOwnerReference(entandoCustomResource))</span>
-<span class="fc" id="L61">                .withLabels(labelsFromResource())</span>
-<span class="fc" id="L62">                .addToLabels(KubeUtils.DB_JOB_LABEL_NAME, dbJobName)</span>
-<span class="fc" id="L63">                .withName(dbJobName + &quot;-&quot; + UUID.randomUUID().toString().substring(0, 10))</span>
-<span class="fc" id="L64">                .endMetadata()</span>
-<span class="fc" id="L65">                .withNewSpec()</span>
-<span class="fc" id="L66">                .withInitContainers(buildContainers(entandoImageResolver, secretClient, dbAwareDeployable))</span>
-<span class="fc" id="L67">                .addNewContainer()</span>
-<span class="fc" id="L68">                .withName(&quot;dummy&quot;)</span>
-<span class="fc" id="L69">                .withImage(entandoImageResolver.determineImageUri(&quot;entando/busybox&quot;, Optional.of(&quot;latest&quot;)))</span>
-<span class="fc" id="L70">                .endContainer()</span>
-<span class="fc" id="L71">                .withRestartPolicy(&quot;Never&quot;)</span>
-<span class="fc" id="L72">                .endSpec()</span>
-<span class="fc" id="L73">                .build();</span>
+<span class="fc" id="L57">        String dbJobName = String</span>
+<span class="fc" id="L58">                .format(&quot;%s-db-preparation-job&quot;, entandoCustomResource.getMetadata().getName());</span>
+<span class="fc" id="L59">        return new PodBuilder().withNewMetadata()</span>
+<span class="fc" id="L60">                .withNamespace(entandoCustomResource.getMetadata().getNamespace())</span>
+<span class="fc" id="L61">                .withOwnerReferences(KubeUtils.buildOwnerReference(entandoCustomResource))</span>
+<span class="fc" id="L62">                .withLabels(labelsFromResource())</span>
+<span class="fc" id="L63">                .addToLabels(KubeUtils.DB_JOB_LABEL_NAME, dbJobName)</span>
+<span class="fc" id="L64">                .withName(dbJobName + &quot;-&quot; + UUID.randomUUID().toString().substring(0, 10))</span>
+<span class="fc" id="L65">                .endMetadata()</span>
+<span class="fc" id="L66">                .withNewSpec()</span>
+<span class="fc" id="L67">                .withInitContainers(buildContainers(entandoImageResolver, secretClient, dbAwareDeployable))</span>
+<span class="fc" id="L68">                .addNewContainer()</span>
+<span class="fc" id="L69">                .withName(&quot;dummy&quot;)</span>
+<span class="fc" id="L70">                .withImage(entandoImageResolver.determineImageUri(&quot;entando/busybox&quot;, Optional.of(&quot;latest&quot;)))</span>
+<span class="fc" id="L71">                .endContainer()</span>
+<span class="fc" id="L72">                .withRestartPolicy(&quot;Never&quot;)</span>
+<span class="fc" id="L73">                .endSpec()</span>
+<span class="fc" id="L74">                .build();</span>
     }
 
     private List&lt;Container&gt; buildContainers(EntandoImageResolver entandoImageResolver, SecretClient secretClient,
             DbAwareDeployable deployable) {
-<span class="fc" id="L78">        List&lt;Container&gt; result = new ArrayList&lt;&gt;();</span>
-<span class="fc bfc" id="L79" title="All 2 branches covered.">        for (DbAware dbAware : deployable.getDbAwareContainers()) {</span>
-<span class="fc" id="L80">            Optional&lt;DatabasePopulator&gt; databasePopulator = dbAware.useDatabaseSchemas(</span>
-<span class="fc" id="L81">                    prepareContainersToCreateSchemas(secretClient, entandoImageResolver, deployable, dbAware, result));</span>
-<span class="fc" id="L82">            databasePopulator</span>
-<span class="pc" id="L83">                    .ifPresent(dbp -&gt; result.add(prepareContainerToPopulateSchemas(entandoImageResolver, dbp, dbAware.getNameQualifier())));</span>
-<span class="fc" id="L84">        }</span>
-<span class="fc" id="L85">        return result;</span>
+<span class="fc" id="L79">        List&lt;Container&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">        for (DbAware dbAware : deployable.getDbAwareContainers()) {</span>
+<span class="fc" id="L81">            Optional&lt;DatabasePopulator&gt; databasePopulator = dbAware.useDatabaseSchemas(</span>
+<span class="fc" id="L82">                    prepareContainersToCreateSchemas(secretClient, entandoImageResolver, deployable, dbAware, result));</span>
+<span class="fc" id="L83">            databasePopulator</span>
+<span class="pc" id="L84">                    .ifPresent(dbp -&gt; result.add(prepareContainerToPopulateSchemas(entandoImageResolver, dbp, dbAware.getNameQualifier())));</span>
+<span class="fc" id="L85">        }</span>
+<span class="fc" id="L86">        return result;</span>
     }
 
     private Map&lt;String, DatabaseSchemaCreationResult&gt; prepareContainersToCreateSchemas(SecretClient secretClient,
             EntandoImageResolver entandoImageResolver, DbAwareDeployable deployable,
             DbAware dbAware, List&lt;Container&gt; containerList) {
-<span class="fc" id="L91">        Map&lt;String, DatabaseSchemaCreationResult&gt; schemaResults = new ConcurrentHashMap&lt;&gt;();</span>
-<span class="fc bfc" id="L92" title="All 2 branches covered.">        for (String dbSchemaQualifier : dbAware.getDbSchemaQualifiers()) {</span>
-<span class="fc" id="L93">            containerList.add(buildContainerToCreateSchema(entandoImageResolver, deployable.getDatabaseServiceResult(), dbSchemaQualifier));</span>
-<span class="fc" id="L94">            schemaResults.put(dbSchemaQualifier, createSchemaResult(deployable.getDatabaseServiceResult(), dbSchemaQualifier));</span>
-<span class="fc" id="L95">            createSchemaSecret(secretClient, dbSchemaQualifier);</span>
-<span class="fc" id="L96">        }</span>
-<span class="fc" id="L97">        return schemaResults;</span>
+<span class="fc" id="L92">        Map&lt;String, DatabaseSchemaCreationResult&gt; schemaResults = new ConcurrentHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L93" title="All 2 branches covered.">        for (String dbSchemaQualifier : dbAware.getDbSchemaQualifiers()) {</span>
+<span class="fc" id="L94">            containerList.add(buildContainerToCreateSchema(entandoImageResolver, deployable.getDatabaseServiceResult(), dbSchemaQualifier));</span>
+<span class="fc" id="L95">            schemaResults.put(dbSchemaQualifier, createSchemaResult(deployable.getDatabaseServiceResult(), dbSchemaQualifier));</span>
+<span class="fc" id="L96">            createSchemaSecret(secretClient, dbSchemaQualifier);</span>
+<span class="fc" id="L97">        }</span>
+<span class="fc" id="L98">        return schemaResults;</span>
     }
 
     private Container prepareContainerToPopulateSchemas(EntandoImageResolver entandoImageResolver, DatabasePopulator databasePopulator,
             String nameQualifier) {
-<span class="nc" id="L102">        String dbJobName = entandoCustomResource.getMetadata().getName() + &quot;-&quot; + nameQualifier + &quot;-db-population-job&quot;;</span>
-<span class="nc" id="L103">        return new ContainerBuilder()</span>
-<span class="nc" id="L104">                .withImage(entandoImageResolver.determineImageUri(databasePopulator.determineImageToUse(), Optional.empty()))</span>
-<span class="nc" id="L105">                .withImagePullPolicy(&quot;Always&quot;)</span>
-<span class="nc" id="L106">                .withName(dbJobName)</span>
-<span class="nc" id="L107">                .withCommand(databasePopulator.getCommand())</span>
-<span class="nc" id="L108">                .withEnv(buildEnvironmentToConnectToDatabase(databasePopulator)).build();</span>
+<span class="nc" id="L103">        String dbJobName = entandoCustomResource.getMetadata().getName() + &quot;-&quot; + nameQualifier + &quot;-db-population-job&quot;;</span>
+<span class="nc" id="L104">        return new ContainerBuilder()</span>
+<span class="nc" id="L105">                .withImage(entandoImageResolver.determineImageUri(databasePopulator.determineImageToUse(), Optional.empty()))</span>
+<span class="nc" id="L106">                .withImagePullPolicy(&quot;Always&quot;)</span>
+<span class="nc" id="L107">                .withName(dbJobName)</span>
+<span class="nc" id="L108">                .withCommand(databasePopulator.getCommand())</span>
+<span class="nc" id="L109">                .withEnv(buildEnvironmentToConnectToDatabase(databasePopulator)).build();</span>
     }
 
     private List&lt;EnvVar&gt; buildEnvironmentToConnectToDatabase(DatabasePopulator container) {
-<span class="nc" id="L112">        List&lt;EnvVar&gt; result = new ArrayList&lt;&gt;();</span>
-<span class="nc" id="L113">        container.addEnvironmentVariables(result);</span>
-<span class="nc" id="L114">        return result;</span>
+<span class="nc" id="L113">        List&lt;EnvVar&gt; result = new ArrayList&lt;&gt;();</span>
+<span class="nc" id="L114">        container.addEnvironmentVariables(result);</span>
+<span class="nc" id="L115">        return result;</span>
     }
 
     private String getSchemaName(String nameQualifier) {
-<span class="fc" id="L118">        return KubeUtils.snakeCaseOf(entandoCustomResource.getMetadata().getName()) + &quot;_&quot; + nameQualifier;</span>
+<span class="fc" id="L119">        return KubeUtils.snakeCaseOf(entandoCustomResource.getMetadata().getName()) + &quot;_&quot; + nameQualifier;</span>
     }
 
     private String getSchemaSecretName(String nameQualifier) {
-<span class="fc" id="L122">        return entandoCustomResource.getMetadata().getName() + &quot;-&quot; + nameQualifier + &quot;-secret&quot;;</span>
+<span class="fc" id="L123">        return entandoCustomResource.getMetadata().getName() + &quot;-&quot; + nameQualifier + &quot;-secret&quot;;</span>
     }
 
     private DatabaseSchemaCreationResult createSchemaResult(DatabaseServiceResult databaseDeployment, String nameQualifier) {
-<span class="fc" id="L126">        return new DatabaseSchemaCreationResult(databaseDeployment, getSchemaName(nameQualifier), getSchemaSecretName(nameQualifier));</span>
+<span class="fc" id="L127">        return new DatabaseSchemaCreationResult(databaseDeployment, getSchemaName(nameQualifier), getSchemaSecretName(nameQualifier));</span>
     }
 
     private void createSchemaSecret(SecretClient secretClient, String nameQualifier) {
-<span class="fc" id="L130">        secretClient.createSecretIfAbsent(entandoCustomResource,</span>
-<span class="fc" id="L131">                KubeUtils.generateSecret(entandoCustomResource, getSchemaSecretName(nameQualifier), getSchemaName(nameQualifier)));</span>
-<span class="fc" id="L132">    }</span>
+<span class="fc" id="L131">        secretClient.createSecretIfAbsent(entandoCustomResource,</span>
+<span class="fc" id="L132">                KubeUtils.generateSecret(entandoCustomResource, getSchemaSecretName(nameQualifier), getSchemaName(nameQualifier)));</span>
+<span class="fc" id="L133">    }</span>
 
     private Container buildContainerToCreateSchema(EntandoImageResolver entandoImageResolver,
             DatabaseServiceResult databaseDeployment, String nameQualifier) {
-<span class="fc" id="L136">        String dbJobName = entandoCustomResource.getMetadata().getName() + &quot;-&quot; + nameQualifier + &quot;-schema-creation-job&quot;;</span>
-        //TODO lookup the version here once we have a pipeline for dbjob
+<span class="fc" id="L137">        String dbJobName = entandoCustomResource.getMetadata().getName() + &quot;-&quot; + nameQualifier + &quot;-schema-creation-job&quot;;</span>
 <span class="fc" id="L138">        return new ContainerBuilder()</span>
 <span class="fc" id="L139">                .withImage(entandoImageResolver</span>
 <span class="fc" id="L140">                        .determineImageUri(&quot;entando/entando-k8s-dbjob&quot;, Optional.empty()))</span>
@@ -150,7 +150,7 @@ public class DatabasePreparationPodCreator extends AbstractK8SResourceCreator {
 <span class="fc" id="L150">        result.add(new EnvVar(&quot;DATABASE_ADMIN_USER&quot;, null, buildSecretKeyRef(databaseDeployment, KubeUtils.USERNAME_KEY)));</span>
 <span class="fc" id="L151">        result.add(new EnvVar(&quot;DATABASE_ADMIN_PASSWORD&quot;, null, buildSecretKeyRef(databaseDeployment, KubeUtils.PASSSWORD_KEY)));</span>
 <span class="fc" id="L152">        result.add(new EnvVar(&quot;DATABASE_NAME&quot;, databaseDeployment.getDatabaseName(), null));</span>
-<span class="fc" id="L153">        EntandoOperatorConfig.lookupProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_FORCE_DB_PASSWORD_RESET).ifPresent(s -&gt;</span>
+<span class="fc" id="L153">        lookupProperty(EntandoOperatorConfigProperty.ENTANDO_K8S_OPERATOR_FORCE_DB_PASSWORD_RESET).ifPresent(s -&gt;</span>
 <span class="nc" id="L154">                result.add(new EnvVar(&quot;FORCE_PASSWORD_RESET&quot;, s, null)));</span>
 <span class="fc" id="L155">        result.add(new EnvVar(&quot;DATABASE_VENDOR&quot;, databaseDeployment.getVendor().toValue(), null));</span>
 <span class="fc" id="L156">        result.add(new EnvVar(&quot;DATABASE_SCHEMA_COMMAND&quot;, &quot;CREATE_SCHEMA&quot;, null));</span>
